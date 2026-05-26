@@ -99,6 +99,11 @@ require_once get_template_directory() . '/inc/application-handler.php';
 require_once get_template_directory() . '/inc/admin-inbox.php';
 
 /**
+ * Progressive Web App: manifest, service worker, and iOS meta tags.
+ */
+require_once get_template_directory() . '/inc/pwa.php';
+
+/**
  * Helper: get a Customizer setting, falling back to the central defaults map
  * so the live site shows the same starter copy that appears in the Customizer
  * inputs — even before the user clicks Publish.

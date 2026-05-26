@@ -160,6 +160,9 @@ p { margin: 0 0 1em; }
 }
 .primary-nav a:not(.cta):hover::after { transform: scaleX(1); }
 
+/* Home icon — nudge up so its bottom sits at the text cap-baseline, not the descent line */
+.primary-nav li.nav-home { transform: translateY(2px); }
+
 .cta,
 .menu-item.cta a {
   background: var(--navy);

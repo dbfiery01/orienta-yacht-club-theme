@@ -41,6 +41,7 @@
 			} else {
 				?>
 				<ul id="nav-menu">
+					<li class="nav-home"><a href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php esc_attr_e( 'Home', 'orienta-yacht-club' ); ?>"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#about' ) ); ?>"><?php esc_html_e( 'About', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#membership' ) ); ?>"><?php esc_html_e( 'Membership', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#sailing' ) ); ?>"><?php esc_html_e( 'Boating', 'orienta-yacht-club' ); ?></a></li>
