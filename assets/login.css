@@ -1,0 +1,138 @@
+/* ============================================================
+   OYC CUSTOM LOGIN PAGE
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --navy:  #0B2A4A;
+  --brass: #D4A851;
+  --cream: #F5EFE2;
+  --line:  rgba(11,42,74,0.15);
+}
+
+html { background: var(--navy); }
+
+body.login {
+  background:
+    linear-gradient(160deg, rgba(11,42,74,0.97) 0%, rgba(4,22,42,0.99) 100%),
+    url('../photos/home-slide-d.jpg') center / cover no-repeat fixed;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Logo */
+#login h1 a,
+.login h1 a {
+  background-image: url('../oyc-logo.png') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  width: 220px !important;
+  height: 52px !important;
+  filter: brightness(0) invert(1);
+}
+
+/* Card */
+#loginform,
+#lostpasswordform,
+#registerform {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(212,168,81,0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
+  padding: 2rem 2rem 1.5rem !important;
+  backdrop-filter: blur(12px);
+}
+
+/* Labels */
+.login label {
+  color: rgba(245,239,226,0.75) !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+/* Inputs */
+.login input[type="text"],
+.login input[type="password"],
+.login input[type="email"] {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(212,168,81,0.3) !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  font-size: 0.95rem !important;
+  padding: 11px 13px !important;
+  box-shadow: none !important;
+  transition: border-color 0.18s, background 0.18s !important;
+}
+.login input[type="text"]:focus,
+.login input[type="password"]:focus,
+.login input[type="email"]:focus {
+  border-color: var(--brass) !important;
+  background: rgba(255,255,255,0.12) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(212,168,81,0.2) !important;
+}
+.login input[type="text"]::placeholder,
+.login input[type="password"]::placeholder { color: rgba(255,255,255,0.3) !important; }
+
+/* Submit button */
+.login .button-primary,
+#wp-submit {
+  background: var(--brass) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: var(--navy) !important;
+  font-weight: 700 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.05em !important;
+  padding: 13px 0 !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: background 0.18s !important;
+}
+.login .button-primary:hover,
+#wp-submit:hover { background: #c49840 !important; }
+
+/* Remember me */
+.login .forgetmenot label { color: rgba(245,239,226,0.6) !important; font-size: 0.8rem !important; }
+.login input[type="checkbox"] { accent-color: var(--brass); }
+
+/* Links below form */
+#nav, #backtoblog {
+  text-align: center !important;
+  padding: 0.4rem 0 !important;
+}
+#nav a, #backtoblog a {
+  color: rgba(212,168,81,0.8) !important;
+  font-size: 0.8rem !important;
+  text-decoration: none !important;
+}
+#nav a:hover, #backtoblog a:hover { color: var(--brass) !important; }
+
+/* Error / notice messages */
+#login_error,
+.login .message,
+.login .success {
+  border-radius: 6px !important;
+  border-left: 4px solid var(--brass) !important;
+  background: rgba(212,168,81,0.12) !important;
+  color: var(--cream) !important;
+  font-size: 0.85rem !important;
+}
+#login_error { border-left-color: #e74c3c !important; background: rgba(231,76,60,0.12) !important; }
+
+/* "Not a member?" footer note */
+.login-footer-note {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: rgba(245,239,226,0.45);
+}
+.login-footer-note a { color: var(--brass); text-decoration: none; }
+.login-footer-note a:hover { text-decoration: underline; }
+
+/* Page title above form */
+#login h1 { margin-bottom: 1.5rem; }

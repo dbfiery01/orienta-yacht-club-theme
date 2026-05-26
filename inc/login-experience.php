@@ -1,0 +1,106 @@
+<?php
+/**
+ * OYC Members Login Experience
+ * - Custom-styled login page
+ * - Post-login redirect to member dashboard
+ * - Members-only page restriction
+ * - Registration / application link on login page
+ *
+ * @package Orienta_Yacht_Club
+ */
+
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+/* ── 1. Custom login page styles & branding ───────────────── */
+
+add_action( 'login_enqueue_scripts', function () {
+	wp_enqueue_style(
+		'oyc-login',
+		get_template_directory_uri() . '/assets/login.css',
+		array(),
+		OYC_VERSION
+	);
+} );
+
+// Replace WordPress logo URL with OYC home page
+add_filter( 'login_headerurl',  fn() => home_url( '/' ) );
+add_filter( 'login_headertext', fn() => get_bloginfo( 'name' ) );
+
+// Add "Not a member? Apply for membership →" and back-to-site link below the form
+add_action( 'login_footer', function () {
+	$apply_url = home_url( '/membership-application/' );
+	$home_url  = home_url( '/' );
+	echo '<p class="login-footer-note">' .
+		'Not a member? <a href="' . esc_url( $apply_url ) . '">Apply for membership &rarr;</a>' .
+		'</p>';
+} );
+
+// Show club name as page title above the form
+add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member Login' );
+
+/* ── 2. Redirect after login → member dashboard ──────────── */
+
+add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
+	if ( $user && ! is_wp_error( $user ) ) {
+		// Admins go to admin dashboard; members go to members area
+		if ( user_can( $user, 'manage_options' ) ) {
+			return admin_url();
+		}
+		return home_url( '/members-area/' );
+	}
+	return $redirect_to;
+}, 10, 3 );
+
+/* ── 3. Members-only page restriction ────────────────────── */
+
+add_action( 'template_redirect', function () {
+	// Only check singular pages
+	if ( ! is_singular( 'page' ) ) {
+		return;
+	}
+	$post_id = get_queried_object_id();
+	if ( get_post_meta( $post_id, '_oyc_members_only', true ) && ! is_user_logged_in() ) {
+		wp_redirect( wp_login_url( get_permalink() ) );
+		exit;
+	}
+} );
+
+// Mark pages as members-only via postmeta
+// Usage: add meta _oyc_members_only = 1 to any page post
+
+/* ── 4. Admin column: show members-only badge on Pages list ─ */
+
+add_filter( 'manage_pages_columns', function ( $columns ) {
+	$columns['oyc_members_only'] = 'Members Only';
+	return $columns;
+} );
+
+add_action( 'manage_pages_custom_column', function ( $column, $post_id ) {
+	if ( $column === 'oyc_members_only' ) {
+		echo get_post_meta( $post_id, '_oyc_members_only', true )
+			? '<span style="color:#D4A851;font-weight:700;">&#x1F512; Yes</span>'
+			: '—';
+	}
+}, 10, 2 );
+
+/* ── 5. Header login button: local wp_login_url ──────────── */
+// (header.php is updated separately — this hook ensures the
+//  logout link also redirects cleanly back to the home page)
+
+add_filter( 'logout_redirect', fn() => home_url( '/' ) );
+
+/* ── 6. Replace "Howdy" in the WordPress admin toolbar ──────── */
+
+add_filter( 'gettext', function ( $translated, $original ) {
+	if ( $original === 'Howdy, %s' ) {
+		$hour = (int) current_time( 'H' );
+		if ( $hour < 12 ) {
+			return 'Good Morning, %s';
+		} elseif ( $hour < 18 ) {
+			return 'Good Afternoon, %s';
+		} else {
+			return 'Good Evening, %s';
+		}
+	}
+	return $translated;
+}, 10, 2 );

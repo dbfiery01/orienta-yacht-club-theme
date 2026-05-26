@@ -1,0 +1,35 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (if build tools are added later)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist/
+*.min.css.map
+*.min.js.map
+
+# WordPress-specific — keep out of version control
+wp-config.php
+wp-content/uploads/
+debug.log
+error_log
+
+# Local dev
+*.sqlite
+.env
+.env.*
+
+# Theme: exclude real logo/photos if they contain proprietary assets
+# (uncomment if needed)
+# assets/photos/
+# assets/oyc-logo.png

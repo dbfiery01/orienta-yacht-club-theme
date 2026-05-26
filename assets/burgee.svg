@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Orienta Yacht Club burgee">
+  <!-- PLACEHOLDER BURGEE — replace with the official Orienta Yacht Club burgee/logo file. -->
+  <defs>
+    <linearGradient id="navy" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b2a4a"/>
+      <stop offset="100%" stop-color="#04162a"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d4a851"/>
+      <stop offset="100%" stop-color="#a8782e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer ring -->
+  <circle cx="60" cy="60" r="56" fill="url(#navy)"/>
+  <circle cx="60" cy="60" r="56" fill="none" stroke="url(#brass)" stroke-width="2"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="url(#brass)" stroke-width="0.6" opacity="0.6"/>
+
+  <!-- Swallowtail burgee -->
+  <g transform="translate(60 60)">
+    <path d="M -34 -16 L 30 -16 L 18 0 L 30 16 L -34 16 Z"
+          fill="#f5efe2" stroke="url(#brass)" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- Compass star inside burgee -->
+    <g transform="translate(-6 0)">
+      <polygon points="0,-10 2.4,-2.4 10,0 2.4,2.4 0,10 -2.4,2.4 -10,0 -2.4,-2.4"
+               fill="url(#brass)"/>
+      <circle cx="0" cy="0" r="1.6" fill="#0b2a4a"/>
+    </g>
+    <!-- Halyard line -->
+    <line x1="-34" y1="-16" x2="-34" y2="22" stroke="url(#brass)" stroke-width="1.2"/>
+  </g>
+
+  <!-- Wordmark arc -->
+  <defs>
+    <path id="topArc" d="M 18,60 a 42,42 0 0 1 84,0" fill="none"/>
+    <path id="botArc" d="M 22,66 a 38,38 0 0 0 76,0" fill="none"/>
+  </defs>
+  <text font-family="Cormorant Garamond, Georgia, serif" font-size="9.5" font-weight="600"
+        fill="#d4a851" letter-spacing="2">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">ORIENTA YACHT CLUB</textPath>
+  </text>
+  <text font-family="Inter, system-ui, sans-serif" font-size="6" font-weight="600"
+        fill="#d4a851" letter-spacing="3">
+    <textPath href="#botArc" startOffset="50%" text-anchor="middle">· EST · 1907 ·</textPath>
+  </text>
+</svg>
