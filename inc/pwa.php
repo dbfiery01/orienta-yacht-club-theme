@@ -95,7 +95,12 @@ add_action( 'template_redirect', function () {
 		header( 'Content-Type: application/javascript; charset=utf-8' );
 		header( 'Service-Worker-Allowed: /' );   // allow full-site scope
 		header( 'Cache-Control: no-cache' );
-		readfile( $sw_file );
+		// Tie the SW cache name to the theme version so each deploy changes the
+		// service worker, which evicts stale cached CSS/JS/HTML automatically
+		// (otherwise users keep seeing old assets after an update).
+		$sw = file_get_contents( $sw_file );
+		$sw = preg_replace( "/const CACHE_NAME = '[^']*';/", "const CACHE_NAME = 'oyc-" . OYC_VERSION . "';", $sw );
+		echo $sw;
 		exit;
 	}
 }, 1 ); // priority 1 → runs before WP's own template selection

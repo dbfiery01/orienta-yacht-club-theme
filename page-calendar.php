@@ -297,6 +297,14 @@ const now = new Date();
 if (now.getFullYear() === 2026) { currentMonth = now.getMonth(); }
 else { currentMonth = 4; } // May
 render();
+
+// On phones the month-grid event pills are hidden (cells are too small to fit
+// them), which made the calendar look empty. Default to the readable List view
+// where every event is visible. Users can still switch back to Month.
+if ( window.matchMedia('(max-width: 520px)').matches ) {
+  var _listBtn = document.querySelector('.cal-view-btn[data-view="list"]');
+  if ( _listBtn ) { _listBtn.click(); }
+}
 </script>
 
 <?php get_footer(); ?>
