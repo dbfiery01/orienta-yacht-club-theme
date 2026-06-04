@@ -56,7 +56,11 @@ get_header();
 		</div>
 
 		<!-- List view -->
-		<div id="cal-list-view" style="display:none;">
+		<div id="cal-list-view">
+			<div class="cal-list-toolbar">
+				<label for="cal-date-picker" class="cal-list-pick-label"><?php esc_html_e( 'Jump to a date', 'orienta-yacht-club' ); ?></label>
+				<input type="date" id="cal-date-picker" class="cal-date-picker" />
+			</div>
 			<div class="cal-list" id="cal-list"></div>
 		</div>
 
@@ -279,9 +283,12 @@ document.querySelectorAll('.cal-view-btn').forEach(btn => {
     document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentView = btn.dataset.view;
-    document.getElementById('cal-month-view').style.display = currentView==='month' ? '' : 'none';
-    document.getElementById('cal-list-view').style.display  = currentView==='list'  ? '' : 'none';
-    document.getElementById('cal-nav').style.display        = currentView==='month' ? '' : 'none';
+    // Toggle via the CSS classes the stylesheet actually uses (.is-active /
+    // .is-hidden). The previous inline style.display approach was overridden by
+    // the `#cal-list-view { display:none }` rule, so the list never showed.
+    document.getElementById('cal-month-view').classList.toggle('is-hidden', currentView !== 'month');
+    document.getElementById('cal-list-view').classList.toggle('is-active', currentView === 'list');
+    document.getElementById('cal-nav').style.display = currentView==='month' ? '' : 'none';
   });
 });
 
@@ -297,6 +304,23 @@ const now = new Date();
 if (now.getFullYear() === 2026) { currentMonth = now.getMonth(); }
 else { currentMonth = 4; } // May
 render();
+
+// List-view date picker: jump the list to any month/day.
+(function () {
+  var dp = document.getElementById('cal-date-picker');
+  if (!dp) return;
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  dp.value = currentYear + '-' + pad(currentMonth + 1) + '-' + pad(Math.min(new Date().getDate(), 28));
+  dp.addEventListener('change', function () {
+    if (!dp.value) return;
+    var parts = dp.value.split('-').map(Number);
+    currentYear = parts[0];
+    currentMonth = parts[1] - 1;
+    render();
+    var lv = document.getElementById('cal-list-view');
+    if (lv) { lv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+})();
 
 // On phones the month-grid event pills are hidden (cells are too small to fit
 // them), which made the calendar look empty. Default to the readable List view
