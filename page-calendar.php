@@ -98,8 +98,6 @@ get_header();
 				<h3 id="cal-popup-title"></h3>
 				<p class="cal-popup-date" id="cal-popup-date"></p>
 				<p class="cal-popup-desc" id="cal-popup-desc"></p>
-				<a class="cal-popup-link" id="cal-popup-link" target="_blank" rel="noopener" hidden><?php esc_html_e( 'View full event details →', 'orienta-yacht-club' ); ?></a>
-				<div class="cal-popup-actions" id="cal-popup-actions"></div>
 			</div>
 		</div>
 
@@ -120,8 +118,7 @@ function oycLoadEvents(){
       EVENTS = (((d&&d.EVENTS)||[]).map(function(ev){
         var time='';
         if(!ev.allDay){ var st=_fmtT(ev.start), en=_fmtT(ev.end); time = st ? ((en && en!==st) ? (st+' – '+en) : st) : ''; }
-        var desc=(ev.description||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;|&#0?38;/g,'&').replace(/\s+/g,' ').trim();
-        return { date: ev.fc_start, title: ev.title, cat: oycInferCat(ev.title), time: time, desc: desc, url: ev.url||'' };
+        return { id: ev.id, date: ev.fc_start, title: ev.title, cat: oycInferCat(ev.title), time: time };
       })).filter(function(x){ return x.date && x.title; });
     })
     .catch(function(){ EVENTS=[]; });
@@ -229,20 +226,22 @@ function renderList() {
   }
 }
 
-/* ---- Add-to-calendar export helpers (Google / Apple / Outlook via .ics) ---- */
-function _pad(n){ return String(n).padStart(2,'0'); }
-function _ymd(s){ return s.replace(/-/g,''); }                                  // 2026-06-07 -> 20260607
-function _nextYmd(s){ var d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+1); return d.getFullYear()+_pad(d.getMonth()+1)+_pad(d.getDate()); }
-function _icsEsc(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
-function _vevent(ev){ return ['BEGIN:VEVENT','UID:'+_ymd(ev.date)+'-'+ev.title.replace(/[^A-Za-z0-9]/g,'')+'@orientayachtclub.com','DTSTART;VALUE=DATE:'+_ymd(ev.date),'DTEND;VALUE=DATE:'+_nextYmd(ev.date),'SUMMARY:'+_icsEsc(ev.title),'DESCRIPTION:'+_icsEsc(ev.desc),'END:VEVENT']; }
-function buildICS(evs){ return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Orienta Yacht Club//Calendar//EN','CALSCALE:GREGORIAN'].concat([].concat.apply([], evs.map(_vevent)), ['END:VCALENDAR']).join('\r\n'); }
-function googleCalUrl(ev){ var p=new URLSearchParams({action:'TEMPLATE',text:ev.title,dates:_ymd(ev.date)+'/'+_nextYmd(ev.date)}); if(ev.desc){ p.set('details',ev.desc); } return 'https://calendar.google.com/calendar/render?'+p.toString(); }
-function downloadICS(name,text){ var b=new Blob([text],{type:'text/calendar;charset=utf-8'}); var u=URL.createObjectURL(b); var a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },1500); }
-function renderPopupActions(ev){
-  var box=document.getElementById('cal-popup-actions'); if(!box){ return; } box.innerHTML='';
-  var label=document.createElement('span'); label.className='cal-addcal-label'; label.textContent='Add to calendar:'; box.appendChild(label);
-  var g=document.createElement('a'); g.href=googleCalUrl(ev); g.target='_blank'; g.rel='noopener'; g.className='cal-addcal-btn'; g.textContent='Google'; box.appendChild(g);
-  var ics=document.createElement('button'); ics.type='button'; ics.className='cal-addcal-btn'; ics.textContent='Apple / Outlook'; ics.addEventListener('click', function(){ downloadICS(ev.title.replace(/[^A-Za-z0-9]+/g,'-')+'.ics', buildICS([ev])); }); box.appendChild(ics);
+/* ---- Fetch & show the full event details inside the popup (Calendarize it!) ---- */
+function oycLoadEventDetails(ev, el){
+  if (!ev.id) { el.textContent = ''; return; }
+  fetch('/?rhc_action=get_rendered_item&id=' + encodeURIComponent(ev.id), { credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var body = (d && d.DATA && d.DATA.body) || '';
+      body = body.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'');
+      var tmp = document.createElement('div'); tmp.innerHTML = body;
+      // Drop a heading that just repeats the event title (popup already shows it).
+      Array.prototype.forEach.call(tmp.querySelectorAll('h1,h2,h3,h4'), function(h){ if (h.textContent.trim() === ev.title.trim()) { h.remove(); } });
+      var text = (tmp.textContent || '').replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+      if (text.indexOf(ev.title.trim()) === 0) { text = text.slice(ev.title.trim().length).trim(); }
+      el.textContent = text || 'No additional details for this event.';
+    })
+    .catch(function(){ el.textContent = 'No additional details for this event.'; });
 }
 
 function showPopup(ev) {
@@ -254,11 +253,10 @@ function showPopup(ev) {
   if (ev.time) { dateStr += ' · ' + ev.time; }
   document.getElementById('cal-popup-date').textContent  = dateStr;
   var descEl = document.getElementById('cal-popup-desc');
-  descEl.textContent = ev.desc || '';
-  descEl.hidden = ! ev.desc;
-  var linkEl = document.getElementById('cal-popup-link');
-  if (ev.url) { linkEl.href = ev.url; linkEl.hidden = false; } else { linkEl.hidden = true; }
-  renderPopupActions(ev);
+  descEl.hidden = false;
+  descEl.style.whiteSpace = 'pre-line';
+  descEl.textContent = 'Loading details…';
+  oycLoadEventDetails(ev, descEl);
   const popup = document.getElementById('cal-popup');
   // Reveal via the CSS class the stylesheet uses (.is-visible); setting only
   // .hidden left it hidden because of the `#/.cal-popup { display:none }` rule.
