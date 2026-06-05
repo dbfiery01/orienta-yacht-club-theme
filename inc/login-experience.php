@@ -116,29 +116,41 @@ function oyc_browser_greeting_script() {
 	if ( ! is_user_logged_in() ) {
 		return;
 	}
-	$user  = wp_get_current_user();
-	$first = $user->first_name ? $user->first_name : $user->display_name;
+	$user    = wp_get_current_user();
+	$first   = $user->first_name ? $user->first_name : $user->display_name;
+	$display = $user->display_name;
 	?>
 	<script>
 	(function () {
-		var name = <?php echo wp_json_encode( $first ); ?>;
-		var h    = new Date().getHours();
-		var g    = h < 12 ? 'Good Morning' : ( h < 18 ? 'Good Afternoon' : 'Good Evening' );
-		var rx   = /Good (Morning|Afternoon|Evening)/;
-		// WordPress admin toolbar greeting word ("Good X, Name")
-		var acct = document.querySelector('#wp-admin-bar-my-account > .ab-item');
-		if ( acct ) {
-			Array.prototype.forEach.call( acct.childNodes, function ( n ) {
-				if ( n.nodeType === 3 && rx.test( n.nodeValue ) ) { n.nodeValue = n.nodeValue.replace( rx, g ); }
+		var first   = <?php echo wp_json_encode( $first ); ?>;
+		var display = <?php echo wp_json_encode( $display ); ?>;
+		function apply() {
+			var h  = new Date().getHours();
+			var g  = h < 12 ? 'Good Morning' : ( h < 18 ? 'Good Afternoon' : 'Good Evening' );
+			var rx = /Good (Morning|Afternoon|Evening)/;
+			// WordPress admin toolbar greeting word ("Good X, Name")
+			var acct = document.querySelector('#wp-admin-bar-my-account > .ab-item');
+			if ( acct ) {
+				Array.prototype.forEach.call( acct.childNodes, function ( n ) {
+					if ( n.nodeType === 3 && rx.test( n.nodeValue ) ) { n.nodeValue = n.nodeValue.replace( rx, g ); }
+				} );
+			}
+			// Toolbar: address the user by first name instead of the display name.
+			// Only touch spans that actually hold the display name (not e.g. "Edit Profile").
+			Array.prototype.forEach.call( document.querySelectorAll('#wpadminbar .display-name'), function ( el ) {
+				if ( el.textContent.trim() === display ) { el.textContent = first; }
 			} );
+			// Member dashboard page greeting word.
+			var eb = document.querySelector('.page-hero--dashboard .page-hero-eyebrow');
+			if ( eb && rx.test( eb.textContent ) ) { eb.textContent = eb.textContent.replace( rx, g ); }
 		}
-		// Toolbar: address the user by first name instead of the display name.
-		Array.prototype.forEach.call( document.querySelectorAll('#wpadminbar .display-name'), function ( el ) {
-			el.textContent = name;
-		} );
-		// Member dashboard page greeting word.
-		var eb = document.querySelector('.page-hero--dashboard .page-hero-eyebrow');
-		if ( eb && rx.test( eb.textContent ) ) { eb.textContent = eb.textContent.replace( rx, g ); }
+		// The admin bar is rendered later in the footer than this script tag, so
+		// wait for the full DOM before querying it.
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', apply );
+		} else {
+			apply();
+		}
 	})();
 	</script>
 	<?php
