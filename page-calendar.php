@@ -98,6 +98,7 @@ get_header();
 				<h3 id="cal-popup-title"></h3>
 				<p class="cal-popup-date" id="cal-popup-date"></p>
 				<p class="cal-popup-desc" id="cal-popup-desc"></p>
+				<a class="cal-popup-link" id="cal-popup-link" target="_blank" rel="noopener" hidden><?php esc_html_e( 'View full event details →', 'orienta-yacht-club' ); ?></a>
 				<div class="cal-popup-actions" id="cal-popup-actions"></div>
 			</div>
 		</div>
@@ -115,10 +116,12 @@ function oycLoadEvents(){
   return fetch('/?rhc_action=get_calendar_events&post_type[]=events&start='+s+'&end='+e, {credentials:'same-origin'})
     .then(function(r){ return r.json(); })
     .then(function(d){
+      function _fmtT(dt){ var m=/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/.exec(dt||''); if(!m) return ''; var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; return h12+':'+m[2]+' '+ap; }
       EVENTS = (((d&&d.EVENTS)||[]).map(function(ev){
-        var desc='';
-        if(!ev.allDay && ev.start){ var m=/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/.exec(ev.start); if(m){ var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; desc='Starts at '+h12+':'+m[2]+' '+ap; } }
-        return { date: ev.fc_start, title: ev.title, cat: oycInferCat(ev.title), desc: desc };
+        var time='';
+        if(!ev.allDay){ var st=_fmtT(ev.start), en=_fmtT(ev.end); time = st ? ((en && en!==st) ? (st+' – '+en) : st) : ''; }
+        var desc=(ev.description||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;|&#0?38;/g,'&').replace(/\s+/g,' ').trim();
+        return { date: ev.fc_start, title: ev.title, cat: oycInferCat(ev.title), time: time, desc: desc, url: ev.url||'' };
       })).filter(function(x){ return x.date && x.title; });
     })
     .catch(function(){ EVENTS=[]; });
@@ -247,9 +250,14 @@ function showPopup(ev) {
   document.getElementById('cal-popup-cat').textContent   = CAT_LABELS[ev.cat];
   document.getElementById('cal-popup-cat').className     = `cal-popup-cat cal-popup-cat--${ev.cat}`;
   document.getElementById('cal-popup-title').textContent = ev.title;
-  document.getElementById('cal-popup-date').textContent  =
-    d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('cal-popup-desc').textContent  = ev.desc || '';
+  var dateStr = d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if (ev.time) { dateStr += ' · ' + ev.time; }
+  document.getElementById('cal-popup-date').textContent  = dateStr;
+  var descEl = document.getElementById('cal-popup-desc');
+  descEl.textContent = ev.desc || '';
+  descEl.hidden = ! ev.desc;
+  var linkEl = document.getElementById('cal-popup-link');
+  if (ev.url) { linkEl.href = ev.url; linkEl.hidden = false; } else { linkEl.hidden = true; }
   renderPopupActions(ev);
   const popup = document.getElementById('cal-popup');
   // Reveal via the CSS class the stylesheet uses (.is-visible); setting only
