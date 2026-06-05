@@ -235,6 +235,8 @@ function oycLoadEventDetails(ev, el){
       var body = (d && d.DATA && d.DATA.body) || '';
       body = body.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'');
       var tmp = document.createElement('div'); tmp.innerHTML = body;
+      // Strip admin-only edit links / wp-admin links from the rendered detail.
+      Array.prototype.forEach.call(tmp.querySelectorAll('.post-edit-link, a[href*="/wp-admin/"], a[href*="action=edit"]'), function(a){ a.remove(); });
       // Drop a heading that just repeats the event title (popup already shows it).
       Array.prototype.forEach.call(tmp.querySelectorAll('h1,h2,h3,h4'), function(h){ if (h.textContent.trim() === ev.title.trim()) { h.remove(); } });
       var text = (tmp.textContent || '').replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
