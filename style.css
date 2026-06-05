@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.6
+Version: 1.0.7
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2162,8 +2162,15 @@ body.tribe-events-page-template { background: transparent; }
 
 /* Event popup / detail card */
 .cal-popup {
-  position: fixed;
-  z-index: 9999;
+  position: fixed; inset: 0; z-index: 9999;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(4,22,42,0.45);
+}
+.cal-popup.is-visible { display: flex; }
+.cal-popup-inner {
+  position: relative;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(4,22,42,0.22), 0 2px 8px rgba(4,22,42,0.10);
@@ -2171,13 +2178,12 @@ body.tribe-events-page-template { background: transparent; }
   width: 300px;
   max-width: calc(100vw - 32px);
   border-top: 4px solid var(--navy);
-  display: none;
 }
-.cal-popup.is-visible { display: block; animation: cal-pop-in 0.18s ease; }
-.cal-popup--race    { border-top-color: var(--navy); }
-.cal-popup--social  { border-top-color: var(--brass); }
-.cal-popup--fishing { border-top-color: var(--harbor); }
-.cal-popup--meeting { border-top-color: #8A9BB0; }
+.cal-popup.is-visible .cal-popup-inner { animation: cal-pop-in 0.18s ease; }
+.cal-popup--race    .cal-popup-inner { border-top-color: var(--navy); }
+.cal-popup--social  .cal-popup-inner { border-top-color: var(--brass); }
+.cal-popup--fishing .cal-popup-inner { border-top-color: var(--harbor); }
+.cal-popup--meeting .cal-popup-inner { border-top-color: #8A9BB0; }
 .cal-popup-close {
   position: absolute;
   top: 10px; right: 12px;
