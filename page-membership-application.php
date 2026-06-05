@@ -55,7 +55,24 @@ get_header();
 
 		<!-- Form -->
 		<div class="apply-form-wrap">
-			<?php echo do_shortcode( '[contact-form-7 id="44" title="Membership Application"]' ); ?>
+			<?php
+			// Find the "Membership Application" Contact Form 7 form by title so this
+			// works across staging/production without a hard-coded ID. CF7 6.x uses a
+			// hash in the shortcode (stored in the _hash post meta).
+			$oyc_cf7 = get_posts( array(
+				'post_type'   => 'wpcf7_contact_form',
+				'title'       => 'Membership Application',
+				'post_status' => 'publish',
+				'numberposts' => 1,
+			) );
+			if ( $oyc_cf7 ) {
+				$oyc_hash = get_post_meta( $oyc_cf7[0]->ID, '_hash', true );
+				$oyc_id   = $oyc_hash ? $oyc_hash : $oyc_cf7[0]->ID;
+				echo do_shortcode( '[contact-form-7 id="' . esc_attr( $oyc_id ) . '" title="Membership Application"]' );
+			} else {
+				echo '<p class="app-form-missing">The membership application form is being set up. Please check back soon, or contact the Membership Chair below.</p>';
+			}
+			?>
 		</div>
 
 	</div>

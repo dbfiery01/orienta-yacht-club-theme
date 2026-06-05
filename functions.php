@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.11' );
+define( 'OYC_VERSION', '1.0.12' );
 
 /**
  * Theme setup.
