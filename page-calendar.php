@@ -38,11 +38,31 @@ get_header();
 			</div>
 		</div>
 
+		<?php
+		$oyc_ics_https  = home_url( '/?oyc_calendar_ics=1' );
+		$oyc_ics_dl     = home_url( '/?oyc_calendar_ics=1&download=1' );
+		$oyc_ics_webcal = preg_replace( '#^https?://#', 'webcal://', $oyc_ics_https );
+		$oyc_google     = 'https://calendar.google.com/calendar/r?cid=' . rawurlencode( $oyc_ics_webcal );
+		$oyc_outlook    = 'https://outlook.live.com/calendar/0/addfromweb?url=' . rawurlencode( $oyc_ics_https ) . '&name=' . rawurlencode( 'Orienta Yacht Club' );
+		?>
 		<div class="cal-export-row">
-			<button type="button" class="cal-export-btn" id="cal-export-all">
-				<?php esc_html_e( 'Export calendar (.ics)', 'orienta-yacht-club' ); ?>
-			</button>
+			<label for="cal-export-select" class="cal-export-label"><?php esc_html_e( 'Add this calendar to:', 'orienta-yacht-club' ); ?></label>
+			<select id="cal-export-select" class="cal-export-select">
+				<option value="apple" selected><?php esc_html_e( 'Apple Calendar (subscribe)', 'orienta-yacht-club' ); ?></option>
+				<option value="google"><?php esc_html_e( 'Google Calendar (subscribe)', 'orienta-yacht-club' ); ?></option>
+				<option value="outlook"><?php esc_html_e( 'Outlook (subscribe)', 'orienta-yacht-club' ); ?></option>
+				<option value="download"><?php esc_html_e( 'Download .ics file', 'orienta-yacht-club' ); ?></option>
+			</select>
+			<button type="button" class="cal-export-btn" id="cal-export-go"><?php esc_html_e( 'Add', 'orienta-yacht-club' ); ?></button>
 		</div>
+		<script>
+		var OYC_FEED = {
+			apple:    <?php echo wp_json_encode( $oyc_ics_webcal ); ?>,
+			google:   <?php echo wp_json_encode( $oyc_google ); ?>,
+			outlook:  <?php echo wp_json_encode( $oyc_outlook ); ?>,
+			download: <?php echo wp_json_encode( $oyc_ics_dl ); ?>
+		};
+		</script>
 
 		<!-- Month nav -->
 		<div class="cal-nav" id="cal-nav">
@@ -86,71 +106,23 @@ get_header();
 </section>
 
 <script>
-/* ===== OYC Calendar — 2026 Events ===================================== */
-const EVENTS = [
-  /* Real club events imported from orientayachtclub.com (Calendarize it!) */
-  { date:"2025-02-15", title:"Mooring Permit Deadline", cat:"social", desc:"" },
-  { date:"2025-03-15", title:"St. Patrick\u2019s Day Party", cat:"social", desc:"" },
-  { date:"2025-03-30", title:"CPR Training", cat:"social", desc:"Starts at 10:00 AM" },
-  { date:"2025-04-08", title:"Early Launch", cat:"social", desc:"Starts at 8:00 AM" },
-  { date:"2025-04-08", title:"General Meeting", cat:"meeting", desc:"Starts at 8:00 PM" },
-  { date:"2025-04-15", title:"Launch", cat:"social", desc:"" },
-  { date:"2025-04-24", title:"Launch", cat:"social", desc:"" },
-  { date:"2025-04-26", title:"Launch", cat:"social", desc:"" },
-  { date:"2025-05-03", title:"Spring Work Party", cat:"social", desc:"" },
-  { date:"2025-05-04", title:"Clubhouse Rented (Frost biters)", cat:"social", desc:"" },
-  { date:"2025-05-10", title:"Commissioning Party", cat:"social", desc:"" },
-  { date:"2025-06-08", title:"Race #1", cat:"race", desc:"" },
-  { date:"2025-06-10", title:"General Meeting", cat:"meeting", desc:"Starts at 8:00 PM" },
-  { date:"2025-06-14", title:"Clubhouse Rented", cat:"social", desc:"" },
-  { date:"2025-06-28", title:"Race #2", cat:"race", desc:"" },
-  { date:"2025-07-04", title:"4th July Party", cat:"social", desc:"" },
-  { date:"2025-07-20", title:"Clubhouse rented.", cat:"social", desc:"" },
-  { date:"2025-07-25", title:"Christmas in July Social Event", cat:"social", desc:"Starts at 6:30 PM" },
-  { date:"2025-08-15", title:"Bo & John Stoffel Social Event", cat:"social", desc:"" },
-  { date:"2025-08-16", title:"Governor\u2019s Cup (City Island YC)", cat:"race", desc:"" },
-  { date:"2025-08-23", title:"Raft Up & Race Oyster Bay", cat:"race", desc:"" },
-  { date:"2025-08-30", title:"Clubhouse Rented \u2013 Charla", cat:"social", desc:"" },
-  { date:"2025-09-14", title:"Race #3", cat:"race", desc:"" },
-  { date:"2025-09-20", title:"WSL RACE", cat:"race", desc:"" },
-  { date:"2025-09-26", title:"Cruise the Coast of Maine", cat:"social", desc:"Starts at 6:30 PM" },
-  { date:"2025-10-04", title:"Race #4", cat:"race", desc:"" },
-  { date:"2025-10-04", title:"SPECIAL MEETING", cat:"meeting", desc:"" },
-  { date:"2025-10-11", title:"Work Party", cat:"social", desc:"Starts at 8:00 AM" },
-  { date:"2025-10-14", title:"General Meeting", cat:"meeting", desc:"Starts at 8:00 PM" },
-  { date:"2025-10-16", title:"Haul", cat:"social", desc:"Starts at 7:30 AM" },
-  { date:"2025-10-20", title:"Haul", cat:"social", desc:"Starts at 7:30 AM" },
-  { date:"2025-10-21", title:"Haul", cat:"social", desc:"Starts at 7:30 AM" },
-  { date:"2025-10-25", title:"Haul", cat:"social", desc:"Starts at 7:30 AM" },
-  { date:"2025-11-08", title:"Commissioning Party", cat:"social", desc:"" },
-  { date:"2025-12-17", title:"Clubhouse Rented \u2013 Young", cat:"social", desc:"" },
-  { date:"2025-12-25", title:"Clubhouse Rented \u2013 Renda", cat:"social", desc:"" },
-  { date:"2025-12-27", title:"Clubhouse Rented \u2013 Peron", cat:"social", desc:"" },
-  { date:"2026-01-11", title:"Pancake Breakfast", cat:"social", desc:"Starts at 10:00 AM" },
-  { date:"2026-01-17", title:"Clubhouse Rented (Viscogliosi) 10am-4pm", cat:"social", desc:"" },
-  { date:"2026-02-07", title:"Clubhouse Rented (Reville)", cat:"social", desc:"" },
-  { date:"2026-02-28", title:"Clubhouse Rented 10am-2pm", cat:"social", desc:"" },
-  { date:"2026-03-14", title:"Clubhouse Rented (Viscogliosi)", cat:"social", desc:"" },
-  { date:"2026-04-11", title:"Clubhouse Occupied 8am-3pm (Winter Storage Crew)", cat:"race", desc:"" },
-  { date:"2026-04-14", title:"General Meeting", cat:"meeting", desc:"Starts at 8:00 PM" },
-  { date:"2026-04-16", title:"1st Launch", cat:"social", desc:"" },
-  { date:"2026-04-24", title:"Social Event 5:30pm", cat:"social", desc:"Starts at 5:30 PM" },
-  { date:"2026-04-29", title:"2nd Launch", cat:"social", desc:"" },
-  { date:"2026-05-03", title:"Clubhouse rented \u2013 MFA Dinner", cat:"social", desc:"Starts at 5:00 PM" },
-  { date:"2026-05-06", title:"3rd Launch", cat:"social", desc:"" },
-  { date:"2026-05-16", title:"4th Launch", cat:"social", desc:"" },
-  { date:"2026-05-17", title:"Work Party", cat:"social", desc:"" },
-  { date:"2026-05-30", title:"Commissioning Party", cat:"social", desc:"" },
-  { date:"2026-06-07", title:"Race #1", cat:"race", desc:"" },
-  { date:"2026-06-13", title:"Clubhouse Rented \u2013 Dwyer", cat:"social", desc:"" },
-  { date:"2026-06-27", title:"Race #2", cat:"race", desc:"" },
-  { date:"2026-07-18", title:"Clubhouse Rented (Sganga)", cat:"social", desc:"" },
-  { date:"2026-08-14", title:"Summer Social Party (Stoffel)", cat:"social", desc:"" },
-  { date:"2026-08-16", title:"Govenor\u2019s Cup", cat:"race", desc:"" },
-  { date:"2026-09-12", title:"WSL CUP", cat:"race", desc:"" },
-  { date:"2026-09-27", title:"Race #3", cat:"race", desc:"" },
-  { date:"2026-10-10", title:"Race #4", cat:"race", desc:"" },
-];
+/* ===== OYC Calendar — events loaded live from Calendarize it! ========= */
+let EVENTS = [];
+function oycInferCat(t){ t=(t||'').toLowerCase(); if(/\brace|cup|wsl|regatta|raft up\b/.test(t))return 'race'; if(/meeting/.test(t))return 'meeting'; if(/fish/.test(t))return 'fishing'; return 'social'; }
+function oycLoadEvents(){
+  var s=Math.floor(new Date(currentYear-1,0,1).getTime()/1000);
+  var e=Math.floor(new Date(currentYear+2,0,1).getTime()/1000);
+  return fetch('/?rhc_action=get_calendar_events&post_type[]=events&start='+s+'&end='+e, {credentials:'same-origin'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      EVENTS = (((d&&d.EVENTS)||[]).map(function(ev){
+        var desc='';
+        if(!ev.allDay && ev.start){ var m=/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/.exec(ev.start); if(m){ var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; desc='Starts at '+h12+':'+m[2]+' '+ap; } }
+        return { date: ev.fc_start, title: ev.title, cat: oycInferCat(ev.title), desc: desc };
+      })).filter(function(x){ return x.date && x.title; });
+    })
+    .catch(function(){ EVENTS=[]; });
+}
 
 const CAT_LABELS = { race:'Racing', social:'Social', fishing:'Fishing', meeting:'Meeting' };
 const CAT_COLORS = { race:'var(--navy)', social:'var(--brass-bright)', fishing:'var(--harbor)', meeting:'#888' };
@@ -293,8 +265,8 @@ function closePopup() {
   popup.hidden = true;
 }
 
-// Export the whole calendar as one .ics (import into Apple/Outlook/Google).
-(function(){ var b=document.getElementById('cal-export-all'); if(b){ b.addEventListener('click', function(){ downloadICS('orienta-yacht-club-calendar.ics', buildICS(EVENTS)); }); } })();
+// Export / subscribe: open the chosen provider pointed at the live .ics feed.
+(function(){ var go=document.getElementById('cal-export-go'); if(!go) return; go.addEventListener('click', function(){ var v=document.getElementById('cal-export-select').value; var url=(window.OYC_FEED||{})[v]; if(!url) return; if(v==='download'){ window.location.href=url; } else { window.open(url,'_blank','noopener'); } }); })();
 
 function render() {
   renderMonth();
@@ -335,7 +307,7 @@ document.addEventListener('keydown', e => { if (e.key==='Escape') closePopup(); 
 const now = new Date();
 if (now.getFullYear() === 2026) { currentMonth = now.getMonth(); }
 else { currentMonth = 4; } // May
-render();
+oycLoadEvents().then(function(){ render(); });
 
 // List-view date picker: jump the list to any month/day.
 (function () {

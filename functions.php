@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.7' );
+define( 'OYC_VERSION', '1.0.8' );
 
 /**
  * Theme setup.
@@ -102,6 +102,11 @@ require_once get_template_directory() . '/inc/admin-inbox.php';
  * Progressive Web App: manifest, service worker, and iOS meta tags.
  */
 require_once get_template_directory() . '/inc/pwa.php';
+
+/**
+ * Dynamic iCal feed for the club calendar (live from Calendarize it!).
+ */
+require_once get_template_directory() . '/inc/calendar-feed.php';
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map
