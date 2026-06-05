@@ -105,29 +105,38 @@ add_filter( 'gettext', function ( $translated, $original ) {
 	return $translated;
 }, 10, 2 );
 
-/* ── 7. Base the greeting on the visitor's BROWSER timezone ───
+/* ── 7. Base the greeting on the visitor's BROWSER timezone, and address
+ *  them by FIRST NAME ─────────────────────────────────────────────────
  *  The PHP greeting above uses the site/server time. The server can be in a
  *  different timezone than the user, so re-evaluate the time of day in the
- *  browser and correct the toolbar greeting + dashboard greeting client-side. */
+ *  browser and correct the toolbar greeting + dashboard greeting client-side.
+ *  We also swap the toolbar's display name for the user's first name. */
 
 function oyc_browser_greeting_script() {
 	if ( ! is_user_logged_in() ) {
 		return;
 	}
+	$user  = wp_get_current_user();
+	$first = $user->first_name ? $user->first_name : $user->display_name;
 	?>
 	<script>
 	(function () {
-		var h  = new Date().getHours();
-		var g  = h < 12 ? 'Good Morning' : ( h < 18 ? 'Good Afternoon' : 'Good Evening' );
-		var rx = /Good (Morning|Afternoon|Evening)/;
-		// WordPress admin toolbar greeting ("Good X, Name")
+		var name = <?php echo wp_json_encode( $first ); ?>;
+		var h    = new Date().getHours();
+		var g    = h < 12 ? 'Good Morning' : ( h < 18 ? 'Good Afternoon' : 'Good Evening' );
+		var rx   = /Good (Morning|Afternoon|Evening)/;
+		// WordPress admin toolbar greeting word ("Good X, Name")
 		var acct = document.querySelector('#wp-admin-bar-my-account > .ab-item');
 		if ( acct ) {
 			Array.prototype.forEach.call( acct.childNodes, function ( n ) {
 				if ( n.nodeType === 3 && rx.test( n.nodeValue ) ) { n.nodeValue = n.nodeValue.replace( rx, g ); }
 			} );
 		}
-		// Member dashboard page greeting
+		// Toolbar: address the user by first name instead of the display name.
+		Array.prototype.forEach.call( document.querySelectorAll('#wpadminbar .display-name'), function ( el ) {
+			el.textContent = name;
+		} );
+		// Member dashboard page greeting word.
 		var eb = document.querySelector('.page-hero--dashboard .page-hero-eyebrow');
 		if ( eb && rx.test( eb.textContent ) ) { eb.textContent = eb.textContent.replace( rx, g ); }
 	})();

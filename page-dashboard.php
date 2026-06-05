@@ -12,7 +12,8 @@ if ( ! is_user_logged_in() ) {
 	exit;
 }
 
-$user = wp_get_current_user();
+$user       = wp_get_current_user();
+$first_name = $user->first_name ? $user->first_name : $user->display_name;
 
 $hour = (int) current_time( 'H' );
 if ( $hour < 12 ) {
@@ -29,7 +30,7 @@ get_header();
 <div class="page-hero page-hero--dashboard">
 	<div class="container">
 		<p class="page-hero-eyebrow"><?php echo esc_html( $greeting ); ?></p>
-		<h1 class="page-hero-title"><?php echo esc_html( $user->display_name ); ?></h1>
+		<h1 class="page-hero-title"><?php echo esc_html( $first_name ); ?></h1>
 	</div>
 </div>
 
