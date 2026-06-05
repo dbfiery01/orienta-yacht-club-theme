@@ -38,6 +38,12 @@ get_header();
 			</div>
 		</div>
 
+		<div class="cal-export-row">
+			<button type="button" class="cal-export-btn" id="cal-export-all">
+				<?php esc_html_e( 'Export calendar (.ics)', 'orienta-yacht-club' ); ?>
+			</button>
+		</div>
+
 		<!-- Month nav -->
 		<div class="cal-nav" id="cal-nav">
 			<button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&#8592;</button>
@@ -72,6 +78,7 @@ get_header();
 				<h3 id="cal-popup-title"></h3>
 				<p class="cal-popup-date" id="cal-popup-date"></p>
 				<p class="cal-popup-desc" id="cal-popup-desc"></p>
+				<div class="cal-popup-actions" id="cal-popup-actions"></div>
 			</div>
 		</div>
 
@@ -247,6 +254,22 @@ function renderList() {
   }
 }
 
+/* ---- Add-to-calendar export helpers (Google / Apple / Outlook via .ics) ---- */
+function _pad(n){ return String(n).padStart(2,'0'); }
+function _ymd(s){ return s.replace(/-/g,''); }                                  // 2026-06-07 -> 20260607
+function _nextYmd(s){ var d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+1); return d.getFullYear()+_pad(d.getMonth()+1)+_pad(d.getDate()); }
+function _icsEsc(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+function _vevent(ev){ return ['BEGIN:VEVENT','UID:'+_ymd(ev.date)+'-'+ev.title.replace(/[^A-Za-z0-9]/g,'')+'@orientayachtclub.com','DTSTART;VALUE=DATE:'+_ymd(ev.date),'DTEND;VALUE=DATE:'+_nextYmd(ev.date),'SUMMARY:'+_icsEsc(ev.title),'DESCRIPTION:'+_icsEsc(ev.desc),'END:VEVENT']; }
+function buildICS(evs){ return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Orienta Yacht Club//Calendar//EN','CALSCALE:GREGORIAN'].concat([].concat.apply([], evs.map(_vevent)), ['END:VCALENDAR']).join('\r\n'); }
+function googleCalUrl(ev){ var p=new URLSearchParams({action:'TEMPLATE',text:ev.title,dates:_ymd(ev.date)+'/'+_nextYmd(ev.date)}); if(ev.desc){ p.set('details',ev.desc); } return 'https://calendar.google.com/calendar/render?'+p.toString(); }
+function downloadICS(name,text){ var b=new Blob([text],{type:'text/calendar;charset=utf-8'}); var u=URL.createObjectURL(b); var a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },1500); }
+function renderPopupActions(ev){
+  var box=document.getElementById('cal-popup-actions'); if(!box){ return; } box.innerHTML='';
+  var label=document.createElement('span'); label.className='cal-addcal-label'; label.textContent='Add to calendar:'; box.appendChild(label);
+  var g=document.createElement('a'); g.href=googleCalUrl(ev); g.target='_blank'; g.rel='noopener'; g.className='cal-addcal-btn'; g.textContent='Google'; box.appendChild(g);
+  var ics=document.createElement('button'); ics.type='button'; ics.className='cal-addcal-btn'; ics.textContent='Apple / Outlook'; ics.addEventListener('click', function(){ downloadICS(ev.title.replace(/[^A-Za-z0-9]+/g,'-')+'.ics', buildICS([ev])); }); box.appendChild(ics);
+}
+
 function showPopup(ev) {
   const d = new Date(ev.date + 'T12:00:00');
   document.getElementById('cal-popup-cat').textContent   = CAT_LABELS[ev.cat];
@@ -255,14 +278,23 @@ function showPopup(ev) {
   document.getElementById('cal-popup-date').textContent  =
     d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('cal-popup-desc').textContent  = ev.desc || '';
+  renderPopupActions(ev);
   const popup = document.getElementById('cal-popup');
+  // Reveal via the CSS class the stylesheet uses (.is-visible); setting only
+  // .hidden left it hidden because of the `#/.cal-popup { display:none }` rule.
+  popup.className = 'cal-popup cal-popup--' + ev.cat + ' is-visible';
   popup.hidden = false;
   document.getElementById('cal-popup-close').focus();
 }
 
 function closePopup() {
-  document.getElementById('cal-popup').hidden = true;
+  const popup = document.getElementById('cal-popup');
+  popup.classList.remove('is-visible');
+  popup.hidden = true;
 }
+
+// Export the whole calendar as one .ics (import into Apple/Outlook/Google).
+(function(){ var b=document.getElementById('cal-export-all'); if(b){ b.addEventListener('click', function(){ downloadICS('orienta-yacht-club-calendar.ics', buildICS(EVENTS)); }); } })();
 
 function render() {
   renderMonth();

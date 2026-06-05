@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.5
+Version: 1.0.6
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2217,6 +2217,39 @@ body.tribe-events-page-template { background: transparent; }
   margin: 0;
   line-height: 1.55;
 }
+
+/* Popup category label */
+.cal-popup-cat {
+  display: inline-block; font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--harbor); margin: 0 0 6px;
+}
+.cal-popup-cat--race    { color: var(--navy); }
+.cal-popup-cat--social  { color: #8a6a1e; }
+.cal-popup-cat--fishing { color: var(--harbor); }
+.cal-popup-cat--meeting { color: #4a5a6e; }
+
+/* Add-to-calendar actions in the event popup */
+.cal-popup-actions {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--line);
+}
+.cal-addcal-label { font-size: 0.78rem; color: rgba(4,22,42,0.6); margin-right: 2px; }
+.cal-addcal-btn {
+  font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  text-decoration: none; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--brass); color: var(--navy); background: #fff;
+}
+.cal-addcal-btn:hover { background: var(--cream); }
+
+/* Export whole calendar button */
+.cal-export-row { display: flex; justify-content: flex-end; margin: -0.25rem 0 1.25rem; }
+.cal-export-btn {
+  font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--navy);
+}
+.cal-export-btn:hover { border-color: var(--brass); color: var(--harbor); }
 
 @keyframes cal-pop-in {
   from { opacity: 0; transform: scale(0.92) translateY(6px); }
