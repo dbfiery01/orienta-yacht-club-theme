@@ -78,8 +78,8 @@ get_header();
 		<p class="kicker"><?php echo esc_html( oyc_get( 'oyc_mem_kicker' ) ); ?></p>
 		<h2><?php echo esc_html( oyc_get( 'oyc_mem_headline' ) ); ?></h2>
 		<p class="section-lede"><?php echo esc_html( oyc_get( 'oyc_mem_lede' ) ); ?></p>
-		<div class="grid-3">
-			<?php for ( $i = 1; $i <= 3; $i++ ) :
+		<div class="grid-4">
+			<?php for ( $i = 1; $i <= 4; $i++ ) :
 				$title = oyc_get( "oyc_mem_tile{$i}_title" );
 				$body  = oyc_get( "oyc_mem_tile{$i}_body" );
 				if ( ! $title && ! $body ) { continue; }
