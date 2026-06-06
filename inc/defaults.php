@@ -33,7 +33,7 @@ function oyc_defaults() {
 		'oyc_about_kicker'   => 'About the Club',
 		'oyc_about_headline' => 'One of the oldest clubs on the Sound.',
 		'oyc_about_p1'       => "Since 1907, Orienta has been a gathering place for boating families on Long Island Sound. Our clubhouse sits at the head of Mamaroneck's East Basin, with a deep-water channel that gives members year-round access to some of the finest cruising grounds on the East Coast.",
-		'oyc_about_p2'       => 'Today the club balances heritage with a relaxed, family-first culture. We are first and foremost a working yacht club — but the dock is just as likely to be lined with kids learning to sail, weekend racers heading out to the start line, or members catching up over dinner on the porch.',
+		'oyc_about_p2'       => 'Today the club balances heritage with a relaxed, no formal dress code, family-first culture. We are first and foremost a working yacht club — but the dock is just as likely to be lined with kids learning to sail, weekend racers heading out to the start line, or members grilling on the porch.',
 
 		'oyc_fact1_value' => '1907',
 		'oyc_fact1_label' => 'Year founded',
