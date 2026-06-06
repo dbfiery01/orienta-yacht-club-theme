@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.31' );
+define( 'OYC_VERSION', '1.0.32' );
 
 /**
  * Theme setup.
@@ -189,6 +189,20 @@ function oyc_allow_svg_uploads( $mimes ) {
 	return $mimes;
 }
 add_filter( 'upload_mimes', 'oyc_allow_svg_uploads' );
+
+/**
+ * Mark the front page and all pages (which render a full hero) so the header
+ * can blend into the hero image — transparent over the hero, solid on scroll —
+ * giving every page the same "one full-size image" treatment as the home page.
+ * Post-type archives (e.g. the events calendar) are excluded and keep the solid header.
+ */
+function oyc_hero_header_body_class( $classes ) {
+	if ( is_front_page() || is_page() ) {
+		$classes[] = 'has-hero-header';
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'oyc_hero_header_body_class' );
 
 /**
  * Pretty-print bullets entered as one-per-line in the Customizer.

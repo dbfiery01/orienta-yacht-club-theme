@@ -1,7 +1,7 @@
 (function () {
 	// ── Homepage: solidify the transparent header once the user scrolls ──
 	var header = document.querySelector('.site-header');
-	if (header && document.body.classList.contains('home')) {
+	if (header && document.body.classList.contains('has-hero-header')) {
 		var onHeaderScroll = function () {
 			header.classList.toggle('is-scrolled', window.scrollY > 60);
 		};
