@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.28
+Version: 1.0.29
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2460,3 +2460,59 @@ body.page-id-4778 .page-hero {
     linear-gradient(180deg, rgba(4,22,42,0.80) 0%, rgba(4,22,42,0.90) 100%),
     url('/wp-content/uploads/2016/06/header-facility.jpg') center 50% / cover no-repeat;
 }
+
+/* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
+.primary-nav li.cta > a {
+  background: transparent !important;
+  color: var(--navy) !important;
+  border: 1.5px solid var(--navy) !important;
+  border-radius: 999px;
+  padding: 8px 18px;
+  min-width: 96px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.primary-nav li.cta > a:hover {
+  background: var(--navy) !important; color: var(--cream) !important;
+}
+
+/* ── Homepage: header blends into the hero (one full-size image), solid on scroll ── */
+body.home .site-header {
+  position: fixed; left: 0; right: 0;
+  background: transparent;
+  border-bottom-color: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+body.home .site-header .brand,
+body.home .site-header .primary-nav a { color: var(--cream); }
+body.home .site-header .brand-mark.logo-img { filter: brightness(0) invert(1); transition: filter 0.3s ease; }
+body.home .site-header .primary-nav a:hover { color: #fff; }
+body.home .site-header .primary-nav a:not(.cta)::after { background: var(--cream); }
+body.home .site-header .nav-toggle .bars,
+body.home .site-header .nav-toggle .bars::before,
+body.home .site-header .nav-toggle .bars::after { background: var(--cream); }
+/* Join + Login: white trace outline over the hero */
+body.home .site-header:not(.is-scrolled) .primary-nav li.cta > a {
+  color: var(--cream) !important;
+  border-color: rgba(245,239,226,0.75) !important;
+}
+body.home .site-header:not(.is-scrolled) .primary-nav li.cta > a:hover {
+  background: rgba(245,239,226,0.14) !important; color: #fff !important;
+}
+
+/* Scrolled state — restore the solid cream bar with dark text */
+body.home .site-header.is-scrolled {
+  background: rgba(245, 239, 226, 0.95);
+  backdrop-filter: saturate(140%) blur(8px); -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom-color: var(--line);
+}
+body.home .site-header.is-scrolled .brand,
+body.home .site-header.is-scrolled .primary-nav a { color: var(--navy); }
+body.home .site-header.is-scrolled .brand-mark.logo-img { filter: none; }
+body.home .site-header.is-scrolled .primary-nav a:hover { color: var(--harbor); }
+body.home .site-header.is-scrolled .primary-nav a:not(.cta)::after { background: var(--brass); }
+body.home .site-header.is-scrolled .nav-toggle .bars,
+body.home .site-header.is-scrolled .nav-toggle .bars::before,
+body.home .site-header.is-scrolled .nav-toggle .bars::after { background: var(--navy); }

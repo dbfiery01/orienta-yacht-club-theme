@@ -1,4 +1,14 @@
 (function () {
+	// ── Homepage: solidify the transparent header once the user scrolls ──
+	var header = document.querySelector('.site-header');
+	if (header && document.body.classList.contains('home')) {
+		var onHeaderScroll = function () {
+			header.classList.toggle('is-scrolled', window.scrollY > 60);
+		};
+		onHeaderScroll();
+		window.addEventListener('scroll', onHeaderScroll, { passive: true });
+	}
+
 	// ── Mobile nav toggle ───────────────────────────────────────────
 	var toggle = document.querySelector('.nav-toggle');
 	var menu   = document.getElementById('nav-menu');
