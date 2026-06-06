@@ -49,6 +49,12 @@ $oyc_resources = array(
 		'type'  => 'pdf',
 	),
 	array(
+		'title' => 'Fees 2026',
+		'url'   => '#',
+		'date'  => '2026',
+		'type'  => 'pdf',
+	),
+	array(
 		'title' => 'Club Rental Agreement',
 		'url'   => '#',
 		'date'  => '',
