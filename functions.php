@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.23' );
+define( 'OYC_VERSION', '1.0.24' );
 
 /**
  * Theme setup.
@@ -201,9 +201,19 @@ function oyc_render_bullets( $raw ) {
 	echo '<ul class="bullets">';
 	foreach ( $lines as $line ) {
 		$line = trim( $line );
-		if ( $line !== '' ) {
-			echo '<li>' . esc_html( $line ) . '</li>';
+		if ( $line === '' ) {
+			continue;
 		}
+		// Optional link syntax: "Label | https://example.com" → linked bullet.
+		if ( strpos( $line, '|' ) !== false ) {
+			list( $label, $url ) = array_map( 'trim', explode( '|', $line, 2 ) );
+			if ( $url !== '' && filter_var( $url, FILTER_VALIDATE_URL ) ) {
+				echo '<li><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . esc_html( $label ) . '</a></li>';
+				continue;
+			}
+			$line = $label;
+		}
+		echo '<li>' . esc_html( $line ) . '</li>';
 	}
 	echo '</ul>';
 }
