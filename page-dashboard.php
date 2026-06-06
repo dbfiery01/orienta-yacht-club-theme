@@ -115,6 +115,11 @@ get_header();
 			</div>
 		</div>
 
+		<!-- Club Videos -->
+		<div class="dashboard-videos">
+			<?php oyc_video_thumbs(); ?>
+		</div>
+
 		<!-- Logout -->
 		<div class="dashboard-logout">
 			<a class="btn btn-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">

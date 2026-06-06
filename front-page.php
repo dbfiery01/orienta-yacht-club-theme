@@ -94,6 +94,7 @@ get_header();
 			<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/membership-application/' ) ); ?>"><?php esc_html_e( 'Apply Now', 'orienta-yacht-club' ); ?></a>
 			<a class="btn btn-link" href="<?php echo esc_url( home_url( '/?inquiry=membership#contact' ) ); ?>"><?php esc_html_e( 'Speak with the Membership Chair →', 'orienta-yacht-club' ); ?></a>
 		</div>
+		<?php oyc_video_thumbs(); ?>
 	</div>
 </section>
 

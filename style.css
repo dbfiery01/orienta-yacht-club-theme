@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.21
+Version: 1.0.22
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2385,4 +2385,40 @@ body.tribe-events-page-template { background: transparent; }
   .cal-pill { display: none; }
   .cal-cell:has(.cal-pill) { background: rgba(11,42,74,0.05); }
   .cal-legend { gap: 0.85rem; }
+}
+
+/* ── Club video thumbnail strip (homepage membership + member dashboard) ── */
+.video-thumbs { margin-top: 52px; }
+.video-thumbs__heading { text-align: center; margin: 0 0 20px; }
+.video-thumbs__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.video-thumb {
+  position: relative; display: block; overflow: hidden;
+  border-radius: 10px; aspect-ratio: 16 / 9;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+  background: #0b1f3b;
+}
+.video-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
+.video-thumb:hover img { transform: scale(1.06); }
+.video-thumb__play {
+  position: absolute; top: 50%; left: 50%; width: 52px; height: 52px;
+  transform: translate(-50%, -50%);
+  background: rgba(11,31,59,0.78); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.25s ease;
+}
+.video-thumb__play::after {
+  content: ""; display: block; margin-left: 4px;
+  border-style: solid; border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent #fff;
+}
+.video-thumb:hover .video-thumb__play { background: var(--brass, #D4A851); }
+.video-thumb__title {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 22px 12px 9px; color: #fff;
+  font-size: 0.8rem; font-weight: 600; line-height: 1.2;
+  background: linear-gradient(to top, rgba(0,0,0,0.72), transparent);
+}
+.video-thumbs__more { text-align: center; margin-top: 16px; }
+@media (max-width: 760px) {
+  .video-thumbs__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }

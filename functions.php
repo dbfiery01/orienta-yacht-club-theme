@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.21' );
+define( 'OYC_VERSION', '1.0.22' );
 
 /**
  * Theme setup.
@@ -206,4 +206,37 @@ function oyc_render_bullets( $raw ) {
 		}
 	}
 	echo '</ul>';
+}
+
+/**
+ * Render a strip of club video thumbnails that link to the /videos/ gallery.
+ * Used at the bottom of the homepage Membership section and the member dashboard.
+ *
+ * @param string $heading Optional heading shown above the thumbnails.
+ */
+function oyc_video_thumbs( $heading = 'Club Videos' ) {
+	// YouTube video ID => caption. Thumbnails are pulled from img.youtube.com.
+	$videos = array(
+		'-cYW29F4Qn4' => "Governor's Cup 2024",
+		'zNLmKy_COpE' => 'Mamaroneck Harbor in 4K',
+		'y9SNwmwNHkY' => 'On the Water at OYC',
+		'T7UzxJq4wQU' => 'Stop-Motion Boat Haul',
+	);
+	$url = home_url( '/videos/' );
+
+	echo '<div class="video-thumbs">';
+	if ( $heading ) {
+		echo '<h3 class="video-thumbs__heading">' . esc_html( $heading ) . '</h3>';
+	}
+	echo '<div class="video-thumbs__grid">';
+	foreach ( $videos as $id => $title ) {
+		echo '<a class="video-thumb" href="' . esc_url( $url ) . '" aria-label="' . esc_attr( $title ) . '">';
+		echo '<img src="' . esc_url( 'https://img.youtube.com/vi/' . $id . '/hqdefault.jpg' ) . '" alt="' . esc_attr( $title ) . '" loading="lazy" />';
+		echo '<span class="video-thumb__play" aria-hidden="true"></span>';
+		echo '<span class="video-thumb__title">' . esc_html( $title ) . '</span>';
+		echo '</a>';
+	}
+	echo '</div>';
+	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'View all videos →', 'orienta-yacht-club' ) . '</a></p>';
+	echo '</div>';
 }
