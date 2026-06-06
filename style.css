@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.29
+Version: 1.0.30
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2485,9 +2485,14 @@ body.home .site-header {
   backdrop-filter: none; -webkit-backdrop-filter: none;
   transition: background 0.3s ease, border-color 0.3s ease;
 }
-body.home .site-header .brand,
 body.home .site-header .primary-nav a { color: var(--cream); }
-body.home .site-header .brand-mark.logo-img { filter: brightness(0) invert(1); transition: filter 0.3s ease; }
+/* Keep the full-color logo legible over the hero on a clean light chip. */
+body.home .site-header:not(.is-scrolled) .brand {
+  background: rgba(255,255,255,0.94);
+  border-radius: 10px;
+  padding: 7px 14px;
+  box-shadow: 0 4px 14px rgba(4,22,42,0.18);
+}
 body.home .site-header .primary-nav a:hover { color: #fff; }
 body.home .site-header .primary-nav a:not(.cta)::after { background: var(--cream); }
 body.home .site-header .nav-toggle .bars,
@@ -2510,7 +2515,6 @@ body.home .site-header.is-scrolled {
 }
 body.home .site-header.is-scrolled .brand,
 body.home .site-header.is-scrolled .primary-nav a { color: var(--navy); }
-body.home .site-header.is-scrolled .brand-mark.logo-img { filter: none; }
 body.home .site-header.is-scrolled .primary-nav a:hover { color: var(--harbor); }
 body.home .site-header.is-scrolled .primary-nav a:not(.cta)::after { background: var(--brass); }
 body.home .site-header.is-scrolled .nav-toggle .bars,
