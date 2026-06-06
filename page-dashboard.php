@@ -106,7 +106,7 @@ get_header();
 				<div class="dashboard-account-info">
 					<p><strong><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->display_name ); ?></p>
 					<p><strong><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->user_email ); ?></p>
-					<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></p>
+					<p><strong><?php esc_html_e( 'Thank you for being a member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></p>
 				</div>
 				<div class="dashboard-account-actions">
 					<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
