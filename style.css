@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.38
+Version: 1.0.39
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2501,6 +2501,39 @@ body.page-id-4778.has-hero-header .page-hero {
 }
 body.page-id-4778 .section,
 body.page-id-4778 .section-tinted { background: transparent; padding-top: 1.75rem; border-block: 0; }
+
+/* ── Home page: fully immersive — one fixed boating photo behind every
+   section; the menu stays transparent the whole way down. ── */
+body.home {
+  background:
+    linear-gradient(rgba(4,22,42,0.66), rgba(4,22,42,0.80)),
+    url('assets/photos/home-slide-a.jpg') center center / cover fixed no-repeat;
+}
+/* Dark scrim behind the fixed transparent menu so its light text stays
+   readable over anything (incl. white cards) that scrolls beneath it. */
+body.home::before {
+  content: "";
+  position: fixed; top: 0; left: 0; right: 0; height: 130px;
+  background: linear-gradient(180deg, rgba(4,22,42,0.65), rgba(4,22,42,0));
+  z-index: 5; pointer-events: none;
+}
+/* The previously-white sections go transparent so the photo shows through. */
+body.home #about,
+body.home #membership,
+body.home .contact-body {
+  background: transparent;
+  border-block: 0;
+  color: rgba(245,239,226,0.92);
+}
+body.home #about h2,
+body.home #membership h2,
+body.home .contact-body h2 { color: var(--cream); }
+body.home #membership .section-lede { color: rgba(245,239,226,0.88); }
+body.home #membership .btn-link { color: var(--brass-bright); }
+body.home #membership .btn-link:hover { color: var(--cream); }
+/* Keep card contents dark on their light card backgrounds. */
+body.home #about .card h3 { color: var(--navy); }
+body.home .contact-form { color: var(--navy-ink); }
 
 /* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
 .primary-nav li.cta > a {

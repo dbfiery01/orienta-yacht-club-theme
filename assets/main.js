@@ -1,7 +1,9 @@
 (function () {
 	// ── Homepage: solidify the transparent header once the user scrolls ──
 	var header = document.querySelector('.site-header');
-	if (header && document.body.classList.contains('has-hero-header')) {
+	// On the home page the menu stays transparent the whole way down (every
+	// section has a dark boat image), so only solidify on the other hero pages.
+	if (header && document.body.classList.contains('has-hero-header') && !document.body.classList.contains('home')) {
 		var onHeaderScroll = function () {
 			header.classList.toggle('is-scrolled', window.scrollY > 60);
 		};
