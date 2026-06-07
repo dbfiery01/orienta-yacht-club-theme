@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.2.5
+Version: 1.2.6
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2849,6 +2849,28 @@ body.oyc-page-storm-warnings .entry-content h1,
 body.oyc-page-storm-warnings .entry-content h2,
 body.oyc-page-storm-warnings .entry-content h3 { color: var(--cream); }
 body.oyc-page-storm-warnings .entry-content a:not(.btn) { color: var(--brass-bright); }
+
+/* Facilities: immersive content page like the rest of the site. */
+body.oyc-page-facilities {
+  background:
+    linear-gradient(rgba(4,22,42,0.74), rgba(4,22,42,0.82)),
+    url('assets/photos/home-slide-c.jpg') center center / cover fixed no-repeat;
+}
+body.oyc-page-facilities.has-hero-header .page-hero {
+  background: transparent;
+  min-height: 0;
+  display: block;
+  padding: 7rem 0 0.5rem;
+}
+body.oyc-page-facilities .section { background: transparent; padding-top: 1rem; }
+body.oyc-page-facilities .page-content,
+body.oyc-page-facilities .entry-content,
+body.oyc-page-facilities .entry-content p,
+body.oyc-page-facilities .entry-content li { color: rgba(245,239,226,0.92); }
+body.oyc-page-facilities .entry-content h1,
+body.oyc-page-facilities .entry-content h2,
+body.oyc-page-facilities .entry-content h3 { color: var(--cream); }
+body.oyc-page-facilities .entry-content a:not(.btn) { color: var(--brass-bright); }
 
 /* 2026 Fee Schedule (#4958): immersive page with a glass fee-schedule card. */
 body.oyc-page-2026-fee-schedule {
