@@ -96,7 +96,38 @@ function oyc_create_calendar_event( $args ) {
 		wp_set_object_terms( $pid, array_map( 'intval', (array) $d['calendar'] ), 'calendar' );
 	}
 
+	// Write Calendarize it!'s occurrence-index row — the calendar queries this
+	// table (wp_rhc_events), not post meta. Then clear its cache.
+	oyc_rhc_index_event( $pid, $start_dt, $end_dt, $allday );
+
 	return $pid;
+}
+
+/**
+ * Insert/refresh the Calendarize it! occurrence-index row for an event and
+ * clear the calendar cache so the change is visible immediately.
+ */
+function oyc_rhc_index_event( $post_id, $start_dt, $end_dt, $allday ) {
+	global $wpdb;
+	$tbl = $wpdb->prefix . 'rhc_events';
+	$wpdb->delete( $tbl, array( 'post_id' => $post_id ) );
+	$wpdb->insert( $tbl, array(
+		'event_start' => $start_dt,
+		'event_end'   => $end_dt,
+		'post_id'     => $post_id,
+		'allday'      => $allday ? '1' : '0',
+		'number'      => 0,
+	) );
+	oyc_rhc_clear_cache();
+}
+
+function oyc_rhc_clear_cache() {
+	global $wpdb;
+	if ( function_exists( 'delete_get_calendar_cache' ) ) {
+		delete_get_calendar_cache();
+	} else {
+		$wpdb->query( "DELETE FROM {$wpdb->prefix}rhc_cache" );
+	}
 }
 
 add_action( 'rest_api_init', function () {
@@ -215,5 +246,8 @@ function oyc_rest_delete_event( $req ) {
 	}
 	$title = get_the_title( $id );
 	wp_delete_post( $id, true );
+	global $wpdb;
+	$wpdb->delete( $wpdb->prefix . 'rhc_events', array( 'post_id' => $id ) );
+	oyc_rhc_clear_cache();
 	return array( 'deleted' => true, 'id' => $id, 'title' => $title );
 }
