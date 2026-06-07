@@ -62,6 +62,9 @@
 		if (!url.hash || url.hash === '#') return;
 		// Only intercept jumps that stay on the current page.
 		if (url.host !== window.location.host || url.pathname !== window.location.pathname) return;
+		// Links that change the query string (e.g. ?inquiry=membership#contact) must
+		// navigate normally so the new query takes effect — don't hijack them.
+		if (url.search !== window.location.search) return;
 		var target = document.getElementById(decodeURIComponent(url.hash.slice(1)));
 		if (!target) return;
 		e.preventDefault();
