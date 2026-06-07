@@ -271,3 +271,46 @@ add_action( 'admin_init', function () {
 	wp_safe_redirect( home_url( '/members-area/' ) );
 	exit;
 } );
+
+/* ── 11. Auth-aware primary menu CTAs ─────────────────────────────────────
+ *  Logged out: Join + Login (as set in the menu).
+ *  Logged in:  hide Join, turn "Login" into "My Account" (→ members area),
+ *              and append a "Logout" item. */
+add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
+	if ( empty( $args->theme_location ) || 'primary' !== $args->theme_location ) {
+		return $items;
+	}
+	if ( ! is_user_logged_in() ) {
+		return $items;
+	}
+
+	$out = array();
+	foreach ( $items as $item ) {
+		$title = strtolower( trim( wp_strip_all_tags( $item->title ) ) );
+
+		if ( 'join' === $title ) {
+			continue; // members don't need Join
+		}
+
+		if ( 'login' === $title ) {
+			// Repurpose Login → My Account.
+			$item->title   = __( 'My Account', 'orienta-yacht-club' );
+			$item->url     = home_url( '/members-area/' );
+			$item->classes = array( 'menu-item', 'cta', 'cta--login' );
+			$out[]         = $item;
+
+			// Append a Logout button.
+			$logout          = clone $item;
+			$logout->ID      = 'oyc-logout';
+			$logout->db_id   = 0;
+			$logout->title   = __( 'Logout', 'orienta-yacht-club' );
+			$logout->url     = wp_logout_url( home_url( '/' ) );
+			$logout->classes = array( 'menu-item', 'cta', 'cta--login', 'cta--logout' );
+			$out[]           = $logout;
+			continue;
+		}
+
+		$out[] = $item;
+	}
+	return $out;
+}, 10, 2 );
