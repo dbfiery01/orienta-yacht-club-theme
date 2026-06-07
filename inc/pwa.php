@@ -53,7 +53,7 @@ add_action( 'template_redirect', function () {
 					'name'        => 'Events Calendar',
 					'short_name'  => 'Events',
 					'description' => 'View upcoming OYC events',
-					'url'         => home_url( '/events/' ),
+					'url'         => home_url( '/calendar/' ),
 					'icons'       => array(
 						array( 'src' => $theme . '/assets/icons/icon-192.png', 'sizes' => '192x192' ),
 					),
@@ -79,6 +79,7 @@ add_action( 'template_redirect', function () {
 			),
 		);
 
+		status_header( 200 );
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
 		header( 'Cache-Control: no-cache' );
 		echo json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
@@ -92,6 +93,7 @@ add_action( 'template_redirect', function () {
 			status_header( 404 );
 			exit;
 		}
+		status_header( 200 );
 		header( 'Content-Type: application/javascript; charset=utf-8' );
 		header( 'Service-Worker-Allowed: /' );   // allow full-site scope
 		header( 'Cache-Control: no-cache' );
