@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.2.7
+Version: 1.2.8
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2871,6 +2871,42 @@ body.oyc-page-facilities .entry-content h1,
 body.oyc-page-facilities .entry-content h2,
 body.oyc-page-facilities .entry-content h3 { color: var(--cream); }
 body.oyc-page-facilities .entry-content a:not(.btn) { color: var(--brass-bright); }
+
+/* Reciprocity List: immersive content page like the rest of the site. */
+body.oyc-page-reciprocity-list {
+  background:
+    linear-gradient(rgba(4,22,42,0.74), rgba(4,22,42,0.82)),
+    url('assets/photos/home-slide-e.jpg') center center / cover fixed no-repeat;
+}
+body.oyc-page-reciprocity-list.has-hero-header .page-hero {
+  background: transparent;
+  min-height: 0;
+  display: block;
+  padding: 7rem 0 0.5rem;
+}
+body.oyc-page-reciprocity-list .section { background: transparent; padding-top: 1rem; }
+body.oyc-page-reciprocity-list .page-content,
+body.oyc-page-reciprocity-list .entry-content,
+body.oyc-page-reciprocity-list .entry-content p,
+body.oyc-page-reciprocity-list .entry-content li { color: rgba(245,239,226,0.92); }
+body.oyc-page-reciprocity-list .entry-content h1,
+body.oyc-page-reciprocity-list .entry-content h2,
+body.oyc-page-reciprocity-list .entry-content h3 { color: var(--cream); }
+body.oyc-page-reciprocity-list .entry-content a:not(.btn) { color: var(--brass-bright); }
+
+/* Responsive embedded map (16:9), framed to match the glass cards. */
+.oyc-map-embed {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  margin: 0 0 1.8rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(212,168,81,0.55);
+  box-shadow: var(--shadow-sm);
+  background: rgba(4,22,42,0.4);
+}
+.oyc-map-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
 /* Sailing Instructions: clean document page in the site style — no hero photo.
    The hero becomes a solid navy band (keeps the menu + title readable), and
