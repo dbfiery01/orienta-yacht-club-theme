@@ -118,6 +118,7 @@ get_header();
 		<h2><?php echo esc_html( oyc_get( 'oyc_sail_headline' ) ); ?></h2>
 		<p><?php echo wp_kses_post( oyc_get( 'oyc_sail_body' ) ); ?></p>
 		<?php oyc_render_bullets( oyc_get( 'oyc_sail_bullets' ) ); ?>
+		<p class="sail-docs-link"><a href="<?php echo esc_url( home_url( '/sailing-instructions/' ) ); ?>"><?php esc_html_e( 'Sailing Instructions', 'orienta-yacht-club' ); ?> &rarr;</a></p>
 	</div>
 </section>
 
