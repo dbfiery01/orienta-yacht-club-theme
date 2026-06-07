@@ -64,7 +64,7 @@ get_header();
 				$body  = oyc_get( "oyc_card{$i}_body" );
 				if ( ! $title && ! $body ) { continue; }
 			?>
-				<article class="card">
+				<article class="tile tile--on-photo">
 					<h3><?php echo esc_html( $title ); ?></h3>
 					<p><?php echo esc_html( $body ); ?></p>
 				</article>
@@ -79,7 +79,7 @@ get_header();
 		<h2><?php echo esc_html( oyc_get( 'oyc_mem_headline' ) ); ?></h2>
 		<p class="section-lede"><?php echo esc_html( oyc_get( 'oyc_mem_lede' ) ); ?></p>
 		<div class="grid-2">
-			<article class="tile">
+			<article class="tile tile--on-photo">
 				<h3><?php esc_html_e( 'Membership Types', 'orienta-yacht-club' ); ?></h3>
 				<ul class="membership-types">
 					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
@@ -87,7 +87,7 @@ get_header();
 					<li><strong>Social</strong> &mdash; Events and Clubhouse privileges and no voting rights</li>
 				</ul>
 			</article>
-			<article class="tile">
+			<article class="tile tile--on-photo">
 				<h3><?php esc_html_e( 'Fees Schedule', 'orienta-yacht-club' ); ?></h3>
 				<table class="fees-table">
 					<thead>
