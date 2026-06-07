@@ -84,7 +84,7 @@ function oyc_save_contact_message( $cf7 ) {
 	$msg_email = sanitize_email( $data['your-email'] ?? '' );
 	$msg_phone = sanitize_text_field( $data['your-phone'] ?? '' );
 	$msg_body  = wp_strip_all_tags( $data['your-message'] ?? '' );
-	$notify_to = 'redacted@example.com';
+	$notify_to = oyc_inbox_email();
 	$subject   = 'OYC Contact: ' . $inquiry;
 	$lines     = array(
 		'A new message was submitted via the website contact form.',

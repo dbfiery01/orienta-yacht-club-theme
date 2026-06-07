@@ -128,7 +128,7 @@ function oyc_save_application( $contact_form ) {
 	// Notify the club of a new membership application.
 	$app_email = isset( $data['email'] ) ? sanitize_email( $data['email'] ) : '';
 	$app_phone = isset( $data['mobile-phone'] ) ? sanitize_text_field( $data['mobile-phone'] ) : '';
-	$notify_to = 'redacted@example.com';
+	$notify_to = oyc_inbox_email();
 	$subject   = 'ORIENTA APPLICATION — ' . trim( "$first $last" );
 	$lines     = array(
 		'A new membership application was submitted via the website.',

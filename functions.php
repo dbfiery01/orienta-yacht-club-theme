@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.74' );
+define( 'OYC_VERSION', '1.0.75' );
 
 /**
  * Theme setup.
@@ -123,6 +123,33 @@ function oyc_get( $key, $fallback = null ) {
 	}
 	return get_theme_mod( $key, $fallback );
 }
+
+/**
+ * Recipient for OYC Inbox notifications (new contact messages & applications).
+ * Stored in the `oyc_notify_email` option (set in the database, not in code) so
+ * no personal address lives in the theme source. Falls back to the site admin
+ * email. Overridable via the `oyc_inbox_notify_email` filter.
+ */
+function oyc_inbox_email() {
+	$email = get_option( 'oyc_notify_email', '' );
+	if ( ! $email || ! is_email( $email ) ) {
+		$email = get_option( 'admin_email' );
+	}
+	return apply_filters( 'oyc_inbox_notify_email', $email );
+}
+
+/**
+ * Register the notification-email option so it can be read/updated via the
+ * Settings REST endpoint (admin only).
+ */
+add_action( 'init', function () {
+	register_setting( 'options', 'oyc_notify_email', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_email',
+		'show_in_rest'      => true,
+		'default'           => '',
+	) );
+} );
 
 /**
  * Helper: render the club mark — uses the Customizer's "Site Logo" if set,
