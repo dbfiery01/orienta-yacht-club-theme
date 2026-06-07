@@ -154,6 +154,19 @@ add_action( 'rest_api_init', function () {
 
 function oyc_rest_cal_debug( $req ) {
 	global $wpdb, $wp_filter;
+
+	// Targeted probe: create a temp event, report its index row + DB error, then delete.
+	if ( $req->get_param( 'probe' ) ) {
+		$tbl = $wpdb->prefix . 'rhc_events';
+		$pid = oyc_create_calendar_event( array( 'title' => 'PROBE DELETE ME', 'start' => '2026-03-15', 'end' => '2026-03-15', 'allday' => true ) );
+		$err = $wpdb->last_error;
+		$rows = is_wp_error( $pid ) ? array() : $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tbl} WHERE post_id = %d", $pid ), ARRAY_A );
+		$cache_rows = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}rhc_cache" );
+		$status_obj = is_wp_error( $pid ) ? $pid->get_error_message() : get_post_status( $pid );
+		if ( ! is_wp_error( $pid ) ) { wp_delete_post( $pid, true ); $wpdb->delete( $tbl, array( 'post_id' => $pid ) ); }
+		return array( 'probe_post' => is_wp_error( $pid ) ? null : $pid, 'post_status' => $status_obj, 'index_rows' => $rows, 'db_last_error' => $err, 'cache_rows_after' => $cache_rows );
+	}
+
 	$tables = $wpdb->get_col( 'SHOW TABLES' );
 	$cal    = array_values( array_filter( $tables, function ( $t ) {
 		return preg_match( '/cal|fc_|rhc|event/i', $t );
