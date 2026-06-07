@@ -90,4 +90,42 @@
 	} else {
 		window.addEventListener('load', scrollToHashOnLoad);
 	}
+
+	// ── Contact form: show a thank-you popup on successful send ──────────
+	function oycShowMsgPopup() {
+		var pop = document.getElementById('oyc-msg-popup');
+		if (!pop) {
+			pop = document.createElement('div');
+			pop.id = 'oyc-msg-popup';
+			pop.className = 'oyc-msg-popup';
+			pop.innerHTML =
+				'<div class="oyc-msg-popup__card" role="dialog" aria-modal="true" aria-labelledby="oyc-msg-popup-title">' +
+					'<div class="oyc-msg-popup__icon" aria-hidden="true">' +
+						'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+					'</div>' +
+					'<h3 id="oyc-msg-popup-title">Thank you for your message.</h3>' +
+					'<p>It has been sent.</p>' +
+					'<button type="button" class="btn btn-primary oyc-msg-popup__close">Close</button>' +
+				'</div>';
+			document.body.appendChild(pop);
+			var close = function () { pop.classList.remove('is-open'); document.body.classList.remove('oyc-msg-lock'); };
+			pop.addEventListener('click', function (e) { if (e.target === pop) close(); });
+			pop.querySelector('.oyc-msg-popup__close').addEventListener('click', close);
+			document.addEventListener('keydown', function (e) {
+				if ((e.key === 'Escape' || e.keyCode === 27) && pop.classList.contains('is-open')) close();
+			});
+		}
+		pop.classList.add('is-open');
+		document.body.classList.add('oyc-msg-lock');
+		var btn = pop.querySelector('.oyc-msg-popup__close');
+		if (btn) btn.focus();
+	}
+	document.addEventListener('wpcf7mailsent', function (e) {
+		var f = (e.target && e.target.tagName === 'FORM') ? e.target
+			: (e.target && e.target.querySelector ? e.target.querySelector('form') : null);
+		// Only the contact form (which has the inquiry-type dropdown) — the
+		// membership application form redirects to its own thank-you page.
+		if (!f || !f.querySelector('[name="inquiry-type"]')) return;
+		oycShowMsgPopup();
+	}, false);
 })();

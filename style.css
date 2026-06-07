@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.53
+Version: 1.0.54
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2743,3 +2743,29 @@ body.has-hero-header .site-header.is-scrolled .primary-nav a:not(.cta)::after { 
 body.has-hero-header .site-header.is-scrolled .nav-toggle .bars,
 body.has-hero-header .site-header.is-scrolled .nav-toggle .bars::before,
 body.has-hero-header .site-header.is-scrolled .nav-toggle .bars::after { background: var(--navy); }
+
+/* ── Contact form: hide CF7's inline success message (shown as a popup instead) ── */
+.wpcf7-response-output.wpcf7-mail-sent-ok { display: none !important; }
+
+/* Thank-you popup */
+body.oyc-msg-lock { overflow: hidden; }
+.oyc-msg-popup {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(4,22,42,0.6);
+  padding: 1.5rem;
+}
+.oyc-msg-popup.is-open { display: flex; }
+.oyc-msg-popup__card {
+  background: #fff; border-radius: 14px;
+  padding: 2.5rem 2.5rem 2rem; max-width: 420px; width: 100%;
+  text-align: center; box-shadow: var(--shadow-md);
+}
+.oyc-msg-popup__icon {
+  width: 60px; height: 60px; margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: rgba(44,110,155,0.12); color: var(--harbor);
+}
+.oyc-msg-popup__card h3 { margin: 0 0 0.35rem; color: var(--navy); font-size: 1.4rem; }
+.oyc-msg-popup__card p { margin: 0 0 1.6rem; color: rgba(4,22,42,0.75); }
+.oyc-msg-popup__close { min-width: 120px; }
