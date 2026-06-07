@@ -84,8 +84,8 @@ function oyc_defaults() {
 		'oyc_vis_tile1_body'  => 'Enter Mamaroneck Harbor and bear into the East Basin — Orienta sits at the head of the basin with a deep, well-marked channel.',
 		'oyc_vis_tile2_title' => 'Launch & Moorings',
 		'oyc_vis_tile2_body'  => "Hail the launch on the club's working channel during operating hours. Reciprocal guests should call ahead to confirm availability.",
-		'oyc_vis_tile3_title' => 'Mamaroneck Harbor resources',
-		'oyc_vis_tile3_body'  => 'Showers, Wi-Fi, ice, and member dining on a seasonal schedule. Mamaroneck village, train, and provisioning are minutes away.',
+		'oyc_vis_tile3_title' => 'On-Shore',
+		'oyc_vis_tile3_body'  => 'Showers, Wi-Fi, ice, access to the club commercial kitchen and member dining on a seasonal schedule. Mamaroneck village, train, and provisioning are minutes away.',
 
 		/* Contact */
 		'oyc_con_kicker'         => 'Contact',
