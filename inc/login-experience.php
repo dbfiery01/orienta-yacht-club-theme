@@ -168,6 +168,11 @@ add_action( 'admin_footer', 'oyc_browser_greeting_script' );
 // Remove the Application Passwords section entirely.
 add_filter( 'wp_is_application_passwords_available', '__return_false' );
 
+// Drop the social/extra contact-method fields (Facebook, Instagram, LinkedIn,
+// MySpace, Pinterest, SoundCloud, Tumblr, Wikipedia, X/Twitter, YouTube, etc.
+// added by Yoast). Email stays (it's a core field, not a contact method).
+add_filter( 'user_contactmethods', function () { return array(); }, 9999 );
+
 add_action( 'admin_head-profile.php', function () {
 	?>
 	<style>
@@ -186,12 +191,12 @@ add_action( 'admin_head-profile.php', function () {
 	</style>
 	<script>
 	document.addEventListener( 'DOMContentLoaded', function () {
-		var hide = [ 'personal options', 'about yourself', 'application passwords' ];
-		Array.prototype.forEach.call( document.querySelectorAll( '.wrap h2' ), function ( h ) {
+		var hide = [ 'personal options', 'about yourself', 'application passwords', 'two factor authentication' ];
+		Array.prototype.forEach.call( document.querySelectorAll( '.wrap h2, .wrap h3' ), function ( h ) {
 			if ( hide.indexOf( h.textContent.trim().toLowerCase() ) === -1 ) { return; }
 			h.style.display = 'none';
 			var el = h.nextElementSibling;
-			while ( el && el.tagName !== 'H2' ) {
+			while ( el && el.tagName !== 'H2' && el.tagName !== 'H3' ) {
 				el.style.display = 'none';
 				el = el.nextElementSibling;
 			}
