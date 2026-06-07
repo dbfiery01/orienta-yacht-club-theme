@@ -143,6 +143,10 @@ get_header();
 							<a href="https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?form=transient" target="_blank" rel="noopener" class="tile-heading-link">
 								<?php echo esc_html( $title ); ?> <span class="tile-link-icon" aria-hidden="true">↗</span>
 							</a>
+						<?php elseif ( $i === 3 ) : ?>
+							<a href="<?php echo esc_url( home_url( '/welcome-guests/' ) ); ?>" class="tile-heading-link">
+								<?php echo esc_html( $title ); ?> <span class="tile-link-icon" aria-hidden="true">↗</span>
+							</a>
 						<?php else : ?>
 							<?php echo esc_html( $title ); ?>
 						<?php endif; ?>
