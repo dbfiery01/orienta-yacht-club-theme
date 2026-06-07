@@ -42,9 +42,9 @@ add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member
 
 add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
 	if ( $user && ! is_wp_error( $user ) ) {
-		// Admins go to admin dashboard; members go to members area
+		// Admins go to their profile page; members go to members area
 		if ( user_can( $user, 'manage_options' ) ) {
-			return admin_url();
+			return admin_url( 'profile.php' );
 		}
 		return home_url( '/members-area/' );
 	}
