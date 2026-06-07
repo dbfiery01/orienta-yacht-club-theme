@@ -205,3 +205,51 @@ add_action( 'admin_head-profile.php', function () {
 	</script>
 	<?php
 } );
+
+/* ── 9. Address + Emergency Contact fields on the user profile ───────────── */
+
+function oyc_profile_extra_fields( $user ) {
+	$v = function ( $key ) use ( $user ) {
+		return esc_attr( get_user_meta( $user->ID, $key, true ) );
+	};
+	$row = function ( $id, $label ) use ( $v ) {
+		echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th>'
+			. '<td><input type="text" name="' . esc_attr( $id ) . '" id="' . esc_attr( $id ) . '" value="' . $v( $id ) . '" class="regular-text" /></td></tr>';
+	};
+	?>
+	<h2><?php esc_html_e( 'Address Information', 'orienta-yacht-club' ); ?></h2>
+	<table class="form-table" role="presentation">
+		<?php
+		$row( 'oyc_address', __( 'Street Address', 'orienta-yacht-club' ) );
+		$row( 'oyc_city', __( 'City', 'orienta-yacht-club' ) );
+		$row( 'oyc_state', __( 'State', 'orienta-yacht-club' ) );
+		$row( 'oyc_zip', __( 'ZIP', 'orienta-yacht-club' ) );
+		?>
+	</table>
+
+	<h2><?php esc_html_e( 'Emergency Contact Information', 'orienta-yacht-club' ); ?></h2>
+	<table class="form-table" role="presentation">
+		<?php
+		$row( 'oyc_emergency_name', __( 'Contact Name', 'orienta-yacht-club' ) );
+		$row( 'oyc_emergency_phone', __( 'Contact Phone', 'orienta-yacht-club' ) );
+		$row( 'oyc_emergency_relationship', __( 'Relationship', 'orienta-yacht-club' ) );
+		?>
+	</table>
+	<?php
+}
+add_action( 'show_user_profile', 'oyc_profile_extra_fields' );
+add_action( 'edit_user_profile', 'oyc_profile_extra_fields' );
+
+function oyc_profile_extra_fields_save( $user_id ) {
+	if ( ! current_user_can( 'edit_user', $user_id ) ) {
+		return;
+	}
+	$keys = array( 'oyc_address', 'oyc_city', 'oyc_state', 'oyc_zip', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' );
+	foreach ( $keys as $k ) {
+		if ( isset( $_POST[ $k ] ) ) {
+			update_user_meta( $user_id, $k, sanitize_text_field( wp_unslash( $_POST[ $k ] ) ) );
+		}
+	}
+}
+add_action( 'personal_options_update', 'oyc_profile_extra_fields_save' );
+add_action( 'edit_user_profile_update', 'oyc_profile_extra_fields_save' );
