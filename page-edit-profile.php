@@ -55,6 +55,10 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 			if ( is_wp_error( $result ) ) {
 				$notices[] = array( 'type' => 'error', 'msg' => $result->get_error_message() );
 			} else {
+				// Address + emergency contact (custom user meta).
+				foreach ( array( 'oyc_address', 'oyc_city', 'oyc_state', 'oyc_zip', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' ) as $oyc_k ) {
+					update_user_meta( $user->ID, $oyc_k, sanitize_text_field( wp_unslash( $_POST[ $oyc_k ] ?? '' ) ) );
+				}
 				$user = wp_get_current_user(); // refresh
 				$msg  = 'Profile updated successfully.';
 				if ( $email_changed ) {
@@ -169,6 +173,38 @@ get_header();
 					<label for="description"><?php esc_html_e( 'About Me', 'orienta-yacht-club' ); ?> <span class="profile-form__optional">(optional)</span></label>
 					<textarea id="description" name="description" rows="4"><?php echo esc_textarea( $user->description ); ?></textarea>
 					<p class="profile-form__hint"><?php esc_html_e( 'A short bio visible to club staff.', 'orienta-yacht-club' ); ?></p>
+				</div>
+
+				<h3 class="profile-form__subhead"><?php esc_html_e( 'Address', 'orienta-yacht-club' ); ?></h3>
+				<div class="profile-form__group">
+					<label for="oyc_address"><?php esc_html_e( 'Street Address', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_address" name="oyc_address" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_address', true ) ); ?>" autocomplete="address-line1" />
+				</div>
+				<div class="profile-form__group">
+					<label for="oyc_city"><?php esc_html_e( 'City', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_city" name="oyc_city" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_city', true ) ); ?>" autocomplete="address-level2" />
+				</div>
+				<div class="profile-form__group">
+					<label for="oyc_state"><?php esc_html_e( 'State', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_state" name="oyc_state" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_state', true ) ); ?>" autocomplete="address-level1" />
+				</div>
+				<div class="profile-form__group">
+					<label for="oyc_zip"><?php esc_html_e( 'ZIP', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_zip" name="oyc_zip" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_zip', true ) ); ?>" autocomplete="postal-code" />
+				</div>
+
+				<h3 class="profile-form__subhead"><?php esc_html_e( 'Emergency Contact', 'orienta-yacht-club' ); ?></h3>
+				<div class="profile-form__group">
+					<label for="oyc_emergency_name"><?php esc_html_e( 'Contact Name', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_emergency_name" name="oyc_emergency_name" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_emergency_name', true ) ); ?>" />
+				</div>
+				<div class="profile-form__group">
+					<label for="oyc_emergency_phone"><?php esc_html_e( 'Contact Phone', 'orienta-yacht-club' ); ?></label>
+					<input type="tel" id="oyc_emergency_phone" name="oyc_emergency_phone" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_emergency_phone', true ) ); ?>" />
+				</div>
+				<div class="profile-form__group">
+					<label for="oyc_emergency_relationship"><?php esc_html_e( 'Relationship', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="oyc_emergency_relationship" name="oyc_emergency_relationship" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_emergency_relationship', true ) ); ?>" />
 				</div>
 
 				<div class="profile-form__actions">
