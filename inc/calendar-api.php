@@ -112,7 +112,50 @@ add_action( 'rest_api_init', function () {
 		'callback'            => 'oyc_rest_delete_event',
 		'permission_callback' => $can_delete,
 	) );
+
+	// Diagnostic: surface the Calendarize it! storage (custom table?) + save hooks.
+	register_rest_route( 'oyc/v1', '/cal-debug', array(
+		'methods'             => 'GET',
+		'callback'            => 'oyc_rest_cal_debug',
+		'permission_callback' => function () { return current_user_can( 'manage_options' ); },
+	) );
 } );
+
+function oyc_rest_cal_debug( $req ) {
+	global $wpdb, $wp_filter;
+	$tables = $wpdb->get_col( 'SHOW TABLES' );
+	$cal    = array_values( array_filter( $tables, function ( $t ) {
+		return preg_match( '/cal|fc_|rhc|event/i', $t );
+	} ) );
+	$hooks = array();
+	foreach ( array( 'save_post', 'save_post_events' ) as $h ) {
+		if ( empty( $wp_filter[ $h ] ) ) { continue; }
+		foreach ( $wp_filter[ $h ]->callbacks as $cbs ) {
+			foreach ( $cbs as $cb ) {
+				$f = $cb['function'];
+				if ( is_array( $f ) ) {
+					$hooks[ $h ][] = ( is_object( $f[0] ) ? get_class( $f[0] ) : $f[0] ) . '::' . $f[1];
+				} elseif ( is_string( $f ) ) {
+					$hooks[ $h ][] = $f;
+				} else {
+					$hooks[ $h ][] = 'Closure';
+				}
+			}
+		}
+	}
+	$classes = array_values( array_filter( get_declared_classes(), function ( $c ) {
+		return preg_match( '/rhc|calendariz|fc_event|event_dates|fervens/i', $c );
+	} ) );
+	$funcs = array_values( array_filter( get_defined_functions()['user'], function ( $fn ) {
+		return preg_match( '/rhc_|calendariz|rebuild.*event|event.*rebuild|fc_save|save_event/i', $fn );
+	} ) );
+	return array(
+		'cal_tables' => $cal,
+		'save_hooks' => $hooks,
+		'classes'    => array_slice( $classes, 0, 50 ),
+		'funcs'      => array_slice( $funcs, 0, 60 ),
+	);
+}
 
 function oyc_rest_list_events( $req ) {
 	$ids = get_posts( array( 'post_type' => 'events', 'post_status' => 'any', 'posts_per_page' => 300, 'fields' => 'ids', 'orderby' => 'meta_value', 'meta_key' => 'fc_start', 'order' => 'ASC' ) );
