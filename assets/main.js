@@ -128,4 +128,32 @@
 		if (!f || !f.querySelector('[name="inquiry-type"]')) return;
 		oycShowMsgPopup();
 	}, false);
+
+	// ── Accessibility: ensure every form control has an accessible name ──
+	// Contact Form 7 fields use placeholders (and radios with adjacent text)
+	// instead of <label>s. Derive an aria-label so they pass WCAG "name" reqs.
+	function oycLabelControls() {
+		var ctrls = document.querySelectorAll(
+			'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=image]), select, textarea'
+		);
+		Array.prototype.forEach.call(ctrls, function (c) {
+			if (c.getAttribute('aria-label') || c.getAttribute('aria-labelledby') || c.title) { return; }
+			if (c.labels && c.labels.length) { return; }
+			var name = c.getAttribute('placeholder') || '';
+			if (!name && (c.type === 'radio' || c.type === 'checkbox')) {
+				var item = c.closest('.wpcf7-list-item') || c.closest('label') || c.parentElement;
+				if (item) { name = (item.textContent || '').replace(/\s+/g, ' ').trim(); }
+			}
+			if (!name && c.name) {
+				name = c.name.replace(/[\[\]_-]+/g, ' ').replace(/\d+/g, '').trim();
+			}
+			if (name) { c.setAttribute('aria-label', name); }
+		});
+	}
+	if (document.readyState !== 'loading') { oycLabelControls(); }
+	else { document.addEventListener('DOMContentLoaded', oycLabelControls); }
+	// Re-run after CF7 re-renders the form (validation / submit).
+	document.addEventListener('wpcf7invalid', oycLabelControls, false);
+	document.addEventListener('wpcf7submit', oycLabelControls, false);
+	document.addEventListener('wpcf7mailsent', oycLabelControls, false);
 })();
