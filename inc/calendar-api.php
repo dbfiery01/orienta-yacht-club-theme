@@ -163,8 +163,22 @@ function oyc_rest_cal_debug( $req ) {
 		$rows = is_wp_error( $pid ) ? array() : $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tbl} WHERE post_id = %d", $pid ), ARRAY_A );
 		$cache_rows = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}rhc_cache" );
 		$status_obj = is_wp_error( $pid ) ? $pid->get_error_message() : get_post_status( $pid );
-		if ( ! is_wp_error( $pid ) ) { wp_delete_post( $pid, true ); $wpdb->delete( $tbl, array( 'post_id' => $pid ) ); }
-		return array( 'probe_post' => is_wp_error( $pid ) ? null : $pid, 'post_status' => $status_obj, 'index_rows' => $rows, 'db_last_error' => $err, 'cache_rows_after' => $cache_rows );
+		// Run the calendar's own read query (server-side loopback) for the probe range.
+		$loop_found = null; $loop_count = null; $loop_sample = array();
+		if ( ! is_wp_error( $pid ) ) {
+			$ls  = home_url( '/?rhc_action=get_calendar_events&post_type[]=events&start=' . strtotime( '2026-03-01' ) . '&end=' . strtotime( '2026-03-31' ) );
+			$rp  = wp_remote_get( $ls, array( 'timeout' => 20, 'sslverify' => false ) );
+			$dat = is_wp_error( $rp ) ? array() : json_decode( wp_remote_retrieve_body( $rp ), true );
+			$evs = ! empty( $dat['EVENTS'] ) ? $dat['EVENTS'] : array();
+			$loop_count = count( $evs );
+			$loop_found = false;
+			foreach ( $evs as $e ) {
+				if ( isset( $e['local_id'] ) && (int) $e['local_id'] === (int) $pid ) { $loop_found = true; }
+				$loop_sample[] = ( isset( $e['local_id'] ) ? $e['local_id'] : '?' ) . ':' . ( isset( $e['title'] ) ? $e['title'] : '' ) . ':' . ( isset( $e['fc_start'] ) ? $e['fc_start'] : '' );
+			}
+		}
+		if ( ! is_wp_error( $pid ) ) { wp_delete_post( $pid, true ); $wpdb->delete( $tbl, array( 'post_id' => $pid ) ); oyc_rhc_clear_cache(); }
+		return array( 'probe_post' => is_wp_error( $pid ) ? null : $pid, 'post_status' => $status_obj, 'index_rows' => $rows, 'db_last_error' => $err, 'cache_rows_after' => $cache_rows, 'loopback_found' => $loop_found, 'loopback_count' => $loop_count, 'loopback_sample' => array_slice( $loop_sample, 0, 12 ) );
 	}
 
 	$tables = $wpdb->get_col( 'SHOW TABLES' );
