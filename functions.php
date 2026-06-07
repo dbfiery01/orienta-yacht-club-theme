@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.82' );
+define( 'OYC_VERSION', '1.0.83' );
 
 /**
  * Theme setup.
@@ -226,6 +226,14 @@ add_filter( 'upload_mimes', 'oyc_allow_svg_uploads' );
 function oyc_hero_header_body_class( $classes ) {
 	if ( is_front_page() || is_page() ) {
 		$classes[] = 'has-hero-header';
+	}
+	// Portable per-page hook: a slug-based body class (e.g. oyc-page-mamaroneck-harbor)
+	// so page-specific CSS survives moving between installs (numeric IDs differ per site).
+	if ( is_page() ) {
+		$slug = get_post_field( 'post_name', get_queried_object_id() );
+		if ( $slug ) {
+			$classes[] = 'oyc-page-' . sanitize_html_class( $slug );
+		}
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
