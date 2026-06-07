@@ -124,6 +124,26 @@ function oyc_save_application( $contact_form ) {
 	// Store submission timestamp and remote IP for reference
 	update_post_meta( $post_id, 'oyc_app_submitted_at', current_time( 'mysql' ) );
 	update_post_meta( $post_id, 'oyc_app_remote_ip',    $submission->get_meta( 'remote_ip' ) ?? '' );
+
+	// Notify the club of a new membership application.
+	$app_email = isset( $data['email'] ) ? sanitize_email( $data['email'] ) : '';
+	$app_phone = isset( $data['mobile-phone'] ) ? sanitize_text_field( $data['mobile-phone'] ) : '';
+	$notify_to = 'redacted@example.com';
+	$subject   = 'ORIENTA APPLICATION — ' . trim( "$first $last" );
+	$lines     = array(
+		'A new membership application was submitted via the website.',
+		'',
+		'Name: ' . trim( "$first $last" ),
+		'Email: ' . $app_email,
+		'Phone: ' . $app_phone,
+		'',
+		'View in the OYC Inbox: ' . admin_url( 'admin.php?page=oyc-applications' ),
+	);
+	$headers = array();
+	if ( $app_email && is_email( $app_email ) ) {
+		$headers[] = 'Reply-To: ' . trim( "$first $last" ) . ' <' . $app_email . '>';
+	}
+	wp_mail( $notify_to, $subject, implode( "\n", $lines ), $headers );
 }
 
 add_action( 'wpcf7_mail_sent',   'oyc_save_application' );

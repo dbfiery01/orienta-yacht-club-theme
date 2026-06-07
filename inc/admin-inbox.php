@@ -79,6 +79,31 @@ function oyc_save_contact_message( $cf7 ) {
 
 	update_post_meta( $post_id, 'oyc_msg_read', '0' );
 	update_post_meta( $post_id, 'oyc_msg_received_at', current_time( 'mysql' ) );
+
+	// Notify the club of a new contact message — subject carries the dropdown type.
+	$msg_email = sanitize_email( $data['your-email'] ?? '' );
+	$msg_phone = sanitize_text_field( $data['your-phone'] ?? '' );
+	$msg_body  = wp_strip_all_tags( $data['your-message'] ?? '' );
+	$notify_to = 'redacted@example.com';
+	$subject   = 'OYC Contact: ' . $inquiry;
+	$lines     = array(
+		'A new message was submitted via the website contact form.',
+		'',
+		'Type: ' . $inquiry,
+		'Name: ' . $name,
+		'Email: ' . $msg_email,
+		'Phone: ' . $msg_phone,
+		'',
+		'Message:',
+		$msg_body,
+		'',
+		'View in the OYC Inbox: ' . admin_url( 'admin.php?page=oyc-messages' ),
+	);
+	$headers = array();
+	if ( $msg_email && is_email( $msg_email ) ) {
+		$headers[] = 'Reply-To: ' . $name . ' <' . $msg_email . '>';
+	}
+	wp_mail( $notify_to, $subject, implode( "\n", $lines ), $headers );
 }
 
 add_action( 'wpcf7_mail_sent',   'oyc_save_contact_message' );
