@@ -65,10 +65,10 @@ function oyc_defaults() {
 		'oyc_mem_tile4_body'  => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.',
 
 		/* Sailing */
-		'oyc_sail_kicker'   => 'Sailing & Racing',
+		'oyc_sail_kicker'   => 'Boating',
 		'oyc_sail_headline' => "From the Governor's Cup to Mamaroneck Frostbiters.",
 		'oyc_sail_body'     => "Orienta has a deep racing tradition on Western Long Island Sound, anchored by the historic <a href=\"https://www.yachtscoring.com/emenu/50084\" target=\"_blank\" rel=\"noopener\"><strong>Governor's Cup</strong></a> regatta — a fun PHRF and IRC navigation event held each summer. Members also race through the <a href=\"https://www.yralis.org/\" target=\"_blank\" rel=\"noopener\">Yacht Racing Association of Long Island Sound (YRALIS)</a>, and right in our back yard the <a href=\"https://www.mamaroneckfrostbite.org/\" target=\"_blank\" rel=\"noopener\">Mamaroneck Frostbiters Association</a> runs one of the largest and longest-standing frostbite programs in America.",
-		'oyc_sail_bullets'  => "Governor's Cup — PHRF Spinnaker, Non-Spin & IRC\nYRALIS fleet racing & distance events | https://www.yralis.org\nWeeknight series and pursuit races\nMamaroneck Frostbiters (fall/winter) | https://www.mamaroneckfrostbite.org\nCruising fleet rendezvous on the Sound",
+		'oyc_sail_bullets'  => "Governor's Cup — PHRF Spinnaker, Non-Spin & IRC\nYRALIS fleet racing & distance events | https://www.yralis.org\nMamaroneck Frostbiters (fall/winter) | https://www.mamaroneckfrostbite.org\nCruising fleet rendezvous on the Sound",
 
 		/* Fishing */
 		'oyc_fish_kicker'   => 'Fishing',
