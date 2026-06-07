@@ -84,7 +84,7 @@ get_header();
 				<ul class="membership-types">
 					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
 					<li><strong>Teen</strong> &mdash; Full privileges and no voting rights</li>
-					<li><strong>Social</strong> &mdash; Events and Clubhouse privileges and no voting rights</li>
+					<li><strong>Social</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
 				</ul>
 			</article>
 			<article class="tile tile--on-photo">
