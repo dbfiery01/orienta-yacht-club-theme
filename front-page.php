@@ -78,17 +78,28 @@ get_header();
 		<p class="kicker"><?php echo esc_html( oyc_get( 'oyc_mem_kicker' ) ); ?></p>
 		<h2><?php echo esc_html( oyc_get( 'oyc_mem_headline' ) ); ?></h2>
 		<p class="section-lede"><?php echo esc_html( oyc_get( 'oyc_mem_lede' ) ); ?></p>
-		<div class="grid-4">
-			<?php for ( $i = 1; $i <= 4; $i++ ) :
-				$title = oyc_get( "oyc_mem_tile{$i}_title" );
-				$body  = oyc_get( "oyc_mem_tile{$i}_body" );
-				if ( ! $title && ! $body ) { continue; }
-			?>
-				<article class="tile">
-					<h3><?php echo esc_html( $title ); ?></h3>
-					<p><?php echo esc_html( $body ); ?></p>
-				</article>
-			<?php endfor; ?>
+		<div class="grid-2">
+			<article class="tile">
+				<h3><?php esc_html_e( 'Membership Types', 'orienta-yacht-club' ); ?></h3>
+				<ul class="membership-types">
+					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
+					<li><strong>Teen</strong> &mdash; Full privileges and no voting rights</li>
+					<li><strong>Social</strong> &mdash; Events and Clubhouse privileges and no voting rights</li>
+				</ul>
+			</article>
+			<article class="tile">
+				<h3><?php esc_html_e( 'Fees Schedule', 'orienta-yacht-club' ); ?></h3>
+				<table class="fees-table">
+					<thead>
+						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th></tr>
+					</thead>
+					<tbody>
+						<tr><td>Regular</td><td>&mdash;</td></tr>
+						<tr><td>Teen</td><td>&mdash;</td></tr>
+						<tr><td>Social</td><td>&mdash;</td></tr>
+					</tbody>
+				</table>
+			</article>
 		</div>
 		<div class="cta-row">
 			<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/membership-application/' ) ); ?>"><?php esc_html_e( 'Apply Now', 'orienta-yacht-club' ); ?></a>
