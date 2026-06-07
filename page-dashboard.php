@@ -69,7 +69,7 @@ get_header();
 				<span class="dash-card__label"><?php esc_html_e( 'Storm Warnings', 'orienta-yacht-club' ); ?></span>
 			</a>
 
-			<a href="<?php echo esc_url( home_url( '/my-sound/' ) ); ?>" class="dash-card">
+			<a href="https://lisicos.uconn.edu/" target="_blank" rel="noopener" class="dash-card">
 				<span class="dash-card__icon" aria-hidden="true">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 				</span>
