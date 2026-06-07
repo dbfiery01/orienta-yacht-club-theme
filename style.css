@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.46
+Version: 1.0.47
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2606,6 +2606,27 @@ body.page-id-70 .page-content strong { color: rgba(245,239,226,0.92); }
 body.page-id-70 .page-content h2,
 body.page-id-70 .page-content h3 { color: var(--cream); }
 body.page-id-70 .page-content a { color: var(--brass-bright); }
+
+/* ── Mamaroneck Harbor (#297): immersive content page ── */
+body.page-id-297 {
+  background:
+    linear-gradient(rgba(4,22,42,0.74), rgba(4,22,42,0.82)),
+    url('assets/photos/home-slide-d.jpg') center center / cover fixed no-repeat;
+}
+body.page-id-297.has-hero-header .page-hero {
+  background: transparent;
+  min-height: 0;
+  display: block;
+  padding: 7rem 0 0.5rem;
+}
+body.page-id-297 .section { background: transparent; padding-top: 1rem; }
+body.page-id-297 .page-content,
+body.page-id-297 .page-content p,
+body.page-id-297 .page-content li,
+body.page-id-297 .page-content strong { color: rgba(245,239,226,0.92); }
+body.page-id-297 .page-content h2,
+body.page-id-297 .page-content h3 { color: var(--cream); }
+body.page-id-297 .page-content a { color: var(--brass-bright); }
 
 /* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
 .primary-nav li.cta > a {
