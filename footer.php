@@ -43,7 +43,7 @@
 			<div class="footer-nav-col">
 				<h4><?php esc_html_e( 'Resources', 'orienta-yacht-club' ); ?></h4>
 				<ul>
-					<li><a href="<?php echo esc_url( home_url( '/welcome-guests/' ) ); ?>"><?php esc_html_e( 'Welcome Guests', 'orienta-yacht-club' ); ?></a></li>
+					<li><a href="<?php echo esc_url( home_url( '/mamaroneck-harbor/' ) ); ?>"><?php esc_html_e( 'Mamaroneck Harbor', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/my-sound/' ) ); ?>"><?php esc_html_e( 'My Sound', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/storm-warnings/' ) ); ?>"><?php esc_html_e( 'Storm Warnings', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/oyc-resources/' ) ); ?>"><?php esc_html_e( 'OYC Resources', 'orienta-yacht-club' ); ?></a></li>

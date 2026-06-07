@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.58' );
+define( 'OYC_VERSION', '1.0.59' );
 
 /**
  * Theme setup.
@@ -202,7 +202,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'welcome-guests', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;

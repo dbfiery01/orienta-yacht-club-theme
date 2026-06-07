@@ -144,7 +144,7 @@ get_header();
 								<?php echo esc_html( $title ); ?> <span class="tile-link-icon" aria-hidden="true">↗</span>
 							</a>
 						<?php elseif ( $i === 3 ) : ?>
-							<a href="<?php echo esc_url( home_url( '/welcome-guests/' ) ); ?>" class="tile-heading-link">
+							<a href="<?php echo esc_url( home_url( '/mamaroneck-harbor/' ) ); ?>" class="tile-heading-link">
 								<?php echo esc_html( $title ); ?> <span class="tile-link-icon" aria-hidden="true">↗</span>
 							</a>
 						<?php else : ?>
