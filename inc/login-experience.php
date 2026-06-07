@@ -253,3 +253,25 @@ function oyc_profile_extra_fields_save( $user_id ) {
 }
 add_action( 'personal_options_update', 'oyc_profile_extra_fields_save' );
 add_action( 'edit_user_profile_update', 'oyc_profile_extra_fields_save' );
+
+/* ── 10. Keep non-admin members out of the WP admin dashboard ─────────────
+ *  Admins are unaffected. Members get the front-end members area instead, but
+ *  can still reach their own Profile (to edit address / emergency contact). */
+
+// Hide the admin toolbar on the front end for non-admins.
+add_filter( 'show_admin_bar', function ( $show ) {
+	return current_user_can( 'manage_options' ) ? $show : false;
+} );
+
+// Redirect non-admins away from wp-admin (except their profile + AJAX).
+add_action( 'admin_init', function () {
+	if ( current_user_can( 'manage_options' ) || wp_doing_ajax() ) {
+		return;
+	}
+	global $pagenow;
+	if ( 'profile.php' === $pagenow ) {
+		return; // members may manage their own profile
+	}
+	wp_safe_redirect( home_url( '/members-area/' ) );
+	exit;
+} );
