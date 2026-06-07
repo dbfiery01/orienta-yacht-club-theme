@@ -37,7 +37,7 @@ add_action( 'init', function () {
  * ───────────────────────────────────────────────────────────────────────────── */
 
 function oyc_save_contact_message( $cf7 ) {
-	if ( (int) $cf7->id() !== 39 ) {
+	if ( $cf7->title() !== 'Contact Orienta Yacht Club' ) {
 		return;
 	}
 
