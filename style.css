@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.62
+Version: 1.0.63
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2744,10 +2744,20 @@ body.oyc-msg-lock { overflow: hidden; }
 .oyc-msg-popup__card p { margin: 0 0 1.6rem; color: rgba(4,22,42,0.75); }
 .oyc-msg-popup__close { min-width: 120px; }
 
-/* External links in page content get an up-right arrow (like the tide/buoy links). */
-.page-content a[target="_blank"]::after,
-.entry-content a[target="_blank"]::after {
+/* Inline content links styled like the #visitors links: brass underline + a
+   small up-right arrow on external links. Resource-list rows and buttons are
+   excluded (they have their own icons / styling). */
+.page-content a:not(.resource-link):not(.btn),
+.entry-content a:not(.resource-link):not(.btn) {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212,168,81,0.5);
+  transition: border-color 0.18s, color 0.18s;
+}
+.page-content a:not(.resource-link):not(.btn):hover,
+.entry-content a:not(.resource-link):not(.btn):hover { border-bottom-color: var(--brass); }
+.page-content a[target="_blank"]:not(.resource-link):not(.btn)::after,
+.entry-content a[target="_blank"]:not(.resource-link):not(.btn)::after {
   content: "\00A0\2197";
-  font-size: 0.85em;
-  font-weight: 600;
+  font-size: 0.75em;
+  opacity: 0.7;
 }
