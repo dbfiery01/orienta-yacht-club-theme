@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.47
+Version: 1.0.48
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2627,6 +2627,37 @@ body.page-id-297 .page-content strong { color: rgba(245,239,226,0.92); }
 body.page-id-297 .page-content h2,
 body.page-id-297 .page-content h3 { color: var(--cream); }
 body.page-id-297 .page-content a { color: var(--brass-bright); }
+/* Wider content + tide/buoy row + three glassy cards over the photo. */
+body.page-id-297 .page-content { max-width: 1080px; }
+body.page-id-297 .harbor-resources {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 0 0 1.5rem;
+}
+body.page-id-297 .harbor-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: start;
+}
+body.page-id-297 .harbor-resource,
+body.page-id-297 .harbor-card {
+  background: rgba(8,26,48,0.55);
+  border: 1px solid rgba(245,239,226,0.22);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+body.page-id-297 .harbor-resource h3,
+body.page-id-297 .harbor-card h3 {
+  color: var(--brass-bright);
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid rgba(245,239,226,0.22);
+  font-size: 1.15rem;
+}
+body.page-id-297 .harbor-card h4 { color: var(--cream); margin: 0.9rem 0 0.15rem; font-size: 0.95rem; }
+body.page-id-297 .harbor-card p,
+body.page-id-297 .harbor-resource p { margin: 0; color: rgba(245,239,226,0.9); font-size: 0.9rem; }
+@media (max-width: 820px) {
+  body.page-id-297 .harbor-cards { grid-template-columns: 1fr; }
+  body.page-id-297 .harbor-resources { grid-template-columns: 1fr; }
+}
 
 /* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
 .primary-nav li.cta > a {
