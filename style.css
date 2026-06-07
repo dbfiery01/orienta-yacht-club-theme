@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.2.8
+Version: 1.2.9
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2893,6 +2893,37 @@ body.oyc-page-reciprocity-list .entry-content h1,
 body.oyc-page-reciprocity-list .entry-content h2,
 body.oyc-page-reciprocity-list .entry-content h3 { color: var(--cream); }
 body.oyc-page-reciprocity-list .entry-content a:not(.btn) { color: var(--brass-bright); }
+/* The reciprocal-clubs table as a glass card over the photo. */
+body.oyc-page-reciprocity-list .entry-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 1.5rem;
+  background: rgba(4,22,42,0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(212,168,81,0.45);
+  border-radius: 12px;
+  overflow: hidden;
+}
+body.oyc-page-reciprocity-list .entry-content th,
+body.oyc-page-reciprocity-list .entry-content td {
+  padding: 9px 13px;
+  border: 1px solid rgba(245,239,226,0.16);
+  color: rgba(245,239,226,0.95);
+  text-align: left;
+  vertical-align: top;
+}
+body.oyc-page-reciprocity-list .entry-content tr:nth-child(even) td { background: rgba(245,239,226,0.05); }
+body.oyc-page-reciprocity-list .entry-content thead th {
+  background: rgba(212,168,81,0.22);
+  color: var(--cream);
+  font-weight: 600;
+}
+body.oyc-page-reciprocity-list .reciprocity-map-link { margin: 0 0 1.6rem; }
+@media (max-width: 760px) {
+  body.oyc-page-reciprocity-list .entry-content { overflow-x: auto; }
+  body.oyc-page-reciprocity-list .entry-content table { min-width: 640px; }
+}
 
 /* Responsive embedded map (16:9), framed to match the glass cards. */
 .oyc-map-embed {
