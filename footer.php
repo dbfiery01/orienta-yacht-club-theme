@@ -35,7 +35,7 @@
 					<li><a href="<?php echo esc_url( home_url( '/social-events/' ) ); ?>"><?php esc_html_e( 'Social Events', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#fishing' ) ); ?>"><?php esc_html_e( 'Fishing', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#sailing' ) ); ?>"><?php esc_html_e( 'Racing', 'orienta-yacht-club' ); ?></a></li>
-					<li><a href="<?php echo esc_url( home_url( '/membership-info/' ) ); ?>"><?php esc_html_e( 'Membership', 'orienta-yacht-club' ); ?></a></li>
+					<li><a href="<?php echo esc_url( home_url( '/#membership' ) ); ?>"><?php esc_html_e( 'Membership', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/additional-information/' ) ); ?>"><?php esc_html_e( 'Additional Information', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="https://orientayachtclub.com/members-log/" target="_blank" rel="noopener"><?php esc_html_e( 'Members Login', 'orienta-yacht-club' ); ?></a></li>
 				</ul>
