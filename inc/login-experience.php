@@ -157,3 +157,46 @@ function oyc_browser_greeting_script() {
 }
 add_action( 'wp_footer', 'oyc_browser_greeting_script' );
 add_action( 'admin_footer', 'oyc_browser_greeting_script' );
+
+/* ── 8. Simplify the user Profile screen (profile.php) ───────────────────────
+ *  Keep: Username, First/Last name, Nickname, Display name, Email, Account
+ *  Management, and WP-Members custom fields. Hide everything else — Personal
+ *  Options (syntax highlighting, color scheme, keyboard shortcuts, toolbar,
+ *  language, visual editor), Website, About Yourself (bio + avatar), and
+ *  Application Passwords. */
+
+// Remove the Application Passwords section entirely.
+add_filter( 'wp_is_application_passwords_available', '__return_false' );
+
+add_action( 'admin_head-profile.php', function () {
+	?>
+	<style>
+		/* Personal Options rows */
+		.user-rich-editing-wrap,
+		.user-syntax-highlighting-wrap,
+		.user-admin-color-wrap,
+		.user-comment-shortcuts-wrap,
+		.user-admin-bar-front-wrap,
+		.user-language-wrap,
+		/* Contact Info: Website */
+		.user-url-wrap,
+		/* About Yourself: Biographical Info + Profile Picture */
+		.user-description-wrap,
+		.user-profile-picture { display: none !important; }
+	</style>
+	<script>
+	document.addEventListener( 'DOMContentLoaded', function () {
+		var hide = [ 'personal options', 'about yourself', 'application passwords' ];
+		Array.prototype.forEach.call( document.querySelectorAll( '.wrap h2' ), function ( h ) {
+			if ( hide.indexOf( h.textContent.trim().toLowerCase() ) === -1 ) { return; }
+			h.style.display = 'none';
+			var el = h.nextElementSibling;
+			while ( el && el.tagName !== 'H2' ) {
+				el.style.display = 'none';
+				el = el.nextElementSibling;
+			}
+		} );
+	} );
+	</script>
+	<?php
+} );
