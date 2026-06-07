@@ -91,14 +91,15 @@ get_header();
 				<h3><?php esc_html_e( 'Fees Schedule', 'orienta-yacht-club' ); ?></h3>
 				<table class="fees-table">
 					<thead>
-						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th></tr>
+						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Initiation Fee', 'orienta-yacht-club' ); ?></th></tr>
 					</thead>
 					<tbody>
-						<tr><td>Regular</td><td>&mdash;</td></tr>
-						<tr><td>Teen</td><td>&mdash;</td></tr>
-						<tr><td>Social</td><td>&mdash;</td></tr>
+						<tr><td>Regular</td><td>&mdash;</td><td>&mdash;</td></tr>
+						<tr><td>Teen</td><td>&mdash;</td><td>&mdash;</td></tr>
+						<tr><td>Social</td><td>&mdash;</td><td>&mdash;</td></tr>
 					</tbody>
 				</table>
+				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'Complete fee schedule', 'orienta-yacht-club' ); ?></a></p>
 			</article>
 		</div>
 		<div class="cta-row">

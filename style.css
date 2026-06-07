@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.76
+Version: 1.0.77
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -418,9 +418,19 @@ p { margin: 0 0 1em; }
   border-bottom: 1px solid var(--line);
 }
 .fees-table th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brass); }
-.fees-table td:last-child,
-.fees-table th:last-child { text-align: right; }
+.fees-table td:not(:first-child),
+.fees-table th:not(:first-child) { text-align: right; }
 .fees-table tbody tr:last-child td { border-bottom: 0; }
+/* "Complete fee schedule" link on the membership card — site link style. */
+.fees-more { margin: 1.1rem 0 0; }
+.tile--on-photo .fees-more a {
+  color: var(--brass-bright);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212,168,81,0.5);
+  transition: border-color 0.18s, color 0.18s;
+}
+.tile--on-photo .fees-more a:hover { border-bottom-color: var(--brass); color: #fff; }
+.tile--on-photo .fees-more a::after { content: "\00A0\2197\FE0F"; font-size: 0.75em; opacity: 0.7; }
 @media (max-width: 980px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .grid-4 { grid-template-columns: 1fr; } }
 .tile {
@@ -2752,6 +2762,45 @@ body.page-id-4405 .video-card h3 {
 }
 @media (max-width: 900px) { body.page-id-4405 .video-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { body.page-id-4405 .video-grid { grid-template-columns: 1fr; } }
+
+/* 2026 Fee Schedule (#4958): immersive page with a glass fee-schedule card. */
+body.page-id-4958 {
+  background:
+    linear-gradient(rgba(4,22,42,0.74), rgba(4,22,42,0.82)),
+    url('assets/photos/home-slide-e.jpg') center center / cover fixed no-repeat;
+}
+body.page-id-4958.has-hero-header .page-hero {
+  background: transparent;
+  min-height: 0;
+  display: block;
+  padding: 7rem 0 0.5rem;
+}
+body.page-id-4958 .section { background: transparent; padding-top: 1rem; }
+body.page-id-4958 .page-content { max-width: 760px; }
+.fee-schedule-card {
+  background: rgba(4, 22, 42, 0.55);
+  border: 1px solid rgba(212, 168, 81, 0.30);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  padding: 1.75rem 2rem;
+}
+.fee-schedule-intro { color: rgba(245, 239, 226, 0.85); margin: 0 0 1.25rem; }
+.fee-schedule-table { width: 100%; border-collapse: collapse; }
+.fee-schedule-table th,
+.fee-schedule-table td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid rgba(245, 239, 226, 0.18);
+  color: rgba(245, 239, 226, 0.9);
+}
+.fee-schedule-table th {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--brass-bright);
+}
+.fee-schedule-table th:not(:first-child),
+.fee-schedule-table td:not(:first-child) { text-align: right; white-space: nowrap; }
+.fee-schedule-table tbody tr:last-child td { border-bottom: 0; }
 
 /* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
 .primary-nav li.cta > a {
