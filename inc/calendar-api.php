@@ -149,11 +149,34 @@ function oyc_rest_cal_debug( $req ) {
 	$funcs = array_values( array_filter( get_defined_functions()['user'], function ( $fn ) {
 		return preg_match( '/rhc_|calendariz|rebuild.*event|event.*rebuild|fc_save|save_event/i', $fn );
 	} ) );
+
+	// Structure of the occurrence-index table + a working event's row(s).
+	$tbl       = $wpdb->prefix . 'rhc_events';
+	$cols_desc = $wpdb->get_results( "DESCRIBE {$tbl}" );
+	$colnames  = $cols_desc ? wp_list_pluck( $cols_desc, 'Field' ) : array();
+	$postcol   = '';
+	foreach ( $colnames as $cn ) {
+		if ( preg_match( '/post/i', $cn ) ) { $postcol = $cn; break; }
+	}
+	$sample = $postcol
+		? $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tbl} WHERE {$postcol} = %d LIMIT 5", 4771 ), ARRAY_A )
+		: $wpdb->get_results( "SELECT * FROM {$tbl} ORDER BY 1 DESC LIMIT 5", ARRAY_A );
+
+	// Methods of the save handler class (to find the index builder).
+	$metabox_methods = class_exists( 'rhc_calendar_metabox' ) ? get_class_methods( 'rhc_calendar_metabox' ) : array();
+	$recurr_methods  = class_exists( 'rhc_recurr' ) ? get_class_methods( 'rhc_recurr' ) : array();
+
 	return array(
-		'cal_tables' => $cal,
-		'save_hooks' => $hooks,
-		'classes'    => array_slice( $classes, 0, 50 ),
-		'funcs'      => array_slice( $funcs, 0, 60 ),
+		'cal_tables'      => $cal,
+		'save_hooks'      => $hooks,
+		'classes'         => array_slice( $classes, 0, 50 ),
+		'funcs'           => array_slice( $funcs, 0, 60 ),
+		'events_table'    => $tbl,
+		'events_columns'  => $colnames,
+		'post_column'     => $postcol,
+		'sample_rows'     => $sample,
+		'metabox_methods' => $metabox_methods,
+		'recurr_methods'  => $recurr_methods,
 	);
 }
 
