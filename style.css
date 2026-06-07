@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.0.71
+Version: 1.0.72
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2714,11 +2714,39 @@ body.page-id-4405 .entry-content h1,
 body.page-id-4405 .entry-content h2,
 body.page-id-4405 .entry-content h3 { color: var(--cream); }
 body.page-id-4405 .entry-content a:not(.btn) { color: var(--brass-bright); }
-body.page-id-4405 .entry-content iframe {
-  max-width: 100%;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(4,22,42,0.45);
+/* Videos: 3-up glass cards with responsive 16:9 embeds. */
+body.page-id-4405 .video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 1rem;
 }
+body.page-id-4405 .video-card {
+  background: rgba(4, 22, 42, 0.55);
+  border: 1px solid rgba(212, 168, 81, 0.30);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  padding: 0.9rem;
+}
+body.page-id-4405 .video-embed {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+body.page-id-4405 .video-embed iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: 0;
+}
+body.page-id-4405 .video-card h3 {
+  margin: 0.75rem 0 0.15rem;
+  font-size: 1rem;
+  color: var(--brass-bright);
+}
+@media (max-width: 900px) { body.page-id-4405 .video-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { body.page-id-4405 .video-grid { grid-template-columns: 1fr; } }
 
 /* ── Unified outline nav buttons (Join + Login) like the hero "Visiting Boaters" ── */
 .primary-nav li.cta > a {
