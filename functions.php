@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.0.88' );
+define( 'OYC_VERSION', '1.0.89' );
 
 /**
  * Theme setup.
@@ -109,10 +109,9 @@ require_once get_template_directory() . '/inc/pwa.php';
 require_once get_template_directory() . '/inc/calendar-feed.php';
 
 /**
- * One-time seeder for US federal holidays 2026–2027 (admin trigger).
- * Safe to remove this require + inc/seed-holidays.php after seeding.
+ * Calendar API: create/list/delete Calendarize it! events programmatically.
  */
-require_once get_template_directory() . '/inc/seed-holidays.php';
+require_once get_template_directory() . '/inc/calendar-api.php';
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map
