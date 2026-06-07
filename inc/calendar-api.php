@@ -128,7 +128,26 @@ function oyc_rhc_clear_cache() {
 	} else {
 		$wpdb->query( "DELETE FROM {$wpdb->prefix}rhc_cache" );
 	}
+	oyc_bump_cal_rev();
 }
+
+/**
+ * Calendar revision token. The calendar page appends it to the feed URL so a
+ * change produces a brand-new URL that no browser/proxy has cached (the feed
+ * itself is sent with an 8-hour max-age by Calendarize it!). Unchanged → same
+ * URL → still cached/fast.
+ */
+function oyc_bump_cal_rev() {
+	update_option( 'oyc_cal_rev', time() );
+}
+function oyc_cal_rev() {
+	return (int) get_option( 'oyc_cal_rev', 1 );
+}
+// Bump on admin event edits too (not just the API).
+add_action( 'save_post_events', 'oyc_bump_cal_rev' );
+add_action( 'before_delete_post', function ( $id ) {
+	if ( 'events' === get_post_type( $id ) ) { oyc_bump_cal_rev(); }
+} );
 
 add_action( 'rest_api_init', function () {
 	$can_edit   = function () { return current_user_can( 'edit_posts' ); };

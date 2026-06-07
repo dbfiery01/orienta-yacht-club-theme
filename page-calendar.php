@@ -111,7 +111,7 @@ function oycInferCat(t){ t=(t||'').toLowerCase(); if(/\brace|cup|wsl|regatta|raf
 function oycLoadEvents(){
   var s=Math.floor(new Date(currentYear-1,0,1).getTime()/1000);
   var e=Math.floor(new Date(currentYear+2,0,1).getTime()/1000);
-  return fetch('/?rhc_action=get_calendar_events&post_type[]=events&start='+s+'&end='+e, {credentials:'same-origin', cache:'no-store'})
+  return fetch('/?rhc_action=get_calendar_events&post_type[]=events&start='+s+'&end='+e+'&rev=<?php echo function_exists( "oyc_cal_rev" ) ? oyc_cal_rev() : time(); ?>', {credentials:'same-origin', cache:'no-store'})
     .then(function(r){ return r.json(); })
     .then(function(d){
       function _fmtT(dt){ var m=/\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/.exec(dt||''); if(!m) return ''; var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; return h12+':'+m[2]+' '+ap; }
