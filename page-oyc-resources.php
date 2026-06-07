@@ -60,6 +60,24 @@ $oyc_resources = array(
 		'date'  => '',
 		'type'  => 'pdf',
 	),
+	array(
+		'title' => 'Weather — NWS Marine Forecast',
+		'url'   => 'https://www.weather.gov/marine/',
+		'date'  => '',
+		'type'  => 'link',
+	),
+	array(
+		'title' => 'Windy',
+		'url'   => 'https://www.windy.com/40.939/-73.715?40.462,-73.715,8',
+		'date'  => '',
+		'type'  => 'link',
+	),
+	array(
+		'title' => 'Passage Weather',
+		'url'   => 'https://www.passageweather.com/',
+		'date'  => '',
+		'type'  => 'link',
+	),
 );
 
 // SVG icons by type
