@@ -94,9 +94,9 @@ get_header();
 						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Initiation Fee', 'orienta-yacht-club' ); ?></th></tr>
 					</thead>
 					<tbody>
-						<tr><td>Regular</td><td>&mdash;</td><td>&mdash;</td></tr>
-						<tr><td>Teen</td><td>&mdash;</td><td>&mdash;</td></tr>
-						<tr><td>Social</td><td>&mdash;</td><td>&mdash;</td></tr>
+						<tr><td>Regular</td><td>$1,200</td><td>$2,500</td></tr>
+						<tr><td>Teen</td><td>$350</td><td>$500</td></tr>
+						<tr><td>Social</td><td>$600</td><td>$750</td></tr>
 					</tbody>
 				</table>
 				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'Complete fee schedule', 'orienta-yacht-club' ); ?></a></p>
