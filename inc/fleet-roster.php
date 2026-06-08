@@ -60,6 +60,10 @@ add_action( 'rest_api_init', function () {
 				return array( 'ok' => true, 'buffered' => strlen( (string) get_option( 'oyc_fleet_roster_buf', '' ) ) );
 			}
 
+			// Accept base64url (-, _) — some request pipelines turn "+" into a
+			// space, which corrupts standard base64. Convert back before decoding.
+			$decode_b64 = strtr( $decode_b64, '-_', '+/' );
+			$decode_b64 = str_replace( ' ', '+', $decode_b64 );
 			$bin = base64_decode( $decode_b64, true );
 			$arr = json_decode( (string) $bin, true );
 			if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
