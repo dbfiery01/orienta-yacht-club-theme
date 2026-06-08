@@ -139,4 +139,64 @@ add_action( 'rest_api_init', function () {
 			return array( 'ok' => true, 'count' => count( $arr ) );
 		},
 	) );
+
+	// Admin-only: move the roster PDF out of the public uploads path into a
+	// protected folder (with an .htaccess deny) so only the members-only
+	// streaming endpoint below can serve it. Run once.
+	register_rest_route( 'oyc/v1', '/protect-roster-pdf', array(
+		'methods'             => 'POST',
+		'permission_callback' => function () { return current_user_can( 'manage_options' ); },
+		'callback'            => function () {
+			$up   = wp_upload_dir();
+			$src  = $up['basedir'] . '/2026/01/2025-Fleet-Roster-Final-Edition.pdf';
+			$dir  = $up['basedir'] . '/oyc-protected';
+			$cur  = (string) get_option( 'oyc_roster_pdf_path', '' );
+			if ( $cur && file_exists( $cur ) ) {
+				return array( 'ok' => true, 'already' => true );
+			}
+			if ( ! file_exists( $dir ) ) {
+				wp_mkdir_p( $dir );
+			}
+			file_put_contents( $dir . '/.htaccess', "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n" );
+			file_put_contents( $dir . '/index.html', '' );
+			if ( ! file_exists( $src ) ) {
+				return new WP_REST_Response( array( 'error' => 'source PDF not found', 'looked' => $src ), 404 );
+			}
+			$dest = $dir . '/roster-' . wp_generate_password( 16, false, false ) . '.pdf';
+			if ( @rename( $src, $dest ) || ( @copy( $src, $dest ) && @unlink( $src ) ) ) {
+				update_option( 'oyc_roster_pdf_path', $dest, false );
+				return array( 'ok' => true, 'protected' => true );
+			}
+			return new WP_REST_Response( array( 'error' => 'could not move file' ), 500 );
+		},
+	) );
 } );
+
+/**
+ * Members-only streaming of the protected roster PDF at /fleet-roster-pdf/.
+ * Non-members are sent to the login screen; the file itself lives in a
+ * deny-all folder so the old public URL no longer serves it.
+ */
+add_action( 'template_redirect', function () {
+	$path = strtok( $_SERVER['REQUEST_URI'] ?? '', '?' );
+	if ( '/fleet-roster-pdf' !== rtrim( (string) $path, '/' ) ) {
+		return;
+	}
+	if ( ! is_user_logged_in() ) {
+		auth_redirect();
+		exit;
+	}
+	$file = (string) get_option( 'oyc_roster_pdf_path', '' );
+	if ( ! $file || ! file_exists( $file ) ) {
+		status_header( 404 );
+		exit;
+	}
+	status_header( 200 );
+	nocache_headers();
+	header( 'Content-Type: application/pdf' );
+	header( 'Content-Disposition: inline; filename="2025-Fleet-Roster.pdf"' );
+	header( 'Content-Length: ' . filesize( $file ) );
+	header( 'X-Robots-Tag: noindex, nofollow' );
+	readfile( $file );
+	exit;
+}, 0 );
