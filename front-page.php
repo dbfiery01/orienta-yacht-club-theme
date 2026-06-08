@@ -84,7 +84,7 @@ get_header();
 				<ul class="membership-types">
 					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
 					<li><strong>Jr</strong> &mdash; Full privileges and no voting rights</li>
-					<li><strong>Social</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
+					<li><strong>Associate</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
 				</ul>
 			</article>
 			<article class="tile tile--on-photo">
@@ -96,7 +96,7 @@ get_header();
 					<tbody>
 						<tr><td>Regular</td><td>$1,750</td><td>$3,500</td></tr>
 						<tr><td>Jr</td><td>$50</td><td>$0</td></tr>
-						<tr><td>Social</td><td>$100</td><td>$0</td></tr>
+						<tr><td>Associate</td><td>$100</td><td>$0</td></tr>
 					</tbody>
 				</table>
 				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'Complete fee schedule', 'orienta-yacht-club' ); ?></a></p>
