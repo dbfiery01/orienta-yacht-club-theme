@@ -36,8 +36,15 @@ add_action( 'rest_api_init', function () {
 			if ( '' === $b64 ) {
 				return new WP_REST_Response( array( 'error' => 'no data' ), 400 );
 			}
-			$json = base64_decode( $b64, true );
-			$arr  = json_decode( (string) $json, true );
+			$bin = base64_decode( $b64, true );
+			$arr = json_decode( (string) $bin, true );
+			// Allow a gzip-compressed payload (smaller to transmit).
+			if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
+				$un = @gzdecode( (string) $bin );
+				if ( false !== $un ) {
+					$arr = json_decode( $un, true );
+				}
+			}
 			if ( ! is_array( $arr ) ) {
 				return new WP_REST_Response( array( 'error' => 'invalid json' ), 400 );
 			}
