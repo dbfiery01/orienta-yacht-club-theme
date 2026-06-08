@@ -1,0 +1,65 @@
+/*
+Theme Name: OYC Fun
+Template: orienta-yacht-club-theme
+Author: Orienta Yacht Club
+Description: A bright, playful preview reskin of the Orienta Yacht Club theme — sunny coral & turquoise palette, rounded shapes, and friendly rounded fonts (Fredoka + Nunito). Activate to preview; switch back to "Orienta Yacht Club" anytime.
+Version: 1.0.0
+*/
+
+/* ===== OYC FUN — overrides layered on top of the parent theme ===== */
+
+:root {
+  --navy: #0f6e8c;        /* turquoise-blue (primary / dark text) */
+  --navy-deep: #0a5a73;
+  --navy-ink: #08475c;
+  --brass: #ff7a59;       /* sunny coral accent */
+  --brass-bright: #ffc24d;/* sunshine yellow */
+  --harbor: #16b3d6;      /* bright link blue */
+  --cream: #fff8ee;
+  --cream-soft: #fffaf3;
+  --line: rgba(15,110,140,0.16);
+  --radius: 14px;
+  --radius-lg: 22px;
+  --serif: "Fredoka", "Nunito", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --sans: "Nunito", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-serif: var(--serif);
+  --font-body: var(--sans);
+  --font-sans: var(--sans);
+}
+
+/* Playful display font on headings + brand */
+h1, h2, h3, .brand-name, .page-hero-title { font-family: var(--serif) !important; letter-spacing: 0 !important; }
+h1 { font-weight: 700; }
+
+/* Eyebrows / kickers in sunny coral */
+.kicker, .eyebrow { color: var(--brass) !important; font-weight: 700; }
+
+/* Round all the cards */
+.tile, .card, .fee-schedule-card, .roster-card, .profile-card, .dash-card,
+.video-card, .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: var(--radius-lg) !important; }
+
+/* Bouncy pill buttons */
+.btn { border-radius: 999px !important; font-family: var(--sans); font-weight: 800; letter-spacing: 0.01em; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.btn:hover { transform: translateY(-2px) rotate(-1.5deg); }
+.btn-primary { background: var(--brass) !important; border-color: var(--brass) !important; color: #fff !important; box-shadow: 0 6px 0 rgba(214,90,60,.35); }
+.btn-primary:hover { background: #ff6a45 !important; box-shadow: 0 8px 0 rgba(214,90,60,.35); }
+.btn-ghost, .btn-ghost-navy { border-width: 2px !important; }
+
+/* Nav CTA buttons rounded; links pop turquoise */
+.primary-nav li.cta > a { border-radius: 999px !important; }
+.primary-nav a { font-weight: 700; }
+a { color: var(--harbor); }
+
+/* Soft sky gradient on the tinted section */
+.section-tinted { background: linear-gradient(180deg, #eafbff 0%, #fff8ee 100%) !important; }
+
+/* Warmer/brighter hero overlay so it feels sunny */
+.hero-overlay { background: linear-gradient(180deg, rgba(255,122,89,0.18) 0%, rgba(15,110,140,0.45) 100%) !important; }
+
+/* Friendlier glass card borders on photos */
+.tile--on-photo, .roster-card, .fee-schedule-card { border-color: rgba(255,201,77,0.55) !important; }
+
+/* Fact figures + section accents in coral */
+.facts strong, .stat strong { color: var(--brass) !important; }
+
+/* A little fun on the footer waves / dividers stays from parent */
