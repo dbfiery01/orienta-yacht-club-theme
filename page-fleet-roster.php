@@ -40,7 +40,7 @@ $roster    = $is_member ? oyc_get_roster() : array();
 				<p class="roster-count"><span id="roster-shown"><?php echo count( $roster ); ?></span> <?php esc_html_e( 'members', 'orienta-yacht-club' ); ?></p>
 			</div>
 
-			<p class="roster-pdf"><a href="<?php echo esc_url( home_url( '/fleet-roster-pdf/' ) ); ?>" target="_blank" rel="noopener">&#128196; <?php esc_html_e( 'Download the full Fleet Roster (PDF)', 'orienta-yacht-club' ); ?> &#8599;</a></p>
+			<p class="roster-pdf"><a href="<?php echo esc_url( home_url( '/fleet-roster-pdf/' ) ); ?>" target="_blank" rel="noopener">&#128196; <?php esc_html_e( 'Download the full Fleet Roster (PDF)', 'orienta-yacht-club' ); ?></a></p>
 
 			<div id="roster-list" class="roster-list">
 				<?php
