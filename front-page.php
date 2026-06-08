@@ -78,7 +78,7 @@ get_header();
 		<p class="kicker"><?php echo esc_html( oyc_get( 'oyc_mem_kicker' ) ); ?></p>
 		<h2><?php echo esc_html( oyc_get( 'oyc_mem_headline' ) ); ?></h2>
 		<p class="section-lede"><?php echo esc_html( oyc_get( 'oyc_mem_lede' ) ); ?></p>
-		<div class="grid-2">
+		<div class="membership-single">
 			<article class="tile tile--on-photo">
 				<h3><?php esc_html_e( 'Membership Types', 'orienta-yacht-club' ); ?></h3>
 				<ul class="membership-types">
@@ -86,22 +86,9 @@ get_header();
 					<li><strong>Junior</strong> &mdash; Full privileges and no voting rights</li>
 					<li><strong>Associate</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
 				</ul>
+				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'View the complete fee schedule (members only)', 'orienta-yacht-club' ); ?></a></p>
 			</article>
-			<article class="tile tile--on-photo">
-				<h3><?php esc_html_e( 'Fees Schedule', 'orienta-yacht-club' ); ?></h3>
-				<table class="fees-table">
-					<thead>
-						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Initiation Fee', 'orienta-yacht-club' ); ?></th></tr>
-					</thead>
-					<tbody>
-						<tr><td>Regular</td><td>$1,750</td><td>$3,500</td></tr>
-						<tr><td>Junior</td><td>$50</td><td>$0</td></tr>
-						<tr><td>Associate</td><td>$100</td><td>$0</td></tr>
-					</tbody>
-				</table>
-				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'Complete fee schedule', 'orienta-yacht-club' ); ?></a></p>
-			</article>
-		</div>
+			</div>
 		<div class="cta-row">
 			<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/membership-application/' ) ); ?>"><?php esc_html_e( 'Apply Now', 'orienta-yacht-club' ); ?></a>
 			<a class="btn btn-link" href="<?php echo esc_url( home_url( '/?inquiry=membership#contact' ) ); ?>"><?php esc_html_e( 'Speak with the Membership Chair →', 'orienta-yacht-club' ); ?></a>
