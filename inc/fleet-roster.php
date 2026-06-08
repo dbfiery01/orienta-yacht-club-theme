@@ -32,13 +32,36 @@ add_action( 'rest_api_init', function () {
 		'methods'             => 'POST',
 		'permission_callback' => function () { return current_user_can( 'manage_options' ); },
 		'callback'            => function ( $req ) {
-			$b64 = (string) $req->get_param( 'b64' );
-			if ( '' === $b64 ) {
-				return new WP_REST_Response( array( 'error' => 'no data' ), 400 );
+			// Chunked upload (small bodies dodge WAF/body-size limits):
+			//   {reset:true}                -> clear the buffer
+			//   {append:"<base64 chunk>"}   -> append a chunk to the buffer
+			//   {finalize:true}             -> decode buffer (gzip ok) -> store
+			// or single-shot {b64:"..."}.
+			$reset    = (bool) $req->get_param( 'reset' );
+			$finalize = (bool) $req->get_param( 'finalize' );
+			$append   = (string) $req->get_param( 'append' );
+			$b64      = (string) $req->get_param( 'b64' );
+
+			if ( $reset ) {
+				update_option( 'oyc_fleet_roster_buf', '', false );
 			}
-			$bin = base64_decode( $b64, true );
+			if ( '' !== $append ) {
+				$buf = (string) get_option( 'oyc_fleet_roster_buf', '' );
+				update_option( 'oyc_fleet_roster_buf', $buf . $append, false );
+				return array( 'ok' => true, 'buffered' => strlen( $buf ) + strlen( $append ) );
+			}
+
+			$decode_b64 = '';
+			if ( $finalize ) {
+				$decode_b64 = (string) get_option( 'oyc_fleet_roster_buf', '' );
+			} elseif ( '' !== $b64 ) {
+				$decode_b64 = $b64;
+			} else {
+				return array( 'ok' => true, 'buffered' => strlen( (string) get_option( 'oyc_fleet_roster_buf', '' ) ) );
+			}
+
+			$bin = base64_decode( $decode_b64, true );
 			$arr = json_decode( (string) $bin, true );
-			// Allow a gzip-compressed payload (smaller to transmit).
 			if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
 				$un = @gzdecode( (string) $bin );
 				if ( false !== $un ) {
@@ -46,10 +69,10 @@ add_action( 'rest_api_init', function () {
 				}
 			}
 			if ( ! is_array( $arr ) ) {
-				return new WP_REST_Response( array( 'error' => 'invalid json' ), 400 );
+				return new WP_REST_Response( array( 'error' => 'invalid json', 'buflen' => strlen( $decode_b64 ) ), 400 );
 			}
-			// Store compact, not autoloaded.
 			update_option( 'oyc_fleet_roster', wp_json_encode( $arr ), false );
+			delete_option( 'oyc_fleet_roster_buf' );
 			return array( 'ok' => true, 'count' => count( $arr ) );
 		},
 	) );
