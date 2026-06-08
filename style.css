@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.2.9
+Version: 1.3.0
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2923,6 +2923,46 @@ body.oyc-page-reciprocity-list .reciprocity-map-link { margin: 0 0 1.6rem; }
 @media (max-width: 760px) {
   body.oyc-page-reciprocity-list .entry-content { overflow-x: auto; }
   body.oyc-page-reciprocity-list .entry-content table { min-width: 640px; }
+}
+
+/* Approach (boater's aid to find the club from the water): immersive page with
+   the chart + harbor photos as framed figures. */
+body.oyc-page-approach {
+  background:
+    linear-gradient(rgba(4,22,42,0.74), rgba(4,22,42,0.82)),
+    url('assets/photos/header-boats.jpg') center center / cover fixed no-repeat;
+}
+body.oyc-page-approach.has-hero-header .page-hero {
+  background: transparent;
+  min-height: 0;
+  display: block;
+  padding: 7rem 0 0.5rem;
+}
+body.oyc-page-approach .section { background: transparent; padding-top: 1rem; }
+.approach-doc { max-width: 900px; margin: 0 auto; }
+.approach-doc .approach-intro {
+  color: rgba(245,239,226,0.95);
+  font-size: 1.12rem;
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+.approach-doc .approach-intro strong { color: var(--cream); }
+.approach-figure {
+  margin: 0 0 2rem;
+  padding: 0.8rem;
+  background: rgba(4,22,42,0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(212,168,81,0.5);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.approach-figure img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.approach-figure figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  color: rgba(245,239,226,0.85);
+  font-size: 0.92rem;
 }
 
 /* Responsive embedded map (16:9), framed to match the glass cards. */

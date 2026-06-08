@@ -149,7 +149,7 @@ get_header();
 				<article class="tile tile--on-photo">
 					<h3>
 						<?php if ( $i === 1 ) : ?>
-							<a href="<?php echo esc_url( get_template_directory_uri() . '/assets/photos/OYC-Map.jpg' ); ?>" target="_blank" rel="noopener" class="tile-heading-link">
+							<a href="<?php echo esc_url( home_url( '/approach/' ) ); ?>" class="tile-heading-link">
 								<?php echo esc_html( $title ); ?> <span class="tile-link-icon" aria-hidden="true">↗</span>
 							</a>
 						<?php elseif ( $i === 2 ) : ?>
