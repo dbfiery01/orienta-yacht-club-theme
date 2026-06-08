@@ -62,7 +62,7 @@ function oyc_defaults() {
 		'oyc_mem_tile3_title' => 'Social',
 		'oyc_mem_tile3_body'  => 'Categories for members who live farther afield or who want to enjoy the clubhouse and events without a boat.',
 		'oyc_mem_tile4_title' => 'Fees',
-		'oyc_mem_tile4_body'  => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.',
+		'oyc_mem_tile4_body'  => '2026 dues are $1,750/year with a one-time $3,500 initiation. Reduced Junior ($50) and Associate ($100) categories. See the full fee schedule for moorings, storage, and more.',
 
 		/* Sailing */
 		'oyc_sail_kicker'   => 'Boating',
