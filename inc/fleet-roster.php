@@ -53,27 +53,34 @@ add_action( 'rest_api_init', function () {
 
 			$decode_b64 = '';
 			if ( $finalize ) {
-				$decode_b64 = (string) get_option( 'oyc_fleet_roster_buf', '' );
+				$payload = (string) get_option( 'oyc_fleet_roster_buf', '' );
 			} elseif ( '' !== $b64 ) {
-				$decode_b64 = $b64;
+				$payload = $b64;
 			} else {
 				return array( 'ok' => true, 'buffered' => strlen( (string) get_option( 'oyc_fleet_roster_buf', '' ) ) );
 			}
 
-			// Accept base64url (-, _) — some request pipelines turn "+" into a
-			// space, which corrupts standard base64. Convert back before decoding.
-			$decode_b64 = strtr( $decode_b64, '-_', '+/' );
-			$decode_b64 = str_replace( ' ', '+', $decode_b64 );
-			$bin = base64_decode( $decode_b64, true );
-			$arr = json_decode( (string) $bin, true );
-			if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
-				$un = @gzdecode( (string) $bin );
-				if ( false !== $un ) {
-					$arr = json_decode( $un, true );
+			// 1) Raw JSON (no encoding) — cleanest, avoids base64/+ pipeline issues.
+			$arr = json_decode( $payload, true );
+			// 2) Fall back to base64 / base64url / gzip.
+			if ( ! is_array( $arr ) ) {
+				$conv = str_replace( ' ', '+', strtr( $payload, '-_', '+/' ) );
+				$bin  = base64_decode( $conv, true );
+				$arr  = json_decode( (string) $bin, true );
+				if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
+					$un = @gzdecode( (string) $bin );
+					if ( false !== $un ) {
+						$arr = json_decode( $un, true );
+					}
 				}
 			}
 			if ( ! is_array( $arr ) ) {
-				return new WP_REST_Response( array( 'error' => 'invalid json', 'buflen' => strlen( $decode_b64 ) ), 400 );
+				return new WP_REST_Response( array(
+					'error' => 'invalid json',
+					'len'   => strlen( $payload ),
+					'head'  => substr( $payload, 0, 24 ),
+					'tail'  => substr( $payload, -16 ),
+				), 400 );
 			}
 			update_option( 'oyc_fleet_roster', wp_json_encode( $arr ), false );
 			delete_option( 'oyc_fleet_roster_buf' );
