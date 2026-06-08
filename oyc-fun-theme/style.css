@@ -2,49 +2,59 @@
 Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
-Description: A refreshed take on the Orienta Yacht Club theme — same Open Sans type as orientayachtclub.com, with gentle rounded shapes and playful, colorful backgrounds (sunny gradients + a sunset-ocean tint over the photos). Activate to preview; switch back to "Orienta Yacht Club" anytime.
-Version: 1.2.0
+Description: A bright, friendly theme that mirrors orientayachtclub.com's identity — sky-blue + lime-green accents on clean light backgrounds, Open Sans type. Activate to preview; switch back to "Orienta Yacht Club" anytime.
+Version: 1.3.0
 */
 
-/* ===== OYC FUN — clean Open Sans type, playful backgrounds ===== */
+/* ===== OYC FUN — mirrors orientayachtclub.com (blue + green, light, Open Sans) ===== */
 
 :root {
-  --cream: #f7f1e4;
-  --cream-soft: #fbf6ec;
-  --brass-bright: #e0b357;
-  --radius: 12px;
-  --radius-lg: 18px;
+  --navy: #2ea3f2;        /* orientayachtclub.com sky blue (primary) */
+  --navy-deep: #0472c1;   /* deeper blue (hover) */
+  --navy-ink: #0a3f63;    /* dark blue for text on light */
+  --brass: #8dc63f;       /* lime-green accent */
+  --brass-bright: #a4d65e;
+  --harbor: #0472c1;      /* link blue */
+  --cream: #ffffff;
+  --cream-soft: #f4fbff;
+  --line: rgba(46,163,242,0.18);
+  --radius: 8px;
+  --radius-lg: 14px;
 }
 
-/* Softer rounded cards + pill buttons (subtle lift) */
-.tile, .card, .fee-schedule-card, .roster-card, .profile-card, .dash-card,
-.video-card, .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch,
-.tile--on-photo { border-radius: var(--radius-lg) !important; }
-.btn { border-radius: 999px !important; transition: transform .15s ease, box-shadow .15s ease; }
+/* Buttons — production blue, lightly rounded (Divi-style) */
+.btn { border-radius: 8px !important; transition: background .15s ease, transform .15s ease; }
 .btn:hover { transform: translateY(-1px); }
-.primary-nav li.cta > a { border-radius: 999px !important; }
+.btn-primary { background: #2ea3f2 !important; border-color: #2ea3f2 !important; color: #fff !important; }
+.btn-primary:hover { background: #0472c1 !important; border-color: #0472c1 !important; }
+.primary-nav li.cta > a { border-radius: 8px !important; }
 
-/* ===== FUN BACKGROUNDS ===== */
+/* Links blue, kickers green (the two site accents) */
+a { color: #2ea3f2; }
+a:hover { color: #0472c1; }
+.kicker, .eyebrow { color: #8dc63f !important; font-weight: 700; }
+.facts strong, .stat strong { color: #2ea3f2 !important; }
 
-/* Sunny sky-to-sand gradient behind non-immersive pages */
-body { background: linear-gradient(165deg, #eaf7ff 0%, #fff4e8 55%, #ffe9e0 100%) fixed; }
+/* Cards lightly rounded */
+.tile, .card, .fee-schedule-card, .roster-card, .profile-card, .dash-card,
+.video-card, .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: var(--radius-lg) !important; }
 
-/* Cheerful gradients on the home content sections */
-#about    { background: linear-gradient(180deg, #eafaff 0%, #ffffff 100%) !important; }
-#membership.section-tinted { background: linear-gradient(135deg, #fff1e6 0%, #eafaff 100%) !important; }
-#contact  { background: linear-gradient(180deg, #eafff4 0%, #ffffff 100%) !important; }
+/* ===== Light, clean backgrounds like the real site ===== */
+body { background: #ffffff; }
+#about    { background: #ffffff !important; }
+#membership.section-tinted { background: #f4fbff !important; }
+#contact  { background: #f4fbff !important; }
 
-/* Sunset-ocean tint over the photo-hero sections + hero (kept dark enough for text) */
-.section-photo-overlay { background: linear-gradient(160deg, rgba(13,92,122,0.60) 0%, rgba(255,122,89,0.48) 100%) !important; }
-.hero-overlay { background: linear-gradient(180deg, rgba(255,150,80,0.28) 0%, rgba(8,50,80,0.64) 100%) !important; }
+/* Photo sections get a bright blue wash (vs. the dark navy), echoing the site's airy photo headers — kept dark enough to read white text */
+.section-photo-overlay { background: linear-gradient(180deg, rgba(46,163,242,0.42) 0%, rgba(4,114,193,0.58) 100%) !important; }
+.hero-overlay { background: linear-gradient(180deg, rgba(46,163,242,0.22) 0%, rgba(8,60,100,0.58) 100%) !important; }
 
-/* Soft colorful wash over the fixed-photo (immersive) pages — sits behind the
-   content cards so text stays readable. */
+/* Soft blue/green wash over the immersive fixed-photo pages (behind content) */
 body.oyc-immersive::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(255,138,76,0.20) 0%, rgba(20,150,180,0.16) 55%, rgba(255,205,90,0.20) 100%);
+  background: linear-gradient(160deg, rgba(46,163,242,0.18) 0%, rgba(141,198,63,0.12) 100%);
 }
