@@ -62,24 +62,35 @@ add_action( 'rest_api_init', function () {
 
 			// 1) Raw JSON (no encoding) — cleanest, avoids base64/+ pipeline issues.
 			$arr = json_decode( $payload, true );
-			// 2) Fall back to base64 / base64url / gzip.
+			$binlen = -1; $gz_ok = false; $gz_avail = function_exists( 'gzdecode' );
+			// 2) Fall back to base64 / base64url / gzip (lenient decode).
 			if ( ! is_array( $arr ) ) {
 				$conv = str_replace( ' ', '+', strtr( $payload, '-_', '+/' ) );
-				$bin  = base64_decode( $conv, true );
+				$bin  = base64_decode( $conv );
+				$binlen = ( false === $bin ) ? -1 : strlen( $bin );
 				$arr  = json_decode( (string) $bin, true );
-				if ( ! is_array( $arr ) && function_exists( 'gzdecode' ) ) {
+				if ( ! is_array( $arr ) && $gz_avail ) {
 					$un = @gzdecode( (string) $bin );
-					if ( false !== $un ) {
+					$gz_ok = ( false !== $un );
+					if ( $gz_ok ) {
 						$arr = json_decode( $un, true );
+					}
+				}
+				if ( ! is_array( $arr ) && $gz_avail ) {
+					$un2 = @gzinflate( substr( (string) $bin, 10 ) ); // raw deflate fallback
+					if ( false !== $un2 ) {
+						$arr = json_decode( $un2, true );
 					}
 				}
 			}
 			if ( ! is_array( $arr ) ) {
 				return new WP_REST_Response( array(
-					'error' => 'invalid json',
-					'len'   => strlen( $payload ),
-					'head'  => substr( $payload, 0, 24 ),
-					'tail'  => substr( $payload, -16 ),
+					'error'    => 'invalid json',
+					'len'      => strlen( $payload ),
+					'md5'      => md5( $payload ),
+					'binlen'   => $binlen,
+					'gz_avail' => $gz_avail,
+					'gz_ok'    => $gz_ok,
 				), 400 );
 			}
 			update_option( 'oyc_fleet_roster', wp_json_encode( $arr ), false );
