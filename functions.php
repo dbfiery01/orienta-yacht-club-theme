@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.3.3' );
+define( 'OYC_VERSION', '1.4.0' );
 
 /**
  * Theme setup.
@@ -112,6 +112,11 @@ require_once get_template_directory() . '/inc/calendar-feed.php';
  * Calendar API: create/list/delete Calendarize it! events programmatically.
  */
 require_once get_template_directory() . '/inc/calendar-api.php';
+
+/**
+ * Fleet Roster: members-only searchable directory (data stays in the DB).
+ */
+require_once get_template_directory() . '/inc/fleet-roster.php';
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map
@@ -242,7 +247,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;
