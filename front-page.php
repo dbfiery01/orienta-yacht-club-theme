@@ -83,7 +83,7 @@ get_header();
 				<h3><?php esc_html_e( 'Membership Types', 'orienta-yacht-club' ); ?></h3>
 				<ul class="membership-types">
 					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
-					<li><strong>Jr</strong> &mdash; Full privileges and no voting rights</li>
+					<li><strong>Junior</strong> &mdash; Full privileges and no voting rights</li>
 					<li><strong>Associate</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
 				</ul>
 			</article>
@@ -95,7 +95,7 @@ get_header();
 					</thead>
 					<tbody>
 						<tr><td>Regular</td><td>$1,750</td><td>$3,500</td></tr>
-						<tr><td>Jr</td><td>$50</td><td>$0</td></tr>
+						<tr><td>Junior</td><td>$50</td><td>$0</td></tr>
 						<tr><td>Associate</td><td>$100</td><td>$0</td></tr>
 					</tbody>
 				</table>
