@@ -49,6 +49,30 @@ add_action( 'rest_api_init', function () {
 				return array( 'ok' => true, 'added' => count( $batch ), 'total' => count( $cur ) );
 			}
 
+			// Patch specific members by email: [ { email, set:{field:val,...} } ].
+			$patch = $req->get_param( 'patch' );
+			if ( is_array( $patch ) ) {
+				$cur = oyc_get_roster();
+				$changed = 0; $unmatched = array();
+				foreach ( $patch as $p ) {
+					if ( ! is_array( $p ) || empty( $p['email'] ) || empty( $p['set'] ) || ! is_array( $p['set'] ) ) {
+						continue;
+					}
+					$em = strtolower( trim( (string) $p['email'] ) );
+					$hit = false;
+					foreach ( $cur as $i => $m ) {
+						$me = strtolower( trim( (string) ( isset( $m['email'] ) ? $m['email'] : '' ) ) );
+						if ( $me === $em ) {
+							$cur[ $i ] = array_merge( $m, $p['set'] );
+							$changed++; $hit = true;
+						}
+					}
+					if ( ! $hit ) { $unmatched[] = $em; }
+				}
+				update_option( 'oyc_fleet_roster', wp_json_encode( $cur ), false );
+				return array( 'ok' => true, 'changed' => $changed, 'unmatched' => $unmatched, 'total' => count( $cur ) );
+			}
+
 			// Chunked upload (small bodies dodge WAF/body-size limits):
 			//   {reset:true}                -> clear the buffer
 			//   {append:"<base64 chunk>"}   -> append a chunk to the buffer
