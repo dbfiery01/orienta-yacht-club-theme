@@ -83,7 +83,7 @@ get_header();
 				<h3><?php esc_html_e( 'Membership Types', 'orienta-yacht-club' ); ?></h3>
 				<ul class="membership-types">
 					<li><strong>Regular</strong> &mdash; Full privileges and voting rights</li>
-					<li><strong>Teen</strong> &mdash; Full privileges and no voting rights</li>
+					<li><strong>Jr</strong> &mdash; Full privileges and no voting rights</li>
 					<li><strong>Social</strong> &mdash; Events, Clubhouse privileges and no voting rights</li>
 				</ul>
 			</article>
@@ -94,9 +94,9 @@ get_header();
 						<tr><th><?php esc_html_e( 'Category', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Annual Dues', 'orienta-yacht-club' ); ?></th><th><?php esc_html_e( 'Initiation Fee', 'orienta-yacht-club' ); ?></th></tr>
 					</thead>
 					<tbody>
-						<tr><td>Regular</td><td>$1,200</td><td>$2,500</td></tr>
-						<tr><td>Teen</td><td>$350</td><td>$500</td></tr>
-						<tr><td>Social</td><td>$600</td><td>$750</td></tr>
+						<tr><td>Regular</td><td>$1,750</td><td>$3,500</td></tr>
+						<tr><td>Jr</td><td>$50</td><td>$0</td></tr>
+						<tr><td>Social</td><td>$100</td><td>$0</td></tr>
 					</tbody>
 				</table>
 				<p class="fees-more"><a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>"><?php esc_html_e( 'Complete fee schedule', 'orienta-yacht-club' ); ?></a></p>
