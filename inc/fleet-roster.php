@@ -32,6 +32,23 @@ add_action( 'rest_api_init', function () {
 		'methods'             => 'POST',
 		'permission_callback' => function () { return current_user_can( 'manage_options' ); },
 		'callback'            => function ( $req ) {
+			// Preferred path: send members as a native JSON array (WP parses the
+			// JSON body, so no string/base64 decoding — malformed JSON is rejected
+			// by REST, making it self-validating). Small batches dodge size limits.
+			//   { batch: [ {member}, ... ], mode: "replace"|"append" }
+			$batch = $req->get_param( 'batch' );
+			if ( is_array( $batch ) ) {
+				$mode = (string) $req->get_param( 'mode' );
+				$cur  = ( 'replace' === $mode ) ? array() : oyc_get_roster();
+				foreach ( $batch as $m ) {
+					if ( is_array( $m ) ) {
+						$cur[] = $m;
+					}
+				}
+				update_option( 'oyc_fleet_roster', wp_json_encode( $cur ), false );
+				return array( 'ok' => true, 'added' => count( $batch ), 'total' => count( $cur ) );
+			}
+
 			// Chunked upload (small bodies dodge WAF/body-size limits):
 			//   {reset:true}                -> clear the buffer
 			//   {append:"<base64 chunk>"}   -> append a chunk to the buffer
