@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.1
+Version: 1.5.2
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -78,3 +78,54 @@ body.oyc-page-members-area strong, body.oyc-page-members-area p, body.oyc-page-m
 .dash-welcome, .dash-greeting { color: #16324a !important; }
 body.oyc-page-members-area .btn-ghost { color: #0472c1 !important; border-color: #0472c1 !important; }
 body.oyc-page-members-area .btn-ghost:hover { background: #0472c1 !important; color: #fff !important; }
+
+/* 9) MENU → solid white bar, dark menu text, glass CTA buttons (OYC Fun) */
+.site-header,
+body.has-hero-header .site-header,
+body.has-hero-header .site-header:not(.is-scrolled),
+body.has-hero-header .site-header.is-scrolled {
+  background: #ffffff !important;
+  box-shadow: 0 1px 0 rgba(11,46,74,0.10), 0 6px 18px rgba(11,46,74,0.06) !important;
+}
+/* dark menu links + blue hover/underline */
+.site-header .primary-nav a,
+body.has-hero-header .site-header .primary-nav a,
+body.has-hero-header .site-header.is-scrolled .primary-nav a,
+#nav-menu a { color: #16324a !important; }
+.site-header .primary-nav a:hover,
+body.has-hero-header .site-header .primary-nav a:hover,
+#nav-menu a:hover { color: #1583cf !important; }
+.site-header .primary-nav a:not(.cta)::after,
+body.has-hero-header .site-header .primary-nav a:not(.cta)::after { background: #1583cf !important; }
+/* hamburger bars + brand dark on white */
+body.has-hero-header .site-header .nav-toggle .bars,
+body.has-hero-header .site-header .nav-toggle .bars::before,
+body.has-hero-header .site-header .nav-toggle .bars::after { background: #16324a !important; }
+body.has-hero-header .site-header:not(.is-scrolled) .brand,
+.site-header .brand-name { color: #16324a !important; }
+
+/* Glass CTA buttons — same font as the rest of the menu (1.14rem / 500) */
+.primary-nav li.cta > a,
+.primary-nav .menu-item.cta a,
+#nav-menu li.cta > a,
+#nav-menu .menu-item.cta a,
+body.has-hero-header .site-header:not(.is-scrolled) .primary-nav li.cta > a,
+body.has-hero-header .site-header.is-scrolled .primary-nav li.cta > a {
+  background: rgba(255,255,255,0.5) !important;
+  border: 1px solid rgba(11,46,74,0.22) !important;
+  color: #16324a !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-size: 1.14rem !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.primary-nav li.cta > a:hover,
+#nav-menu li.cta > a:hover,
+#nav-menu .menu-item.cta a:hover,
+body.has-hero-header .site-header .primary-nav li.cta > a:hover {
+  background: rgba(21,131,207,0.12) !important;
+  border-color: rgba(21,131,207,0.5) !important;
+  color: #0472c1 !important;
+}
