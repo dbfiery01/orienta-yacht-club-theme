@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.14
+Version: 1.5.15
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -211,3 +211,16 @@ body.oyc-page-contact .contact-split__info p,
 body.oyc-page-contact .contact-split__info strong,
 body.oyc-page-contact .entry-content strong,
 body.oyc-page-contact strong { color: #16324a !important; }
+
+/* 18) Reciprocity list table → light with alternating (zebra) rows */
+body.oyc-page-reciprocity-list .entry-content table {
+  background: #ffffff !important;
+  border: 1px solid rgba(11,46,74,0.12) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+body.oyc-page-reciprocity-list .entry-content td,
+body.oyc-page-reciprocity-list .entry-content th { color: #16324a !important; border-color: rgba(11,46,74,0.10) !important; }
+body.oyc-page-reciprocity-list .entry-content tr:nth-child(odd) td  { background: #ffffff !important; }  /* lighter */
+body.oyc-page-reciprocity-list .entry-content tr:nth-child(even) td { background: #e3edf7 !important; }  /* darker */
+body.oyc-page-reciprocity-list .entry-content tr:first-child th,
+body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !important; font-weight: 700; }
