@@ -2,62 +2,46 @@
 Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
-Description: Mirrors orientayachtclub.com — sky-blue + lime-green accents, Open Sans, clean light backgrounds. Text kept dark for readability; blue/green used only on accents (green on dark areas where it has contrast). Activate to preview; switch back anytime.
-Version: 1.4.0
+Description: Mirrors orientayachtclub.com's color identity — sky-blue + lime-green accents, Open Sans — applied to the existing (readable) layout. Text colors are left to the parent so nothing becomes low-contrast. Activate to preview; switch back anytime.
+Version: 1.4.1
 */
 
-/* ===== OYC FUN — orientayachtclub.com look, readable ===== */
+/* ===== OYC FUN — orientayachtclub.com accents on the existing layout =====
+   IMPORTANT: we do NOT change section backgrounds or text colors here. The
+   home + interior pages are an immersive design (light text over photos), so
+   forcing white backgrounds made text disappear. We only re-skin ACCENTS. */
 
 :root {
-  --navy: #1f3a52;        /* headings + dark surfaces (stays DARK = readable) */
-  --navy-deep: #163047;
-  --navy-ink: #333333;    /* body text — matches the real site */
-  --brass: #1583cf;       /* primary blue accent (readable on light: kickers, underlines) */
-  --brass-bright: #2ea3f2;/* brighter blue for on-dark accents */
-  --harbor: #1583cf;      /* links */
-  --cream: #f7faff;       /* light text on dark surfaces */
-  --cream-soft: #ffffff;
-  --line: rgba(31,58,82,0.14);
+  /* Text/heading/surface colors stay essentially as the parent (dark stays
+     dark, light stays light) so contrast is preserved. */
+  --navy: #16324a;          /* headings on light + dark surfaces (dark = readable) */
+  --navy-deep: #0f2638;
+  --navy-ink: #2a2a2a;      /* body text */
+  /* Accents become the site's blue + green */
+  --brass: #1583cf;         /* primary blue accent (links/kickers/underlines) */
+  --brass-bright: #2ea3f2;  /* brighter blue for accents on dark */
+  --harbor: #1583cf;
   --radius: 8px;
   --radius-lg: 14px;
 }
 
 /* Links */
-a { color: var(--harbor); }
 a:hover { color: #0472c1; }
 
-/* Buttons — readable solid blue (white text passes on this shade) */
+/* Buttons — readable solid blue */
 .btn { border-radius: 8px !important; transition: background .15s ease, transform .15s ease; }
 .btn:hover { transform: translateY(-1px); }
 .btn-primary { background: #1583cf !important; border-color: #1583cf !important; color: #fff !important; }
 .btn-primary:hover { background: #0472c1 !important; border-color: #0472c1 !important; }
 .primary-nav li.cta > a { border-radius: 8px !important; }
 
-/* Accents: blue on light, lime-green where it sits on dark (good contrast) */
-.facts strong, .stat strong { color: #1583cf !important; }       /* readable blue on light */
-.kicker.on-dark { color: #a4d65e !important; }                   /* lime-green over photos (dark) */
-.section-photo-hero .kicker { color: #b6e27a !important; }        /* green eyebrow on photo sections */
+/* Lime-green eyebrows over photos (good contrast on dark) */
+.kicker.on-dark, .section-photo-hero .kicker { color: #b6e27a !important; }
 
 /* Rounded cards */
 .tile, .card, .fee-schedule-card, .roster-card, .profile-card, .dash-card,
 .video-card, .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: var(--radius-lg) !important; }
 
-/* ===== Clean, light backgrounds like the real site ===== */
-body { background: #ffffff; }
-#about    { background: #ffffff !important; }
-#membership.section-tinted { background: #f3f9ff !important; }
-#contact  { background: #f3f9ff !important; }
-
-/* Photo sections: blue-cast overlay, kept dark enough for white text */
-.section-photo-overlay { background: linear-gradient(160deg, rgba(11,46,74,0.60) 0%, rgba(4,90,150,0.60) 100%) !important; }
+/* Photo overlays get a blue cast (kept dark enough for white text) */
+.section-photo-overlay { background: linear-gradient(160deg, rgba(11,46,74,0.62) 0%, rgba(4,90,150,0.60) 100%) !important; }
 .hero-overlay { background: linear-gradient(180deg, rgba(20,70,110,0.30) 0%, rgba(6,40,70,0.66) 100%) !important; }
-
-/* Very subtle blue/green wash on immersive pages (won't reduce text contrast) */
-body.oyc-immersive::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(160deg, rgba(46,163,242,0.10) 0%, rgba(141,198,63,0.08) 100%);
-}
