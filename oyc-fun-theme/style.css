@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.0
+Version: 1.5.1
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -42,18 +42,23 @@ body.oyc-immersive .section:not(.section-photo-hero) a:not(.btn) { color: #1583c
 .tile--on-photo, .tile--on-photo p, .tile--on-photo li, .tile--on-photo strong,
 .fee-schedule-intro, .fee-schedule-table td, .fee-schedule-note,
 .roster-card__contact li, .roster-card__addr, .roster-card__spouse,
-.dash-card__label, .approach-figure figcaption, .approach-launch p,
+.dash-card__label, .approach-figure figcaption, .approach-launch p, .approach-launch li,
 .membership-types li, .profile-card, .harbor-col, .harbor-col p, .video-card figcaption { color: #2a2a2a !important; }
 .tile--on-photo h3, .roster-card__name, .approach-launch__title, .fee-schedule-card h2, .harbor-col h3 { color: #16324a !important; }
 .dash-card__icon, .roster-card__contact a, .fees-more a, .tile--on-photo .fees-more a,
-.fee-schedule-table th, .roster-pdf a, .approach-launch a { color: #1583cf !important; }
+.fee-schedule-table th, .roster-pdf a, .approach-launch a, .approach-launch__label { color: #1583cf !important; }
 .fee-schedule-table th, .fee-schedule-table td { border-color: rgba(11,46,74,0.12) !important; }
+/* roster category chip → blue text on light-blue chip */
+.roster-badge { color: #0472c1 !important; background: rgba(21,131,207,0.14) !important; }
 
-/* 5) Home light sections (photo feature sections stay as-is) */
-#about, #contact { background: #ffffff !important; }
+/* 5) Home light sections (photo feature + contact photo header stay as-is) */
+#about { background: #ffffff !important; }
 #membership.section-tinted { background: #eef6fd !important; }
-#about .kicker, #membership .kicker, #contact .kicker, .kicker { color: #1583cf !important; }
+.kicker { color: #1583cf !important; }
 #about .facts strong { color: #1583cf !important; }
+.section-photo-hero .kicker, .contact-photo-header .kicker { color: #cdee9a !important; }
+#membership .btn-link, body.oyc-immersive .entry-content .btn-link { color: #0472c1 !important; }
+#membership .btn-link:hover { color: #16324a !important; }
 
 /* 6) Buttons + rounding */
 a:hover { color: #0472c1; }
@@ -64,6 +69,12 @@ a:hover { color: #0472c1; }
 .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: 14px !important; }
 
 /* 7) Photo FEATURE sections (home #sailing/#fishing/#visitors) keep photo + light text */
-.section-photo-hero .kicker { color: #cdee9a !important; }
 .section-photo-overlay { background: linear-gradient(160deg, rgba(11,46,74,0.55) 0%, rgba(4,90,150,0.55) 100%) !important; }
 .hero-overlay { background: linear-gradient(180deg, rgba(20,70,110,0.28) 0%, rgba(6,40,70,0.62) 100%) !important; }
+
+/* 8) Readability corrections (light-on-light fixes from contrast audit) */
+body.oyc-page-approach strong { color: #16324a !important; }
+body.oyc-page-members-area strong, body.oyc-page-members-area p, body.oyc-page-members-area li,
+.dash-welcome, .dash-greeting { color: #16324a !important; }
+body.oyc-page-members-area .btn-ghost { color: #0472c1 !important; border-color: #0472c1 !important; }
+body.oyc-page-members-area .btn-ghost:hover { background: #0472c1 !important; color: #fff !important; }
