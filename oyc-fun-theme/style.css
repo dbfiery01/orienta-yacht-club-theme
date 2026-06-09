@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.9
+Version: 1.5.10
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -193,3 +193,7 @@ body.oyc-page-boating .page-hero, body.oyc-page-fishing .page-hero,
 body.oyc-page-visitors .page-hero, body.oyc-page-membership .page-hero {
   padding: 5.6rem 0 1.1rem !important;
 }
+
+/* 14) Tile heading links already carry a manual arrow icon — drop the auto
+   external-link arrow on them inside page content (was showing two arrows). */
+.entry-content .tile-heading-link::after { content: none !important; }
