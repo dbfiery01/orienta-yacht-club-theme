@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.6
+Version: 1.5.7
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -162,3 +162,15 @@ body.has-hero-header .site-header .primary-nav li.cta > a:hover {
 .harbor-card, .harbor-card p, .harbor-card li, .harbor-card strong, .harbor-card td { color: #2a2a2a !important; }
 .harbor-card h2, .harbor-card h3, .harbor-card h4 { color: #16324a !important; }
 .harbor-card a { color: #1583cf !important; }
+
+/* 11) Home photo sections (Boating/Fishing/Visitors) → photo banner strip on
+   top + white content below (matches the interior-page style, not full-immersive) */
+body.home .section-photo-hero { background: #ffffff !important; padding: 0 0 3rem !important; }
+body.home .section-photo-hero .section-photo-bg { position: relative !important; inset: auto !important; height: 240px !important; z-index: 0 !important; }
+body.home .section-photo-hero .section-photo-overlay { position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: auto !important; height: 240px !important; z-index: 1 !important; background: linear-gradient(180deg, rgba(8,40,66,0.08) 0%, rgba(8,40,66,0.30) 100%) !important; }
+body.home .section-photo-hero .section-photo-inner { position: relative !important; z-index: 2 !important; padding-top: 2.5rem !important; }
+body.home .section-photo-hero h2 { color: #16324a !important; }
+body.home .section-photo-hero .kicker { color: #1583cf !important; }
+body.home .section-photo-hero p, body.home .section-photo-hero .bullets li,
+body.home .section-photo-hero .section-lede { color: #2a2a2a !important; }
+body.home .section-photo-hero .sail-docs-link a { color: #1583cf !important; }
