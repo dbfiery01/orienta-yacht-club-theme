@@ -38,41 +38,6 @@ get_header();
 	<div class="hero-scroll" aria-hidden="true"><span></span></div>
 </section>
 
-<section id="about" class="section">
-	<div class="container two-col">
-		<div>
-			<p class="kicker"><?php echo esc_html( oyc_get( 'oyc_about_kicker' ) ); ?></p>
-			<h2><?php echo esc_html( oyc_get( 'oyc_about_headline' ) ); ?></h2>
-			<p><?php echo esc_html( oyc_get( 'oyc_about_p1' ) ); ?></p>
-			<p><?php echo esc_html( oyc_get( 'oyc_about_p2' ) ); ?></p>
-			<ul class="facts">
-				<?php for ( $i = 1; $i <= 4; $i++ ) :
-					$value = oyc_get( "oyc_fact{$i}_value" );
-					$label = oyc_get( "oyc_fact{$i}_label" );
-					if ( ! $value && ! $label ) { continue; }
-				?>
-					<li>
-						<strong><?php echo esc_html( $value ); ?></strong>
-						<span><?php echo esc_html( $label ); ?></span>
-					</li>
-				<?php endfor; ?>
-			</ul>
-		</div>
-		<aside class="card-stack">
-			<?php for ( $i = 1; $i <= 3; $i++ ) :
-				$title = oyc_get( "oyc_card{$i}_title" );
-				$body  = oyc_get( "oyc_card{$i}_body" );
-				if ( ! $title && ! $body ) { continue; }
-			?>
-				<article class="tile tile--on-photo">
-					<h3><?php echo esc_html( $title ); ?></h3>
-					<p><?php echo esc_html( $body ); ?></p>
-				</article>
-			<?php endfor; ?>
-		</aside>
-	</div>
-</section>
-
 <!-- Contact photo banner -->
 <div class="contact-photo-header" id="contact">
 	<div class="contact-photo-bg" aria-hidden="true"></div>
