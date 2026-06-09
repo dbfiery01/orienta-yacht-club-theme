@@ -2,46 +2,68 @@
 Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
-Description: Mirrors orientayachtclub.com's color identity — sky-blue + lime-green accents, Open Sans — applied to the existing (readable) layout. Text colors are left to the parent so nothing becomes low-contrast. Activate to preview; switch back anytime.
-Version: 1.4.1
+Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
+Version: 1.5.0
 */
 
-/* ===== OYC FUN — orientayachtclub.com accents on the existing layout =====
-   IMPORTANT: we do NOT change section backgrounds or text colors here. The
-   home + interior pages are an immersive design (light text over photos), so
-   forcing white backgrounds made text disappear. We only re-skin ACCENTS. */
+/* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
 
-:root {
-  /* Text/heading/surface colors stay essentially as the parent (dark stays
-     dark, light stays light) so contrast is preserved. */
-  --navy: #16324a;          /* headings on light + dark surfaces (dark = readable) */
-  --navy-deep: #0f2638;
-  --navy-ink: #2a2a2a;      /* body text */
-  /* Accents become the site's blue + green */
-  --brass: #1583cf;         /* primary blue accent (links/kickers/underlines) */
-  --brass-bright: #2ea3f2;  /* brighter blue for accents on dark */
-  --harbor: #1583cf;
-  --radius: 8px;
-  --radius-lg: 14px;
+:root { --brass:#1583cf; --brass-bright:#2ea3f2; --harbor:#1583cf; --radius:8px; --radius-lg:14px; }
+
+/* 1) Drop the immersive fixed-photo backdrop + scrims → clean light pages */
+body.oyc-immersive { background: #f5f9fd !important; }
+body.oyc-immersive::before, body.oyc-immersive::after { display: none !important; }
+
+/* 2) Interior page header → blue band with white title (photo-free) */
+body.oyc-immersive .page-hero { background: linear-gradient(135deg, #1f8fd6 0%, #0472c1 100%) !important; min-height: 0 !important; padding: 6.5rem 0 1.6rem !important; }
+body.oyc-immersive .page-hero *, body.oyc-immersive .page-hero-title, body.oyc-immersive .page-hero .kicker { color: #ffffff !important; }
+body.oyc-immersive .page-hero::before, body.oyc-immersive .page-hero::after { display: none !important; }
+
+/* 3) Interior content text → dark on light (NOT the photo feature sections) */
+body.oyc-immersive .page-content, body.oyc-immersive .entry-content,
+body.oyc-immersive .entry-content p, body.oyc-immersive .entry-content li,
+body.oyc-immersive .section:not(.section-photo-hero),
+body.oyc-immersive .section:not(.section-photo-hero) p,
+body.oyc-immersive .section:not(.section-photo-hero) li { color: #2a2a2a !important; }
+body.oyc-immersive .entry-content h1, body.oyc-immersive .entry-content h2, body.oyc-immersive .entry-content h3,
+body.oyc-immersive .section:not(.section-photo-hero) h2,
+body.oyc-immersive .section:not(.section-photo-hero) h3 { color: #16324a !important; }
+body.oyc-immersive .entry-content a:not(.btn),
+body.oyc-immersive .section:not(.section-photo-hero) a:not(.btn) { color: #1583cf !important; }
+
+/* 4) Glass cards → clean white cards with dark text */
+.tile--on-photo, .fee-schedule-card, .roster-card, .roster-gate, .profile-card, .dash-card,
+.approach-figure, .approach-launch, .oyc-map-embed, .harbor-col, .video-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(11,46,74,0.12) !important;
+  box-shadow: 0 4px 16px rgba(11,46,74,0.08) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 }
+.tile--on-photo, .tile--on-photo p, .tile--on-photo li, .tile--on-photo strong,
+.fee-schedule-intro, .fee-schedule-table td, .fee-schedule-note,
+.roster-card__contact li, .roster-card__addr, .roster-card__spouse,
+.dash-card__label, .approach-figure figcaption, .approach-launch p,
+.membership-types li, .profile-card, .harbor-col, .harbor-col p, .video-card figcaption { color: #2a2a2a !important; }
+.tile--on-photo h3, .roster-card__name, .approach-launch__title, .fee-schedule-card h2, .harbor-col h3 { color: #16324a !important; }
+.dash-card__icon, .roster-card__contact a, .fees-more a, .tile--on-photo .fees-more a,
+.fee-schedule-table th, .roster-pdf a, .approach-launch a { color: #1583cf !important; }
+.fee-schedule-table th, .fee-schedule-table td { border-color: rgba(11,46,74,0.12) !important; }
 
-/* Links */
+/* 5) Home light sections (photo feature sections stay as-is) */
+#about, #contact { background: #ffffff !important; }
+#membership.section-tinted { background: #eef6fd !important; }
+#about .kicker, #membership .kicker, #contact .kicker, .kicker { color: #1583cf !important; }
+#about .facts strong { color: #1583cf !important; }
+
+/* 6) Buttons + rounding */
 a:hover { color: #0472c1; }
-
-/* Buttons — readable solid blue */
-.btn { border-radius: 8px !important; transition: background .15s ease, transform .15s ease; }
-.btn:hover { transform: translateY(-1px); }
+.btn { border-radius: 8px !important; }
 .btn-primary { background: #1583cf !important; border-color: #1583cf !important; color: #fff !important; }
 .btn-primary:hover { background: #0472c1 !important; border-color: #0472c1 !important; }
-.primary-nav li.cta > a { border-radius: 8px !important; }
+.tile--on-photo, .fee-schedule-card, .roster-card, .profile-card, .dash-card, .video-card,
+.harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: 14px !important; }
 
-/* Lime-green eyebrows over photos (good contrast on dark) */
-.kicker.on-dark, .section-photo-hero .kicker { color: #b6e27a !important; }
-
-/* Rounded cards */
-.tile, .card, .fee-schedule-card, .roster-card, .profile-card, .dash-card,
-.video-card, .harbor-col, .approach-figure, .oyc-map-embed, .approach-launch { border-radius: var(--radius-lg) !important; }
-
-/* Photo overlays get a blue cast (kept dark enough for white text) */
-.section-photo-overlay { background: linear-gradient(160deg, rgba(11,46,74,0.62) 0%, rgba(4,90,150,0.60) 100%) !important; }
-.hero-overlay { background: linear-gradient(180deg, rgba(20,70,110,0.30) 0%, rgba(6,40,70,0.66) 100%) !important; }
+/* 7) Photo FEATURE sections (home #sailing/#fishing/#visitors) keep photo + light text */
+.section-photo-hero .kicker { color: #cdee9a !important; }
+.section-photo-overlay { background: linear-gradient(160deg, rgba(11,46,74,0.55) 0%, rgba(4,90,150,0.55) 100%) !important; }
+.hero-overlay { background: linear-gradient(180deg, rgba(20,70,110,0.28) 0%, rgba(6,40,70,0.62) 100%) !important; }
