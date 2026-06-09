@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.2
+Version: 1.5.3
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -111,21 +111,23 @@ body.has-hero-header .site-header:not(.is-scrolled) .brand,
 #nav-menu .menu-item.cta a,
 body.has-hero-header .site-header:not(.is-scrolled) .primary-nav li.cta > a,
 body.has-hero-header .site-header.is-scrolled .primary-nav li.cta > a {
-  background: rgba(255,255,255,0.5) !important;
-  border: 1px solid rgba(11,46,74,0.22) !important;
+  background: rgba(255,255,255,0.94) !important;   /* same white plate as the logo */
+  border: 0 !important;
+  box-shadow: 0 2px 10px rgba(11,46,74,0.14) !important;
   color: #16324a !important;
   text-transform: none !important;
   letter-spacing: normal !important;
   font-size: 1.14rem !important;
-  font-weight: 500 !important;
-  border-radius: 8px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;                  /* same radius as the logo box */
+  padding: 8px 16px !important;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
 .primary-nav li.cta > a:hover,
 #nav-menu li.cta > a:hover,
 #nav-menu .menu-item.cta a:hover,
 body.has-hero-header .site-header .primary-nav li.cta > a:hover {
-  background: rgba(21,131,207,0.12) !important;
-  border-color: rgba(21,131,207,0.5) !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(11,46,74,0.20) !important;
   color: #0472c1 !important;
 }
