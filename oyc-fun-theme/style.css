@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.12
+Version: 1.5.13
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -193,3 +193,14 @@ body.oyc-page-visitors .page-hero, body.oyc-page-membership .page-hero {
 .entry-content .facts strong { color: #1583cf !important; }
 .entry-content .facts span,
 .entry-content .facts li { color: #2a2a2a !important; }
+
+/* 16) Much darker blue for link text (content + cards; nav left as-is) */
+.entry-content a:not(.btn), .harbor-card a,
+body.oyc-immersive .entry-content a:not(.btn),
+body.oyc-immersive .section:not(.section-photo-hero) a:not(.btn),
+.roster-card__contact a, .fees-more a, .tile--on-photo .fees-more a, .roster-pdf a,
+.approach-launch a, .approach-launch__label, .dash-card__icon,
+.sail-docs-link a, #membership .btn-link, .entry-content .btn-link,
+.section-photo-hero .sail-docs-link a { color: #0a3f73 !important; }
+.entry-content a:not(.btn):hover, .roster-card__contact a:hover,
+.fees-more a:hover, .sail-docs-link a:hover { color: #06283f !important; }
