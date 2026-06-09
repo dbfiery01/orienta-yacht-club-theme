@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.3
+Version: 1.5.4
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -131,3 +131,15 @@ body.has-hero-header .site-header .primary-nav li.cta > a:hover {
   box-shadow: 0 4px 14px rgba(11,46,74,0.20) !important;
   color: #0472c1 !important;
 }
+
+/* 10) Mamaroneck Harbor resource cards → white like the rest */
+.harbor-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(11,46,74,0.12) !important;
+  box-shadow: 0 4px 16px rgba(11,46,74,0.08) !important;
+  border-radius: 14px !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+.harbor-card, .harbor-card p, .harbor-card li, .harbor-card strong, .harbor-card td { color: #2a2a2a !important; }
+.harbor-card h2, .harbor-card h3, .harbor-card h4 { color: #16324a !important; }
+.harbor-card a { color: #1583cf !important; }
