@@ -305,8 +305,8 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 		}
 
 		if ( 'login' === $title ) {
-			// Repurpose Login → My Account.
-			$item->title   = __( 'My Account', 'orienta-yacht-club' );
+			// Repurpose Login → My Account (with a person/user icon).
+			$item->title   = '<svg class="cta-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ' . __( 'My Account', 'orienta-yacht-club' );
 			$item->url     = home_url( '/members-area/' );
 			$item->classes = array( 'menu-item', 'cta', 'cta--login' );
 			$out[]         = $item;
