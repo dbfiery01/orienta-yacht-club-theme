@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.15
+Version: 1.5.16
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -26,7 +26,7 @@ body.oyc-page-reciprocity-list, body.oyc-page-2026-fee-schedule { --oyc-hero-pho
 body.oyc-page-approach { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/header-boats.jpg'); }
 body.oyc-page-sailing-instructions { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/govcup-2024.jpg'); }
 body.oyc-page-thank-you-application { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-f.jpg'); }
-body.oyc-page-boating { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-b.jpg'); }
+body.oyc-page-boating { --oyc-hero-photo: url('assets/photos/header-racing.jpg'); }
 body.oyc-page-fishing { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/header-fishing.jpg'); }
 body.oyc-page-visitors { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/visitors-sailing.jpeg'); }
 body.oyc-page-membership { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-a.jpg'); }
