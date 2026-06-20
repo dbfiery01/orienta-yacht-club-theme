@@ -122,7 +122,7 @@ add_action( 'wp_head', function () {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="<?php echo $name; ?>">
-<link rel="apple-touch-icon" href="<?php echo esc_url( $theme . '/assets/icons/apple-touch-icon.png' ); ?>">
+<link rel="apple-touch-icon" href="<?php echo esc_url( $theme . '/assets/icons/apple-touch-icon-oyc.png' ); ?>">
 
 <!-- MS Tile (Edge / Windows) -->
 <meta name="msapplication-TileColor" content="#0b2a4a">
