@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.6.8' );
+define( 'OYC_VERSION', '1.6.9' );
 
 /**
  * Theme setup.
@@ -117,6 +117,12 @@ require_once get_template_directory() . '/inc/calendar-api.php';
  * Fleet Roster: members-only searchable directory (data stays in the DB).
  */
 require_once get_template_directory() . '/inc/fleet-roster.php';
+
+/**
+ * SEO: staging noindex, LocalBusiness schema, per-page titles/descriptions,
+ * and the /fishing/ → /boating/ redirect.
+ */
+require_once get_template_directory() . '/inc/seo.php';
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map
