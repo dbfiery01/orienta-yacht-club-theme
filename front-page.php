@@ -29,7 +29,7 @@ get_header();
 				</a>
 			<?php endif; ?>
 			<?php if ( oyc_get( 'oyc_hero_cta2_text' ) ) : ?>
-				<a class="btn btn-ghost" href="<?php echo esc_url( oyc_get( 'oyc_hero_cta2_url' ) ); ?>">
+				<a class="btn btn-ghost" href="<?php echo esc_url( oyc_get( 'oyc_hero_cta2_url' ) ); ?>" target="_blank" rel="noopener">
 					<?php echo esc_html( oyc_get( 'oyc_hero_cta2_text' ) ); ?>
 				</a>
 			<?php endif; ?>

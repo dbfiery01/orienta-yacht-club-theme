@@ -284,6 +284,15 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 		return $items;
 	}
 	if ( ! is_user_logged_in() ) {
+		// Logged out: turn "Login" into "Reservations" → Dockwa (new tab).
+		foreach ( $items as $item ) {
+			if ( 'login' === strtolower( trim( wp_strip_all_tags( $item->title ) ) ) ) {
+				$item->title  = __( 'Reservations', 'orienta-yacht-club' );
+				$item->url    = 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient';
+				$item->target = '_blank';
+				$item->xfn    = 'noopener';
+			}
+		}
 		return $items;
 	}
 

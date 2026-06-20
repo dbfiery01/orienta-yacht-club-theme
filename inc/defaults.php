@@ -27,7 +27,7 @@ function oyc_defaults() {
 		'oyc_hero_cta1_text' => 'Become a Member',
 		'oyc_hero_cta1_url'  => '/membership-application/',
 		'oyc_hero_cta2_text' => 'Visiting Boaters',
-		'oyc_hero_cta2_url'  => '/#visitors',
+		'oyc_hero_cta2_url'  => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient',
 
 		/* About */
 		'oyc_about_kicker'   => 'About the Club',
