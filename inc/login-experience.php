@@ -283,15 +283,31 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 	if ( empty( $args->theme_location ) || 'primary' !== $args->theme_location ) {
 		return $items;
 	}
+	$person_icon = '<svg class="cta-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ';
+
 	if ( ! is_user_logged_in() ) {
-		// Logged out: turn "Login" into "Reservations" → Dockwa (new tab).
+		// Logged out: turn "Login" into "Reservations" → Dockwa (new tab),
+		// then append a clear "Member Login" item with the person icon.
+		$ref = null;
 		foreach ( $items as $item ) {
 			if ( 'login' === strtolower( trim( wp_strip_all_tags( $item->title ) ) ) ) {
 				$item->title  = __( 'Reservations', 'orienta-yacht-club' );
 				$item->url    = 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient';
 				$item->target = '_blank';
 				$item->xfn    = 'noopener';
+				$ref          = $item;
 			}
+		}
+		if ( $ref ) {
+			$login          = clone $ref;
+			$login->ID      = 'oyc-member-login';
+			$login->db_id   = 0;
+			$login->title   = $person_icon . __( 'Member Login', 'orienta-yacht-club' );
+			$login->url     = wp_login_url( home_url( '/members-area/' ) );
+			$login->target  = '';
+			$login->xfn     = '';
+			$login->classes = array( 'menu-item', 'cta', 'cta--login' );
+			$items[]        = $login;
 		}
 		return $items;
 	}
@@ -306,7 +322,7 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 
 		if ( 'login' === $title ) {
 			// Repurpose Login → My Account (with a person/user icon).
-			$item->title   = '<svg class="cta-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ' . __( 'My Account', 'orienta-yacht-club' );
+			$item->title   = $person_icon . __( 'My Account', 'orienta-yacht-club' );
 			$item->url     = home_url( '/members-area/' );
 			$item->classes = array( 'menu-item', 'cta', 'cta--login' );
 			$out[]         = $item;
