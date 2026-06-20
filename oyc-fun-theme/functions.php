@@ -30,3 +30,18 @@ add_action( 'wp_enqueue_scripts', function () {
 		}
 	}
 }, 99 );
+
+// Photo reel of the home-* gallery images, shown above the footer on every page.
+add_action( 'wp_footer', function () {
+	$dir = get_template_directory() . '/assets/photos/';
+	$uri = get_template_directory_uri() . '/assets/photos/';
+	$files = glob( $dir . 'home*.{jpg,jpeg,png,webp}', GLOB_BRACE );
+	if ( ! $files ) { return; }
+	sort( $files );
+	echo '<div class="oyc-photo-reel" aria-hidden="true">';
+	foreach ( $files as $f ) {
+		echo '<span style="background-image:url(' . esc_url( $uri . basename( $f ) ) . ')"></span>';
+	}
+	echo '</div>';
+	echo '<script>(function(){var r=document.querySelector(".oyc-photo-reel");var f=document.querySelector(".site-footer,footer");if(r&&f&&f.parentNode){f.parentNode.insertBefore(r,f);}})();</script>';
+} );
