@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.19
+Version: 1.5.20
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -32,14 +32,13 @@ body.oyc-page-visitors { --oyc-hero-photo: url('../orienta-yacht-club-theme/asse
 body.oyc-page-membership { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-a.jpg'); }
 
 body.oyc-immersive .page-hero {
-  background-image: linear-gradient(90deg, rgba(8,40,66,0.90) 0%, rgba(8,40,66,0.66) 38%, rgba(8,40,66,0.18) 74%, rgba(8,40,66,0.05) 100%), var(--oyc-hero-photo, linear-gradient(135deg, #1f8fd6, #0472c1)) !important;
-  background-size: cover, cover !important;
-  background-position: center, center right !important;
-  background-repeat: no-repeat !important;
+  background: #ffffff !important;            /* white title band, no photo */
+  border-bottom: 1px solid rgba(11,46,74,0.10) !important;
   min-height: 0 !important;
-  padding: 6rem 0 2.2rem !important;
+  padding: 6rem 0 1.4rem !important;
 }
-body.oyc-immersive .page-hero *, body.oyc-immersive .page-hero-title, body.oyc-immersive .page-hero .kicker { color: #ffffff !important; }
+body.oyc-immersive .page-hero-title, body.oyc-immersive .page-hero h1, body.oyc-immersive .page-hero h2 { color: #16324a !important; }  /* dark title */
+body.oyc-immersive .page-hero .kicker, body.oyc-immersive .page-hero-eyebrow, body.oyc-immersive .page-hero-sub { color: #1583cf !important; }
 body.oyc-immersive .page-hero::before, body.oyc-immersive .page-hero::after { display: none !important; }
 
 /* 3) Interior content text → dark on light (NOT the photo feature sections) */
@@ -179,11 +178,6 @@ body.home .section-photo-hero p, body.home .section-photo-hero .bullets li,
 body.home .section-photo-hero .section-lede { color: #2a2a2a !important; }
 body.home .section-photo-hero .sail-docs-link a { color: #1583cf !important; }
 
-/* 13) Shorter photo-strip header for the section-pages split from the home */
-body.oyc-page-boating .page-hero, body.oyc-page-fishing .page-hero,
-body.oyc-page-visitors .page-hero, body.oyc-page-membership .page-hero {
-  padding: 5.6rem 0 1.1rem !important;
-}
 
 /* 14) Tile heading links already carry a manual arrow icon — drop the auto
    external-link arrow on them inside page content (was showing two arrows). */
@@ -231,9 +225,18 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 .oyc-carousel { position: relative; width: 100%; background: #0b2a4a; line-height: 0; }
 .oyc-carousel__viewport { overflow: hidden; }
 .oyc-carousel__track { display: flex; will-change: transform; }
-.oyc-carousel__track span { flex: 0 0 auto; width: 300px; height: 120px; background-size: cover; background-position: center; }
+.oyc-carousel__track span { flex: 0 0 auto; width: 300px; height: 150px; background-size: cover; background-position: center; }
 .oyc-carousel__nav { position: absolute; top: 0; bottom: 0; width: 46px; border: 0; background: rgba(11,42,74,0.45); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; transition: background .15s ease; }
 .oyc-carousel__nav:hover { background: rgba(11,42,74,0.85); }
 .oyc-carousel__nav--prev { left: 0; }
 .oyc-carousel__nav--next { right: 0; }
-@media (max-width: 700px) { .oyc-carousel__track span { width: 220px; height: 88px; } .oyc-carousel__nav { width: 38px; font-size: 1.4rem; } }
+@media (max-width: 700px) { .oyc-carousel__track span { width: 220px; height: 110px; } .oyc-carousel__nav { width: 38px; font-size: 1.4rem; } }
+
+/* 20) Home hero → white title band like the interior pages (no photo) */
+body.home .hero { background: #ffffff !important; min-height: 0 !important; padding: 7rem 0 2.4rem !important; border-bottom: 1px solid rgba(11,46,74,0.10) !important; }
+body.home .hero .hero-slides, body.home .hero .hero-overlay, body.home .hero-scroll { display: none !important; }
+body.home .hero .eyebrow { color: #1583cf !important; }
+body.home .hero h1 { color: #16324a !important; }
+body.home .hero .lede { color: #2a2a2a !important; }
+body.home .hero .btn-ghost { color: #0472c1 !important; border-color: #0472c1 !important; background: transparent !important; }
+body.home .hero .btn-ghost:hover { background: #0472c1 !important; color: #fff !important; }

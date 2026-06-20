@@ -38,50 +38,6 @@ get_header();
 	<div class="hero-scroll" aria-hidden="true"><span></span></div>
 </section>
 
-<!-- Contact photo banner -->
-<div class="contact-photo-header" id="contact">
-	<div class="contact-photo-bg" aria-hidden="true"></div>
-	<div class="contact-photo-overlay" aria-hidden="true"></div>
-	<div class="container contact-photo-inner">
-		<p class="kicker on-dark"><?php echo esc_html( oyc_get( 'oyc_con_kicker' ) ); ?></p>
-		<h2><?php echo esc_html( oyc_get( 'oyc_con_headline' ) ); ?></h2>
-	</div>
-</div>
-
-<section class="section section-tinted contact-body">
-	<div class="container two-col">
-		<div>
-			<p><?php echo esc_html( oyc_get( 'oyc_con_body' ) ); ?></p>
-			<dl class="contact-list">
-				<?php if ( oyc_get( 'oyc_con_address' ) ) : ?>
-					<dt><?php esc_html_e( 'Address', 'orienta-yacht-club' ); ?></dt>
-					<dd><?php echo nl2br( esc_html( oyc_get( 'oyc_con_address' ) ) ); ?></dd>
-				<?php endif; ?>
-				<?php if ( oyc_get( 'oyc_con_phone' ) ) : ?>
-					<dt><?php esc_html_e( 'Office', 'orienta-yacht-club' ); ?></dt>
-					<dd><a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9+]/', '', oyc_get( 'oyc_con_phone' ) ) ); ?>"><?php echo esc_html( oyc_get( 'oyc_con_phone' ) ); ?></a></dd>
-				<?php endif; ?>
-				<?php if ( oyc_get( 'oyc_con_email' ) ) : ?>
-					<dt><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></dt>
-					<dd><a href="mailto:<?php echo esc_attr( antispambot( oyc_get( 'oyc_con_email' ) ) ); ?>"><?php echo esc_html( antispambot( oyc_get( 'oyc_con_email' ) ) ); ?></a></dd>
-				<?php endif; ?>
-				<dt><?php esc_html_e( 'Radio', 'orienta-yacht-club' ); ?></dt>
-				<dd><?php esc_html_e( 'VHF Channel 68', 'orienta-yacht-club' ); ?></dd>
-				<dt class="contact-list__section"><?php esc_html_e( 'Emergency Services', 'orienta-yacht-club' ); ?></dt>
-				<dd></dd>
-				<dt><?php esc_html_e( 'Harbor Patrol', 'orienta-yacht-club' ); ?></dt>
-				<dd>
-					<?php esc_html_e( 'Radio: VHF Channel 16', 'orienta-yacht-club' ); ?><br>
-					<a href="tel:+19147777764">(914) 777-7764</a>
-				</dd>
-			</dl>
-		</div>
-		<div class="contact-form">
-			<?php echo do_shortcode( '[contact-form-7 id="39" title="Contact Orienta Yacht Club"]' ); ?>
-		</div>
-	</div>
-</section>
-
 <script>
 (function () {
 	// Hero slideshow
