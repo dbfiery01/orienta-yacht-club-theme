@@ -41,7 +41,14 @@ add_action( 'wp_footer', function () {
 	sort( $files );
 	$cells = '';
 	foreach ( $files as $f ) {
-		$cells .= '<span style="background-image:url(' . esc_url( $uri . basename( $f ) ) . ')"></span>';
+		$cells .= '<span class="oyc-carousel__cell" style="background-image:url(' . esc_url( $uri . basename( $f ) ) . ')"></span>';
+	}
+	// Club videos (YouTube) — thumbnails link to the videos page, with a play badge.
+	$videos = array( '-cYW29F4Qn4', 'zNLmKy_COpE', 'y9SNwmwNHkY', 'T7UzxJq4wQU' );
+	$vurl   = esc_url( home_url( '/videos/' ) );
+	foreach ( $videos as $vid ) {
+		$thumb = 'https://img.youtube.com/vi/' . $vid . '/hqdefault.jpg';
+		$cells .= '<a class="oyc-carousel__cell oyc-carousel__cell--video" href="' . $vurl . '" style="background-image:url(' . esc_url( $thumb ) . ')"><span class="oyc-carousel__play" aria-hidden="true"></span></a>';
 	}
 	// Track duplicated so the auto-advance can loop seamlessly.
 	echo '<div class="oyc-carousel">'
