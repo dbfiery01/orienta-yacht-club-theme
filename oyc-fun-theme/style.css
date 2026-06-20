@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.18
+Version: 1.5.19
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -226,13 +226,14 @@ body.oyc-page-reciprocity-list .entry-content tr:first-child th,
 body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !important; font-weight: 700; }
 
 
-/* 19) Auto-scrolling photo marquee (home-* images) below the menu on every page */
-.oyc-marquee { width: 100%; overflow: hidden; background: #0b2a4a; line-height: 0; position: relative; z-index: 1; margin-top: 88px; }
-.oyc-marquee__track { display: flex; width: max-content; animation: oyc-marq 55s linear infinite; }
-.oyc-marquee__track span { flex: 0 0 auto; width: 300px; height: 96px; background-size: cover; background-position: center; }
-.oyc-marquee:hover .oyc-marquee__track { animation-play-state: paused; }
-@keyframes oyc-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@media (max-width: 700px) { .oyc-marquee__track span { width: 200px; height: 70px; } }
-@media (prefers-reduced-motion: reduce) { .oyc-marquee__track { animation: none; } }
-/* With the marquee below the menu, interior page headers no longer need to clear the fixed menu */
-body.oyc-has-marquee.oyc-immersive .page-hero { padding-top: 2rem !important; }
+
+/* 19) Photo carousel below the page title — static, auto-advances every 5s, with arrows */
+.oyc-carousel { position: relative; width: 100%; background: #0b2a4a; line-height: 0; }
+.oyc-carousel__viewport { overflow: hidden; }
+.oyc-carousel__track { display: flex; will-change: transform; }
+.oyc-carousel__track span { flex: 0 0 auto; width: 300px; height: 120px; background-size: cover; background-position: center; }
+.oyc-carousel__nav { position: absolute; top: 0; bottom: 0; width: 46px; border: 0; background: rgba(11,42,74,0.45); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; transition: background .15s ease; }
+.oyc-carousel__nav:hover { background: rgba(11,42,74,0.85); }
+.oyc-carousel__nav--prev { left: 0; }
+.oyc-carousel__nav--next { right: 0; }
+@media (max-width: 700px) { .oyc-carousel__track span { width: 220px; height: 88px; } .oyc-carousel__nav { width: 38px; font-size: 1.4rem; } }

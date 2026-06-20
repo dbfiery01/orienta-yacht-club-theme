@@ -31,8 +31,8 @@ add_action( 'wp_enqueue_scripts', function () {
 	}
 }, 99 );
 
-// Auto-scrolling photo marquee (home-* images) placed just below the menu on
-// every page. Output at wp_footer, then moved directly after the header via JS.
+// Photo carousel (home-* images) placed just below the page title banner.
+// Static, auto-advances to the right every 5s, with left/right arrows.
 add_action( 'wp_footer', function () {
 	$dir = get_template_directory() . '/assets/photos/';
 	$uri = get_template_directory_uri() . '/assets/photos/';
@@ -43,7 +43,11 @@ add_action( 'wp_footer', function () {
 	foreach ( $files as $f ) {
 		$cells .= '<span style="background-image:url(' . esc_url( $uri . basename( $f ) ) . ')"></span>';
 	}
-	// Track is duplicated so the loop is seamless (translateX -50% = one full set).
-	echo '<div class="oyc-marquee" aria-hidden="true"><div class="oyc-marquee__track">' . $cells . $cells . '</div></div>';
-	echo '<script>(function(){var m=document.querySelector(".oyc-marquee");var h=document.querySelector(".site-header,header");if(!m||!h||!h.parentNode){return;}h.parentNode.insertBefore(m,h.nextSibling);function s(){m.style.marginTop=(h.offsetHeight||88)+"px";}s();window.addEventListener("resize",s);document.body.classList.add("oyc-has-marquee");})();</script>';
+	// Track duplicated so the auto-advance can loop seamlessly.
+	echo '<div class="oyc-carousel">'
+		. '<button type="button" class="oyc-carousel__nav oyc-carousel__nav--prev" aria-label="Previous photos">&#8249;</button>'
+		. '<div class="oyc-carousel__viewport"><div class="oyc-carousel__track">' . $cells . $cells . '</div></div>'
+		. '<button type="button" class="oyc-carousel__nav oyc-carousel__nav--next" aria-label="Next photos">&#8250;</button>'
+		. '</div>';
+	echo '<script>(function(){var c=document.querySelector(".oyc-carousel");if(!c)return;var ph=document.querySelector(".page-hero");if(ph&&ph.parentNode){ph.parentNode.insertBefore(c,ph.nextSibling);}else{if(c.parentNode)c.parentNode.removeChild(c);return;}var t=c.querySelector(".oyc-carousel__track");var n=t.children.length/2;var i=0;function w(){return t.children[0].getBoundingClientRect().width;}function set(anim){t.style.transition=anim?"transform .6s ease":"none";t.style.transform="translateX("+(-i*w())+"px)";}function next(){i++;set(true);if(i>=n){setTimeout(function(){i=0;set(false);},650);}}function prev(){if(i<=0){i=n;set(false);void t.offsetWidth;}i--;set(true);}var tm;function arm(){clearInterval(tm);tm=setInterval(next,5000);}c.querySelector(".oyc-carousel__nav--next").addEventListener("click",function(){next();arm();});c.querySelector(".oyc-carousel__nav--prev").addEventListener("click",function(){prev();arm();});window.addEventListener("resize",function(){set(false);});arm();})();</script>';
 } );
