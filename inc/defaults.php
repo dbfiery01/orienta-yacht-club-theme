@@ -22,7 +22,7 @@ function oyc_defaults() {
 	$d = array(
 		/* Hero */
 		'oyc_hero_eyebrow'   => 'Founded 1907 · Long Island Sound',
-		'oyc_hero_headline'  => 'A storied harbor, a generous welcome.',
+		'oyc_hero_headline'  => 'A fun relaxed club, a storied harbor, and a generous welcome.',
 		'oyc_hero_lede'      => 'The Orienta Yacht Club has anchored the East Basin of Mamaroneck Harbor for more than a century — a deep, well-protected home for sailors, anglers, and families who love the water.',
 		'oyc_hero_cta1_text' => 'Become a Member',
 		'oyc_hero_cta1_url'  => '/membership-application/',
