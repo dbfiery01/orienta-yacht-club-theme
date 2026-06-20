@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.17
+Version: 1.5.18
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -225,8 +225,14 @@ body.oyc-page-reciprocity-list .entry-content tr:nth-child(even) td { background
 body.oyc-page-reciprocity-list .entry-content tr:first-child th,
 body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !important; font-weight: 700; }
 
-/* 19) Photo reel (home-* gallery) above the footer on every page */
-.oyc-photo-reel { display: flex; flex-wrap: nowrap; gap: 3px; width: 100%; overflow: hidden; background: #fff; line-height: 0; }
-.oyc-photo-reel span { flex: 1 1 0; min-width: 0; height: 150px; background-size: cover; background-position: center; display: block; transition: transform .45s ease; }
-.oyc-photo-reel span:hover { transform: scale(1.07); }
-@media (max-width: 700px) { .oyc-photo-reel span { height: 92px; } }
+
+/* 19) Auto-scrolling photo marquee (home-* images) below the menu on every page */
+.oyc-marquee { width: 100%; overflow: hidden; background: #0b2a4a; line-height: 0; position: relative; z-index: 1; margin-top: 88px; }
+.oyc-marquee__track { display: flex; width: max-content; animation: oyc-marq 55s linear infinite; }
+.oyc-marquee__track span { flex: 0 0 auto; width: 300px; height: 96px; background-size: cover; background-position: center; }
+.oyc-marquee:hover .oyc-marquee__track { animation-play-state: paused; }
+@keyframes oyc-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (max-width: 700px) { .oyc-marquee__track span { width: 200px; height: 70px; } }
+@media (prefers-reduced-motion: reduce) { .oyc-marquee__track { animation: none; } }
+/* With the marquee below the menu, interior page headers no longer need to clear the fixed menu */
+body.oyc-has-marquee.oyc-immersive .page-hero { padding-top: 2rem !important; }
