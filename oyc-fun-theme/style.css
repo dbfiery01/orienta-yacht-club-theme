@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.26
+Version: 1.5.27
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -225,12 +225,12 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 .oyc-carousel { position: relative; width: 100%; background: transparent; line-height: 0; }
 .oyc-carousel__viewport { overflow: hidden; padding: 22px 0; }
 .oyc-carousel__track { display: flex; will-change: transform; }
-.oyc-carousel__track > * { flex: 0 0 auto; width: 300px; height: 150px; background-size: cover; background-position: center; display: block; position: relative; }
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell { flex: 0 0 300px !important; width: 300px !important; height: 150px !important; background-size: cover; background-position: center; display: block; position: relative; }
 .oyc-carousel__nav { position: absolute; top: 0; bottom: 0; width: 46px; border: 0; background: rgba(11,42,74,0.45); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; transition: background .15s ease; }
 .oyc-carousel__nav:hover { background: rgba(11,42,74,0.85); }
 .oyc-carousel__nav--prev { left: 0; }
 .oyc-carousel__nav--next { right: 0; }
-@media (max-width: 700px) { .oyc-carousel__track > * { width: 220px; height: 110px; } .oyc-carousel__nav { width: 38px; font-size: 1.4rem; } }
+@media (max-width: 700px) { .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell { flex-basis: 220px !important; width: 220px !important; height: 110px !important; } .oyc-carousel__nav { width: 38px; font-size: 1.4rem; } }
 
 /* 20) Home hero → white title band like the interior pages (no photo) */
 body.home .hero { background: #ffffff !important; min-height: 0 !important; padding: 7rem 0 2.4rem !important; border-bottom: 1px solid rgba(11,46,74,0.10) !important; }
@@ -249,8 +249,8 @@ body.oyc-home-reel-top .hero { padding-top: 2.5rem !important; }
 .oyc-carousel__cell--video .oyc-carousel__play::after { content: ""; position: absolute; top: 50%; left: 55%; transform: translate(-50%,-50%); border-style: solid; border-width: 9px 0 9px 15px; border-color: transparent transparent transparent #fff; }
 .oyc-carousel__cell--video:hover .oyc-carousel__play { background: rgba(21,131,207,0.9); }
 /* Home reel is larger */
-body.oyc-home-reel-top .oyc-carousel__cell { height: 230px; }
-@media (max-width: 700px) { body.oyc-home-reel-top .oyc-carousel__cell { height: 150px; } }
+body.oyc-home-reel-top .oyc-carousel__track > .oyc-carousel__cell { height: 230px !important; }
+@media (max-width: 700px) { body.oyc-home-reel-top .oyc-carousel__track > .oyc-carousel__cell { height: 150px !important; } }
 /* Home hero: compact, top-aligned (kills the flex-centering gap above the headline) */
 body.home .hero { display: block !important; min-height: 0 !important; height: auto !important; padding: 1.25rem 0 2rem !important; }
 body.home .hero > .container, body.home .hero .hero-inner { margin-top: 0 !important; padding-top: 0 !important; min-height: 0 !important; }
