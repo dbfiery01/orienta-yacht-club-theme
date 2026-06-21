@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.33
+Version: 1.5.34
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -273,3 +273,23 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
 .oyc-zoom-next { right: 24px; }
 .oyc-zoom-nav:hover { background: #fff; color: #0472c1; }
 @media (max-width: 700px) { .oyc-zoom-nav { width: 42px; height: 42px; font-size: 1.5rem; } .oyc-zoom-prev { left: 8px; } .oyc-zoom-next { right: 8px; } }
+
+/* 26) Member dashboard — compact quick-link cards with page-preview thumbnails
+   (mShots screenshots) replacing the old line icons. */
+.dashboard-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; }
+.dash-card { gap: 0.5rem; padding: 0.5rem 0.5rem 0.65rem; border-radius: 9px; }
+.dash-card__thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-size: cover;
+  background-position: center top;
+  background-color: rgba(11,42,74,0.06);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.dash-card:hover .dash-card__thumb { border-color: var(--brass); }
+.dash-card__label { font-size: 0.78rem; }
+@media (max-width: 600px) {
+  .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+}

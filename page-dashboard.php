@@ -40,84 +40,31 @@ get_header();
 		<!-- Quick links grid -->
 		<h2 class="dashboard-heading"><?php esc_html_e( 'Quick Links', 'orienta-yacht-club' ); ?></h2>
 		<div class="dashboard-grid">
-
-			<a href="<?php echo esc_url( home_url( '/calendar/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Club Calendar', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/reciprocity-list/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Reciprocity List', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/sailing-instructions/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V4a1 1 0 0 1 1-1z"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="14" y2="15"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Sailing Instructions', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/fleet-roster/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Fleet Roster', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/2026-fee-schedule/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Fee Schedule', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/oyc-resources/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'OYC Resources', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/storm-warnings/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 0 1 0 9z"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Storm Warnings', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="https://lisicos.uconn.edu/" target="_blank" rel="noopener" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'My Sound', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club" target="_blank" rel="noopener" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l9-13 9 13H3z"/><line x1="12" y1="4" x2="12" y2="17"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Dock Reservations', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/mamaroneck-harbor/' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Mamaroneck Harbor', 'orienta-yacht-club' ); ?></span>
-			</a>
-
-			<a href="<?php echo esc_url( home_url( '/#contact' ) ); ?>" class="dash-card">
-				<span class="dash-card__icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-				</span>
-				<span class="dash-card__label"><?php esc_html_e( 'Contact Club Office', 'orienta-yacht-club' ); ?></span>
-			</a>
-
+			<?php
+			$dash_links = array(
+				array( 'url' => home_url( '/calendar/' ),             'label' => __( 'Club Calendar', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/reciprocity-list/' ),     'label' => __( 'Reciprocity List', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/oyc-resources/' ),        'label' => __( 'OYC Resources', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
+				array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
+				array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
+				array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
+				array( 'url' => home_url( '/#contact' ),              'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
+			);
+			foreach ( $dash_links as $link ) {
+				$ext = ! empty( $link['external'] );
+				printf(
+					'<a href="%1$s" class="dash-card"%2$s>%3$s<span class="dash-card__label">%4$s</span></a>',
+					esc_url( $link['url'] ),
+					$ext ? ' target="_blank" rel="noopener"' : '',
+					oyc_dash_thumb( $link['url'] ),
+					esc_html( $link['label'] )
+				);
+			}
+			?>
 		</div>
 
 		<!-- Account -->
