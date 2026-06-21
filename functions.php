@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.1' );
+define( 'OYC_VERSION', '1.7.2' );
 
 /**
  * Theme setup.
@@ -333,7 +333,30 @@ function oyc_video_thumbs( $heading = 'Club Videos' ) {
  */
 function oyc_dash_thumb( $url ) {
 	$clean = strtok( $url, '#' );
-	$shot  = 'https://s.wordpress.com/mshots/v1/' . rawurlencode( $clean ) . '?w=480&h=300';
+
+	// Prefer a bundled screenshot (named <slug>.jpg in assets/dashthumbs/) when one
+	// exists — used for members-only pages that the external mShots service can only
+	// see as a login screen. Checked in the child theme first, then the parent.
+	$path = (string) wp_parse_url( $clean, PHP_URL_PATH );
+	$slug = $path ? basename( trim( $path, '/' ) ) : '';
+	if ( $slug ) {
+		$rel = '/assets/dashthumbs/' . $slug . '.jpg';
+		$src = '';
+		if ( file_exists( get_stylesheet_directory() . $rel ) ) {
+			$src = get_stylesheet_directory_uri() . $rel;
+		} elseif ( file_exists( get_template_directory() . $rel ) ) {
+			$src = get_template_directory_uri() . $rel;
+		}
+		if ( $src ) {
+			return sprintf(
+				'<span class="dash-card__thumb" aria-hidden="true" style="background-image:url(%s)"></span>',
+				esc_url( $src )
+			);
+		}
+	}
+
+	// Otherwise generate a live preview via WordPress.com's mShots service.
+	$shot = 'https://s.wordpress.com/mshots/v1/' . rawurlencode( $clean ) . '?w=480&h=300';
 	return sprintf(
 		'<span class="dash-card__thumb" aria-hidden="true" style="background-image:url(%s)"></span>',
 		esc_url( $shot )
