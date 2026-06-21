@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.23
+Version: 1.5.24
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -223,7 +223,7 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 
 /* 19) Photo carousel below the page title — static, auto-advances every 5s, with arrows */
 .oyc-carousel { position: relative; width: 100%; background: #0b2a4a; line-height: 0; }
-.oyc-carousel__viewport { overflow: hidden; }
+.oyc-carousel__viewport { overflow: hidden; padding: 22px 0; }
 .oyc-carousel__track { display: flex; will-change: transform; }
 .oyc-carousel__track > * { flex: 0 0 auto; width: 300px; height: 150px; background-size: cover; background-position: center; display: block; position: relative; }
 .oyc-carousel__nav { position: absolute; top: 0; bottom: 0; width: 46px; border: 0; background: rgba(11,42,74,0.45); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; transition: background .15s ease; }
@@ -255,3 +255,7 @@ body.oyc-home-reel-top .oyc-carousel__cell { height: 230px; }
 body.home .hero { display: block !important; min-height: 0 !important; height: auto !important; padding: 1.25rem 0 2rem !important; }
 body.home .hero > .container, body.home .hero .hero-inner { margin-top: 0 !important; padding-top: 0 !important; min-height: 0 !important; }
 body.home .hero .eyebrow { margin-top: 0 !important; }
+
+/* 23) Reel spotlight — active photo is full-size & in colour; the rest are smaller, dimmed, grayscale */
+.oyc-carousel__cell { transition: transform .5s ease, opacity .5s ease, filter .5s ease; transform: scale(0.8); opacity: 0.4; filter: grayscale(90%); }
+.oyc-carousel__cell.is-active { transform: scale(1.2); opacity: 1; filter: none; z-index: 1; box-shadow: 0 8px 26px rgba(0,0,0,0.4); }
