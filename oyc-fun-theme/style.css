@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.31
+Version: 1.5.32
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -266,3 +266,10 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
 .oyc-carousel__cell--video { cursor: pointer; }
 .oyc-carousel-backdrop { position: fixed; inset: 0; background: rgba(8,30,55,0.85); z-index: 99999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
 .oyc-carousel-zoom { width: min(92vw, 1100px); height: min(82vh, 640px); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 8px; box-shadow: 0 24px 70px rgba(0,0,0,0.6); }
+
+/* 25) Prev/next arrows inside the zoom lightbox */
+.oyc-zoom-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 54px; height: 54px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: #16324a; font-size: 2rem; line-height: 1; cursor: pointer; z-index: 100000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
+.oyc-zoom-prev { left: 24px; }
+.oyc-zoom-next { right: 24px; }
+.oyc-zoom-nav:hover { background: #fff; color: #0472c1; }
+@media (max-width: 700px) { .oyc-zoom-nav { width: 42px; height: 42px; font-size: 1.5rem; } .oyc-zoom-prev { left: 8px; } .oyc-zoom-next { right: 8px; } }
