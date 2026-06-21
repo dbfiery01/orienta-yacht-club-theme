@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.3' );
+define( 'OYC_VERSION', '1.7.4' );
 
 /**
  * Theme setup.
@@ -253,7 +253,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;
@@ -361,4 +361,14 @@ function oyc_dash_thumb( $url ) {
 		'<span class="dash-card__thumb" aria-hidden="true" style="background-image:url(%s)"></span>',
 		esc_url( $shot )
 	);
+}
+
+/**
+ * Return a placeholder document icon for member-document links that have no page
+ * preview yet (e.g. "coming soon" pages). Mirrors the thumbnail markup so the
+ * cards line up in the grid.
+ */
+function oyc_dash_icon() {
+	$svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+	return '<span class="dash-card__thumb dash-card__thumb--icon" aria-hidden="true">' . $svg . '</span>';
 }

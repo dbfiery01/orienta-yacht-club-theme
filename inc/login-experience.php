@@ -60,7 +60,14 @@ add_action( 'template_redirect', function () {
 	}
 	$post_id = get_queried_object_id();
 	$slug    = get_post_field( 'post_name', $post_id );
-	$always_members = array( '2026-fee-schedule' ); // always members-only by slug
+	$always_members = array( // always members-only by slug
+			'2026-fee-schedule',
+			'slip-waiting-list',
+			'dock-assignments',
+			'constitution-and-bylaws-2026',
+			'club-rental-agreement',
+			'member-guidelines-2026',
+		);
 	$is_members_only = in_array( $slug, $always_members, true ) || get_post_meta( $post_id, '_oyc_members_only', true );
 	if ( $is_members_only && ! is_user_logged_in() ) {
 		wp_redirect( wp_login_url( get_permalink() ) );
