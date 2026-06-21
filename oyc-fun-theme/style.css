@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.27
+Version: 1.5.28
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -259,3 +259,13 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
 /* 23) Reel spotlight — active photo is full-size & in colour; the rest are smaller, dimmed, grayscale */
 .oyc-carousel__cell { transition: transform .5s ease, opacity .5s ease, filter .5s ease; transform: scale(0.8); opacity: 0.4; filter: grayscale(90%); }
 .oyc-carousel__cell.is-active { transform: scale(1.2); opacity: 1; filter: none; z-index: 1; box-shadow: 0 8px 26px rgba(0,0,0,0.4); }
+
+/* 24) Click a photo to expand it to 400% within the reel (others hide, dark backdrop) */
+.oyc-carousel__cell { cursor: zoom-in; }
+.oyc-carousel__cell--video { cursor: pointer; }
+.oyc-carousel__track { align-items: center; }
+.oyc-carousel__viewport { transition: height .4s ease, background .3s ease; }
+.oyc-carousel__viewport.is-zooming { height: 660px !important; background: rgba(8,30,55,0.92); }
+.oyc-carousel__viewport.is-zooming .oyc-carousel__cell { opacity: 0; }
+.oyc-carousel__cell.is-zoomed { transform: scale(4) !important; opacity: 1 !important; filter: none !important; z-index: 5; box-shadow: 0 14px 50px rgba(0,0,0,0.5); cursor: zoom-out; }
+@media (max-width: 700px) { .oyc-carousel__viewport.is-zooming { height: 340px !important; } .oyc-carousel__cell.is-zoomed { transform: scale(2.2) !important; } }
