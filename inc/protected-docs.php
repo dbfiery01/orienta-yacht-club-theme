@@ -90,14 +90,72 @@ function oyc_protect_doc( $key ) {
 }
 
 /**
- * After a deploy, move any not-yet-protected documents into the deny-all folder
- * automatically the next time an admin loads wp-admin. No manual step needed.
+ * Stale documents that must no longer be publicly reachable but must NOT be
+ * deleted (they hold member PII in superseded versions). These are moved into
+ * the deny-all folder on deploy; the originals are preserved there and could be
+ * restored if ever needed. They are not served anywhere — just retired.
+ *
+ * @return string[] Paths under wp-content/uploads/.
+ */
+function oyc_retired_docs() {
+	return array(
+		'2025/06/OYC-Wait-List-June-2025.pdf',
+		'2025/06/Slip-Wait-June-2025-2.pdf',
+		'2025/06/2025-Fleet-Roster-First-Edition.pdf',
+		'2025/06/2025-Fleet-Roster-Second-Edition.pdf',
+		'2025/06/2025-Fleet-Roster-Third-Edition.pdf',
+	);
+}
+
+/**
+ * Move a retired file out of public uploads into the deny-all folder.
+ * Non-destructive: the file is preserved (recoverable), just no longer public.
+ * Tracks moves in the oyc_retired_doc_paths option so each runs once.
+ *
+ * @param string $relpath Path under wp-content/uploads/.
+ * @return bool
+ */
+function oyc_retire_doc( $relpath ) {
+	$done = (array) get_option( 'oyc_retired_doc_paths', array() );
+	if ( isset( $done[ $relpath ] ) && file_exists( $done[ $relpath ] ) ) {
+		return true; // already retired
+	}
+
+	$up  = wp_upload_dir();
+	$dir = $up['basedir'] . '/oyc-protected';
+	$src = $up['basedir'] . '/' . ltrim( $relpath, '/' );
+
+	if ( ! file_exists( $dir ) ) {
+		wp_mkdir_p( $dir );
+		file_put_contents( $dir . '/.htaccess', "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n" );
+		file_put_contents( $dir . '/index.html', '' );
+	}
+	if ( ! file_exists( $src ) ) {
+		return false; // nothing to move (not present, or already moved)
+	}
+
+	$dest = $dir . '/retired-' . wp_generate_password( 12, false, false ) . '-' . basename( $src );
+	if ( @rename( $src, $dest ) || ( @copy( $src, $dest ) && @unlink( $src ) ) ) {
+		$done[ $relpath ] = $dest;
+		update_option( 'oyc_retired_doc_paths', $done, false );
+		return true;
+	}
+	return false;
+}
+
+/**
+ * After a deploy, move any not-yet-protected documents (and retire stale PII
+ * files) into the deny-all folder automatically the next time an admin loads
+ * wp-admin. No manual step needed.
  */
 add_action( 'admin_init', function () {
 	foreach ( array_keys( oyc_protected_docs() ) as $key ) {
 		if ( ! get_option( 'oyc_protected_doc_' . $key, '' ) ) {
 			oyc_protect_doc( $key );
 		}
+	}
+	foreach ( oyc_retired_docs() as $relpath ) {
+		oyc_retire_doc( $relpath );
 	}
 } );
 
@@ -118,6 +176,9 @@ add_action( 'rest_api_init', function () {
 			$out = array();
 			foreach ( array_keys( oyc_protected_docs() ) as $k ) {
 				$out[ $k ] = oyc_protect_doc( $k );
+			}
+			foreach ( oyc_retired_docs() as $rp ) {
+				$out[ $rp ] = oyc_retire_doc( $rp );
 			}
 			return array( 'ok' => true, 'results' => $out );
 		},
