@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.46
+Version: 1.5.47
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -364,10 +364,19 @@ body.has-hero-header .site-header.is-scrolled .brand {
   border-radius: 0 !important;
 }
 
-/* 34) Membership — "Benefits of becoming a member" three-card grid */
-body.oyc-page-membership .benefits-title { margin-top: 2.4rem; }
-body.oyc-page-membership .benefits-access { margin: 0.2rem 0 0.8rem; }
-body.oyc-page-membership .benefits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-body.oyc-page-membership .benefits-grid .tile--on-photo h3 { margin-top: 0; }
-body.oyc-page-membership .benefits-grid .bullets { margin: 0.5rem 0 0 1.1rem; }
-@media (max-width: 900px) { body.oyc-page-membership .benefits-grid { grid-template-columns: 1fr; } }
+/* 34) Membership — "Benefits of becoming a member" four-card grid spanning the
+   full width, with full-width intro + compact cards so the page is short. */
+body.oyc-page-membership .benefits-title { margin: 1rem 0 0.3rem; }
+body.oyc-page-membership .section-lede { max-width: none; margin: 0 0 0.4rem; }
+body.oyc-page-membership .benefits-access { margin: 0.1rem 0 0.55rem; }
+body.oyc-page-membership .benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+body.oyc-page-membership .benefits-grid .tile--on-photo { padding: 12px 14px; }
+body.oyc-page-membership .benefits-grid h3 { margin: 0 0 6px; font-size: 1rem; }
+body.oyc-page-membership .benefits-grid .bullets { margin: 0 0 0 1rem; font-size: 0.82rem; line-height: 1.3; }
+body.oyc-page-membership .benefits-grid .bullets li { margin-bottom: 0.12rem; padding-bottom: 0.12rem; }
+body.oyc-page-membership .benefits-grid p { font-size: 0.84rem; line-height: 1.35; margin: 0 0 0.4rem; }
+body.oyc-page-membership .benefits-grid .membership-types { font-size: 0.84rem; line-height: 1.3; }
+body.oyc-page-membership .benefits-grid .membership-types li { margin-bottom: 0.25rem; }
+body.oyc-page-membership .cta-row { margin-top: 1rem; }
+@media (max-width: 1000px) { body.oyc-page-membership .benefits-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { body.oyc-page-membership .benefits-grid { grid-template-columns: 1fr; } }
