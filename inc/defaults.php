@@ -22,7 +22,7 @@ function oyc_defaults() {
 	$d = array(
 		/* Hero */
 		'oyc_hero_eyebrow'   => 'Founded 1907 · Long Island Sound',
-		'oyc_hero_headline'  => 'A fun relaxed club, a storied harbor, and a generous welcome.',
+		'oyc_hero_headline'  => 'A fun relaxed club, a storied harbor, and a generous welcome',
 		'oyc_hero_lede'      => 'The Orienta Yacht Club has anchored the East Basin of Mamaroneck Harbor for more than a century — a deep, well-protected home for sailors, anglers, and families who love the water.',
 		'oyc_hero_cta1_text' => 'Become a Member',
 		'oyc_hero_cta1_url'  => '/membership-application/',
@@ -31,7 +31,7 @@ function oyc_defaults() {
 
 		/* About */
 		'oyc_about_kicker'   => 'About the Club',
-		'oyc_about_headline' => 'One of the oldest clubs on the Sound.',
+		'oyc_about_headline' => 'One of the oldest clubs on the Sound',
 		'oyc_about_p1'       => "Since 1907, Orienta has been a gathering place for boating families on Long Island Sound. Our clubhouse sits at the head of Mamaroneck's East Basin, with a deep-water channel that gives members year-round access to some of the finest cruising grounds on the East Coast.",
 		'oyc_about_p2'       => 'Today the club balances heritage with a relaxed, no formal dress code, family-first culture. We are first and foremost a working yacht club — but the dock is just as likely to be lined with kids learning to sail, weekend racers heading out to the start line, or members grilling on the porch.',
 
@@ -53,7 +53,7 @@ function oyc_defaults() {
 
 		/* Membership */
 		'oyc_mem_kicker'      => 'Membership',
-		'oyc_mem_headline'    => 'Join a club built around the water — and the people on it.',
+		'oyc_mem_headline'    => 'Join a club built around the water — and the people on it',
 		'oyc_mem_lede'        => "Orienta welcomes new members through a sponsorship process. Whether you sail, fish, or simply love being near the harbor, there's a place for your family at the club.",
 		'oyc_mem_tile1_title' => 'Regular',
 		'oyc_mem_tile1_body'  => 'Full access to the clubhouse, docks, launch, dining, racing, and social calendar for members and their families.',
@@ -66,13 +66,13 @@ function oyc_defaults() {
 
 		/* Sailing */
 		'oyc_sail_kicker'   => 'Boating',
-		'oyc_sail_headline' => "From the Governor's Cup to Mamaroneck Frostbiters.",
+		'oyc_sail_headline' => "From the Governor's Cup to Mamaroneck Frostbiters",
 		'oyc_sail_body'     => "Orienta has a deep racing tradition on Western Long Island Sound, anchored by the historic <a href=\"https://www.yachtscoring.com/emenu/50084\" target=\"_blank\" rel=\"noopener\"><strong>Governor's Cup</strong></a> regatta — a fun PHRF and IRC navigation event held each summer. Members also race through the <a href=\"https://www.yralis.org/\" target=\"_blank\" rel=\"noopener\">Yacht Racing Association of Long Island Sound (YRALIS)</a>, and right in our back yard the <a href=\"https://www.mamaroneckfrostbite.org/\" target=\"_blank\" rel=\"noopener\">Mamaroneck Frostbiters Association</a> runs one of the largest and longest-standing frostbite programs in America.",
 		'oyc_sail_bullets'  => "Governor's Cup — PHRF Spinnaker, Non-Spin & IRC\nYRALIS fleet racing & distance events | https://www.yralis.org\nMamaroneck Frostbiters (fall/winter) | https://www.mamaroneckfrostbite.org\nCruising fleet rendezvous on the Sound",
 
 		/* Fishing */
 		'oyc_fish_kicker'   => 'Fishing',
-		'oyc_fish_headline' => 'An active angling community.',
+		'oyc_fish_headline' => 'An active angling community',
 		'oyc_fish_body'     => "Mamaroneck's protected basin and quick access to the Sound make Orienta an excellent home port for anglers. The fishing committee runs a calendar of tournaments and informal trips through the season — striped bass, bluefish, fluke, and blackfish all in reach.",
 		'oyc_fish_bullets'  => "Member tournaments and weigh-ins\nFamily fishing days\nLocal knowledge from longtime captains",
 
@@ -89,7 +89,7 @@ function oyc_defaults() {
 
 		/* Contact */
 		'oyc_con_kicker'         => 'Contact',
-		'oyc_con_headline'       => 'Get in touch.',
+		'oyc_con_headline'       => 'Get in touch',
 		'oyc_con_body'           => 'For membership inquiries, reciprocal visits, event reservations, or general questions, the club office is the right starting point.',
 		'oyc_con_address'        => "Orienta Yacht Club\nMamaroneck Harbor, East Basin\nMamaroneck, NY",
 		'oyc_con_phone'          => '(914) 698-9858',
