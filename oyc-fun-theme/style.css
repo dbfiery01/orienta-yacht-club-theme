@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.41
+Version: 1.5.42
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -318,3 +318,27 @@ body.oyc-page-about .section { padding-top: 12px !important; padding-bottom: 16p
 
 /* 30) About page — align the facts grid (1907 / Deep water) with the paragraph above it */
 body.oyc-page-about .facts { margin-left: 0 !important; }
+
+/* 31) Reel-led pages: drop the page-title header so the photo reel sits directly
+   under the menu, framed by a line above and below. (margin-top clears the fixed
+   menu — works with or without the logged-in admin bar.) */
+body.oyc-page-about .page-hero,
+body.oyc-page-membership .page-hero,
+body.oyc-page-visitors .page-hero,
+body.oyc-page-boating .page-hero,
+body.oyc-page-mamaroneck-harbor .page-hero,
+body.oyc-page-calendar .page-hero,
+body.oyc-page-contact .page-hero { display: none !important; }
+
+body.oyc-page-about .oyc-carousel,
+body.oyc-page-membership .oyc-carousel,
+body.oyc-page-visitors .oyc-carousel,
+body.oyc-page-boating .oyc-carousel,
+body.oyc-page-mamaroneck-harbor .oyc-carousel,
+body.oyc-page-calendar .oyc-carousel,
+body.oyc-page-contact .oyc-carousel {
+  margin-top: 92px !important;
+  padding: 14px 0 !important;
+  border-top: 1px solid rgba(11,46,74,0.18) !important;
+  border-bottom: 1px solid rgba(11,46,74,0.18) !important;
+}
