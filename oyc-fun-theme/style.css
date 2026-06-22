@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.39
+Version: 1.5.40
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -222,7 +222,7 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 
 
 /* 19) Photo carousel below the page title — static, auto-advances every 5s, with arrows */
-.oyc-carousel { position: relative; width: min(1140px, 92%); margin-inline: auto; background: transparent; line-height: 0; }
+.oyc-carousel { position: relative; width: min(1052px, 92%); margin-inline: auto; background: transparent; line-height: 0; }
 .oyc-carousel__viewport { overflow: hidden; padding: 22px 0; }
 .oyc-carousel__track { display: flex; will-change: transform; }
 .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell { flex: 0 0 300px !important; width: 300px !important; height: 150px !important; background-size: cover; background-position: center; display: block; position: relative; }
@@ -302,3 +302,16 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
 /* 28) Visitors page — tighten the white space above tile titles to ~1/8" */
 body.oyc-page-visitors .tile--on-photo { padding-top: 12px !important; }
 body.oyc-page-visitors .tile--on-photo h3 { margin-top: 0 !important; }
+
+/* 29) About page — compact single-screen layout: clear the fixed header, align
+   the right cards' top with the heading, shrink the cells + reel, less white space. */
+body.oyc-page-about .page-hero { padding-top: 62px !important; padding-bottom: 8px !important; }
+body.oyc-page-about .oyc-carousel__viewport { padding: 8px 0 !important; }
+body.oyc-page-about .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell { height: 100px !important; }
+body.oyc-page-about .two-col { gap: 48px !important; margin-top: 12px !important; align-items: start !important; }
+body.oyc-page-about .two-col h2 { margin-top: 0 !important; }
+body.oyc-page-about .two-col .tile--on-photo { padding: 14px 16px !important; }
+body.oyc-page-about .tile--on-photo h3 { margin: 0 0 6px !important; }
+body.oyc-page-about .tile--on-photo p { margin: 0 !important; }
+body.oyc-page-about .card-stack { gap: 12px !important; }
+body.oyc-page-about .section { padding-top: 12px !important; padding-bottom: 16px !important; }
