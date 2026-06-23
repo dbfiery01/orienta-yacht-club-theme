@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.10' );
+define( 'OYC_VERSION', '1.7.11' );
 
 /**
  * Theme setup.
@@ -361,8 +361,11 @@ function oyc_dash_thumb( $url ) {
 		}
 	}
 
-	// Otherwise generate a live preview via WordPress.com's mShots service.
-	$shot = 'https://s.wordpress.com/mshots/v1/' . rawurlencode( $clean ) . '?w=480&h=300';
+	// Otherwise generate a live preview via WordPress.com's mShots service. The
+	// `?v=N` appended to the target forces mShots to re-screenshot when a page's
+	// design changes; bump it to refresh all generated thumbnails.
+	$bust = ( false === strpos( $clean, '?' ) ? '?' : '&' ) . 'v=2';
+	$shot = 'https://s.wordpress.com/mshots/v1/' . rawurlencode( $clean . $bust ) . '?w=480&h=300';
 	return sprintf(
 		'<span class="dash-card__thumb" aria-hidden="true" style="background-image:url(%s)"></span>',
 		esc_url( $shot )
