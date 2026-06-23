@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.52
+Version: 1.5.53
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -419,3 +419,6 @@ body.oyc-page-members-area .dashboard-side .dashboard-account-actions .btn { wid
 .oyc-confirm-box h3 { margin: 0 0 6px; color: #16324a; }
 .oyc-confirm-box p { margin: 0 0 18px; color: #2a2a2a; }
 .oyc-confirm-box .btn { min-width: 130px; }
+
+/* 38) Tighten the white space between the photo reel and the content below it */
+body.oyc-immersive .oyc-carousel + .section { padding-top: 12px !important; }
