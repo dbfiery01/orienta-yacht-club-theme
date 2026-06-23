@@ -37,84 +37,85 @@ get_header();
 <section class="section dashboard-section">
 	<div class="container">
 
-		<!-- Quick links grid -->
-		<h2 class="dashboard-heading"><?php esc_html_e( 'Quick Links', 'orienta-yacht-club' ); ?></h2>
-		<div class="dashboard-grid">
-			<?php
-			$dash_links = array(
-				array( 'url' => home_url( '/calendar/' ),             'label' => __( 'Club Calendar', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/reciprocity-list/' ),     'label' => __( 'Reciprocity List', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
-				array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
-				array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
-				array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
-			);
-			foreach ( $dash_links as $link ) {
-				$ext = ! empty( $link['external'] );
-				printf(
-					'<a href="%1$s" class="dash-card"%2$s>%3$s<span class="dash-card__label">%4$s</span></a>',
-					esc_url( $link['url'] ),
-					$ext ? ' target="_blank" rel="noopener"' : '',
-					oyc_dash_thumb( $link['url'] ),
-					esc_html( $link['label'] )
-				);
-			}
-			?>
-		</div>
+		<div class="dashboard-layout">
 
-		<!-- Member documents -->
-		<h2 class="dashboard-heading"><?php esc_html_e( 'Member Documents', 'orienta-yacht-club' ); ?></h2>
-		<div class="dashboard-grid dashboard-grid--docs">
-			<?php
-			$dash_docs = array(
-				array( 'url' => home_url( '/slip-waiting-list/' ),             'label' => __( 'Slip Waiting List', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/dock-assignments/' ),              'label' => __( 'Dock Assignments', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/constitution-and-bylaws-2026/' ),  'label' => __( 'Constitution & Bylaws 2026', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/club-rental-agreement/' ),         'label' => __( 'Club Rental Agreement', 'orienta-yacht-club' ) ),
-				array( 'url' => home_url( '/member-guidelines-2026/' ),        'label' => __( 'Member Guidelines 2026', 'orienta-yacht-club' ) ),
-			);
-			foreach ( $dash_docs as $doc ) {
-				printf(
-					'<a href="%1$s" class="dash-card dash-card--doc">%2$s<span class="dash-card__label">%3$s</span></a>',
-					esc_url( $doc['url'] ),
-					oyc_dash_icon(),
-					esc_html( $doc['label'] )
-				);
-			}
-			?>
-		</div>
+			<div class="dashboard-main">
 
-		<!-- Account -->
-		<div class="dashboard-account">
-			<h2 class="dashboard-heading"><?php esc_html_e( 'Your Account', 'orienta-yacht-club' ); ?></h2>
-			<div class="dashboard-account-row">
-				<div class="dashboard-account-info">
-					<p><strong><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->display_name ); ?></p>
-					<p><strong><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->user_email ); ?></p>
-					<p><strong><?php esc_html_e( 'Thank you for being a member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></p>
+				<!-- Member documents -->
+				<h2 class="dashboard-heading"><?php esc_html_e( 'Member Documents', 'orienta-yacht-club' ); ?></h2>
+				<div class="dashboard-grid dashboard-grid--docs">
+					<?php
+					$dash_docs = array(
+						array( 'url' => home_url( '/slip-waiting-list/' ),             'label' => __( 'Slip Waiting List', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/dock-assignments/' ),              'label' => __( 'Dock Assignments', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/constitution-and-bylaws-2026/' ),  'label' => __( 'Constitution & Bylaws 2026', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/club-rental-agreement/' ),         'label' => __( 'Club Rental Agreement', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/member-guidelines-2026/' ),        'label' => __( 'Member Guidelines 2026', 'orienta-yacht-club' ) ),
+					);
+					foreach ( $dash_docs as $doc ) {
+						printf(
+							'<a href="%1$s" class="dash-card dash-card--doc">%2$s<span class="dash-card__label">%3$s</span></a>',
+							esc_url( $doc['url'] ),
+							oyc_dash_icon(),
+							esc_html( $doc['label'] )
+						);
+					}
+					?>
 				</div>
-				<div class="dashboard-account-actions">
-					<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
-					<a class="btn btn-ghost" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?></a>
+
+				<!-- Quick links grid -->
+				<h2 class="dashboard-heading"><?php esc_html_e( 'Quick Links', 'orienta-yacht-club' ); ?></h2>
+				<div class="dashboard-grid">
+					<?php
+					$dash_links = array(
+						array( 'url' => home_url( '/calendar/' ),             'label' => __( 'Club Calendar', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/reciprocity-list/' ),     'label' => __( 'Reciprocity List', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
+						array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
+						array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
+						array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
+					);
+					foreach ( $dash_links as $link ) {
+						$ext = ! empty( $link['external'] );
+						printf(
+							'<a href="%1$s" class="dash-card"%2$s>%3$s<span class="dash-card__label">%4$s</span></a>',
+							esc_url( $link['url'] ),
+							$ext ? ' target="_blank" rel="noopener"' : '',
+							oyc_dash_thumb( $link['url'] ),
+							esc_html( $link['label'] )
+						);
+					}
+					?>
 				</div>
-			</div>
-		</div>
+
+			</div><!-- .dashboard-main -->
+
+			<aside class="dashboard-side">
+				<div class="dashboard-account">
+					<h2 class="dashboard-heading"><?php esc_html_e( 'Your Account', 'orienta-yacht-club' ); ?></h2>
+					<div class="dashboard-account-row">
+						<div class="dashboard-account-info">
+							<p><strong><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->display_name ); ?></p>
+							<p><strong><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->user_email ); ?></p>
+							<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></p>
+						</div>
+						<div class="dashboard-account-actions">
+							<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
+							<a class="btn btn-ghost" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?></a>
+						</div>
+					</div>
+				</div>
+			</aside>
+
+		</div><!-- .dashboard-layout -->
 
 		<!-- Club Videos -->
 		<div class="dashboard-videos">
 			<?php oyc_video_thumbs(); ?>
-		</div>
-
-		<!-- Logout -->
-		<div class="dashboard-logout">
-			<a class="btn btn-logout" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-				<?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?>
-			</a>
 		</div>
 
 	</div>
