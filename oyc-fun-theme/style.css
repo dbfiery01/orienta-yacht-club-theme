@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.47
+Version: 1.5.48
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -380,3 +380,18 @@ body.oyc-page-membership .benefits-grid .membership-types li { margin-bottom: 0.
 body.oyc-page-membership .cta-row { margin-top: 1rem; }
 @media (max-width: 1000px) { body.oyc-page-membership .benefits-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { body.oyc-page-membership .benefits-grid { grid-template-columns: 1fr; } }
+
+/* 35) Sailing Instructions — this page isn't flagged immersive, so it fell back
+   to the parent's tall dark-gradient hero. Give it the standard white, compact
+   title band (dark title) so the reel + copy sit higher. */
+body.oyc-page-sailing-instructions .page-hero {
+  background: #ffffff !important;
+  background-image: none !important;
+  border-bottom: 1px solid rgba(11,46,74,0.10) !important;
+  min-height: 0 !important;
+  padding: 92px 0 12px !important;
+}
+body.oyc-page-sailing-instructions .page-hero::before,
+body.oyc-page-sailing-instructions .page-hero::after { display: none !important; }
+body.oyc-page-sailing-instructions .page-hero-title,
+body.oyc-page-sailing-instructions .page-hero h1 { color: #16324a !important; }
