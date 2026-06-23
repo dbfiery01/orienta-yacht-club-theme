@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.50
+Version: 1.5.51
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -409,3 +409,11 @@ body.oyc-page-members-area .dashboard-side .dashboard-account-info p { margin: 0
 body.oyc-page-members-area .dashboard-side .dashboard-account-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 body.oyc-page-members-area .dashboard-side .dashboard-account-actions .btn { width: 100%; text-align: center; }
 @media (max-width: 900px) { body.oyc-page-members-area .dashboard-layout { grid-template-columns: 1fr; } }
+
+/* 37) Edit Profile — save confirmation modal (standard "changes saved" dialog) */
+.oyc-confirm-overlay { position: fixed; inset: 0; background: rgba(8,30,55,0.55); display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 20px; }
+.oyc-confirm-box { background: #fff; border-radius: 14px; padding: 28px 28px 24px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 24px 60px rgba(4,22,42,0.35); }
+.oyc-confirm-check { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border-radius: 50%; background: rgba(39,174,96,0.12); color: #27ae60; margin-bottom: 12px; }
+.oyc-confirm-box h3 { margin: 0 0 6px; color: #16324a; }
+.oyc-confirm-box p { margin: 0 0 18px; color: #2a2a2a; }
+.oyc-confirm-box .btn { min-width: 130px; }

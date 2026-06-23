@@ -98,6 +98,25 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 // Re-fetch user so form fields show current saved values
 $user = wp_get_current_user();
 
+// Pre-fill from the member's application (matched by email) when a profile field
+// hasn't been saved yet, so members don't re-enter data they already provided.
+$app = function_exists( 'oyc_get_member_application' ) ? oyc_get_member_application( $user->user_email ) : array();
+$oyc_prefill = function ( $saved, $app_key ) use ( $app ) {
+	$saved = (string) $saved;
+	return $saved !== '' ? $saved : ( isset( $app[ $app_key ] ) ? $app[ $app_key ] : '' );
+};
+
+// Split notices: errors show inline; a success shows the confirmation modal.
+$oyc_success = array();
+$oyc_errors  = array();
+foreach ( $notices as $n ) {
+	if ( $n['type'] === 'success' ) {
+		$oyc_success[] = $n['msg'];
+	} else {
+		$oyc_errors[] = $n;
+	}
+}
+
 get_header();
 ?>
 
@@ -116,17 +135,24 @@ get_header();
 <section class="section dashboard-section">
 	<div class="container profile-layout">
 
-		<?php if ( $notices ) : ?>
-			<?php foreach ( $notices as $n ) : ?>
-				<div class="profile-notice profile-notice--<?php echo esc_attr( $n['type'] ); ?>" role="alert">
-					<?php if ( $n['type'] === 'success' ) : ?>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-					<?php else : ?>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-					<?php endif; ?>
+		<?php if ( $oyc_errors ) : ?>
+			<?php foreach ( $oyc_errors as $n ) : ?>
+				<div class="profile-notice profile-notice--error" role="alert">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 					<?php echo esc_html( $n['msg'] ); ?>
 				</div>
 			<?php endforeach; ?>
+		<?php endif; ?>
+
+		<?php if ( $oyc_success ) : ?>
+			<div class="oyc-confirm-overlay" id="oyc-saved-modal">
+				<div class="oyc-confirm-box" role="dialog" aria-modal="true" aria-labelledby="oyc-saved-title">
+					<span class="oyc-confirm-check" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+					<h3 id="oyc-saved-title"><?php esc_html_e( 'Changes saved', 'orienta-yacht-club' ); ?></h3>
+					<p><?php echo esc_html( implode( ' ', $oyc_success ) ); ?></p>
+					<button type="button" class="btn btn-primary" data-oyc-close><?php esc_html_e( 'Done', 'orienta-yacht-club' ); ?></button>
+				</div>
+			</div>
 		<?php endif; ?>
 
 		<!-- ===== Profile Info ===== -->
@@ -143,13 +169,13 @@ get_header();
 					<div class="profile-form__group">
 						<label for="first_name"><?php esc_html_e( 'First Name', 'orienta-yacht-club' ); ?></label>
 						<input type="text" id="first_name" name="first_name"
-						       value="<?php echo esc_attr( $user->first_name ); ?>"
+						       value="<?php echo esc_attr( $oyc_prefill( $user->first_name, 'first_name' ) ); ?>"
 						       autocomplete="given-name" required />
 					</div>
 					<div class="profile-form__group">
 						<label for="last_name"><?php esc_html_e( 'Last Name', 'orienta-yacht-club' ); ?></label>
 						<input type="text" id="last_name" name="last_name"
-						       value="<?php echo esc_attr( $user->last_name ); ?>"
+						       value="<?php echo esc_attr( $oyc_prefill( $user->last_name, 'last_name' ) ); ?>"
 						       autocomplete="family-name" required />
 					</div>
 				</div>
@@ -178,19 +204,19 @@ get_header();
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Address', 'orienta-yacht-club' ); ?></h3>
 				<div class="profile-form__group">
 					<label for="oyc_address"><?php esc_html_e( 'Street Address', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_address" name="oyc_address" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_address', true ) ); ?>" autocomplete="address-line1" />
+					<input type="text" id="oyc_address" name="oyc_address" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_address', true ), 'address' ) ); ?>" autocomplete="address-line1" />
 				</div>
 				<div class="profile-form__group">
 					<label for="oyc_city"><?php esc_html_e( 'City', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_city" name="oyc_city" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_city', true ) ); ?>" autocomplete="address-level2" />
+					<input type="text" id="oyc_city" name="oyc_city" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_city', true ), 'city' ) ); ?>" autocomplete="address-level2" />
 				</div>
 				<div class="profile-form__group">
 					<label for="oyc_state"><?php esc_html_e( 'State', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_state" name="oyc_state" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_state', true ) ); ?>" autocomplete="address-level1" />
+					<input type="text" id="oyc_state" name="oyc_state" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_state', true ), 'state' ) ); ?>" autocomplete="address-level1" />
 				</div>
 				<div class="profile-form__group">
 					<label for="oyc_zip"><?php esc_html_e( 'ZIP', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_zip" name="oyc_zip" value="<?php echo esc_attr( get_user_meta( $user->ID, 'oyc_zip', true ) ); ?>" autocomplete="postal-code" />
+					<input type="text" id="oyc_zip" name="oyc_zip" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_zip', true ), 'zip' ) ); ?>" autocomplete="postal-code" />
 				</div>
 
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Emergency Contact', 'orienta-yacht-club' ); ?></h3>
@@ -353,10 +379,20 @@ get_header();
 		confirmPw.addEventListener('input', checkMatch);
 	}
 
-	// Scroll to first error / success notice on page load
+	// Scroll to first error notice on page load
 	var firstNotice = document.querySelector('.profile-notice');
 	if (firstNotice) {
 		firstNotice.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+
+	// Save-confirmation modal: dismiss on Done / backdrop / Esc
+	var savedModal = document.getElementById('oyc-saved-modal');
+	if (savedModal) {
+		var closeSaved = function () { if (savedModal.parentNode) savedModal.parentNode.removeChild(savedModal); };
+		savedModal.addEventListener('click', function (e) {
+			if (e.target === savedModal || (e.target.closest && e.target.closest('[data-oyc-close]'))) closeSaved();
+		});
+		document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSaved(); });
 	}
 }());
 </script>

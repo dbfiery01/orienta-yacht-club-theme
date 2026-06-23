@@ -184,6 +184,46 @@ function oyc_ajax_check_email() {
 	wp_send_json( array( 'duplicate' => (bool) $exists ) );
 }
 
+/**
+ * Fetch the most recent membership application for a member, matched by email,
+ * so the Edit Profile form can pre-fill fields the member already provided in
+ * their application (no need to re-enter). Returns an empty array if none found.
+ *
+ * @param string $email Member email to match against the application.
+ * @return array Map of profile fields → values.
+ */
+function oyc_get_member_application( $email ) {
+	$email = sanitize_email( (string) $email );
+	if ( ! $email ) {
+		return array();
+	}
+	$ids = get_posts( array(
+		'post_type'        => 'oyc_application',
+		'post_status'      => 'publish',
+		'numberposts'      => 1,
+		'orderby'          => 'date',
+		'order'            => 'DESC',
+		'fields'           => 'ids',
+		'meta_key'         => 'oyc_app_email',
+		'meta_value'       => $email,
+		'suppress_filters' => false,
+	) );
+	if ( empty( $ids ) ) {
+		return array();
+	}
+	$id = (int) $ids[0];
+	return array(
+		'first_name'   => (string) get_post_meta( $id, 'oyc_app_first_name', true ),
+		'last_name'    => (string) get_post_meta( $id, 'oyc_app_last_name', true ),
+		'address'      => (string) get_post_meta( $id, 'oyc_app_address', true ),
+		'city'         => (string) get_post_meta( $id, 'oyc_app_city', true ),
+		'state'        => (string) get_post_meta( $id, 'oyc_app_state', true ),
+		'zip'          => (string) get_post_meta( $id, 'oyc_app_zip', true ),
+		'mobile_phone' => (string) get_post_meta( $id, 'oyc_app_mobile_phone', true ),
+		'home_phone'   => (string) get_post_meta( $id, 'oyc_app_home_phone', true ),
+	);
+}
+
 /* ──────────────────────────────────────────────
  * 4. Admin list columns for oyc_application
  * ────────────────────────────────────────────── */
