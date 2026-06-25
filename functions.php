@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.13' );
+define( 'OYC_VERSION', '1.7.14' );
 
 /**
  * Theme setup.
@@ -129,6 +129,12 @@ require_once get_template_directory() . '/inc/protected-docs.php';
  * and the /fishing/ → /boating/ redirect.
  */
 require_once get_template_directory() . '/inc/seo.php';
+
+/**
+ * One-time Formidable entry importer (Contact Us CSV). Admin-only, dry-run by
+ * default. DELETE this file + require line once the import is complete.
+ */
+require_once get_template_directory() . '/inc/entry-import.php';
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map
