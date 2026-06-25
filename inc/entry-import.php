@@ -37,26 +37,52 @@ function oyc_imp_norm( $s ) {
  */
 function oyc_imp_meta_cols() {
 	return array(
-		'id'         => 'skip',
-		'key'        => 'item_key',
-		'itemkey'    => 'item_key',
-		'entrykey'   => 'item_key',
-		'createdat'  => 'created_at',
-		'created'    => 'created_at',
-		'date'       => 'created_at',
-		'datecreated'=> 'created_at',
-		'entrydate'  => 'created_at',
-		'timestamp'  => 'created_at',
-		'updatedat'  => 'skip',
-		'updated'    => 'skip',
-		'ip'         => 'ip',
-		'userid'     => 'skip',
-		'user'       => 'skip',
-		'createdby'  => 'skip',
-		'postid'     => 'skip',
-		'parentid'   => 'skip',
-		'isdraft'    => 'skip',
+		'id'          => 'skip',
+		'key'         => 'item_key',
+		'itemkey'     => 'item_key',
+		'entrykey'    => 'item_key',
+		'createdat'   => 'created_at',
+		'created'     => 'created_at',
+		'date'        => 'created_at',
+		'datecreated' => 'created_at',
+		'entrydate'   => 'created_at',
+		'timestamp'   => 'created_at',
+		'updatedat'   => 'skip',
+		'updated'     => 'skip',
+		'lastupdated' => 'skip',
+		'ip'          => 'ip',
+		'userid'      => 'skip',
+		'user'        => 'skip',
+		'createdby'   => 'skip',
+		'updatedby'   => 'skip',
+		'entrystatus' => 'skip',
+		'status'      => 'skip',
+		'postid'      => 'skip',
+		'parentid'    => 'skip',
+		'isdraft'     => 'skip',
 	);
+}
+
+/**
+ * Sniff the column delimiter from the header line (handles , | tab ;).
+ */
+function oyc_imp_detect_delim( $path ) {
+	$fh = fopen( $path, 'r' );
+	if ( ! $fh ) {
+		return ',';
+	}
+	$line = fgets( $fh );
+	fclose( $fh );
+	if ( $line === false ) {
+		return ',';
+	}
+	$cands = array( ',' => 0, '|' => 0, "\t" => 0, ';' => 0 );
+	foreach ( $cands as $d => $_z ) {
+		$cands[ $d ] = substr_count( $line, $d );
+	}
+	arsort( $cands );
+	$best = key( $cands );
+	return $cands[ $best ] > 0 ? $best : ',';
 }
 
 /**
@@ -114,11 +140,12 @@ function oyc_imp_find_csv( $prefer = '' ) {
 function oyc_imp_parse_csv( $path ) {
 	$rows = array();
 	$headers = array();
+	$delim = oyc_imp_detect_delim( $path );
 	if ( ( $fh = fopen( $path, 'r' ) ) === false ) {
 		return array( $headers, $rows );
 	}
 	$first = true;
-	while ( ( $data = fgetcsv( $fh, 0, ',' ) ) !== false ) {
+	while ( ( $data = @fgetcsv( $fh, 0, $delim, '"', '' ) ) !== false ) {
 		if ( $first ) {
 			// Strip a UTF-8 BOM from the first header cell.
 			if ( isset( $data[0] ) ) {
