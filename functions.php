@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.12' );
+define( 'OYC_VERSION', '1.7.13' );
 
 /**
  * Theme setup.
@@ -234,10 +234,21 @@ function oyc_has_real_logo() {
 function oyc_allow_svg_uploads( $mimes ) {
 	if ( current_user_can( 'upload_files' ) ) {
 		$mimes['svg'] = 'image/svg+xml';
+		$mimes['csv'] = 'text/csv';
 	}
 	return $mimes;
 }
 add_filter( 'upload_mimes', 'oyc_allow_svg_uploads' );
+
+// Allow admins to upload CSVs — the real-MIME check can otherwise reject them
+// (a .csv is often sniffed as text/plain or application/vnd.ms-excel).
+add_filter( 'wp_check_filetype_and_ext', function ( $data, $file, $filename ) {
+	if ( current_user_can( 'upload_files' ) && preg_match( '/\.csv$/i', $filename ) ) {
+		$data['ext']  = 'csv';
+		$data['type'] = 'text/csv';
+	}
+	return $data;
+}, 10, 3 );
 
 /**
  * Mark the front page and all pages (which render a full hero) so the header
