@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.69
+Version: 1.5.70
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -19,7 +19,7 @@ body.oyc-immersive::before, body.oyc-immersive::after { display: none !important
    from the parent theme (relative path → works on any domain). */
 body.oyc-page-membership-application, body.oyc-page-fleet-roster { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-a.jpg'); }
 body.oyc-page-storm-warnings { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-b.jpg'); }
-body.oyc-page-videos, body.oyc-page-facilities, body.oyc-page-video-streaming { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-c.jpg'); }
+body.oyc-page-videos, body.oyc-page-facilities, body.oyc-page-video-streaming, body.oyc-page-live-video-streaming { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-c.jpg'); }
 body.oyc-page-calendar, body.oyc-page-members-area, body.oyc-page-edit-profile,
 body.oyc-page-about, body.oyc-page-mamaroneck-harbor, body.oyc-page-oyc-resources { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-d.jpg'); }
 body.oyc-page-reciprocity-list, body.oyc-page-2026-fee-schedule { --oyc-hero-photo: url('../orienta-yacht-club-theme/assets/photos/home-slide-e.jpg'); }
