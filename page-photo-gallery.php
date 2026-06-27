@@ -68,6 +68,19 @@ $messages = array(
 				<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Upload', 'orienta-yacht-club' ); ?></button>
 				<p class="gallery-note"><?php esc_html_e( 'Photos are reviewed by a club admin before they appear here. Images only, up to 12 MB each.', 'orienta-yacht-club' ); ?></p>
 			</form>
+			<script>
+			(function(){
+				var f = document.querySelector('.gallery-upload-form');
+				if (!f) return;
+				f.addEventListener('submit', function(){
+					var b = f.querySelector('button[type="submit"]');
+					if (!b || b.disabled) return;
+					b.classList.add('is-loading');
+					b.disabled = true;
+					b.textContent = <?php echo wp_json_encode( __( 'Uploading…', 'orienta-yacht-club' ) ); ?>;
+				});
+			})();
+			</script>
 		</div>
 
 		<?php if ( $is_admin && ! empty( $pending ) ) : ?>
