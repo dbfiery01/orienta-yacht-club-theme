@@ -35,7 +35,7 @@ add_action( 'wp_enqueue_scripts', function () {
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
 	// No photo reel on these pages (per request) — they get the tighter layout.
-	if ( is_page( array( 'videos', 'members-area', 'photo-gallery' ) ) ) {
+	if ( is_page( array( 'videos', 'members-area', 'photo-gallery', 'live-video-streaming' ) ) ) {
 		return;
 	}
 	// Collect home-* and header-* photos from the parent theme, plus any
