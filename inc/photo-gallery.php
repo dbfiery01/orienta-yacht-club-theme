@@ -89,6 +89,9 @@ function oyc_gallery_handle_upload() {
 		oyc_gallery_redirect( 'nofile' );
 	}
 
+	// TEMP DEBUG: surface the real fatal so we can see it (remove after diagnosis).
+	try {
+
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 
@@ -152,6 +155,10 @@ function oyc_gallery_handle_upload() {
 	}
 
 	oyc_gallery_redirect( $ok > 0 ? 'uploaded' : 'failed' );
+
+	} catch ( \Throwable $e ) {
+		wp_die( 'OYC UPLOAD DEBUG: ' . esc_html( $e->getMessage() ) . ' @ ' . esc_html( basename( $e->getFile() ) ) . ':' . (int) $e->getLine() );
+	}
 }
 add_action( 'admin_post_oyc_gallery_upload', 'oyc_gallery_handle_upload' );
 
