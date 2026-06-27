@@ -65,22 +65,23 @@ get_header();
 
 				<!-- Quick links grid -->
 				<h2 class="dashboard-heading"><?php esc_html_e( 'Quick Links', 'orienta-yacht-club' ); ?></h2>
-				<div class="dashboard-grid">
-					<?php
-					$dash_links = array(
-						array( 'url' => home_url( '/calendar/' ),             'label' => __( 'Club Calendar', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/reciprocity-list/' ),     'label' => __( 'Reciprocity List', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/live-video-streaming/' ), 'label' => __( 'Live Video Streaming', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
-						array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
-						array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
-						array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
-					);
-					foreach ( $dash_links as $link ) {
+				<?php
+				$dash_links = array(
+					array( 'url' => home_url( '/calendar/' ),             'label' => __( 'Club Calendar', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/reciprocity-list/' ),     'label' => __( 'Reciprocity List', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/live-video-streaming/' ), 'label' => __( 'Live Video Streaming', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
+					array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
+					array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
+					array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
+					array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
+				);
+				// Quick Links: 5 cards on the first row, 6 on the second (intentionally wider).
+				$oyc_render_dash = function ( $links ) {
+					foreach ( $links as $link ) {
 						$ext = ! empty( $link['external'] );
 						printf(
 							'<a href="%1$s" class="dash-card"%2$s>%3$s<span class="dash-card__label">%4$s</span></a>',
@@ -90,8 +91,10 @@ get_header();
 							esc_html( $link['label'] )
 						);
 					}
-					?>
-				</div>
+				};
+				?>
+				<div class="dashboard-grid dash-qrow dash-qrow--5"><?php $oyc_render_dash( array_slice( $dash_links, 0, 5 ) ); ?></div>
+				<div class="dashboard-grid dash-qrow dash-qrow--6"><?php $oyc_render_dash( array_slice( $dash_links, 5 ) ); ?></div>
 
 			</div><!-- .dashboard-main -->
 

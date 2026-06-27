@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.71
+Version: 1.5.72
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -582,3 +582,16 @@ body.oyc-page-video-streaming .coming-soon__badge {
 }
 body.oyc-page-video-streaming .coming-soon__title { color: #16324a; margin: 0 0 12px; }
 body.oyc-page-video-streaming .coming-soon__text { color: #2a2a2a; line-height: 1.55; margin: 0; }
+
+/* 45) Quick Links: first row 5 cards, second row 6 cards (intentionally wider).
+   body.oyc-page-members-area prefix → higher specificity than the base 5-across rule. */
+body.oyc-page-members-area .dashboard-grid.dash-qrow--5 { grid-template-columns: repeat(5, 1fr); }
+body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns: repeat(6, 1fr); margin-top: 0.7rem; }
+@media (max-width: 1100px) {
+  body.oyc-page-members-area .dashboard-grid.dash-qrow--5,
+  body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  body.oyc-page-members-area .dashboard-grid.dash-qrow--5,
+  body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns: repeat(2, 1fr); }
+}
