@@ -144,10 +144,35 @@ $messages = array(
 						<?php /* translators: %d: number of photos awaiting approval. */ ?>
 						<?php printf( esc_html__( 'Pending Approval (%d)', 'orienta-yacht-club' ), count( $pending ) ); ?>
 					</h2>
-					<p class="gallery-moderate__hint"><?php esc_html_e( 'Approve a photo to publish it for members, or Remove it. Anything you leave stays pending.', 'orienta-yacht-club' ); ?></p>
-					<div class="gallery-grid">
-						<?php foreach ( $pending as $photo ) : oyc_gallery_card( $photo, true, true ); endforeach; ?>
-					</div>
+						<p class="gallery-moderate__hint"><?php esc_html_e( 'Tick photos and use Approve/Delete selected to act on several at once \u2014 or use the buttons on each photo.', 'orienta-yacht-club' ); ?></p>
+						<form id="oyc-bulk-moderate" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gallery-moderate">
+							<input type="hidden" name="action" value="oyc_gallery_bulk">
+							<?php wp_nonce_field( 'oyc_gallery_bulk' ); ?>
+							<div class="gallery-moderate__bar">
+								<label class="gallery-moderate__all"><input type="checkbox" class="gallery-check-all"> <?php esc_html_e( 'Select all', 'orienta-yacht-club' ); ?></label>
+								<span class="gallery-moderate__buttons">
+									<button type="submit" name="do" value="approve" class="btn btn-primary btn-sm"><?php esc_html_e( 'Approve selected', 'orienta-yacht-club' ); ?></button>
+									<button type="submit" name="do" value="delete" class="btn btn-sm gallery-remove-btn" onclick="return confirm('<?php echo esc_js( __( 'Delete the selected photos? This cannot be undone.', 'orienta-yacht-club' ) ); ?>');"><?php esc_html_e( 'Delete selected', 'orienta-yacht-club' ); ?></button>
+								</span>
+							</div>
+						</form>
+						<div class="gallery-grid">
+							<?php foreach ( $pending as $photo ) : oyc_gallery_card( $photo, true, true, true ); endforeach; ?>
+						</div>
+						<script>
+						(function(){
+							var all = document.querySelector('.gallery-check-all');
+							if (all) all.addEventListener('change', function(){
+								document.querySelectorAll('input[name="photo_ids[]"]').forEach(function(c){ c.checked = all.checked; });
+							});
+							var bulk = document.getElementById('oyc-bulk-moderate');
+							if (bulk) bulk.addEventListener('submit', function(e){
+								if (!document.querySelectorAll('input[name="photo_ids[]"]:checked').length) { e.preventDefault(); return; }
+								var b = e.submitter || bulk.querySelector('button[type="submit"]');
+								if (b) b.classList.add('is-loading');
+							});
+						})();
+						</script>
 				</div>
 			<?php endif; ?>
 
