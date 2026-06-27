@@ -68,6 +68,23 @@ add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $
 	return home_url( '/members-area/' );
 }, 10, 3 );
 
+/* ── 2b. Make the "Login" menu button remember the current page ──────────
+ * The Login nav item points at wp-login.php with no redirect. Append the page
+ * the visitor is currently on as redirect_to, so after login they land back
+ * where they were (the login_redirect filter above then honors it). */
+add_filter( 'nav_menu_link_attributes', function ( $atts, $item, $args ) {
+	if ( is_user_logged_in() || empty( $atts['href'] ) ) {
+		return $atts;
+	}
+	if ( false !== strpos( $atts['href'], 'wp-login.php' ) && false === strpos( $atts['href'], 'redirect_to=' ) ) {
+		global $wp;
+		$path    = isset( $wp->request ) && $wp->request !== '' ? trailingslashit( $wp->request ) : '';
+		$current = home_url( $path );
+		$atts['href'] = add_query_arg( 'redirect_to', rawurlencode( $current ), $atts['href'] );
+	}
+	return $atts;
+}, 10, 3 );
+
 /* ── 3. Members-only page restriction ────────────────────── */
 
 add_action( 'template_redirect', function () {
