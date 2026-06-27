@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.40' );
+define( 'OYC_VERSION', '1.7.41' );
 
 /**
  * Theme setup.
@@ -245,6 +245,28 @@ function oyc_allow_svg_uploads( $mimes ) {
 	return $mimes;
 }
 add_filter( 'upload_mimes', 'oyc_allow_svg_uploads' );
+
+/**
+ * Pre-select the contact form's "inquiry-type" dropdown from a ?inquiry= URL
+ * parameter, on ANY page the form appears on (e.g. /contact/, not just the
+ * homepage). Lets /contact/?inquiry=membership open with "Contact Membership
+ * Chair" already chosen.
+ */
+add_action( 'wp_footer', function () {
+	?>
+	<script>
+	(function(){
+		var want = ({ 'membership': 'Contact Membership Chair' })[ new URLSearchParams(window.location.search).get('inquiry') ];
+		if (!want) return;
+		function apply(){ var s = document.querySelector('select[name="inquiry-type"]'); if (s) { s.value = want; } }
+		apply();
+		document.addEventListener('DOMContentLoaded', apply);
+		document.addEventListener('wpcf7domloaded', apply);
+		setTimeout(apply, 300);
+	})();
+	</script>
+	<?php
+} );
 
 // Allow admins to upload CSVs — the real-MIME check can otherwise reject them
 // (a .csv is often sniffed as text/plain or application/vnd.ms-excel).
