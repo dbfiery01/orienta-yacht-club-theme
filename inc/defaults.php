@@ -45,7 +45,7 @@ function oyc_defaults() {
 		'oyc_fact4_label' => 'Volunteer officers & flag',
 
 		'oyc_card1_title' => 'Clubhouse & Dining',
-		'oyc_card1_body'  => 'A classic harbor-front clubhouse with porches over the basin, a working bar, and member dining throughout the season.',
+		'oyc_card1_body'  => 'A classic harbor-front clubhouse with porches over the basin and self-service member dining throughout the season.',
 		'oyc_card2_title' => 'Docks & Moorings',
 		'oyc_card2_body'  => "Member docks, launch service, and moorings inside the basin's protected waters, with easy access to the Sound.",
 		'oyc_card3_title' => 'Heritage',
