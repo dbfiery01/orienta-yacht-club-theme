@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.67
+Version: 1.5.68
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -553,3 +553,19 @@ body.oyc-page-photo-gallery .gallery-upload-error {
   margin: 12px 0 0; color: #b23a3a; font-weight: 600;
   background: rgba(178,58,58,0.08); border: 1px solid rgba(178,58,58,0.3); border-radius: 8px; padding: 9px 13px;
 }
+
+/* 43) Photo-use consent popup + admin consent record */
+body.oyc-page-photo-gallery .gallery-consent {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  align-items: center; justify-content: center; padding: 20px;
+  background: rgba(11,46,74,0.55);
+}
+body.oyc-page-photo-gallery .gallery-consent.is-open { display: flex; }
+body.oyc-page-photo-gallery .gallery-consent__box {
+  background: #ffffff; border-radius: 14px; max-width: 540px; width: 100%;
+  padding: 24px 26px; box-shadow: 0 18px 50px rgba(11,46,74,0.35);
+}
+body.oyc-page-photo-gallery .gallery-consent__box h3 { margin: 0 0 10px; color: #16324a; font-size: 1.25rem; }
+body.oyc-page-photo-gallery .gallery-consent__box p { margin: 0 0 20px; color: #2a2a2a; line-height: 1.55; }
+body.oyc-page-photo-gallery .gallery-consent__actions { display: flex; justify-content: flex-end; gap: 10px; }
+body.oyc-page-photo-gallery .gallery-caption__consent { display: block; margin-top: 3px; font-size: 0.76rem; color: #2e7d32; font-weight: 600; }

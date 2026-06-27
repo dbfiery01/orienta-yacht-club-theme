@@ -20,6 +20,17 @@ define( 'OYC_GALLERY_STATUS', '_oyc_gallery_status' );
 define( 'OYC_GALLERY_MAX_FILES', 10 );
 define( 'OYC_GALLERY_MAX_BYTES', 12 * 1024 * 1024 ); // 12 MB per file
 
+// Photo-use consent. Bump the version if the wording below changes — uploaders
+// are then re-prompted, and each photo records the exact version agreed to.
+define( 'OYC_PHOTO_CONSENT_VERSION', '1.0' );
+
+/**
+ * The photo-use permission text shown in the upload consent popup.
+ */
+function oyc_photo_consent_text() {
+	return __( 'By uploading, you give Orienta Yacht Club permission to use your photo(s) anywhere on this website and in club communications and materials, with no restrictions. Please confirm you have the right to share these photos. Uploading your photo constitutes that permission.', 'orienta-yacht-club' );
+}
+
 /**
  * Image MIME types accepted for upload (whitelist).
  */
@@ -84,6 +95,13 @@ function oyc_gallery_handle_upload() {
 		oyc_gallery_redirect( 'login' );
 	}
 	check_admin_referer( 'oyc_gallery_upload' );
+
+	// Require the photo-use consent acknowledgement (tracked per photo below).
+	$consent_version = isset( $_POST['oyc_consent_version'] ) ? sanitize_text_field( wp_unslash( $_POST['oyc_consent_version'] ) ) : '';
+	if ( empty( $_POST['oyc_consent'] ) || '' === $consent_version ) {
+		oyc_gallery_redirect( 'noconsent' );
+	}
+	$consent_at = current_time( 'mysql' );
 
 	if ( empty( $_FILES['oyc_gallery_photo'] ) || empty( $_FILES['oyc_gallery_photo']['name'] ) ) {
 		oyc_gallery_redirect( 'nofile' );
@@ -156,6 +174,10 @@ function oyc_gallery_handle_upload() {
 		wp_update_attachment_metadata( $attach_id, wp_generate_attachment_metadata( $attach_id, $uploaded['file'] ) );
 		update_post_meta( $attach_id, OYC_GALLERY_META, '1' );
 		update_post_meta( $attach_id, OYC_GALLERY_STATUS, 'pending' );
+		// Photo-use consent record: uploader is the attachment author (user id);
+		// store which consent version was agreed to and when.
+		update_post_meta( $attach_id, '_oyc_consent_version', $consent_version );
+		update_post_meta( $attach_id, '_oyc_consent_at', $consent_at );
 		$ok++;
 	}
 
@@ -263,8 +285,11 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false, $
 		$uploader = get_the_author_meta( 'display_name', $photo->post_author );
 	}
 	$admin_post = esc_url( admin_url( 'admin-post.php' ) );
-	// Uploader name is shown to admins only (for moderation), never to members.
-	$show_by = ( $uploader && current_user_can( 'manage_options' ) );
+	// Uploader name + consent record are shown to admins only (for moderation).
+	$is_admin = current_user_can( 'manage_options' );
+	$show_by  = ( $uploader && $is_admin );
+	$consent_v  = $is_admin ? get_post_meta( $photo->ID, '_oyc_consent_version', true ) : '';
+	$consent_at = $is_admin ? get_post_meta( $photo->ID, '_oyc_consent_at', true ) : '';
 
 	echo '<figure class="gallery-item' . ( $select_mode ? ' gallery-item--select' : '' ) . '">';
 
@@ -283,7 +308,7 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false, $
 		echo $img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
-	if ( $caption || $show_by ) {
+	if ( $caption || $show_by || $consent_v ) {
 		echo '<figcaption class="gallery-caption">';
 		if ( $caption ) {
 			echo '<span class="gallery-caption__text">' . esc_html( $caption ) . '</span>';
@@ -291,6 +316,10 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false, $
 		if ( $show_by ) {
 			/* translators: %s: member first name (shown to admins only). */
 			echo '<span class="gallery-caption__by">' . esc_html( sprintf( __( 'by %s', 'orienta-yacht-club' ), $uploader ) ) . '</span>';
+		}
+		if ( $consent_v ) {
+			/* translators: 1: consent version, 2: date/time agreed (admins only). */
+			echo '<span class="gallery-caption__consent" title="' . esc_attr__( 'Photo-use consent on file', 'orienta-yacht-club' ) . '">' . esc_html( sprintf( __( '✔ Consent v%1$s · %2$s', 'orienta-yacht-club' ), $consent_v, $consent_at ) ) . '</span>';
 		}
 		echo '</figcaption>';
 	}

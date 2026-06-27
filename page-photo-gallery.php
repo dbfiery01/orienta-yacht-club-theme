@@ -32,6 +32,7 @@ $messages = array(
 	'bulkdeleted' => array( 'ok',  __( 'Selected photos deleted.', 'orienta-yacht-club' ) ),
 	'noselect'    => array( 'err', __( 'Select at least one photo first.', 'orienta-yacht-club' ) ),
 	'denied'      => array( 'err', __( 'You don’t have permission to do that.', 'orienta-yacht-club' ) ),
+	'noconsent'   => array( 'err', __( 'Your upload needs the photo-use acknowledgement. Please try again and confirm the permission.', 'orienta-yacht-club' ) ),
 	'login'       => array( 'err', __( 'Please log in to add photos.', 'orienta-yacht-club' ) ),
 );
 ?>
@@ -69,6 +70,16 @@ $messages = array(
 				<p class="gallery-note"><?php esc_html_e( 'Photos are reviewed by a club admin before they appear here. Images only, up to 12 MB each.', 'orienta-yacht-club' ); ?></p>
 			</form>
 				<p class="gallery-upload-error" role="alert" hidden></p>
+				<div class="gallery-consent" id="oyc-consent" aria-hidden="true">
+					<div class="gallery-consent__box" role="dialog" aria-modal="true" aria-labelledby="oyc-consent-title">
+						<h3 id="oyc-consent-title"><?php esc_html_e( 'Photo use & permission', 'orienta-yacht-club' ); ?></h3>
+						<p><?php echo esc_html( oyc_photo_consent_text() ); ?></p>
+						<div class="gallery-consent__actions">
+							<button type="button" class="btn btn-sm gallery-remove-btn gallery-consent__cancel"><?php esc_html_e( 'Cancel', 'orienta-yacht-club' ); ?></button>
+							<button type="button" class="btn btn-primary gallery-consent__agree"><?php esc_html_e( 'I Agree &amp; Upload', 'orienta-yacht-club' ); ?></button>
+						</div>
+					</div>
+				</div>
 				<script>
 				(function(){
 					var form = document.querySelector('.gallery-upload-form');
@@ -76,12 +87,17 @@ $messages = array(
 					var fileInput = form.querySelector('input[type="file"]');
 					var btn = form.querySelector('button[type="submit"]');
 					var errEl = form.parentNode.querySelector('.gallery-upload-error');
+					var modal = document.getElementById('oyc-consent');
 					var UPLOADING = <?php echo wp_json_encode( __( 'Uploading…', 'orienta-yacht-club' ) ); ?>;
 					var TOO_BIG = <?php echo wp_json_encode( __( 'That photo is too large (max 12 MB). Please choose a smaller image, or use a JPG/PNG.', 'orienta-yacht-club' ) ); ?>;
+					var CONSENT_VERSION = <?php echo wp_json_encode( OYC_PHOTO_CONSENT_VERSION ); ?>;
 					var ORIG = btn ? btn.textContent : 'Upload';
 					var MAX_EDGE = 2560, MAX_BYTES = 12 * 1024 * 1024;
 					function showError(m){ if (errEl){ errEl.textContent = m; errEl.hidden = false; } }
 					function resetBtn(){ if (btn){ btn.classList.remove('is-loading'); btn.disabled = false; btn.textContent = ORIG; } }
+					function loadBtn(){ if (btn){ btn.classList.add('is-loading'); btn.disabled = true; btn.textContent = UPLOADING; } }
+					function openModal(){ if (modal){ modal.classList.add('is-open'); modal.setAttribute('aria-hidden','false'); var a=modal.querySelector('.gallery-consent__agree'); if (a) a.focus(); } }
+					function closeModal(){ if (modal){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); } }
 					function shrink(file){
 						return new Promise(function(resolve){
 							if (!file.type || file.type.indexOf('image/') !== 0) { resolve(file); return; }
@@ -105,34 +121,42 @@ $messages = array(
 							img.src = url;
 						});
 					}
-					form.addEventListener('submit', async function(e){
-						if (!fileInput || !fileInput.files || !fileInput.files.length) return;
-						e.preventDefault();
-						if (errEl) errEl.hidden = true;
-						if (btn) { btn.classList.add('is-loading'); btn.disabled = true; btn.textContent = UPLOADING; }
+					async function runUpload(){
+						loadBtn();
 						var files = Array.prototype.slice.call(fileInput.files);
 						var outs = [];
 						for (var i = 0; i < files.length; i++) { outs.push(await shrink(files[i])); }
-						for (var j = 0; j < outs.length; j++) {
-							if (outs[j].size > MAX_BYTES) { showError(TOO_BIG); resetBtn(); return; }
-						}
+						for (var j = 0; j < outs.length; j++) { if (outs[j].size > MAX_BYTES) { showError(TOO_BIG); resetBtn(); return; } }
 						var fd = new FormData();
 						var add = function(sel){ var el = form.querySelector(sel); if (el) fd.set(el.name, el.value); };
 						add('input[name="action"]');
 						add('input[name="_wpnonce"]');
 						add('input[name="_wp_http_referer"]');
 						add('input[name="oyc_gallery_caption"]');
+						fd.set('oyc_consent', '1');
+						fd.set('oyc_consent_version', CONSENT_VERSION);
 						for (var k = 0; k < outs.length; k++) { fd.append('oyc_gallery_photo[]', outs[k], outs[k].name || files[k].name); }
 						try {
 							var res = await fetch(form.getAttribute('action'), { method: 'POST', body: fd, credentials: 'same-origin', redirect: 'follow' });
 							window.location.href = res.url || window.location.href;
 						} catch (err) { window.location.reload(); }
+					}
+					form.addEventListener('submit', function(e){
+						if (!fileInput || !fileInput.files || !fileInput.files.length) return;
+						e.preventDefault();
+						if (errEl) errEl.hidden = true;
+						if (modal) { openModal(); } else { runUpload(); }
 					});
+					if (modal) {
+						var agree = modal.querySelector('.gallery-consent__agree');
+						var cancel = modal.querySelector('.gallery-consent__cancel');
+						if (agree) agree.addEventListener('click', function(){ closeModal(); runUpload(); });
+						if (cancel) cancel.addEventListener('click', function(){ closeModal(); resetBtn(); });
+						modal.addEventListener('click', function(ev){ if (ev.target === modal) { closeModal(); resetBtn(); } });
+						document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && modal.classList.contains('is-open')) { closeModal(); resetBtn(); } });
+					}
 					document.querySelectorAll('.gallery-page .gallery-actions form').forEach(function(af){
-						af.addEventListener('submit', function(ev){
-							var b = ev.submitter || af.querySelector('button[type="submit"]');
-							if (b) b.classList.add('is-loading');
-						});
+						af.addEventListener('submit', function(ev){ var b = ev.submitter || af.querySelector('button[type="submit"]'); if (b) b.classList.add('is-loading'); });
 					});
 				})();
 				</script>
