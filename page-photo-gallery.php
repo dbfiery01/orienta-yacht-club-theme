@@ -68,19 +68,61 @@ $messages = array(
 				<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Upload', 'orienta-yacht-club' ); ?></button>
 				<p class="gallery-note"><?php esc_html_e( 'Photos are reviewed by a club admin before they appear here. Images only, up to 12 MB each.', 'orienta-yacht-club' ); ?></p>
 			</form>
-			<script>
-			(function(){
-				var f = document.querySelector('.gallery-upload-form');
-				if (!f) return;
-				f.addEventListener('submit', function(){
-					var b = f.querySelector('button[type="submit"]');
-					if (!b || b.disabled) return;
-					b.classList.add('is-loading');
-					b.disabled = true;
-					b.textContent = <?php echo wp_json_encode( __( 'Uploading…', 'orienta-yacht-club' ) ); ?>;
-				});
-			})();
-			</script>
+				<script>
+				(function(){
+					var form = document.querySelector('.gallery-upload-form');
+					if (!form) return;
+					var fileInput = form.querySelector('input[type="file"]');
+					var btn = form.querySelector('button[type="submit"]');
+					var UPLOADING = <?php echo wp_json_encode( __( 'Uploading…', 'orienta-yacht-club' ) ); ?>;
+					var MAX_EDGE = 2560;
+					function shrink(file){
+						return new Promise(function(resolve){
+							if (!file.type || file.type.indexOf('image/') !== 0) { resolve(file); return; }
+							var url = URL.createObjectURL(file);
+							var img = new Image();
+							img.onload = function(){
+								var w = img.naturalWidth, h = img.naturalHeight;
+								URL.revokeObjectURL(url);
+								if (!w || !h || Math.max(w, h) <= MAX_EDGE) { resolve(file); return; }
+								var sc = MAX_EDGE / Math.max(w, h);
+								var cw = Math.round(w * sc), ch = Math.round(h * sc);
+								var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+								try { c.getContext('2d').drawImage(img, 0, 0, cw, ch); } catch (e) { resolve(file); return; }
+								c.toBlob(function(blob){
+									if (!blob) { resolve(file); return; }
+									var name = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+									resolve(new File([blob], name, { type: 'image/jpeg' }));
+								}, 'image/jpeg', 0.85);
+							};
+							img.onerror = function(){ URL.revokeObjectURL(url); resolve(file); };
+							img.src = url;
+						});
+					}
+					form.addEventListener('submit', async function(e){
+						if (!fileInput || !fileInput.files || !fileInput.files.length) return;
+						e.preventDefault();
+						if (btn) { btn.classList.add('is-loading'); btn.disabled = true; btn.textContent = UPLOADING; }
+						var fd = new FormData();
+						var add = function(sel){ var el = form.querySelector(sel); if (el) fd.set(el.name, el.value); };
+						add('input[name="action"]');
+						add('input[name="_wpnonce"]');
+						add('input[name="_wp_http_referer"]');
+						add('input[name="oyc_gallery_caption"]');
+						var files = Array.prototype.slice.call(fileInput.files);
+						for (var i = 0; i < files.length; i++) {
+							var out = await shrink(files[i]);
+							fd.append('oyc_gallery_photo[]', out, out.name || files[i].name);
+						}
+						try {
+							var res = await fetch(form.getAttribute('action'), { method: 'POST', body: fd, credentials: 'same-origin', redirect: 'follow' });
+							window.location.href = res.url || window.location.href;
+						} catch (err) {
+							window.location.reload();
+						}
+					});
+				})();
+				</script>
 		</div>
 
 		<?php if ( $is_admin && ! empty( $pending ) ) : ?>
