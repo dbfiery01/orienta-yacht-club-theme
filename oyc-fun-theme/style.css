@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.62
+Version: 1.5.63
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -445,3 +445,53 @@ body.oyc-page-members-area .video-thumbs__heading {
 
 /* 38) Tighten the white space between the photo reel and the content below it */
 body.oyc-immersive .oyc-carousel + .section { padding-top: 12px !important; }
+
+/* 39) Member Photo Gallery (members-only, self-serve uploads) */
+body.oyc-page-photo-gallery .gallery-notice {
+  border-radius: 10px; padding: 12px 16px; margin: 0 0 1.5rem; font-weight: 600;
+  border: 1px solid transparent;
+}
+body.oyc-page-photo-gallery .gallery-notice--ok  { background: rgba(21,131,207,0.10); border-color: rgba(21,131,207,0.30); color: #0472c1; }
+body.oyc-page-photo-gallery .gallery-notice--err { background: rgba(193,57,57,0.08);  border-color: rgba(193,57,57,0.30);  color: #b23a3a; }
+
+/* Upload card */
+body.oyc-page-photo-gallery .gallery-upload {
+  background: #ffffff; border: 1px solid rgba(11,46,74,0.12); border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(11,46,74,0.08); padding: 22px; margin: 0 0 2.5rem;
+}
+body.oyc-page-photo-gallery .gallery-upload .dashboard-heading { margin-top: 0; }
+body.oyc-page-photo-gallery .gallery-upload-form {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+}
+body.oyc-page-photo-gallery .gallery-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 240px; }
+body.oyc-page-photo-gallery .gallery-field__label { font-weight: 600; color: #16324a; font-size: 0.92rem; }
+body.oyc-page-photo-gallery .gallery-field input[type="text"] {
+  padding: 10px 12px; border: 1px solid rgba(11,46,74,0.22); border-radius: 8px; font: inherit; color: #2a2a2a;
+}
+body.oyc-page-photo-gallery .gallery-field input[type="file"] { color: #2a2a2a; }
+body.oyc-page-photo-gallery .gallery-note { flex: 1 1 100%; margin: 4px 0 0; font-size: 0.85rem; color: #5a6b78; }
+
+/* Photo grid */
+body.oyc-page-photo-gallery .gallery-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0 0 2.5rem;
+}
+@media (max-width: 900px) { body.oyc-page-photo-gallery .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 560px) { body.oyc-page-photo-gallery .gallery-grid { grid-template-columns: 1fr; } }
+
+body.oyc-page-photo-gallery .gallery-item {
+  margin: 0; background: #ffffff; border: 1px solid rgba(11,46,74,0.12); border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(11,46,74,0.08); overflow: hidden; display: flex; flex-direction: column;
+}
+body.oyc-page-photo-gallery .gallery-link { display: block; }
+body.oyc-page-photo-gallery .gallery-photo {
+  display: block; width: 100%; height: 220px; object-fit: cover; background: #eef3f8;
+}
+body.oyc-page-photo-gallery .gallery-caption { padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+body.oyc-page-photo-gallery .gallery-caption__text { color: #16324a; font-weight: 600; }
+body.oyc-page-photo-gallery .gallery-caption__by  { color: #5a6b78; font-size: 0.85rem; }
+body.oyc-page-photo-gallery .gallery-actions { display: flex; gap: 8px; padding: 0 14px 14px; margin-top: auto; }
+body.oyc-page-photo-gallery .gallery-actions form { margin: 0; }
+body.oyc-page-photo-gallery .gallery-empty { color: #2a2a2a; }
+
+/* Pending-approval strip gets a subtle amber frame so admins can tell it apart */
+body.oyc-page-photo-gallery .gallery-pending .gallery-item { border-color: rgba(214,158,46,0.55); }

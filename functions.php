@@ -125,6 +125,12 @@ require_once get_template_directory() . '/inc/fleet-roster.php';
 require_once get_template_directory() . '/inc/protected-docs.php';
 
 /**
+ * Member Photo Gallery: members-only, self-serve front-end photo uploads
+ * (held for admin approval before they appear).
+ */
+require_once get_template_directory() . '/inc/photo-gallery.php';
+
+/**
  * SEO: staging noindex, LocalBusiness schema, per-page titles/descriptions,
  * and the /fishing/ → /boating/ redirect.
  */
@@ -270,7 +276,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;
