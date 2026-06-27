@@ -144,7 +144,7 @@ $messages = array(
 						<?php /* translators: %d: number of photos awaiting approval. */ ?>
 						<?php printf( esc_html__( 'Pending Approval (%d)', 'orienta-yacht-club' ), count( $pending ) ); ?>
 					</h2>
-						<p class="gallery-moderate__hint"><?php esc_html_e( 'Tick photos and use Approve/Delete selected to act on several at once \u2014 or use the buttons on each photo.', 'orienta-yacht-club' ); ?></p>
+						<p class="gallery-moderate__hint"><?php esc_html_e( 'Tick photos and use Approve/Delete selected to act on several at once — or use the buttons on each photo.', 'orienta-yacht-club' ); ?></p>
 						<form id="oyc-bulk-moderate" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gallery-moderate">
 							<input type="hidden" name="action" value="oyc_gallery_bulk">
 							<?php wp_nonce_field( 'oyc_gallery_bulk' ); ?>
