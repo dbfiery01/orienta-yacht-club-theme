@@ -33,7 +33,7 @@ get_header();
 				<div class="apply-contact-block">
 					<p class="apply-contact-label"><?php esc_html_e( 'Questions?', 'orienta-yacht-club' ); ?></p>
 					<p><?php esc_html_e( 'Contact the Membership Chair:', 'orienta-yacht-club' ); ?></p>
-					<a href="<?php echo esc_url( home_url( '/?inquiry=membership#contact' ) ); ?>" class="btn btn-ghost-navy btn-sm">
+					<a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>" class="btn btn-ghost-navy btn-sm">
 						<?php esc_html_e( 'Send a Message', 'orienta-yacht-club' ); ?>
 					</a>
 					<p class="apply-or"><?php esc_html_e( 'or call', 'orienta-yacht-club' ); ?></p>

@@ -49,7 +49,7 @@
 					<li><a href="<?php echo esc_url( home_url( '/#fishing' ) ); ?>"><?php esc_html_e( 'Fishing', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/#visitors' ) ); ?>"><?php esc_html_e( 'Visitors', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/calendar/' ) ); ?>"><?php esc_html_e( 'Calendar', 'orienta-yacht-club' ); ?></a></li>
-					<li><a href="<?php echo esc_url( home_url( '/#contact' ) ); ?>"><?php esc_html_e( 'Contact', 'orienta-yacht-club' ); ?></a></li>
+					<li><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><?php esc_html_e( 'Contact', 'orienta-yacht-club' ); ?></a></li>
 					<li><a class="cta" href="<?php echo esc_url( home_url( '/#membership' ) ); ?>"><?php esc_html_e( 'Join', 'orienta-yacht-club' ); ?></a></li>
 					<li>
 						<?php if ( is_user_logged_in() ) : ?>

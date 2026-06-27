@@ -25,7 +25,7 @@
 					<li><a href="<?php echo esc_url( home_url( '/officers-trustees/' ) ); ?>"><?php esc_html_e( 'Officers &amp; Trustees', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="<?php echo esc_url( home_url( '/calendar/' ) ); ?>"><?php esc_html_e( 'Calendar', 'orienta-yacht-club' ); ?></a></li>
 					<li><a href="https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club" target="_blank" rel="noopener"><?php esc_html_e( 'Reservations', 'orienta-yacht-club' ); ?></a></li>
-					<li><a href="<?php echo esc_url( home_url( '/#contact' ) ); ?>"><?php esc_html_e( 'Contact', 'orienta-yacht-club' ); ?></a></li>
+					<li><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>"><?php esc_html_e( 'Contact', 'orienta-yacht-club' ); ?></a></li>
 				</ul>
 			</div>
 			<div class="footer-nav-col">
