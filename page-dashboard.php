@@ -75,7 +75,6 @@ get_header();
 						array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
 						array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
 						array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/photo-gallery/' ),        'label' => __( 'Member Photos', 'orienta-yacht-club' ) ),
 						array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
 						array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
 						array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
@@ -113,6 +112,11 @@ get_header();
 			</aside>
 
 		</div><!-- .dashboard-layout -->
+
+		<!-- Member Photos -->
+		<div class="dashboard-photos">
+			<?php oyc_photo_thumbs(); ?>
+		</div>
 
 		<!-- Club Videos -->
 		<div class="dashboard-videos">

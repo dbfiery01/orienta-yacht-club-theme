@@ -260,3 +260,58 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) 
 
 	echo '</figure>';
 }
+
+/**
+ * Render a strip of Member Photo thumbnails (latest approved gallery photos),
+ * mirroring oyc_video_thumbs(): same .video-thumbs markup/classes so it matches
+ * the Club Videos section, but the tiles link to the gallery and there is no
+ * play badge. The footer link reads "Add your own photos →".
+ *
+ * @param string $heading Heading above the strip.
+ * @param int    $limit   Max thumbnails to show.
+ */
+function oyc_photo_thumbs( $heading = 'Member Photos', $limit = 8 ) {
+	$url    = oyc_gallery_url();
+	$photos = oyc_gallery_photos( 'approved', $limit );
+
+	echo '<div class="video-thumbs photo-thumbs">';
+	if ( $heading ) {
+		echo '<h3 class="video-thumbs__heading">' . esc_html( $heading ) . '</h3>';
+	}
+	echo '<div class="video-thumbs__grid">';
+
+	if ( $photos ) {
+		foreach ( $photos as $photo ) {
+			$img = wp_get_attachment_image_url( $photo->ID, 'large' );
+			if ( ! $img ) {
+				continue;
+			}
+			$cap = $photo->post_excerpt;
+			echo '<a class="video-thumb" href="' . esc_url( $url ) . '"' . ( $cap ? ' aria-label="' . esc_attr( $cap ) . '"' : '' ) . '>';
+			echo '<img src="' . esc_url( $img ) . '" alt="' . esc_attr( $cap ) . '" loading="lazy" />';
+			if ( $cap ) {
+				echo '<span class="video-thumb__title">' . esc_html( $cap ) . '</span>';
+			}
+			echo '</a>';
+		}
+	} else {
+		// No approved photos yet → one inviting placeholder tile.
+		$rel = '/assets/dashthumbs/photo-gallery.jpg';
+		$ph  = '';
+		if ( file_exists( get_stylesheet_directory() . $rel ) ) {
+			$ph = get_stylesheet_directory_uri() . $rel;
+		} elseif ( file_exists( get_template_directory() . $rel ) ) {
+			$ph = get_template_directory_uri() . $rel;
+		}
+		echo '<a class="video-thumb photo-thumb--empty" href="' . esc_url( $url ) . '">';
+		if ( $ph ) {
+			echo '<img src="' . esc_url( $ph ) . '" alt="" loading="lazy" />';
+		}
+		echo '<span class="video-thumb__title">' . esc_html__( 'No member photos yet — add the first!', 'orienta-yacht-club' ) . '</span>';
+		echo '</a>';
+	}
+
+	echo '</div>';
+	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'Add your own photos →', 'orienta-yacht-club' ) . '</a></p>';
+	echo '</div>';
+}
