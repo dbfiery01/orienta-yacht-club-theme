@@ -41,14 +41,31 @@ add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member
 /* ── 2. Redirect after login → member dashboard ──────────── */
 
 add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
-	if ( $user && ! is_wp_error( $user ) ) {
-		// Admins go to their profile page; members go to members area
-		if ( user_can( $user, 'manage_options' ) ) {
-			return admin_url( 'profile.php' );
-		}
-		return home_url( '/members-area/' );
+	if ( ! $user || is_wp_error( $user ) ) {
+		return $redirect_to;
 	}
-	return $redirect_to;
+
+	// If the user was sent to the login screen FROM a specific page (e.g. a
+	// members-only page like /photo-gallery/), return them to that page rather
+	// than a generic landing screen. WordPress puts that page in
+	// $requested_redirect_to; the bare wp-admin URL means "no specific page".
+	$requested = is_string( $requested_redirect_to ) ? trim( $requested_redirect_to ) : '';
+	$generic   = array_map(
+		'untrailingslashit',
+		array( admin_url(), admin_url( 'profile.php' ), admin_url( 'index.php' ) )
+	);
+	if ( '' !== $requested && ! in_array( untrailingslashit( $requested ), $generic, true ) ) {
+		$safe = wp_validate_redirect( $requested, '' ); // keep it on-site
+		if ( $safe ) {
+			return $safe;
+		}
+	}
+
+	// No specific page requested → default landing.
+	if ( user_can( $user, 'manage_options' ) ) {
+		return admin_url(); // admin dashboard (not profile.php)
+	}
+	return home_url( '/members-area/' );
 }, 10, 3 );
 
 /* ── 3. Members-only page restriction ────────────────────── */
