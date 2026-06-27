@@ -27,9 +27,12 @@ $messages = array(
 	'failed'   => array( 'err', __( 'Sorry, that upload didn’t work. Please use image files (JPG, PNG, GIF or WebP) under 12 MB.', 'orienta-yacht-club' ) ),
 	'nofile'   => array( 'err', __( 'Please choose at least one photo to upload.', 'orienta-yacht-club' ) ),
 	'deleted'  => array( 'ok',  __( 'Photo removed.', 'orienta-yacht-club' ) ),
-	'approved' => array( 'ok',  __( 'Photo approved — it’s now visible to members.', 'orienta-yacht-club' ) ),
-	'denied'   => array( 'err', __( 'You don’t have permission to do that.', 'orienta-yacht-club' ) ),
-	'login'    => array( 'err', __( 'Please log in to add photos.', 'orienta-yacht-club' ) ),
+	'approved'    => array( 'ok',  __( 'Photo approved — it’s now visible to members.', 'orienta-yacht-club' ) ),
+	'bulkapproved'=> array( 'ok',  __( 'Selected photos approved — they’re now visible to members.', 'orienta-yacht-club' ) ),
+	'bulkdeleted' => array( 'ok',  __( 'Selected photos deleted.', 'orienta-yacht-club' ) ),
+	'noselect'    => array( 'err', __( 'Select at least one photo first.', 'orienta-yacht-club' ) ),
+	'denied'      => array( 'err', __( 'You don’t have permission to do that.', 'orienta-yacht-club' ) ),
+	'login'       => array( 'err', __( 'Please log in to add photos.', 'orienta-yacht-club' ) ),
 );
 ?>
 
@@ -73,9 +76,31 @@ $messages = array(
 					<?php /* translators: %d: number of photos awaiting approval. */ ?>
 					<?php printf( esc_html__( 'Pending Approval (%d)', 'orienta-yacht-club' ), count( $pending ) ); ?>
 				</h2>
-				<div class="gallery-grid">
-					<?php foreach ( $pending as $photo ) : oyc_gallery_card( $photo, true, true ); endforeach; ?>
-				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gallery-moderate">
+					<input type="hidden" name="action" value="oyc_gallery_bulk">
+					<?php wp_nonce_field( 'oyc_gallery_bulk' ); ?>
+					<p class="gallery-moderate__hint"><?php esc_html_e( 'Tick the photos to act on, then choose Approve or Delete. Photos you leave unticked stay pending.', 'orienta-yacht-club' ); ?></p>
+					<div class="gallery-moderate__bar">
+						<label class="gallery-moderate__all"><input type="checkbox" class="gallery-check-all"> <?php esc_html_e( 'Select all', 'orienta-yacht-club' ); ?></label>
+						<span class="gallery-moderate__buttons">
+							<button type="submit" name="do" value="approve" class="btn btn-primary btn-sm"><?php esc_html_e( 'Approve selected', 'orienta-yacht-club' ); ?></button>
+							<button type="submit" name="do" value="delete" class="btn btn-ghost btn-sm" onclick="return confirm('<?php echo esc_js( __( 'Delete the selected photos? This cannot be undone.', 'orienta-yacht-club' ) ); ?>');"><?php esc_html_e( 'Delete selected', 'orienta-yacht-club' ); ?></button>
+						</span>
+					</div>
+					<div class="gallery-grid">
+						<?php foreach ( $pending as $photo ) : oyc_gallery_card( $photo, false, false, true ); endforeach; ?>
+					</div>
+				</form>
+				<script>
+				(function(){
+					var f = document.querySelector('.gallery-moderate');
+					if (!f) return;
+					var all = f.querySelector('.gallery-check-all');
+					if (all) all.addEventListener('change', function(){
+						f.querySelectorAll('input[name="photo_ids[]"]').forEach(function(c){ c.checked = all.checked; });
+					});
+				})();
+				</script>
 			</div>
 		<?php endif; ?>
 

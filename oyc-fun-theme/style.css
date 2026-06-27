@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.64
+Version: 1.5.65
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -496,3 +496,26 @@ body.oyc-page-photo-gallery .gallery-empty { color: #2a2a2a; }
 
 /* Pending-approval strip gets a subtle amber frame so admins can tell it apart */
 body.oyc-page-photo-gallery .gallery-pending .gallery-item { border-color: rgba(214,158,46,0.55); }
+
+/* 40) Photo Gallery — admin bulk moderation (select → approve/delete) */
+body.oyc-page-photo-gallery .gallery-moderate__hint { color: #5a6b78; font-size: 0.9rem; margin: 0 0 12px; }
+body.oyc-page-photo-gallery .gallery-moderate__bar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  background: #ffffff; border: 1px solid rgba(11,46,74,0.12); border-radius: 12px;
+  padding: 12px 16px; margin: 0 0 16px;
+}
+body.oyc-page-photo-gallery .gallery-moderate__all { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #16324a; cursor: pointer; }
+body.oyc-page-photo-gallery .gallery-moderate__buttons { display: inline-flex; gap: 8px; }
+body.oyc-page-photo-gallery .gallery-moderate .gallery-item { cursor: pointer; }
+
+/* Selection checkbox overlaid on each pending photo */
+body.oyc-page-photo-gallery .gallery-select {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.92); border-radius: 8px; padding: 5px 9px;
+  box-shadow: 0 2px 8px rgba(11,46,74,0.18); cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #16324a;
+}
+body.oyc-page-photo-gallery .gallery-select input { width: 17px; height: 17px; accent-color: #1583cf; cursor: pointer; }
+body.oyc-page-photo-gallery .gallery-item--select { position: relative; }
+/* Highlight a ticked card */
+body.oyc-page-photo-gallery .gallery-item--select:has(input:checked) { outline: 3px solid #1583cf; outline-offset: 0; }

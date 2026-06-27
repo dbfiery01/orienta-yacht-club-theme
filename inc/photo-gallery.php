@@ -194,13 +194,55 @@ function oyc_gallery_handle_delete() {
 add_action( 'admin_post_oyc_gallery_delete', 'oyc_gallery_handle_delete' );
 
 /**
+ * Admin bulk moderation: approve or delete the SELECTED pending photos at once.
+ * The button pressed sets `do` = approve|delete. Unselected photos are left as-is
+ * (i.e. remain pending / not approved). Admin only.
+ */
+function oyc_gallery_handle_bulk() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		oyc_gallery_redirect( 'denied' );
+	}
+	check_admin_referer( 'oyc_gallery_bulk' );
+
+	$do  = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : '';
+	$ids = isset( $_POST['photo_ids'] ) ? array_map( 'intval', (array) wp_unslash( $_POST['photo_ids'] ) ) : array();
+	$ids = array_filter( $ids );
+
+	if ( empty( $ids ) ) {
+		oyc_gallery_redirect( 'noselect' );
+	}
+	if ( 'approve' !== $do && 'delete' !== $do ) {
+		oyc_gallery_redirect( 'denied' );
+	}
+
+	$n = 0;
+	foreach ( $ids as $id ) {
+		if ( ! get_post_meta( $id, OYC_GALLERY_META, true ) ) {
+			continue; // not a gallery photo — ignore.
+		}
+		if ( 'approve' === $do ) {
+			update_post_meta( $id, OYC_GALLERY_STATUS, 'approved' );
+			$n++;
+		} else {
+			wp_delete_attachment( $id, true );
+			$n++;
+		}
+	}
+
+	oyc_gallery_redirect( 'delete' === $do ? 'bulkdeleted' : 'bulkapproved' );
+}
+add_action( 'admin_post_oyc_gallery_bulk', 'oyc_gallery_handle_bulk' );
+
+/**
  * Render one gallery photo card (image + caption + uploader + actions).
  *
  * @param WP_Post $photo        Attachment post.
  * @param bool    $show_approve Show the admin "Approve" button (pending list).
  * @param bool    $can_delete   Show the "Remove" button (owner or admin).
+ * @param bool    $select_mode  Render a selection checkbox instead of per-photo
+ *                              buttons (used inside the admin bulk-moderation form).
  */
-function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) {
+function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false, $select_mode = false ) {
 	$img = wp_get_attachment_image(
 		$photo->ID,
 		'large',
@@ -220,7 +262,16 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) 
 	// Uploader name is shown to admins only (for moderation), never to members.
 	$show_by = ( $uploader && current_user_can( 'manage_options' ) );
 
-	echo '<figure class="gallery-item">';
+	echo '<figure class="gallery-item' . ( $select_mode ? ' gallery-item--select' : '' ) . '">';
+
+	// Selection checkbox (admin bulk-moderation form wraps these cards).
+	if ( $select_mode ) {
+		echo '<label class="gallery-select">';
+		echo '<input type="checkbox" name="photo_ids[]" value="' . (int) $photo->ID . '">';
+		echo '<span class="gallery-select__label">' . esc_html__( 'Select', 'orienta-yacht-club' ) . '</span>';
+		echo '</label>';
+	}
+
 	if ( $full ) {
 		echo '<a href="' . esc_url( $full ) . '" class="gallery-link" target="_blank" rel="noopener">' . $img . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	} else {
@@ -239,7 +290,7 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) 
 		echo '</figcaption>';
 	}
 
-	if ( $show_approve || $can_delete ) {
+	if ( ! $select_mode && ( $show_approve || $can_delete ) ) {
 		echo '<div class="gallery-actions">';
 		if ( $show_approve ) {
 			echo '<form method="post" action="' . $admin_post . '">';
