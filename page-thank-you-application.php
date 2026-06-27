@@ -66,7 +66,7 @@ get_header();
 			<div class="thankyou-contact">
 				<p><?php esc_html_e( 'Questions? Contact us at any time:', 'orienta-yacht-club' ); ?></p>
 				<div class="thankyou-contact-row">
-					<a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>" class="thankyou-contact-item">
+					<a href="<?php echo esc_url( home_url( '/contact/?inquiry=membership' ) ); ?>" class="thankyou-contact-item">
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 						<?php esc_html_e( 'Send a message', 'orienta-yacht-club' ); ?>
 					</a>
