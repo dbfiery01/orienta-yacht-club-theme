@@ -20,6 +20,24 @@ define( 'OYC_GALLERY_STATUS', '_oyc_gallery_status' );
 define( 'OYC_GALLERY_MAX_FILES', 10 );
 define( 'OYC_GALLERY_MAX_BYTES', 12 * 1024 * 1024 ); // 12 MB per file
 
+// ===== TEMP DEBUG (remove after diagnosis) =====
+// Capture ANY fatal (incl. uncatchable memory/timeout) during a gallery upload
+// into an option, and expose a reader at ?oyc_show_fatal=1 for admins.
+add_action( 'init', function () {
+	if ( isset( $_POST['action'] ) && 'oyc_gallery_upload' === $_POST['action'] ) {
+		register_shutdown_function( function () {
+			$e = error_get_last();
+			if ( $e && in_array( $e['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ), true ) ) {
+				update_option( 'oyc_upload_fatal', gmdate( 'c' ) . ' | ' . $e['message'] . ' | ' . $e['file'] . ':' . $e['line'], false );
+			}
+		} );
+	}
+	if ( isset( $_GET['oyc_show_fatal'] ) && current_user_can( 'manage_options' ) ) {
+		wp_die( 'LAST UPLOAD FATAL: ' . esc_html( (string) get_option( 'oyc_upload_fatal', '(none recorded yet)' ) ) );
+	}
+} );
+// ===== END TEMP DEBUG =====
+
 /**
  * Image MIME types accepted for upload (whitelist).
  */
