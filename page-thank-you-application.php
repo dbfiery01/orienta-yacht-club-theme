@@ -77,7 +77,7 @@ get_header();
 				<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/' ) ); ?>">
 					<?php esc_html_e( 'Return to Home', 'orienta-yacht-club' ); ?>
 				</a>
-				<a class="btn btn-ghost-navy" href="<?php echo esc_url( home_url( '/#membership' ) ); ?>">
+				<a class="btn btn-ghost-navy" href="<?php echo esc_url( home_url( '/membership/' ) ); ?>">
 					<?php esc_html_e( 'Learn More About Membership', 'orienta-yacht-club' ); ?>
 				</a>
 			</div>
