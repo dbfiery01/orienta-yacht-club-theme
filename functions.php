@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.41' );
+define( 'OYC_VERSION', '1.7.42' );
 
 /**
  * Theme setup.
@@ -247,22 +247,38 @@ function oyc_allow_svg_uploads( $mimes ) {
 add_filter( 'upload_mimes', 'oyc_allow_svg_uploads' );
 
 /**
- * Pre-select the contact form's "inquiry-type" dropdown from a ?inquiry= URL
- * parameter, on ANY page the form appears on (e.g. /contact/, not just the
- * homepage). Lets /contact/?inquiry=membership open with "Contact Membership
- * Chair" already chosen.
+ * Route ?inquiry= links to the contact form.
+ *
+ * If the contact form is on the current page (e.g. /contact/), pre-select its
+ * "inquiry-type" dropdown from the ?inquiry= param. If the form is NOT on the
+ * page (e.g. an old /?inquiry=membership#contact link landing on the homepage,
+ * which no longer has a contact section), redirect to /contact/ carrying the
+ * param so the dropdown pre-selects there. /contact/ itself is the fallback,
+ * so the link always ends up on the contact page even if pre-select misses.
  */
 add_action( 'wp_footer', function () {
 	?>
 	<script>
 	(function(){
-		var want = ({ 'membership': 'Contact Membership Chair' })[ new URLSearchParams(window.location.search).get('inquiry') ];
-		if (!want) return;
-		function apply(){ var s = document.querySelector('select[name="inquiry-type"]'); if (s) { s.value = want; } }
-		apply();
-		document.addEventListener('DOMContentLoaded', apply);
-		document.addEventListener('wpcf7domloaded', apply);
-		setTimeout(apply, 300);
+		var inquiry = new URLSearchParams(window.location.search).get('inquiry');
+		if (!inquiry) return;
+		var want = ({ 'membership': 'Contact Membership Chair' })[ inquiry ];
+		var sel  = document.querySelector('select[name="inquiry-type"]');
+
+		if (sel) {
+			// Form is on this page — pre-select now and again after CF7 re-renders.
+			function apply(){ var s = document.querySelector('select[name="inquiry-type"]'); if (s && want) { s.value = want; } }
+			apply();
+			document.addEventListener('wpcf7domloaded', apply);
+			setTimeout(apply, 300);
+			return;
+		}
+
+		// No contact form here — send the user to /contact/ (carrying the param),
+		// unless we're already on /contact/ (avoid a redirect loop).
+		if (!/\/contact\/?$/.test(window.location.pathname)) {
+			window.location.replace('/contact/?inquiry=' + encodeURIComponent(inquiry));
+		}
 	})();
 	</script>
 	<?php
