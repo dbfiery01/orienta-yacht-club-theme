@@ -402,3 +402,181 @@ function oyc_photo_thumbs( $heading = 'Member Photos', $limit = 8 ) {
 	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'Add your own photos →', 'orienta-yacht-club' ) . '</a></p>';
 	echo '</div>';
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Admin: "Photo Consents" list — every gallery upload + its metadata and the
+ * photo-use consent record (user, date, version). Lives under the OYC Inbox menu.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+add_action( 'admin_menu', function () {
+	// Parent 'oyc-applications' is registered by inc/admin-inbox.php.
+	add_submenu_page(
+		'oyc-applications',
+		__( 'Photo Consents — OYC', 'orienta-yacht-club' ),
+		__( 'Photo Consents', 'orienta-yacht-club' ),
+		'manage_options',
+		'oyc-photo-consents',
+		'oyc_render_photo_consents_page'
+	);
+}, 20 );
+
+/**
+ * CSV export of all photo consents (runs before any admin output).
+ */
+add_action( 'admin_init', function () {
+	if ( empty( $_GET['page'] ) || 'oyc-photo-consents' !== $_GET['page'] || empty( $_GET['oyc_export'] ) ) {
+		return;
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	check_admin_referer( 'oyc_consents_export' );
+
+	$photos = get_posts( array(
+		'post_type'      => 'attachment',
+		'post_status'    => 'inherit',
+		'posts_per_page' => -1,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query'     => array( array( 'key' => OYC_GALLERY_META, 'value' => '1' ) ),
+	) );
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename=oyc-photo-consents.csv' );
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, array( 'Attachment ID', 'File URL', 'Caption', 'User ID', 'Name', 'Email', 'Uploaded', 'Status', 'Consent Version', 'Consent At' ) );
+	foreach ( $photos as $p ) {
+		fputcsv( $out, array(
+			$p->ID,
+			wp_get_attachment_url( $p->ID ),
+			$p->post_excerpt,
+			$p->post_author,
+			get_the_author_meta( 'display_name', $p->post_author ),
+			get_the_author_meta( 'user_email', $p->post_author ),
+			$p->post_date,
+			get_post_meta( $p->ID, OYC_GALLERY_STATUS, true ),
+			get_post_meta( $p->ID, '_oyc_consent_version', true ),
+			get_post_meta( $p->ID, '_oyc_consent_at', true ),
+		) );
+	}
+	fclose( $out );
+	exit;
+} );
+
+/**
+ * Render the Photo Consents admin list.
+ */
+function oyc_render_photo_consents_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Not authorized.', 'orienta-yacht-club' ) );
+	}
+
+	$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
+	$paged  = max( 1, (int) ( $_GET['paged'] ?? 1 ) );
+	$per    = 30;
+
+	$meta_query = array( array( 'key' => OYC_GALLERY_META, 'value' => '1' ) );
+	if ( 'pending' === $status || 'approved' === $status ) {
+		$meta_query[] = array( 'key' => OYC_GALLERY_STATUS, 'value' => $status );
+	}
+
+	$q = new WP_Query( array(
+		'post_type'      => 'attachment',
+		'post_status'    => 'inherit',
+		'posts_per_page' => $per,
+		'paged'          => $paged,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query'     => $meta_query,
+	) );
+
+	$base       = admin_url( 'admin.php?page=oyc-photo-consents' );
+	$export_url = wp_nonce_url( $base . '&oyc_export=1', 'oyc_consents_export' );
+	?>
+	<div class="wrap">
+		<h1 style="display:flex;align-items:center;gap:12px;">
+			<?php esc_html_e( 'Photo Consents', 'orienta-yacht-club' ); ?>
+			<span style="font-size:13px;font-weight:400;color:#646970;"><?php echo (int) $q->found_posts; ?> <?php echo esc_html( $status ? $status : __( 'total', 'orienta-yacht-club' ) ); ?></span>
+			<a href="<?php echo esc_url( $export_url ); ?>" class="button" style="font-size:12px;"><?php esc_html_e( 'Export CSV', 'orienta-yacht-club' ); ?></a>
+		</h1>
+		<p style="max-width:760px;color:#50575e;"><?php esc_html_e( 'Every photo uploaded to the member gallery, with the uploader and the photo-use consent (version + date) recorded at upload. Uploading constitutes permission for the club to use the photo without restriction.', 'orienta-yacht-club' ); ?></p>
+
+		<p class="subsubsub" style="margin:0 0 8px;">
+			<a href="<?php echo esc_url( $base ); ?>" class="<?php echo '' === $status ? 'current' : ''; ?>"><?php esc_html_e( 'All', 'orienta-yacht-club' ); ?></a> |
+			<a href="<?php echo esc_url( $base . '&status=pending' ); ?>" class="<?php echo 'pending' === $status ? 'current' : ''; ?>"><?php esc_html_e( 'Pending', 'orienta-yacht-club' ); ?></a> |
+			<a href="<?php echo esc_url( $base . '&status=approved' ); ?>" class="<?php echo 'approved' === $status ? 'current' : ''; ?>"><?php esc_html_e( 'Approved', 'orienta-yacht-club' ); ?></a>
+		</p>
+
+		<table class="wp-list-table widefat fixed striped">
+			<thead>
+				<tr>
+					<th style="width:70px;"><?php esc_html_e( 'Photo', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'Caption', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'Member', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'Uploaded', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'Consent', 'orienta-yacht-club' ); ?></th>
+					<th><?php esc_html_e( 'File', 'orienta-yacht-club' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php
+			if ( $q->have_posts() ) :
+				while ( $q->have_posts() ) :
+					$q->the_post();
+					$id        = get_the_ID();
+					$author_id = (int) get_post_field( 'post_author', $id );
+					$st        = get_post_meta( $id, OYC_GALLERY_STATUS, true );
+					$cv        = get_post_meta( $id, '_oyc_consent_version', true );
+					$ca        = get_post_meta( $id, '_oyc_consent_at', true );
+					$url       = wp_get_attachment_url( $id );
+					?>
+					<tr>
+						<td><?php echo wp_get_attachment_image( $id, array( 60, 60 ), true, array( 'style' => 'width:60px;height:60px;object-fit:cover;border-radius:4px;' ) ); // phpcs:ignore ?></td>
+						<td><?php echo esc_html( get_post_field( 'post_excerpt', $id ) ); ?></td>
+						<td>
+							<strong><?php echo esc_html( get_the_author_meta( 'display_name', $author_id ) ); ?></strong> <span style="color:#646970;">#<?php echo (int) $author_id; ?></span><br>
+							<span style="color:#646970;"><?php echo esc_html( get_the_author_meta( 'user_email', $author_id ) ); ?></span>
+						</td>
+						<td><?php echo esc_html( get_the_date( 'Y-m-d H:i', $id ) ); ?></td>
+						<td><?php echo esc_html( ucfirst( $st ? $st : 'pending' ) ); ?></td>
+						<td>
+							<?php if ( $cv ) : ?>
+								<span style="color:#2e7d32;font-weight:600;">✔ v<?php echo esc_html( $cv ); ?></span><br>
+								<span style="color:#646970;"><?php echo esc_html( $ca ); ?></span>
+							<?php else : ?>
+								<span style="color:#b32d2e;"><?php esc_html_e( 'none on file', 'orienta-yacht-club' ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'View', 'orienta-yacht-club' ); ?></a></td>
+					</tr>
+					<?php
+				endwhile;
+				wp_reset_postdata();
+			else :
+				echo '<tr><td colspan="7">' . esc_html__( 'No photos uploaded yet.', 'orienta-yacht-club' ) . '</td></tr>';
+			endif;
+			?>
+			</tbody>
+		</table>
+
+		<?php if ( $q->max_num_pages > 1 ) : ?>
+			<div class="tablenav"><div class="tablenav-pages">
+				<?php
+				echo paginate_links( array(
+					'base'      => esc_url_raw( add_query_arg( 'paged', '%#%', $base . ( $status ? '&status=' . $status : '' ) ) ),
+					'format'    => '',
+					'current'   => $paged,
+					'total'     => $q->max_num_pages,
+					'prev_text' => '‹',
+					'next_text' => '›',
+				) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
+			</div></div>
+		<?php endif; ?>
+	</div>
+	<?php
+}
