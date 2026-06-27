@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.72
+Version: 1.5.73
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -595,3 +595,8 @@ body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns:
   body.oyc-page-members-area .dashboard-grid.dash-qrow--5,
   body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* 46) Photo reel removed on videos / members-area / photo-gallery → keep the
+   hero-to-content gap tight (photo-gallery had no section override, so without
+   the carousel-sibling rule it would otherwise fall back to the 6rem default). */
+body.oyc-page-photo-gallery .section { background: transparent; padding-top: 1rem; }

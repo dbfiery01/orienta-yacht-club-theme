@@ -34,6 +34,10 @@ add_action( 'wp_enqueue_scripts', function () {
 // Photo carousel (home-* + header-* images + club videos) below the page title.
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
+	// No photo reel on these pages (per request) — they get the tighter layout.
+	if ( is_page( array( 'videos', 'members-area', 'photo-gallery' ) ) ) {
+		return;
+	}
 	// Collect home-* and header-* photos from the parent theme, plus any
 	// header-* in the child theme (e.g. header-racing.jpg). Keyed by filename.
 	$sets = array();
