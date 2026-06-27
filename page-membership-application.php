@@ -36,8 +36,6 @@ get_header();
 					<a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>" class="btn btn-ghost-navy btn-sm">
 						<?php esc_html_e( 'Send a Message', 'orienta-yacht-club' ); ?>
 					</a>
-					<p class="apply-or"><?php esc_html_e( 'or call', 'orienta-yacht-club' ); ?></p>
-					<a href="tel:+19146989858" class="apply-phone">(914) 698-9858</a>
 				</div>
 			</div>
 
