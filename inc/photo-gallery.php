@@ -217,6 +217,8 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) 
 		$uploader = get_the_author_meta( 'display_name', $photo->post_author );
 	}
 	$admin_post = esc_url( admin_url( 'admin-post.php' ) );
+	// Uploader name is shown to admins only (for moderation), never to members.
+	$show_by = ( $uploader && current_user_can( 'manage_options' ) );
 
 	echo '<figure class="gallery-item">';
 	if ( $full ) {
@@ -225,13 +227,13 @@ function oyc_gallery_card( $photo, $show_approve = false, $can_delete = false ) 
 		echo $img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
-	if ( $caption || $uploader ) {
+	if ( $caption || $show_by ) {
 		echo '<figcaption class="gallery-caption">';
 		if ( $caption ) {
 			echo '<span class="gallery-caption__text">' . esc_html( $caption ) . '</span>';
 		}
-		if ( $uploader ) {
-			/* translators: %s: member first name. */
+		if ( $show_by ) {
+			/* translators: %s: member first name (shown to admins only). */
 			echo '<span class="gallery-caption__by">' . esc_html( sprintf( __( 'by %s', 'orienta-yacht-club' ), $uploader ) ) . '</span>';
 		}
 		echo '</figcaption>';
