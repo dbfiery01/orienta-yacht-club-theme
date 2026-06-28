@@ -70,6 +70,28 @@ add_filter( 'oyc_inbox_notify_email', function ( $email ) {
 	return $list ? $list : $email;
 }, 20 );
 
+/**
+ * Membership application is a Contact Form 7 form, so CF7 sends the actual
+ * notification (its Mail tab "To" — a single address by default). Override that
+ * recipient with the addresses set under Settings → General, so the application
+ * email reaches BOTH the secretary address and a personal address. Only touches
+ * the application form's primary mail; recipients still come from the DB option.
+ */
+add_filter( 'wpcf7_mail_components', function ( $components, $contact_form = null, $mail = null ) {
+	if ( is_object( $mail ) && method_exists( $mail, 'name' ) && 'mail' !== $mail->name() ) {
+		return $components; // leave "Mail (2)" alone
+	}
+	$title = ( is_object( $contact_form ) && method_exists( $contact_form, 'title' ) ) ? strtolower( $contact_form->title() ) : '';
+	if ( strpos( $title, 'application' ) === false ) {
+		return $components;
+	}
+	$list = get_option( 'oyc_notify_emails', '' );
+	if ( $list ) {
+		$components['recipient'] = $list;
+	}
+	return $components;
+}, 20, 3 );
+
 // Photo carousel (home-* + header-* images + club videos) below the page title.
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
