@@ -125,25 +125,11 @@ function oyc_save_application( $contact_form ) {
 	update_post_meta( $post_id, 'oyc_app_submitted_at', current_time( 'mysql' ) );
 	update_post_meta( $post_id, 'oyc_app_remote_ip',    $submission->get_meta( 'remote_ip' ) ?? '' );
 
-	// Notify the club of a new membership application.
-	$app_email = isset( $data['email'] ) ? sanitize_email( $data['email'] ) : '';
-	$app_phone = isset( $data['mobile-phone'] ) ? sanitize_text_field( $data['mobile-phone'] ) : '';
-	$notify_to = oyc_inbox_email();
-	$subject   = 'ORIENTA APPLICATION — ' . trim( "$first $last" );
-	$lines     = array(
-		'A new membership application was submitted via the website.',
-		'',
-		'Name: ' . trim( "$first $last" ),
-		'Email: ' . $app_email,
-		'Phone: ' . $app_phone,
-		'',
-		'View in the OYC Inbox: ' . admin_url( 'admin.php?page=oyc-applications' ),
-	);
-	$headers = array();
-	if ( $app_email && is_email( $app_email ) ) {
-		$headers[] = 'Reply-To: ' . trim( "$first $last" ) . ' <' . $app_email . '>';
-	}
-	wp_mail( $notify_to, $subject, implode( "\n", $lines ), $headers );
+	// Note: the application notification EMAIL is sent by Contact Form 7 itself
+	// (its Mail tab), with the recipient routed to the "OYC notification emails"
+	// setting via the child theme's wpcf7_mail_components filter — so the club
+	// gets exactly ONE application email per recipient. We only persist the
+	// application to the OYC Inbox here; no duplicate email is sent.
 }
 
 add_action( 'wpcf7_mail_sent',   'oyc_save_application' );
