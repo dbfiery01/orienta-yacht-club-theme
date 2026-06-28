@@ -31,6 +31,45 @@ add_action( 'wp_enqueue_scripts', function () {
 	}
 }, 99 );
 
+/**
+ * Notification recipients for OYC Inbox emails (new applications & contact
+ * messages). Lets an admin set MULTIPLE addresses (e.g. the club secretary
+ * address AND a personal address) under Settings → General. Addresses live in
+ * a DB option — never in the theme source — and feed the parent's
+ * oyc_inbox_notify_email filter, so wp_mail() delivers to all of them.
+ */
+function oyc_sanitize_notify_emails( $val ) {
+	$out = array();
+	foreach ( preg_split( '/[\s,]+/', (string) $val ) as $p ) {
+		$p = trim( $p );
+		if ( $p && is_email( $p ) ) {
+			$out[] = $p;
+		}
+	}
+	return implode( ', ', array_unique( $out ) );
+}
+add_action( 'admin_init', function () {
+	register_setting( 'general', 'oyc_notify_emails', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'oyc_sanitize_notify_emails',
+		'default'           => '',
+	) );
+	add_settings_field(
+		'oyc_notify_emails',
+		'OYC notification emails',
+		function () {
+			$v = esc_attr( get_option( 'oyc_notify_emails', '' ) );
+			echo '<input type="text" name="oyc_notify_emails" id="oyc_notify_emails" value="' . $v . '" class="regular-text" placeholder="secretary@orientayachtclub.com, you@example.com" />';
+			echo '<p class="description">Comma-separated. Everyone listed is emailed when a membership application or contact message is submitted.</p>';
+		},
+		'general'
+	);
+} );
+add_filter( 'oyc_inbox_notify_email', function ( $email ) {
+	$list = get_option( 'oyc_notify_emails', '' );
+	return $list ? $list : $email;
+}, 20 );
+
 // Photo carousel (home-* + header-* images + club videos) below the page title.
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
