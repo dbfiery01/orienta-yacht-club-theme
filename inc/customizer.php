@@ -67,6 +67,39 @@ function oyc_customize_register( $wp_customize ) {
 	$add( 'oyc_hero_cta2_text', __( 'Secondary Button — Text', 'orienta-yacht-club' ), 'oyc_hero' );
 	$add( 'oyc_hero_cta2_url',  __( 'Secondary Button — Link', 'orienta-yacht-club' ), 'oyc_hero', 'url' );
 
+	// Hero slideshow images (leave blank to use the bundled theme photos)
+	for ( $i = 1; $i <= 6; $i++ ) {
+		$wp_customize->add_setting( "oyc_hero_slide{$i}", array(
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+		) );
+		$wp_customize->add_control( new WP_Customize_Image_Control( $wp_customize, "oyc_hero_slide{$i}", array(
+			'label'   => sprintf( __( 'Slide %d Image', 'orienta-yacht-club' ), $i ),
+			'section' => 'oyc_hero',
+		) ) );
+	}
+
+	// Section & footer background images
+	$wp_customize->add_section( 'oyc_images', array(
+		'title' => __( 'Section Images', 'orienta-yacht-club' ),
+		'panel' => 'oyc_content',
+	) );
+	foreach ( array(
+		'oyc_img_sailing'  => 'Sailing & Racing — Background',
+		'oyc_img_fishing'  => 'Fishing — Background',
+		'oyc_img_visitors' => 'Visitors — Background',
+		'oyc_img_footer'   => 'Footer — Background',
+	) as $key => $label ) {
+		$wp_customize->add_setting( $key, array(
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+		) );
+		$wp_customize->add_control( new WP_Customize_Image_Control( $wp_customize, $key, array(
+			'label'   => __( $label, 'orienta-yacht-club' ),
+			'section' => 'oyc_images',
+		) ) );
+	}
+
 	/* ===== ABOUT ===== */
 	$wp_customize->add_section( 'oyc_about', array(
 		'title' => __( 'About', 'orienta-yacht-club' ),

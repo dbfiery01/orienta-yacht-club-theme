@@ -11,6 +11,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'OYC_VERSION', '1.7.44' );
 
+// Strip any [TEST] prefix that gets added by SendLayer sandbox or SMTP plugins.
+add_filter( 'wp_mail', function ( $args ) {
+	$args['subject'] = preg_replace( '/^\[TEST\]\s*/i', '', $args['subject'] );
+	return $args;
+} );
+
 /**
  * Theme setup.
  */
@@ -135,6 +141,41 @@ require_once get_template_directory() . '/inc/photo-gallery.php';
  * and the /fishing/ → /boating/ redirect.
  */
 require_once get_template_directory() . '/inc/seo.php';
+
+/**
+ * Inject Customizer-overridden section background images as inline CSS.
+ * Only outputs rules when a Customizer image has been set (non-empty),
+ * so the bundled CSS fallbacks stay in effect when nothing is configured.
+ */
+add_action( 'wp_head', function () {
+	$rules = '';
+
+	$sailing = oyc_get( 'oyc_img_sailing' );
+	if ( $sailing ) {
+		$rules .= '.section-photo-hero--sailing .section-photo-bg { background-image: url("' . esc_url( $sailing ) . '"); }';
+	}
+
+	$fishing = oyc_get( 'oyc_img_fishing' );
+	if ( $fishing ) {
+		$rules .= '.section-photo-hero--fishing .section-photo-bg { background-image: url("' . esc_url( $fishing ) . '"); }';
+		$rules .= '@media (max-width:600px) { .section-photo-hero--fishing .section-photo-bg { background-image: url("' . esc_url( $fishing ) . '"); } }';
+	}
+
+	$visitors = oyc_get( 'oyc_img_visitors' );
+	if ( $visitors ) {
+		$rules .= '.section-photo-hero--visitors .section-photo-bg { background-image: url("' . esc_url( $visitors ) . '"); }';
+		$rules .= '@media (max-width:600px) { .section-photo-hero--visitors .section-photo-bg { background-image: url("' . esc_url( $visitors ) . '"); } }';
+	}
+
+	$footer = oyc_get( 'oyc_img_footer' );
+	if ( $footer ) {
+		$rules .= '.site-footer { background-image: url("' . esc_url( $footer ) . '"); }';
+	}
+
+	if ( $rules ) {
+		echo '<style id="oyc-customizer-images">' . $rules . '</style>';
+	}
+} );
 
 /**
  * Helper: get a Customizer setting, falling back to the central defaults map

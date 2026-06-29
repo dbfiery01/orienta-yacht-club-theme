@@ -9,13 +9,21 @@ get_header();
 ?>
 
 <section id="top" class="hero">
+	<?php
+	$theme   = get_template_directory_uri();
+	$slides  = array(
+		oyc_get( 'oyc_hero_slide1' ) ?: $theme . '/assets/photos/home-slide-a.jpg',
+		oyc_get( 'oyc_hero_slide2' ) ?: $theme . '/assets/photos/home-slide-b.jpg',
+		oyc_get( 'oyc_hero_slide3' ) ?: $theme . '/assets/photos/home-slide-c.jpg',
+		oyc_get( 'oyc_hero_slide4' ) ?: $theme . '/assets/photos/home-slide-d.jpg',
+		oyc_get( 'oyc_hero_slide5' ) ?: $theme . '/assets/photos/home-slide-e.jpg',
+		oyc_get( 'oyc_hero_slide6' ) ?: $theme . '/assets/photos/home-slide-f.jpg',
+	);
+	?>
 	<div class="hero-slides" aria-hidden="true">
-		<div class="hero-slide hero-slide--active" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-a.jpg' ); ?>')"></div>
-		<div class="hero-slide" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-b.jpg' ); ?>')"></div>
-		<div class="hero-slide" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-c.jpg' ); ?>')"></div>
-		<div class="hero-slide" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-d.jpg' ); ?>')"></div>
-		<div class="hero-slide" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-e.jpg' ); ?>')"></div>
-		<div class="hero-slide" style="background-image:url('<?php echo esc_url( get_template_directory_uri() . '/assets/photos/home-slide-f.jpg' ); ?>')"></div>
+		<?php foreach ( $slides as $i => $src ) : ?>
+		<div class="hero-slide<?php echo $i === 0 ? ' hero-slide--active' : ''; ?>" style="background-image:url('<?php echo esc_url( $src ); ?>')"></div>
+		<?php endforeach; ?>
 	</div>
 	<div class="hero-overlay"></div>
 	<div class="container hero-inner">
