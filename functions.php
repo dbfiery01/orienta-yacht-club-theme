@@ -11,11 +11,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'OYC_VERSION', '1.7.44' );
 
-// Strip any [TEST] prefix that gets added by SendLayer sandbox or SMTP plugins.
+// Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
 	$args['subject'] = preg_replace( '/^\[TEST\]\s*/i', '', $args['subject'] );
 	return $args;
-} );
+}, 9999 );
+
+// Also strip at the CF7 level before wp_mail is called.
+add_filter( 'wpcf7_mail_components', function ( $components ) {
+	if ( ! empty( $components['subject'] ) ) {
+		$components['subject'] = preg_replace( '/^\[TEST\]\s*/i', '', $components['subject'] );
+	}
+	return $components;
+}, 9999 );
 
 /**
  * Theme setup.
