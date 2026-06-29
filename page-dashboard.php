@@ -72,7 +72,7 @@ get_header();
 					array( 'url' => home_url( '/fleet-roster/' ),         'label' => __( 'Fleet Roster', 'orienta-yacht-club' ) ),
 					array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
 					array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
-					array( 'url' => home_url( '/live-video-streaming/' ), 'label' => __( 'Live Video Streaming', 'orienta-yacht-club' ) ),
+					array( 'url' => 'https://home.google.com/home/1-bb3a35d901bb41466cf34cda2062065ee089745ae2fb85403e18fc2148226cb6/cameras/grid', 'label' => __( 'Live Video Streaming', 'orienta-yacht-club' ), 'external' => true ),
 					array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
 					array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
 					array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
