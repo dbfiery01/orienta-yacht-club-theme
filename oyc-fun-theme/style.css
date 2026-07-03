@@ -601,3 +601,8 @@ body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns:
    the carousel-sibling rule it would otherwise fall back to the 6rem default). */
 body.oyc-page-photo-gallery .section { background: transparent; padding-top: 1rem; }
 body.oyc-page-live-video-streaming .section { padding-top: 1rem; }
+
+/* 47) Header width matches the photo reel (1052px) so the nav menu doesn't
+   bleed past the carousel's left/right arrow buttons. The base .container is
+   1140px; narrowing to 1052px here aligns the menu edge with the reel edge. */
+.site-header .container { width: min(1052px, 92%); }
