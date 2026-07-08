@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.51' );
+define( 'OYC_VERSION', '1.7.52' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -111,6 +111,12 @@ require_once get_template_directory() . '/inc/application-handler.php';
  * Admin inbox: OYC Inbox menu, applications + messages pages, contact-form save hook.
  */
 require_once get_template_directory() . '/inc/admin-inbox.php';
+
+/**
+ * Contact-form spam protection: honeypot that flags bot submissions as spam
+ * (blocks the email and keeps them out of the OYC Inbox).
+ */
+require_once get_template_directory() . '/inc/contact-spam.php';
 
 /**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
