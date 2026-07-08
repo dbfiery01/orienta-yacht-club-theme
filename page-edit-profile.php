@@ -57,7 +57,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 			} else {
 				// Address -> WP-Members/WooCommerce billing_* keys (shared source of truth
 					// with wp-admin); emergency contact stays theme meta.
-				foreach ( array( 'billing_address_1', 'billing_city', 'billing_state', 'billing_postcode', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' ) as $oyc_k ) {
+				foreach ( array( 'billing_address_1', 'billing_address_2', 'billing_city', 'billing_state', 'billing_postcode', 'billing_country', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' ) as $oyc_k ) {
 					update_user_meta( $user->ID, $oyc_k, sanitize_text_field( wp_unslash( $_POST[ $oyc_k ] ?? '' ) ) );
 				}
 				$user = wp_get_current_user(); // refresh
@@ -208,6 +208,10 @@ get_header();
 					<input type="text" id="billing_address_1" name="billing_address_1" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_address_1', true ), 'address' ) ); ?>" autocomplete="address-line1" />
 				</div>
 				<div class="profile-form__group">
+					<label for="billing_address_2"><?php esc_html_e( 'Address Line 2', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_address_2" name="billing_address_2" value="<?php echo esc_attr( get_user_meta( $user->ID, 'billing_address_2', true ) ); ?>" autocomplete="address-line2" />
+				</div>
+				<div class="profile-form__group">
 					<label for="billing_city"><?php esc_html_e( 'City', 'orienta-yacht-club' ); ?></label>
 					<input type="text" id="billing_city" name="billing_city" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_city', true ), 'city' ) ); ?>" autocomplete="address-level2" />
 				</div>
@@ -218,6 +222,10 @@ get_header();
 				<div class="profile-form__group">
 					<label for="billing_postcode"><?php esc_html_e( 'ZIP', 'orienta-yacht-club' ); ?></label>
 					<input type="text" id="billing_postcode" name="billing_postcode" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_postcode', true ), 'zip' ) ); ?>" autocomplete="postal-code" />
+				</div>
+				<div class="profile-form__group">
+					<label for="billing_country"><?php esc_html_e( 'Country', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_country" name="billing_country" value="<?php echo esc_attr( get_user_meta( $user->ID, 'billing_country', true ) ); ?>" autocomplete="country-name" />
 				</div>
 
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Emergency Contact', 'orienta-yacht-club' ); ?></h3>
