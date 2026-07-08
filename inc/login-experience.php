@@ -262,17 +262,9 @@ function oyc_profile_extra_fields( $user ) {
 		echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th>'
 			. '<td><input type="text" name="' . esc_attr( $id ) . '" id="' . esc_attr( $id ) . '" value="' . $v( $id ) . '" class="regular-text" /></td></tr>';
 	};
+	// Address is handled by WP-Members' own "Additional Fields" on this screen,
+	// so the theme no longer renders a duplicate Address Information block here.
 	?>
-	<h2><?php esc_html_e( 'Address Information', 'orienta-yacht-club' ); ?></h2>
-	<table class="form-table" role="presentation">
-		<?php
-		$row( 'oyc_address', __( 'Street Address', 'orienta-yacht-club' ) );
-		$row( 'oyc_city', __( 'City', 'orienta-yacht-club' ) );
-		$row( 'oyc_state', __( 'State', 'orienta-yacht-club' ) );
-		$row( 'oyc_zip', __( 'ZIP', 'orienta-yacht-club' ) );
-		?>
-	</table>
-
 	<h2><?php esc_html_e( 'Emergency Contact Information', 'orienta-yacht-club' ); ?></h2>
 	<table class="form-table" role="presentation">
 		<?php
@@ -290,7 +282,9 @@ function oyc_profile_extra_fields_save( $user_id ) {
 	if ( ! current_user_can( 'edit_user', $user_id ) ) {
 		return;
 	}
-	$keys = array( 'oyc_address', 'oyc_city', 'oyc_state', 'oyc_zip', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' );
+	// Address fields intentionally omitted here — WP-Members owns the address on
+	// the wp-admin profile screen. Only the theme's emergency-contact fields save.
+	$keys = array( 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' );
 	foreach ( $keys as $k ) {
 		if ( isset( $_POST[ $k ] ) ) {
 			update_user_meta( $user_id, $k, sanitize_text_field( wp_unslash( $_POST[ $k ] ) ) );
