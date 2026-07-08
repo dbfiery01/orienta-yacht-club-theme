@@ -225,7 +225,7 @@ get_header();
 				</div>
 				<div class="profile-form__group">
 					<label for="billing_country"><?php esc_html_e( 'Country', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="billing_country" name="billing_country" value="<?php echo esc_attr( get_user_meta( $user->ID, 'billing_country', true ) ); ?>" autocomplete="country-name" />
+					<input type="text" id="billing_country" name="billing_country" value="<?php echo esc_attr( get_user_meta( $user->ID, 'billing_country', true ) ?: 'US' ); ?>" autocomplete="country-name" />
 				</div>
 
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Emergency Contact', 'orienta-yacht-club' ); ?></h3>
