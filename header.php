@@ -1,4 +1,5 @@
 <!doctype html>
+<?php /* oyc-rebuild v1.7.53 recovery — forces WP Pusher to overwrite this template */ ?>
 <html <?php language_attributes(); ?>>
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
