@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.76
+Version: 1.5.77
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -606,3 +606,14 @@ body.oyc-page-live-video-streaming .section { padding-top: 1rem; }
    bleed past the carousel's left/right arrow buttons. The base .container is
    1140px; narrowing to 1052px here aligns the menu edge with the reel edge. */
 .site-header .container { width: min(1052px, 92%); }
+
+/* 48) Center the nav menu within the reel-width header on desktop. The header
+   was flush-right (justify-content: space-between); this switches .header-inner
+   to a 3-col grid so the logo stays pinned at the left edge while the menu sits
+   centered between the photo reel's left and right edges. Mobile (<=880px) is
+   untouched and keeps the logo-left / hamburger-right layout. */
+@media (min-width: 881px) {
+  .site-header .header-inner { display: grid; grid-template-columns: 1fr auto 1fr; }
+  .site-header .header-inner .brand { grid-column: 1; justify-self: start; }
+  .site-header .header-inner .primary-nav { grid-column: 2; justify-self: center; }
+}
