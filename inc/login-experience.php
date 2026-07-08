@@ -101,6 +101,8 @@ add_action( 'template_redirect', function () {
 			'constitution-and-bylaws-2026',
 			'club-rental-agreement',
 			'member-guidelines-2026',
+			'member-guidelines',        // real content page (the -2026 slug 301-redirects here)
+			'member-rental-agreement',  // real content page (club-rental-agreement 301-redirects here)
 		);
 	$is_members_only = in_array( $slug, $always_members, true ) || get_post_meta( $post_id, '_oyc_members_only', true );
 	if ( $is_members_only && ! is_user_logged_in() ) {
