@@ -55,8 +55,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 			if ( is_wp_error( $result ) ) {
 				$notices[] = array( 'type' => 'error', 'msg' => $result->get_error_message() );
 			} else {
-				// Address + emergency contact (custom user meta).
-				foreach ( array( 'oyc_address', 'oyc_city', 'oyc_state', 'oyc_zip', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' ) as $oyc_k ) {
+				// Address -> WP-Members/WooCommerce billing_* keys (shared source of truth
+					// with wp-admin); emergency contact stays theme meta.
+				foreach ( array( 'billing_address_1', 'billing_city', 'billing_state', 'billing_postcode', 'oyc_emergency_name', 'oyc_emergency_phone', 'oyc_emergency_relationship' ) as $oyc_k ) {
 					update_user_meta( $user->ID, $oyc_k, sanitize_text_field( wp_unslash( $_POST[ $oyc_k ] ?? '' ) ) );
 				}
 				$user = wp_get_current_user(); // refresh
@@ -203,20 +204,20 @@ get_header();
 
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Address', 'orienta-yacht-club' ); ?></h3>
 				<div class="profile-form__group">
-					<label for="oyc_address"><?php esc_html_e( 'Street Address', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_address" name="oyc_address" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_address', true ), 'address' ) ); ?>" autocomplete="address-line1" />
+					<label for="billing_address_1"><?php esc_html_e( 'Street Address', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_address_1" name="billing_address_1" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_address_1', true ), 'address' ) ); ?>" autocomplete="address-line1" />
 				</div>
 				<div class="profile-form__group">
-					<label for="oyc_city"><?php esc_html_e( 'City', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_city" name="oyc_city" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_city', true ), 'city' ) ); ?>" autocomplete="address-level2" />
+					<label for="billing_city"><?php esc_html_e( 'City', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_city" name="billing_city" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_city', true ), 'city' ) ); ?>" autocomplete="address-level2" />
 				</div>
 				<div class="profile-form__group">
-					<label for="oyc_state"><?php esc_html_e( 'State', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_state" name="oyc_state" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_state', true ), 'state' ) ); ?>" autocomplete="address-level1" />
+					<label for="billing_state"><?php esc_html_e( 'State', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_state" name="billing_state" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_state', true ), 'state' ) ); ?>" autocomplete="address-level1" />
 				</div>
 				<div class="profile-form__group">
-					<label for="oyc_zip"><?php esc_html_e( 'ZIP', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="oyc_zip" name="oyc_zip" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'oyc_zip', true ), 'zip' ) ); ?>" autocomplete="postal-code" />
+					<label for="billing_postcode"><?php esc_html_e( 'ZIP', 'orienta-yacht-club' ); ?></label>
+					<input type="text" id="billing_postcode" name="billing_postcode" value="<?php echo esc_attr( $oyc_prefill( get_user_meta( $user->ID, 'billing_postcode', true ), 'zip' ) ); ?>" autocomplete="postal-code" />
 				</div>
 
 				<h3 class="profile-form__subhead"><?php esc_html_e( 'Emergency Contact', 'orienta-yacht-club' ); ?></h3>
