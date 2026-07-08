@@ -252,6 +252,24 @@ add_action( 'admin_head-profile.php', function () {
 	<?php
 } );
 
+/* Rename WP-Members' "WP-Members Additional Fields" heading to
+ *  "Member Contact Information" on the profile + edit-user screens. */
+add_action( 'admin_head-profile.php', 'oyc_rename_wpmembers_heading' );
+add_action( 'admin_head-user-edit.php', 'oyc_rename_wpmembers_heading' );
+function oyc_rename_wpmembers_heading() {
+	?>
+	<script>
+	document.addEventListener( 'DOMContentLoaded', function () {
+		Array.prototype.forEach.call( document.querySelectorAll( '.wrap h2, .wrap h3' ), function ( h ) {
+			if ( h.textContent.trim().toLowerCase() === 'wp-members additional fields' ) {
+				h.textContent = 'Member Contact Information';
+			}
+		} );
+	} );
+	</script>
+	<?php
+}
+
 /* ── 9. Address + Emergency Contact fields on the user profile ───────────── */
 
 function oyc_profile_extra_fields( $user ) {
