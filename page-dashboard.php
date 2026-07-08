@@ -49,8 +49,8 @@ get_header();
 						array( 'url' => home_url( '/slip-waiting-list/' ),             'label' => __( 'Slip Waiting List', 'orienta-yacht-club' ) ),
 						array( 'url' => home_url( '/dock-assignments/' ),              'label' => __( 'Dock Assignments', 'orienta-yacht-club' ) ),
 						array( 'url' => home_url( '/constitution-and-bylaws-2026/' ),  'label' => __( 'Constitution & Bylaws 2026', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/club-rental-agreement/' ),         'label' => __( 'Club Rental Agreement', 'orienta-yacht-club' ) ),
-						array( 'url' => home_url( '/member-guidelines-2026/' ),        'label' => __( 'Member Guidelines 2026', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/member-guidelines/' ),             'label' => __( 'Member Guidelines', 'orienta-yacht-club' ) ),
+						array( 'url' => home_url( '/member-rental-agreement/' ),       'label' => __( 'Club Rental Agreement', 'orienta-yacht-club' ) ),
 					);
 					foreach ( $dash_docs as $doc ) {
 						printf(
