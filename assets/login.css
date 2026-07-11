@@ -18,7 +18,7 @@
 }
 
 body.login {
-  background: var(--cream);
+  background: #f5f9fd;
   font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
