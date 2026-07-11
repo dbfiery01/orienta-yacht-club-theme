@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.58' );
+define( 'OYC_VERSION', '1.7.59' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -117,6 +117,11 @@ require_once get_template_directory() . '/inc/admin-inbox.php';
  * (blocks the email and keeps them out of the OYC Inbox).
  */
 require_once get_template_directory() . '/inc/contact-spam.php';
+
+/**
+ * Tap-to-call: linkify plain phone numbers in content as tel: links.
+ */
+require_once get_template_directory() . '/inc/phone-links.php';
 
 /**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
