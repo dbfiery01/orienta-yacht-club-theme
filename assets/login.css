@@ -16,14 +16,14 @@ html { background: var(--navy); }
 body.login {
   background:
     linear-gradient(160deg, rgba(11,42,74,0.97) 0%, rgba(4,22,42,0.99) 100%),
-    url('../photos/home-slide-d.jpg') center / cover no-repeat fixed;
+    url('photos/home-slide-d.jpg') center / cover no-repeat fixed;
   font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* Logo */
 #login h1 a,
 .login h1 a {
-  background-image: url('../oyc-logo.png') !important;
+  background-image: url('oyc-logo.png') !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
