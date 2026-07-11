@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.59' );
+define( 'OYC_VERSION', '1.7.60' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -154,6 +154,11 @@ require_once get_template_directory() . '/inc/protected-docs.php';
  * (held for admin approval before they appear).
  */
 require_once get_template_directory() . '/inc/photo-gallery.php';
+
+/**
+ * Member Videos: members submit YouTube/Vimeo links (held for admin approval).
+ */
+require_once get_template_directory() . '/inc/video-gallery.php';
 
 /**
  * SEO: staging noindex, LocalBusiness schema, per-page titles/descriptions,
@@ -374,7 +379,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement', 'video-gallery' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;
@@ -423,7 +428,8 @@ function oyc_video_thumbs( $heading = 'Club Videos' ) {
 		'y9SNwmwNHkY' => 'On the Water at OYC',
 		'T7UzxJq4wQU' => 'Stop-Motion Boat Haul',
 	);
-	$url = home_url( '/videos/' );
+	$url     = home_url( '/videos/' );
+	$gallery = function_exists( 'oyc_video_gallery_url' ) ? oyc_video_gallery_url() : home_url( '/video-gallery/' );
 
 	echo '<div class="video-thumbs">';
 	if ( $heading ) {
@@ -437,8 +443,22 @@ function oyc_video_thumbs( $heading = 'Club Videos' ) {
 		echo '<span class="video-thumb__title">' . esc_html( $title ) . '</span>';
 		echo '</a>';
 	}
+	// Member-submitted, approved videos → link to the member video gallery.
+	if ( function_exists( 'oyc_video_gallery_items' ) ) {
+		foreach ( oyc_video_gallery_items( 'approved', 8 ) as $mv ) {
+			$thumb = oyc_video_thumb_url( $mv->ID );
+			$title = $mv->post_title;
+			echo '<a class="video-thumb" href="' . esc_url( $gallery ) . '" aria-label="' . esc_attr( $title ) . '">';
+			if ( $thumb ) {
+				echo '<img src="' . esc_url( $thumb ) . '" alt="' . esc_attr( $title ) . '" loading="lazy" />';
+			}
+			echo '<span class="video-thumb__play" aria-hidden="true"></span>';
+			echo '<span class="video-thumb__title">' . esc_html( $title ) . '</span>';
+			echo '</a>';
+		}
+	}
 	echo '</div>';
-	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'View all videos →', 'orienta-yacht-club' ) . '</a></p>';
+	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'View all videos →', 'orienta-yacht-club' ) . '</a> <a href="' . esc_url( $gallery ) . '">' . esc_html__( 'Add your own videos →', 'orienta-yacht-club' ) . '</a></p>';
 	echo '</div>';
 }
 
