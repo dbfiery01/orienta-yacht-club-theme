@@ -12,6 +12,11 @@
     border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
   .oyc-pin--r{width:26px;height:26px;background:#b08a3e;font-size:13px;}
   .oyc-pin--home{width:32px;height:32px;background:#0b2a4a;font-size:15px;}
+  /* Card-driven emphasis: the inner pin animates, so it never fights Leaflet's
+     positioning transform on the outer marker element. */
+  @keyframes oyc-hop{0%{transform:translateY(0);}30%{transform:translateY(-11px);}55%{transform:translateY(0);}75%{transform:translateY(-5px);}100%{transform:translateY(0);}}
+  .oyc-pin.oyc-active{animation:oyc-hop 0.7s ease infinite;box-shadow:0 5px 14px rgba(0,0,0,0.45);outline:2px solid #d4a851;outline-offset:1px;}
+  .oyc-pin.oyc-hop{animation:oyc-hop 0.6s ease;}
   .leaflet-popup-content{margin:12px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.45;}
   .oyc-pop h4{margin:0 0 2px;color:#0b2a4a;font-size:15px;}
   .oyc-pop .town{color:#2c6e9b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;}
@@ -45,14 +50,40 @@
     maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
   }).addTo(map);
   var bounds = [];
+  var markersByN = {};
   spots.forEach(function(s){
     var cls  = s.home ? 'oyc-pin oyc-pin--home' : 'oyc-pin oyc-pin--r';
     var size = s.home ? 32 : 26;
     var icon = L.divIcon({className:'', html:'<div class="'+cls+'">'+s.n+'</div>', iconSize:[size,size], iconAnchor:[size/2,size/2], popupAnchor:[0,-(size/2)]});
     var dir  = 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.q);
     var html = '<div class="oyc-pop"><h4>'+s.name+'</h4><div class="town">'+s.town+'</div><p>'+s.desc+'</p><a class="dir" href="'+dir+'" target="_blank" rel="noopener">Directions ↗</a></div>';
-    L.marker([s.lat,s.lng], {icon:icon, title:s.name, riseOnHover:true}).addTo(map).bindPopup(html);
+    var mk = L.marker([s.lat,s.lng], {icon:icon, title:s.name, riseOnHover:true}).addTo(map).bindPopup(html);
+    markersByN[s.n] = mk;
     bounds.push([s.lat,s.lng]);
+  });
+
+  // Restaurant cards on the parent page (same origin) drive the pins via
+  // postMessage: hover -> the matching pin bounces; click -> zoom to it.
+  function pinEl(mk){ var el = mk.getElement(); return el ? el.querySelector('.oyc-pin') : null; }
+  window.addEventListener('message', function(ev){
+    var d = ev && ev.data;
+    if(!d || !d.oyc) return;
+    if(String(ev.origin).indexOf('orientayachtclub.com') === -1) return;
+    var mk = markersByN[d.n];
+    if(!mk) return;
+    var pin = pinEl(mk);
+    if(d.type === 'hover'){
+      mk.setZIndexOffset(1000);
+      if(pin){ pin.classList.add('oyc-active'); }
+    } else if(d.type === 'unhover'){
+      mk.setZIndexOffset(0);
+      if(pin){ pin.classList.remove('oyc-active'); }
+    } else if(d.type === 'focus'){
+      map.setView(mk.getLatLng(), 14, {animate:true});
+      mk.openPopup();
+      if(pin){ pin.classList.remove('oyc-hop'); void pin.offsetWidth; pin.classList.add('oyc-hop');
+        setTimeout(function(){ if(pin) pin.classList.remove('oyc-hop'); }, 700); }
+    }
   });
   // Re-fit after the iframe has actually laid out — otherwise Leaflet computes
   // the zoom against a not-yet-sized container and ends up zoomed way out.
