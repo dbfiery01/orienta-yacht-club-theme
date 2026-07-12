@@ -135,3 +135,49 @@ add_action( 'wp_footer', function () {
 		. '</div>';
 	echo '<script>(function(){var c=document.querySelector(".oyc-carousel");if(!c)return;var home=document.body.classList.contains("home");if(home){var h=document.querySelector(".site-header,header");if(!h||!h.parentNode){if(c.parentNode)c.parentNode.removeChild(c);return;}h.parentNode.insertBefore(c,h.nextSibling);var mt=function(){c.style.marginTop=(h.offsetHeight||88)+"px";};mt();window.addEventListener("resize",mt);document.body.classList.add("oyc-home-reel-top");}else{var ph=document.querySelector(".page-hero");if(!ph||!ph.parentNode){if(c.parentNode)c.parentNode.removeChild(c);return;}ph.parentNode.insertBefore(c,ph.nextSibling);}var vp=c.querySelector(".oyc-carousel__viewport");var t=c.querySelector(".oyc-carousel__track");var n=t.children.length/3;var i=n;function w(){return t.children[0].offsetWidth;}function center(){return (vp.clientWidth-w())/2;}function mark(){for(var k=0;k<t.children.length;k++){t.children[k].classList.toggle("is-active",(k%n)===(((i%n)+n)%n));}}function set(anim){t.style.transition=anim?"transform .6s ease":"none";t.style.transform="translateX("+(center()-i*w())+"px)";mark();}function next(){i++;set(true);if(i>=2*n){setTimeout(function(){i-=n;set(false);},650);}}function prev(){if(i<=n){i+=n;set(false);void t.offsetWidth;}i--;set(true);}var tm;function arm(){clearInterval(tm);tm=setInterval(next,10000);}var pk=(document.body.className.match(/oyc-page-([a-z0-9-]+)/)||[])[1]||"home";var photos=[];for(var k=0;k<n;k++){if(!t.children[k].classList.contains("oyc-carousel__cell--video"))photos.push(k);}var startPref={membership:"header-facility",boating:"header-fishing"};var want=startPref[pk]||"";var fi=-1;if(want){for(var k=0;k<n;k++){if((t.children[k].getAttribute("data-img")||"").indexOf(want)>-1){fi=k;break;}}}var startIdx;if(fi>-1){startIdx=fi;}else{var hh=0;for(var x=0;x<pk.length;x++){hh=(hh*31+pk.charCodeAt(x))>>>0;}startIdx=photos.length?photos[hh%photos.length]:0;}i=n+startIdx;c.querySelector(".oyc-carousel__nav--next").addEventListener("click",function(){next();arm();});c.querySelector(".oyc-carousel__nav--prev").addEventListener("click",function(){prev();arm();});var photoList=[],imgToIdx={};for(var k=0;k<n;k++){var ch=t.children[k];if(ch.classList.contains("oyc-carousel__cell--video"))continue;var raw=ch.getAttribute("data-bg-image")||ch.style.backgroundImage||"";imgToIdx[ch.getAttribute("data-img")]=photoList.length;photoList.push(raw.indexOf("url(")===0?raw:"url(\""+raw+"\")");}var zwrap=null,zimg=null,zi=0;function showZoom(){if(zimg)zimg.style.backgroundImage=photoList[zi];}function unzoom(){if(!zwrap)return;if(zwrap.parentNode)zwrap.parentNode.removeChild(zwrap);zwrap=null;zimg=null;arm();}function zstep(d){if(!photoList.length)return;zi=((zi+d)%photoList.length+photoList.length)%photoList.length;showZoom();}function openZoom(idx){unzoom();clearInterval(tm);zi=((idx%photoList.length)+photoList.length)%photoList.length;zwrap=document.createElement("div");zwrap.className="oyc-carousel-backdrop";var pv=document.createElement("button");pv.type="button";pv.className="oyc-zoom-nav oyc-zoom-prev";pv.setAttribute("aria-label","Previous photo");pv.innerHTML="&#8249;";var nx=document.createElement("button");nx.type="button";nx.className="oyc-zoom-nav oyc-zoom-next";nx.setAttribute("aria-label","Next photo");nx.innerHTML="&#8250;";zimg=document.createElement("div");zimg.className="oyc-carousel-zoom";pv.addEventListener("click",function(e){e.stopPropagation();zstep(-1);});nx.addEventListener("click",function(e){e.stopPropagation();zstep(1);});zwrap.appendChild(pv);zwrap.appendChild(zimg);zwrap.appendChild(nx);zwrap.addEventListener("click",unzoom);document.body.appendChild(zwrap);showZoom();}[].forEach.call(t.children,function(cell){if(cell.classList.contains("oyc-carousel__cell--video"))return;cell.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();openZoom(imgToIdx[cell.getAttribute("data-img")]||0);});});document.addEventListener("keydown",function(e){if(!zwrap)return;if(e.key==="Escape")unzoom();else if(e.key==="ArrowLeft")zstep(-1);else if(e.key==="ArrowRight")zstep(1);});set(false);window.addEventListener("resize",function(){set(false);});arm();})();</script>';
 } );
+
+/**
+ * Dock & Dine — wire the restaurant cards to the embedded map (same origin).
+ * Hovering a card bounces its numbered pin; clicking it recenters the map on
+ * that pin, opens the popup, and scrolls the page so the map is in view. The
+ * map iframe (assets/dock-and-dine-map.html) listens for these postMessages.
+ * Lives here (not in the page's content) so it is version-controlled.
+ */
+add_action( 'wp_footer', function () {
+	if ( ! is_page( 'dock-and-dine' ) ) {
+		return;
+	}
+	?>
+	<script>
+	(function(){
+		if (window.__oycDDwired) return;
+		window.__oycDDwired = 1;
+		function mf(){ return document.querySelector('iframe[data-src*="dock-and-dine-map"],iframe[src*="dock-and-dine-map"]'); }
+		function send(type, n){ var f = mf(), w = f && f.contentWindow; if (w){ try { w.postMessage({oyc:1, type:type, n:n}, '*'); } catch(e){} } }
+		// Bring the map into view. This page throttles/fights long rAF scroll
+		// animations, so a timeout backstop guarantees the final position lands.
+		function toMap(){
+			var f = mf(); if (!f) return;
+			var r = f.getBoundingClientRect();
+			var y = Math.max(0, window.pageYOffset + r.top - Math.max(0, (window.innerHeight - r.height) / 2));
+			var el = document.documentElement; el.style.scrollBehavior = 'auto';
+			var s = window.pageYOffset, d = y - s, t0 = 0, D = 500, done = false;
+			function fin(){ if (done) return; done = true; window.scrollTo(0, y); el.style.scrollBehavior = ''; }
+			function fr(t){ if (done) return; if (!t0) t0 = t; var p = Math.min(1, (t - t0) / D);
+				window.scrollTo(0, s + d * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(fr); else fin(); }
+			requestAnimationFrame(fr);
+			setTimeout(fin, 650);
+		}
+		document.querySelectorAll('.dd-card').forEach(function(c){
+			var q = c.querySelector('.dd-num');
+			var n = q ? parseInt(q.textContent, 10) : 0;
+			if (!n) return;
+			c.style.cursor = 'pointer';
+			c.addEventListener('mouseenter', function(){ send('hover', n); });
+			c.addEventListener('mouseleave', function(){ send('unhover', n); });
+			c.addEventListener('click', function(ev){ if (ev.target.closest('a')) return; send('focus', n); toMap(); });
+		});
+	})();
+	</script>
+	<?php
+} );
