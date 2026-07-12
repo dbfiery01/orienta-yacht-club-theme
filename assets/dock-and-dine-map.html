@@ -50,7 +50,12 @@
     L.marker([s.lat,s.lng], {icon:icon, title:s.name, riseOnHover:true}).addTo(map).bindPopup(html);
     bounds.push([s.lat,s.lng]);
   });
-  map.fitBounds(bounds, {padding:[45,45]});
+  // Re-fit after the iframe has actually laid out — otherwise Leaflet computes
+  // the zoom against a not-yet-sized container and ends up zoomed way out.
+  function fit(){ map.invalidateSize(); map.fitBounds(bounds, {padding:[45,45]}); }
+  fit();
+  window.addEventListener('load', fit);
+  setTimeout(fit, 400);
 })();
 </script>
 </body>
