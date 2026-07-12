@@ -79,7 +79,12 @@
       mk.setZIndexOffset(0);
       if(pin){ pin.classList.remove('oyc-active'); }
     } else if(d.type === 'focus'){
-      map.setView(mk.getLatLng(), 14, {animate:true});
+      // Recenter instantly (no animated-pan vs. popup autoPan race) and nudge the
+      // view up ~40px so the pin sits a little below centre with its popup fully
+      // above it — the pin stays clearly in view, never shoved to the map edge.
+      var z = 14, pt = map.project(mk.getLatLng(), z);
+      pt.y -= 40;
+      map.setView(map.unproject(pt, z), z, {animate:false});
       mk.openPopup();
       if(pin){ pin.classList.remove('oyc-hop'); void pin.offsetWidth; pin.classList.add('oyc-hop');
         setTimeout(function(){ if(pin) pin.classList.remove('oyc-hop'); }, 700); }
