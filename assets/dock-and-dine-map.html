@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OYC Dock &amp; Dine Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html,body{margin:0;height:100%;background:#dCe9f4;}
+  #map{position:absolute;inset:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .oyc-pin{display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;
+    border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+  .oyc-pin--r{width:26px;height:26px;background:#b08a3e;font-size:13px;}
+  .oyc-pin--home{width:32px;height:32px;background:#0b2a4a;font-size:15px;}
+  .leaflet-popup-content{margin:12px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.45;}
+  .oyc-pop h4{margin:0 0 2px;color:#0b2a4a;font-size:15px;}
+  .oyc-pop .town{color:#2c6e9b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;}
+  .oyc-pop p{margin:0 0 7px;color:#33424e;font-size:13px;}
+  .oyc-pop .dir{display:inline-block;color:#8a6a24;font-weight:700;font-size:12.5px;text-decoration:none;}
+  .oyc-pop .dir:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  var spots = [
+    {n:'⚓', home:true, name:"Mamaroneck Harbor — Orienta Yacht Club", town:"Home port", lat:40.9385, lng:-73.7330, desc:"Your home harbor — cast off from here.", q:"Orienta Yacht Club Mamaroneck NY"},
+    {n:1, name:"L'Escale at Delamar", town:"Greenwich, CT · ~5 nm", lat:41.0193, lng:-73.6250, desc:"Upscale Mediterranean on Greenwich Harbor. Slips at Delamar, $2/ft/hr — call the Dock Master ahead: 203-733-5320.", q:"L'Escale Restaurant Delamar Greenwich CT"},
+    {n:2, name:"City Island Lobster House", town:"City Island, Bronx · ~7 nm", lat:40.8462, lng:-73.7856, desc:"Classic seafood just past the bridge. Free dock & dine for customers in season.", q:"City Island Lobster House Bronx NY"},
+    {n:3, name:"Sea Shore Restaurant & Marina", town:"City Island, Bronx · ~7 nm", lat:40.8415, lng:-73.7840, desc:"A City Island seafood landmark since 1929, with its own marina. Guest slips for diners.", q:"Sea Shore Restaurant City Island Bronx"},
+    {n:4, name:"Louie's Prime Steak & Seafood", town:"Port Washington, NY · ~7 nm", lat:40.8352, lng:-73.7092, desc:"Manhasset Bay institution since 1905 — prime steaks & raw bar. Free docking up to 50′; hail VHF 68.", q:"Louie's Prime Steak Seafood Port Washington NY"},
+    {n:5, name:"Harbor House", town:"Stamford, CT · ~10 nm", lat:41.0288, lng:-73.5468, desc:"At the center of busy Stamford Harbor with a full-service marina. Transient dockage — Harbor Point VHF 9 / 203-355-6045.", q:"Harbor House Restaurant Stamford CT"},
+    {n:6, name:"Prime: An American Kitchen & Bar", town:"Stamford (Harbor Point), CT · ~10 nm", lat:41.0258, lng:-73.5492, desc:"Elevated waterfront dining with direct marina access. VHF 9 / 203-355-6045.", q:"Prime An American Kitchen Bar Stamford CT"},
+    {n:7, name:"SoNo Seaport", town:"South Norwalk, CT · ~14 nm", lat:41.0928, lng:-73.4185, desc:"Steamers and lobster rolls on the Norwalk River, in past the Norwalk Islands. Hail VHF 9.", q:"SoNo Seaport Seafood Norwalk CT"},
+    {n:8, name:"Sunset Grille", town:"Norwalk (Norwalk Cove), CT · ~14 nm", lat:41.0930, lng:-73.3922, desc:"Harborside sunset dining at Norwalk Cove. Transient dockage via Norwalk Cove Marina — VHF 72 / 203-838-5899.", q:"Sunset Grille Norwalk Cove Marina CT"}
+  ];
+  var map = L.map('map', {scrollWheelZoom:false}).setView([40.955,-73.60], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  var bounds = [];
+  spots.forEach(function(s){
+    var cls  = s.home ? 'oyc-pin oyc-pin--home' : 'oyc-pin oyc-pin--r';
+    var size = s.home ? 32 : 26;
+    var icon = L.divIcon({className:'', html:'<div class="'+cls+'">'+s.n+'</div>', iconSize:[size,size], iconAnchor:[size/2,size/2], popupAnchor:[0,-(size/2)]});
+    var dir  = 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.q);
+    var html = '<div class="oyc-pop"><h4>'+s.name+'</h4><div class="town">'+s.town+'</div><p>'+s.desc+'</p><a class="dir" href="'+dir+'" target="_blank" rel="noopener">Directions ↗</a></div>';
+    L.marker([s.lat,s.lng], {icon:icon, title:s.name, riseOnHover:true}).addTo(map).bindPopup(html);
+    bounds.push([s.lat,s.lng]);
+  });
+  map.fitBounds(bounds, {padding:[45,45]});
+})();
+</script>
+</body>
+</html>
