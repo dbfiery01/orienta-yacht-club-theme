@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.80
+Version: 1.5.81
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -671,3 +671,17 @@ body.oyc-page-video-gallery .gallery-field__label { font-weight: 600; color: #16
 body.oyc-page-video-gallery .gallery-field input[type="text"],
 body.oyc-page-video-gallery .gallery-field input[type="url"] { padding: 10px 12px; border: 1px solid rgba(11,46,74,0.22); border-radius: 8px; font: inherit; color: #2a2a2a; width: 100%; }
 body.oyc-page-video-gallery .gallery-note { flex: 1 1 100%; margin: 4px 0 0; font-size: 0.85rem; color: #5a6b78; }
+
+/* 52) Dock & Dine — restaurant cards (matches the approved preview design).
+   Span-based markup so the page content stays wpautop-safe. */
+body.oyc-page-dock-and-dine .dd-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin:10px 0 1.5rem; }
+@media (max-width:680px){ body.oyc-page-dock-and-dine .dd-grid { grid-template-columns:1fr; } }
+body.oyc-page-dock-and-dine .dd-card { background:#fff; border:1px solid rgba(11,42,74,0.12); border-radius:14px; box-shadow:0 4px 16px rgba(11,46,74,0.08); padding:16px 18px; display:flex; gap:14px; }
+body.oyc-page-dock-and-dine .dd-num { flex:0 0 auto; width:30px; height:30px; border-radius:50%; background:#b08a3e; color:#fff !important; font-weight:800; font-size:0.95rem; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(11,42,74,0.25); }
+body.oyc-page-dock-and-dine .dd-body { display:flex; flex-direction:column; min-width:0; }
+body.oyc-page-dock-and-dine .dd-eyebrow { display:block; margin:1px 0 3px; font-size:0.76rem; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; color:#2c6e9b !important; }
+body.oyc-page-dock-and-dine .dd-name { display:block; margin:0 0 4px; color:#16324a !important; font-size:1.08rem; font-weight:700; line-height:1.2; }
+body.oyc-page-dock-and-dine .dd-desc { display:block; margin:0 0 9px; font-size:0.92rem; color:#33424e !important; }
+body.oyc-page-dock-and-dine .dd-dock { display:block; margin:0; font-size:0.85rem; color:#16324a !important; border-top:1px dashed rgba(11,42,74,0.14); padding-top:9px; }
+body.oyc-page-dock-and-dine .dd-dock strong { color:#16324a; }
+body.oyc-page-dock-and-dine .dd-dock::before { content:""; display:inline-block; width:15px; height:15px; margin-right:7px; vertical-align:-2px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23b08a3e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='2'/%3E%3Cpath d='M12 22V7M5 12H2a10 10 0 0 0 20 0h-3'/%3E%3C/svg%3E") no-repeat center / contain; }

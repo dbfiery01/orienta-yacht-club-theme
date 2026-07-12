@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.66' );
+define( 'OYC_VERSION', '1.7.67' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
