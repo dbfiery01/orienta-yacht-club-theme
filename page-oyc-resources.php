@@ -123,6 +123,95 @@ get_header();
 			<?php esc_html_e( 'Members Only', 'orienta-yacht-club' ); ?>
 		</div>
 
+		<?php // --- Weather widget: streamlined live view; links to the full dashboard. ---
+		$oyc_weather_url = esc_url( home_url( '/weather/' ) ); ?>
+		<style>
+			.oyc-wx{display:block;text-decoration:none;color:#eaf5fd;margin-bottom:2rem;border-radius:16px;
+				padding:18px 20px;border:1px solid rgba(120,180,220,.18);
+				background:radial-gradient(900px 400px at 85% -40%,#12283f 0%,#0a1626 55%,#081120 100%);
+				box-shadow:0 10px 30px rgba(6,16,30,.28);transition:transform .18s ease,box-shadow .18s ease}
+			.oyc-wx:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(6,16,30,.4)}
+			.oyc-wx__top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+			.oyc-wx__ttl{font-weight:800;letter-spacing:.03em;font-size:16px}
+			.oyc-wx__sub{color:#45d8c7;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+			.oyc-wx__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+			.oyc-wx__stat{border-left:2px solid rgba(120,180,220,.16);padding-left:12px}
+			.oyc-wx__stat:first-child{border-left:0;padding-left:0}
+			.oyc-wx__v{font-size:26px;font-weight:800;line-height:1;color:#fff;
+				font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+			.oyc-wx__v .u{font-size:12px;color:#7ea6c4;font-weight:700;margin-left:4px;font-family:inherit}
+			.oyc-wx__k{color:#5b829e;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:6px;font-weight:700}
+			.oyc-wx__trend{font-size:12px;font-weight:800;letter-spacing:.06em}
+			.oyc-wx__trend.rising{color:#45d8c7} .oyc-wx__trend.falling{color:#f6ad55}
+			.oyc-wx__cta{display:flex;align-items:center;gap:7px;margin-top:16px;color:#45d8c7;
+				font-weight:700;font-size:13px;letter-spacing:.03em}
+			.oyc-wx__cta svg{transition:transform .18s ease}
+			.oyc-wx:hover .oyc-wx__cta svg{transform:translateX(3px)}
+		</style>
+		<a class="oyc-wx" href="<?php echo $oyc_weather_url; ?>" aria-label="Open the live harbor conditions dashboard">
+			<div class="oyc-wx__top">
+				<span class="oyc-wx__ttl">&#127788; Live Harbor Conditions</span>
+				<span class="oyc-wx__sub">Mamaroneck Harbor</span>
+			</div>
+			<div class="oyc-wx__stats">
+				<div class="oyc-wx__stat">
+					<div class="oyc-wx__v"><span id="wxTide">&mdash;</span><span class="u">ft</span></div>
+					<div class="oyc-wx__k"><span class="oyc-wx__trend" id="wxTrend">Tide</span></div>
+				</div>
+				<div class="oyc-wx__stat">
+					<div class="oyc-wx__v"><span id="wxWind">&mdash;</span><span class="u">kt</span></div>
+					<div class="oyc-wx__k">Wind <span id="wxWindDir"></span></div>
+				</div>
+				<div class="oyc-wx__stat">
+					<div class="oyc-wx__v" style="font-size:19px" id="wxNext">&mdash;</div>
+					<div class="oyc-wx__k" id="wxNextKind">Next Tide</div>
+				</div>
+			</div>
+			<div class="oyc-wx__cta">Open full dashboard
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+			</div>
+		</a>
+		<script>
+		(function(){
+			var TIDE='8518091', MET='8516945', COOPS='https://api.tidesandcurrents.gov/api/prod/datagetter';
+			function pad(n){return String(n).padStart(2,'0');}
+			function ymd(d){return ''+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());}
+			function ymdhm(d){return ymd(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+			function hmt(d){var h=d.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+pad(d.getMinutes())+' '+ap;}
+			function g(id){return document.getElementById(id);}
+			function coops(product,extra){
+				var p=Object.assign({product:product,station:(product==='predictions'?TIDE:MET),
+					application:'OYC-ResourcesWidget',time_zone:'lst_ldt',units:'english',format:'json'},extra||{});
+				var qs=Object.keys(p).map(function(k){return k+'='+encodeURIComponent(p[k]);}).join('&');
+				return fetch(COOPS+'?'+qs).then(function(r){return r.json();});
+			}
+			// current tide + trend
+			var now=new Date(),start=new Date();start.setHours(0,0,0,0);
+			coops('predictions',{begin_date:ymdhm(start),range:48,datum:'MLLW',interval:'30'}).then(function(j){
+				if(!j||!j.predictions)return;
+				var s=j.predictions.map(function(p){return{t:new Date(p.t.replace(' ','T')),v:parseFloat(p.v)};});
+				for(var i=1;i<s.length;i++){ if(s[i].t>=now){
+					var a=s[i-1],b=s[i],f=(now-a.t)/(b.t-a.t),v=a.v+(b.v-a.v)*f,rising=(b.v-a.v)>=0;
+					g('wxTide').textContent=v.toFixed(1);
+					var tr=g('wxTrend');tr.textContent=rising?'▲ Rising':'▼ Falling';
+					tr.className='oyc-wx__trend '+(rising?'rising':'falling');break; } }
+			}).catch(function(){});
+			// next tide
+			coops('predictions',{begin_date:ymdhm(now),range:48,datum:'MLLW',interval:'hilo'}).then(function(j){
+				if(!j||!j.predictions)return;
+				for(var i=0;i<j.predictions.length;i++){var t=new Date(j.predictions[i].t.replace(' ','T'));
+					if(t>now){var hi=j.predictions[i].type==='H';
+						g('wxNext').textContent=hmt(t);
+						g('wxNextKind').textContent=(hi?'Next High':'Next Low');break;}}
+			}).catch(function(){});
+			// wind
+			coops('wind',{date:'latest'}).then(function(j){var d=j&&j.data&&j.data[0];if(!d)return;
+				g('wxWind').textContent=Math.round(parseFloat(d.s));
+				g('wxWindDir').textContent=d.dr?('from '+d.dr):'';
+			}).catch(function(){});
+		})();
+		</script>
+
 		<ul class="resource-list" role="list">
 			<?php foreach ( $oyc_resources as $doc ) :
 				$is_placeholder = ( $doc['url'] === '#' );
