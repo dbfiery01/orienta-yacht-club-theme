@@ -173,7 +173,7 @@ get_header();
 		</a>
 		<script>
 		(function(){
-			var TIDE='8518091', MET='8516945', COOPS='https://api.tidesandcurrents.gov/api/prod/datagetter';
+			var TIDE='8518091', MET='8516945', COOPS='https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 			function pad(n){return String(n).padStart(2,'0');}
 			function ymd(d){return ''+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());}
 			function ymdhm(d){return ymd(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}

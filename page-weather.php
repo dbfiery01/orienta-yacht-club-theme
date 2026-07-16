@@ -269,7 +269,7 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 
 	var $ = function(id){ return document.getElementById(id); };
 	var pad = function(n){ return String(n).padStart(2,'0'); };
-	var COOPS = 'https://api.tidesandcurrents.gov/api/prod/datagetter';
+	var COOPS = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 
 	function ymd(d){ return '' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()); }
 	function ymdhm(d){ return ymd(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
