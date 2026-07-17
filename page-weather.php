@@ -103,7 +103,10 @@ nocache_headers();
 
 	/* graph */
 	.graph-card{flex:1;display:flex;flex-direction:column}
-	.graph-wrap{flex:1;min-height:190px;margin-top:8px}
+	.graph-wrap{flex:1;min-height:190px;margin-top:8px;position:relative}
+	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
+	#tideOutage .to-t{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:14px}
+	#tideOutage .to-s{color:var(--faint);font-size:12.5px;max-width:440px;line-height:1.5}
 	svg.tidegraph{width:100%;height:100%;display:block}
 	.axis{fill:var(--faint);font-size:11px;font-family:ui-monospace,Menlo,monospace}
 	.hilo-lbl{fill:var(--ink);font-size:12px;font-weight:700;font-family:ui-monospace,Menlo,monospace;text-anchor:middle}
@@ -343,7 +346,36 @@ nocache_headers();
 		if(!cap) return;
 		cap.textContent = (mode === 'cached')  ? 'Predicted level — cached (live NOAA feed offline)'
 		               : (mode === 'bundled') ? 'Predicted level — bundled predictions (live NOAA feed offline)'
+		               : (mode === 'down')    ? 'NOAA tide service unavailable — retrying automatically'
 		               : 'Predicted level, interpolated to the minute';
+	}
+
+	// Shown in the graph window when NOAA is down AND no cache/bundle could fill
+	// in — an empty graph reads as "broken"; say what's actually happening.
+	function showTideOutage(){
+		if(tideSeries.length >= 2) return;               // keep last-good data
+		var wrap = document.querySelector('.graph-wrap');
+		if(wrap && !document.getElementById('tideOutage')){
+			var d = document.createElement('div');
+			d.id = 'tideOutage';
+			d.innerHTML = '<div class="to-t">&#9888; NOAA tide service unavailable</div>'
+				+ '<div class="to-s">The live tide feed (api.tidesandcurrents.noaa.gov) is not responding. '
+				+ 'Tide data will reappear automatically as soon as NOAA recovers.</div>';
+			wrap.appendChild(d);
+		}
+		setTideCached('down');
+		var nt = $('nextTides');
+		if(nt && /Loading/.test(nt.textContent)){
+			nt.innerHTML = '<div class="nt-row"><span class="miss" style="grid-column:1/-1">NOAA tide service unavailable</span></div>';
+		}
+		// retry sooner than the normal 30-min cycle while the outage notice is up
+		if(!showTideOutage._t){
+			showTideOutage._t = setTimeout(function(){ showTideOutage._t = null; loadTides(); }, 5*60*1000);
+		}
+	}
+	function clearTideOutage(){
+		var d = document.getElementById('tideOutage');
+		if(d) d.parentNode.removeChild(d);
 	}
 
 	// Last-resort fallback: hi/lo predictions bundled with the theme (deterministic,
@@ -403,10 +435,10 @@ nocache_headers();
 				}
 				bundledTides().then(function(ev){
 					var series = eventsToSeries(ev, dayStart.getTime(), end);
-					if(series.length < 2) return; // keep last good
+					if(series.length < 2){ showTideOutage(); return; }
 					tideSeries = series;
 					drawGraph(); updateCurrentTide(); setTideCached('bundled');
-				}).catch(function(){ /* keep last good */ });
+				}).catch(function(){ showTideOutage(); });
 			});
 		// high/low list for "next tides" — live, else cache, else bundled.
 		coops('predictions', { begin_date:ymdhm(new Date()), range:48, datum:'MLLW', interval:'hilo' })
@@ -459,6 +491,7 @@ nocache_headers();
 	// ---------- TIDE GRAPH ----------
 	function drawGraph(){
 		var svg=$('tideGraph'); if(tideSeries.length<2){ return; }
+		clearTideOutage();
 		var W=1000,H=320, padL=8,padR=8,padT=26,padB=26;
 		var xs=tideSeries.map(function(p){return p.t.getTime();});
 		var vs=tideSeries.map(function(p){return p.v;});
