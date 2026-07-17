@@ -22,7 +22,6 @@ if ( ! is_user_logged_in() ) {
 	exit;
 }
 nocache_headers();
-$oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -32,10 +31,12 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
 <style>
 	:root{
-		--bg1:#0a1626; --bg2:#081120; --panel:rgba(17,38,60,.66); --panel2:rgba(12,28,46,.7);
-		--edge:rgba(120,180,220,.14); --edge2:rgba(120,180,220,.24);
-		--ink:#eaf5fd; --muted:#7ea6c4; --faint:#5b829e;
-		--teal:#45d8c7; --teal2:#2fb9ab; --amber:#f6ad55; --red:#e8544a; --green:#4ade80;
+		/* OYC brand palette — navy ground, brass-gold primary accent, harbor-blue contrast.
+		   Var names --teal/--amber kept for a minimal diff; values are now brand colors. */
+		--bg1:#0b2a4a; --bg2:#04162a; --panel:rgba(11,42,74,.55); --panel2:rgba(7,32,58,.72);
+		--edge:rgba(245,239,226,.12); --edge2:rgba(245,239,226,.24);
+		--ink:#f5efe2; --muted:#aeb9c8; --faint:#84909f;
+		--teal:#d4a851; --teal2:#b08a3e; --amber:#57a6d6; --red:#c0392b; --green:#4ade80;
 	}
 	*{box-sizing:border-box;margin:0;padding:0}
 	html,body{height:100%}
@@ -127,6 +128,16 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 	.wind-lab .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 	.wind-lab .v{font-weight:700;font-size:15px}
 
+	/* waves */
+	.wave-body{display:flex;align-items:center;gap:20px;margin-top:12px;flex-wrap:wrap}
+	.wave-main{display:flex;align-items:flex-end;gap:8px}
+	.wave-val{font-size:44px;font-weight:800;line-height:.9;color:#fff}
+	.wave-unit{color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding-bottom:6px;font-weight:700}
+	.wave-lab{display:flex;gap:18px}
+	.wave-lab .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+	.wave-lab .v{font-weight:700;font-size:15px}
+	.wave-cap{color:var(--faint);font-size:11px;margin-top:12px;letter-spacing:.03em}
+
 	/* conditions */
 	.cond{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:12px;
 		background:var(--edge);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
@@ -146,19 +157,12 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
 	@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 
-	/* back chip */
-	.backchip{position:fixed;top:22px;left:22px;z-index:20;display:inline-flex;align-items:center;gap:6px;
-		padding:7px 12px;border-radius:999px;border:1px solid var(--edge2);background:rgba(8,17,32,.7);
-		color:var(--muted);text-decoration:none;font-size:12px;letter-spacing:.08em;opacity:.55;transition:opacity .2s}
-	.backchip:hover{opacity:1;color:var(--ink)}
-
 	.miss{color:var(--faint)}
 	@media (max-width:1100px){ .grid{grid-template-columns:1fr}}
 	@media (max-width:560px){ .topbar{padding:12px 14px} .card{padding:14px} }
 </style>
 </head>
 <body>
-<a class="backchip" href="<?php echo $oyc_resources_url; ?>" title="Back to Resources">&#8249;&nbsp;Resources</a>
 
 <div class="wrap">
 	<!-- TOP BAR -->
@@ -232,6 +236,18 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 					</div>
 				</div>
 			</div>
+			<div class="card">
+				<h2>Wave Conditions <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
+				<div class="wave-body">
+					<div class="wave-main"><span class="wave-val miss" id="waveHt">&mdash;</span><span class="wave-unit">seas</span></div>
+					<div class="wave-lab">
+						<div class="it"><div class="k">Period</div><div class="v" id="wavePer">&mdash;</div></div>
+						<div class="it"><div class="k">Direction</div><div class="v" id="waveDir">&mdash;</div></div>
+					</div>
+				</div>
+				<div class="wave-cap" id="waveCap">Forecast seas, current period</div>
+			</div>
+
 			<div class="card" style="flex:1">
 				<h2>Conditions</h2>
 				<div class="cond">
@@ -375,7 +391,7 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 		for(i=1;i<tideSeries.length-1;i++){
 			if((vs[i]>=vs[i-1]&&vs[i]>vs[i+1])||(vs[i]<=vs[i-1]&&vs[i]<vs[i+1])){
 				var mx=X(xs[i]), my=Y(vs[i]), hi=vs[i]>=vs[i-1];
-				marks+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="3.5" fill="#45d8c7"/>';
+				marks+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="3.5" fill="#d4a851"/>';
 				marks+='<text class="hilo-lbl" x="'+mx.toFixed(1)+'" y="'+(hi?my-9:my+18).toFixed(1)+'">'+vs[i].toFixed(1)+'</text>';
 			}
 		}
@@ -391,15 +407,15 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 		// now line
 		var nowX=X(Date.now());
 		var nowLine = (Date.now()>=minX&&Date.now()<=maxX)
-			? '<line x1="'+nowX.toFixed(1)+'" y1="'+padT+'" x2="'+nowX.toFixed(1)+'" y2="'+(H-padB)+'" stroke="#f6ad55" stroke-width="1.5" stroke-dasharray="4 4"/>'
-			  + '<circle cx="'+nowX.toFixed(1)+'" cy="'+Y(interp(tideSeries,new Date()).v).toFixed(1)+'" r="4.5" fill="#f6ad55"/>' : '';
+			? '<line x1="'+nowX.toFixed(1)+'" y1="'+padT+'" x2="'+nowX.toFixed(1)+'" y2="'+(H-padB)+'" stroke="#57a6d6" stroke-width="1.5" stroke-dasharray="4 4"/>'
+			  + '<circle cx="'+nowX.toFixed(1)+'" cy="'+Y(interp(tideSeries,new Date()).v).toFixed(1)+'" r="4.5" fill="#57a6d6"/>' : '';
 		svg.innerHTML =
 			'<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">'
-			+ '<stop offset="0" stop-color="#45d8c7" stop-opacity=".38"/>'
-			+ '<stop offset="1" stop-color="#45d8c7" stop-opacity="0"/></linearGradient></defs>'
+			+ '<stop offset="0" stop-color="#d4a851" stop-opacity=".38"/>'
+			+ '<stop offset="1" stop-color="#d4a851" stop-opacity="0"/></linearGradient></defs>'
 			+ ticks
 			+ '<path d="'+area+'" fill="url(#tg)"/>'
-			+ '<path d="'+d+'" fill="none" stroke="#5fe6d6" stroke-width="2.4" stroke-linejoin="round"/>'
+			+ '<path d="'+d+'" fill="none" stroke="#e6c374" stroke-width="2.4" stroke-linejoin="round"/>'
 			+ marks + nowLine;
 	}
 
@@ -420,15 +436,15 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 			var rr=(deg-90)*Math.PI/180;
 			var tipx=cx+Math.cos(rr)*(r-14), tipy=cy+Math.sin(rr)*(r-14);            // from side
 			var tailx=cx-Math.cos(rr)*(r-22), taily=cy-Math.sin(rr)*(r-22);
-			needle='<line x1="'+tailx.toFixed(1)+'" y1="'+taily.toFixed(1)+'" x2="'+tipx.toFixed(1)+'" y2="'+tipy.toFixed(1)+'" stroke="#45d8c7" stroke-width="3.5" stroke-linecap="round"/>'
-				+ '<circle cx="'+tipx.toFixed(1)+'" cy="'+tipy.toFixed(1)+'" r="4" fill="#45d8c7"/>';
+			needle='<line x1="'+tailx.toFixed(1)+'" y1="'+taily.toFixed(1)+'" x2="'+tipx.toFixed(1)+'" y2="'+tipy.toFixed(1)+'" stroke="#d4a851" stroke-width="3.5" stroke-linecap="round"/>'
+				+ '<circle cx="'+tipx.toFixed(1)+'" cy="'+tipy.toFixed(1)+'" r="4" fill="#d4a851"/>';
 		}
 		$('windDial').innerHTML = '<svg viewBox="0 0 120 120">'
 			+ '<circle cx="60" cy="60" r="'+r+'" fill="rgba(8,20,34,.6)" stroke="rgba(120,180,220,.25)"/>'
 			+ ticks
-			+ '<text x="60" y="16" fill="#7ea6c4" font-size="9" text-anchor="middle" font-family="monospace">N</text>'
-			+ '<text x="60" y="112" fill="#5b829e" font-size="9" text-anchor="middle" font-family="monospace">S</text>'
-			+ needle + '<circle cx="60" cy="60" r="3" fill="#7ea6c4"/></svg>';
+			+ '<text x="60" y="16" fill="#aeb9c8" font-size="9" text-anchor="middle" font-family="monospace">N</text>'
+			+ '<text x="60" y="112" fill="#84909f" font-size="9" text-anchor="middle" font-family="monospace">S</text>'
+			+ needle + '<circle cx="60" cy="60" r="3" fill="#aeb9c8"/></svg>';
 	}
 	function loadWind(){
 		coops('wind', { date:'latest' }).then(function(j){
@@ -483,8 +499,25 @@ $oyc_resources_url = esc_url( home_url( '/oyc-resources/' ) );
 				return '<div class="fc-row"><div class="fc-when">'+p.name+'</div>'
 					+ '<div class="fc-txt">'+p.body+'</div></div>';
 			}).join('');
+			renderWaves(periods);
 			markUpdated(true);
 		}).catch(function(){});
+	}
+
+	// Current-period wave conditions, derived from the same CWF text.
+	// "Seas" gives the significant wave height (always present); the optional
+	// "Wave Detail: <DIR> <ft> at <sec> seconds" line adds period + direction.
+	function renderWaves(periods){
+		if(!periods || !periods.length) return;
+		var cur = periods[0], body = cur.body || '';
+		var seas = body.match(/Seas\s+([^.,;]+)/i);
+		var ht = seas ? seas[1].trim().replace(/(\d+)\s*ft or less/i,'≤1 ft').replace(/^around\s+/i,'') : null;
+		var wd = body.match(/Wave Detail:\s*([NSEW]{1,3})\s+[\d.]+\s*ft\s+at\s+([\d.]+)\s*second/i);
+		$('waveHt').textContent = ht || '—';
+		$('waveHt').classList.toggle('miss', !ht);
+		$('wavePer').textContent = wd ? (wd[2] + ' s') : '—';
+		$('waveDir').textContent = wd ? wd[1] : '—';
+		$('waveCap').textContent = 'Forecast seas — ' + (cur.name || 'current period');
 	}
 
 	// ---------- ALERTS ----------
