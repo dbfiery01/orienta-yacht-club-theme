@@ -3,7 +3,7 @@
  * Template Name: Weather — Live Conditions
  *
  * Full-bleed dark "live harbor conditions" signage dashboard for Mamaroneck
- * Harbor, modeled on the club's Yodeck display. Members-only. Renders a
+ * Harbor, modeled on the club's Yodeck display. Publicly accessible. Renders a
  * self-contained HTML document (no site header/footer) and pulls LIVE data
  * client-side from:
  *   - NOAA CO-OPS  (tide predictions + Kings Point wind/met)
@@ -17,10 +17,6 @@
  * @package Orienta_Yacht_Club
  */
 
-if ( ! is_user_logged_in() ) {
-	wp_redirect( wp_login_url( get_permalink() ) );
-	exit;
-}
 nocache_headers();
 ?><!doctype html>
 <html lang="en">
