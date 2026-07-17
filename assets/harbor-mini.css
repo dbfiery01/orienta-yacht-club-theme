@@ -107,14 +107,33 @@
 
 /* Embedded form — when the widget sits INSIDE a harbor-guide card (e.g. the
    "Weather and Tides" card with its links below it), the stats stack
-   vertically as label-left / value-right rows instead of spanning 4-across. */
+   vertically as label-left / value-right rows, and the widget adopts the
+   page's own look: card background, inherited fonts, dark text, blue link. */
 .harbor-card .oyc-harbor-mini {
-	margin: 6px 0 16px;
-	padding: 12px 14px;
+	margin: 6px 0 14px;
+	padding: 0 0 14px;
 	line-height: 1.4;
+	background: none;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	border-bottom: 1px solid rgba(11, 46, 74, 0.14);
+	color: inherit;
+	font-family: inherit;
+}
+.harbor-card .oyc-harbor-mini:hover,
+.harbor-card .oyc-harbor-mini:focus {
+	transform: none;
+	box-shadow: none;
+	border-color: rgba(11, 46, 74, 0.14);
+	color: inherit;
 }
 .harbor-card .oyc-harbor-mini .ohm-head {
 	margin-bottom: 10px;
+	color: #16324a;
+}
+.harbor-card .oyc-harbor-mini .ohm-live {
+	color: #7a8896;
 }
 .harbor-card .oyc-harbor-mini .ohm-grid {
 	display: flex;
@@ -127,10 +146,15 @@
 	align-items: baseline;
 	gap: 10px;
 }
+.harbor-card .oyc-harbor-mini .ohm-k {
+	color: #7a8896;
+}
 .harbor-card .oyc-harbor-mini .ohm-v {
 	font-size: 15px;
+	color: #16324a;
 }
 .harbor-card .oyc-harbor-mini .ohm-cta {
 	margin-top: 10px;
-	font-size: 10.5px;
+	font-size: 11px;
+	color: #1583cf;
 }
