@@ -96,7 +96,7 @@ add_filter( 'wpcf7_mail_components', function ( $components, $contact_form = nul
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
 	// No photo reel on these pages (per request) — they get the tighter layout.
-	if ( is_page( array( 'videos', 'members-area', 'photo-gallery', 'live-video-streaming', 'dock-and-dine' ) ) ) {
+	if ( is_page( array( 'videos', 'members-area', 'photo-gallery', 'live-video-streaming', 'dock-and-dine', 'mamaroneck-harbor' ) ) ) {
 		return;
 	}
 	// Collect home-* and header-* photos from the parent theme, plus any
