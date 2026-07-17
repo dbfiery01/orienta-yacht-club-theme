@@ -49,21 +49,19 @@ add_action( 'wp_enqueue_scripts', function () {
  */
 add_shortcode( 'oyc_harbor_mini', function () {
 	$url = esc_url( home_url( '/weather/' ) );
-	ob_start();
-	?>
-	<a class="oyc-harbor-mini" href="<?php echo $url; ?>" aria-label="Live Mamaroneck Harbor conditions — open the full board">
-		<div class="ohm-head">
-			<span>Harbor Conditions</span>
-			<span class="ohm-live"><span class="ohm-dot"></span>Live</span>
-		</div>
-		<div class="ohm-grid">
-			<div class="ohm-cell"><span class="ohm-k">Time</span><span class="ohm-v" data-ohm="time">&mdash;</span></div>
-			<div class="ohm-cell"><span class="ohm-k">Tide</span><span class="ohm-v" data-ohm="tide">&mdash;</span></div>
-			<div class="ohm-cell"><span class="ohm-k">Sunrise</span><span class="ohm-v" data-ohm="sunrise">&mdash;</span></div>
-			<div class="ohm-cell"><span class="ohm-k">Sunset</span><span class="ohm-v" data-ohm="sunset">&mdash;</span></div>
-		</div>
-		<div class="ohm-cta">View full live conditions <span class="ohm-arr">&rarr;</span></div>
-	</a>
-	<?php
-	return ob_get_clean();
+	// span-only markup, emitted as a single line: block elements inside an <a>
+	// get torn apart by the HTML parser once wpautop wraps the shortcode in a
+	// <p> (the widget renders empty). Spans are valid anchor content and the
+	// existing CSS classes set their display, so this survives any content flow.
+	return '<a class="oyc-harbor-mini" href="' . $url . '" aria-label="Live Mamaroneck Harbor conditions — open the full board">'
+		. '<span class="ohm-head"><span>Harbor Conditions</span>'
+		. '<span class="ohm-live"><span class="ohm-dot"></span>Live</span></span>'
+		. '<span class="ohm-grid">'
+		. '<span class="ohm-cell"><span class="ohm-k">Time</span><span class="ohm-v" data-ohm="time">&mdash;</span></span>'
+		. '<span class="ohm-cell"><span class="ohm-k">Tide</span><span class="ohm-v" data-ohm="tide">&mdash;</span></span>'
+		. '<span class="ohm-cell"><span class="ohm-k">Sunrise</span><span class="ohm-v" data-ohm="sunrise">&mdash;</span></span>'
+		. '<span class="ohm-cell"><span class="ohm-k">Sunset</span><span class="ohm-v" data-ohm="sunset">&mdash;</span></span>'
+		. '</span>'
+		. '<span class="ohm-cta">View full live conditions <span class="ohm-arr">&rarr;</span></span>'
+		. '</a>';
 } );

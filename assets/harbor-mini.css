@@ -45,6 +45,7 @@
 	font-weight: 600;
 }
 .oyc-harbor-mini .ohm-dot {
+	display: inline-block;
 	width: 7px;
 	height: 7px;
 	border-radius: 50%;
@@ -93,6 +94,7 @@
 	gap: 6px;
 }
 .oyc-harbor-mini .ohm-arr {
+	display: inline-block;
 	transition: transform 0.15s ease;
 }
 .oyc-harbor-mini:hover .ohm-arr {

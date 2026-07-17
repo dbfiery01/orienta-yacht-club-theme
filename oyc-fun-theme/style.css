@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.82
+Version: 1.5.83
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -336,6 +336,10 @@ body.oyc-page-boating .page-hero,
 body.oyc-page-mamaroneck-harbor .page-hero,
 body.oyc-page-calendar .page-hero,
 body.oyc-page-contact .page-hero { display: none !important; }
+
+/* Mamaroneck Harbor has no hero and (since 1.5.82) no photo reel, so nothing
+   pushes the content below the fixed header — give it the offset directly. */
+body.oyc-page-mamaroneck-harbor .entry-content { padding-top: 88px; }
 
 body.oyc-page-about .oyc-carousel,
 body.oyc-page-membership .oyc-carousel,
