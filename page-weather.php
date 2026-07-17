@@ -517,10 +517,11 @@ nocache_headers();
 		}
 		var needle='';
 		if(deg!=null){
-			var rr=(deg-90)*Math.PI/180;
-			var tipx=cx+Math.cos(rr)*(r-10), tipy=cy+Math.sin(rr)*(r-10);            // from side
+			// needle flies WITH the wind: tail at the FROM side, arrowhead pointing
+			// downwind (wind from NW => arrow points SE), weather-vane convention.
+			var rr=(deg+90)*Math.PI/180;
+			var tipx=cx+Math.cos(rr)*(r-10), tipy=cy+Math.sin(rr)*(r-10);            // downwind side
 			var tailx=cx-Math.cos(rr)*(r-22), taily=cy-Math.sin(rr)*(r-22);
-			// proper arrowhead at the tip (points to where the wind is FROM)
 			var w1x=tipx-Math.cos(rr-0.42)*12, w1y=tipy-Math.sin(rr-0.42)*12;
 			var w2x=tipx-Math.cos(rr+0.42)*12, w2y=tipy-Math.sin(rr+0.42)*12;
 			needle='<line x1="'+tailx.toFixed(1)+'" y1="'+taily.toFixed(1)+'" x2="'+((tipx+w1x+w2x)/3).toFixed(1)+'" y2="'+((tipy+w1y+w2y)/3).toFixed(1)+'" stroke="#d4a851" stroke-width="3.5" stroke-linecap="round"/>'
