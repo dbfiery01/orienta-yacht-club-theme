@@ -76,13 +76,36 @@
 			tideSeries = parseTide(j.predictions);
 			renderCurrentTide();
 		}).catch(function () {
-			// NOAA down: fall back to cache; else retry a few times.
+			// NOAA down: fall back to cache, then to the bundled hi/lo predictions
+			// shipped with the theme (cosine-interpolated); else retry a few times.
 			if (!tideSeries.length) {
 				var c = readTideCache();
 				if (c) { tideSeries = parseTide(c); renderCurrentTide(); return; }
+				bundledTide();
 			}
 			if (retries > 0) { setTimeout(function () { fetchTide(retries - 1); }, 20000); }
 		});
+	}
+	function bundledTide() {
+		var url = (window.OYC_HM && window.OYC_HM.bundled) || null;
+		if (!url) { return; }
+		fetch(url).then(function (r) {
+			if (!r.ok) { throw new Error('no bundle'); }
+			return r.json();
+		}).then(function (j) {
+			if (!j || !j.events || j.events.length < 2) { return; }
+			var ev = parseTide(j.events), now = new Date(), i;
+			for (i = 1; i < ev.length; i++) {
+				if (ev[i].t >= now) {
+					if (ev[i - 1].t > now) { return; }
+					var a = ev[i - 1], b = ev[i];
+					var f = (now - a.t) / (b.t - a.t);
+					var v = a.v + (b.v - a.v) * (1 - Math.cos(Math.PI * f)) / 2;
+					if (!tideSeries.length) { set('tide', v.toFixed(1) + ' ft ' + (b.v - a.v >= 0 ? '▲' : '▼')); }
+					return;
+				}
+			}
+		}).catch(function () { });
 	}
 	var _cached = readTideCache();
 	if (_cached) { tideSeries = parseTide(_cached); renderCurrentTide(); } // instant paint from cache

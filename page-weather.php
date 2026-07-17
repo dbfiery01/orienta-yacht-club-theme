@@ -337,11 +337,41 @@ nocache_headers();
 		}catch(e){ return null; }
 	}
 	function parsePreds(preds){ return preds.map(function(p){ return { t:new Date(p.t.replace(' ','T')), v:parseFloat(p.v) }; }); }
-	function setTideCached(cached){
+	function setTideCached(mode){
 		var cap = document.querySelector('.tide-cap');
-		if(cap) cap.textContent = cached
-			? 'Predicted level — cached (live NOAA feed offline)'
-			: 'Predicted level, interpolated to the minute';
+		if(!cap) return;
+		cap.textContent = (mode === 'cached')  ? 'Predicted level — cached (live NOAA feed offline)'
+		               : (mode === 'bundled') ? 'Predicted level — bundled predictions (live NOAA feed offline)'
+		               : 'Predicted level, interpolated to the minute';
+	}
+
+	// Last-resort fallback: hi/lo predictions bundled with the theme (deterministic,
+	// pre-generated from NOAA). Covers a cold start during a NOAA outage, when
+	// localStorage has never been seeded. Smooth curve via cosine interpolation.
+	var BUNDLED_TIDES_URL = '<?php echo esc_url( get_template_directory_uri() . '/assets/tide-predictions-8518091.json' ); ?>';
+	var bundledEvents = null;
+	function bundledTides(){
+		if(bundledEvents) return Promise.resolve(bundledEvents);
+		return fetch(BUNDLED_TIDES_URL).then(function(r){
+			if(!r.ok) throw new Error('no bundle');
+			return r.json();
+		}).then(function(j){
+			if(!j || !j.events || !j.events.length) throw new Error('empty bundle');
+			bundledEvents = j.events;
+			return bundledEvents;
+		});
+	}
+	function eventsToSeries(events, fromMs, toMs){
+		var ev = parsePreds(events), out = [], step = 30*60*1000, i = 1;
+		if(ev.length < 2) return out;
+		for(var t = fromMs; t <= toMs; t += step){
+			while(i < ev.length && ev[i].t.getTime() < t){ i++; }
+			if(i >= ev.length || ev[i-1].t.getTime() > t) continue;
+			var a = ev[i-1], b = ev[i];
+			var f = (t - a.t.getTime()) / (b.t.getTime() - a.t.getTime());
+			out.push({ t:new Date(t), v: a.v + (b.v - a.v) * (1 - Math.cos(Math.PI * f)) / 2 });
+		}
+		return out;
 	}
 	// Refresh the wide cache in the background (on load + every 6h) so the
 	// fallback stays current without hammering NOAA on every 30-min refresh.
@@ -354,29 +384,38 @@ nocache_headers();
 	}
 	function loadTides(){
 		var start=new Date(); start.setHours(0,0,0,0);
-		// 48h smooth series for the graph — live, else the cached window sliced to now.
+		// 48h smooth series for the graph — live, else cache, else bundled.
 		coops('predictions', { begin_date:ymdhm(start), range:48, datum:'MLLW', interval:'30' })
 			.then(function(j){
 				if(!j || !j.predictions || !j.predictions.length) throw new Error('no predictions');
 				tideSeries = parsePreds(j.predictions);
-				drawGraph(); updateCurrentTide(); setTideCached(false); markUpdated(true);
+				drawGraph(); updateCurrentTide(); setTideCached('live'); markUpdated(true);
 			}).catch(function(){
-				var c = readTideCache('series');
-				if(!c) return; // keep last good
 				var dayStart=new Date(); dayStart.setHours(0,0,0,0);
 				var end = dayStart.getTime() + 48*3600*1000;
-				var win = parsePreds(c).filter(function(p){ return p.t.getTime()>=dayStart.getTime() && p.t.getTime()<=end; });
-				tideSeries = (win.length>=2) ? win : parsePreds(c);
-				drawGraph(); updateCurrentTide(); setTideCached(true);
+				var c = readTideCache('series');
+				if(c){
+					var win = parsePreds(c).filter(function(p){ return p.t.getTime()>=dayStart.getTime() && p.t.getTime()<=end; });
+					tideSeries = (win.length>=2) ? win : parsePreds(c);
+					drawGraph(); updateCurrentTide(); setTideCached('cached');
+					return;
+				}
+				bundledTides().then(function(ev){
+					var series = eventsToSeries(ev, dayStart.getTime(), end);
+					if(series.length < 2) return; // keep last good
+					tideSeries = series;
+					drawGraph(); updateCurrentTide(); setTideCached('bundled');
+				}).catch(function(){ /* keep last good */ });
 			});
-		// high/low list for "next tides" — live, else cached.
+		// high/low list for "next tides" — live, else cache, else bundled.
 		coops('predictions', { begin_date:ymdhm(new Date()), range:48, datum:'MLLW', interval:'hilo' })
 			.then(function(j){
 				if(!j || !j.predictions || !j.predictions.length) throw new Error('no hilo');
 				renderNextTides(j.predictions);
 			}).catch(function(){
 				var c = readTideCache('hilo');
-				if(c) renderNextTides(c);
+				if(c){ renderNextTides(c); return; }
+				bundledTides().then(function(ev){ renderNextTides(ev); }).catch(function(){});
 			});
 	}
 	function interp(series, when){
@@ -490,60 +529,102 @@ nocache_headers();
 			+ '<text x="60" y="112" fill="#84909f" font-size="9" text-anchor="middle" font-family="monospace">S</text>'
 			+ needle + '<circle cx="60" cy="60" r="3" fill="#aeb9c8"/></svg>';
 	}
+	function windFromObs(){
+		fetchObs().then(function(p){
+			var kts = obsKts(p.windSpeed);
+			if(kts == null){ return; }
+			$('windSpd').textContent = Math.round(kts);
+			var deg = (p.windDirection && p.windDirection.value != null) ? p.windDirection.value : null;
+			$('windDir').textContent = (deg != null) ? dirCardinal(deg) : '—';
+			var g = obsKts(p.windGust);
+			$('windGust').textContent = (g != null) ? (Math.round(g)+' kt') : '—';
+			$('windSta').textContent = 'NWS ASOS';
+			drawDial(deg); markUpdated(true);
+		}).catch(function(){});
+	}
 	function loadWind(){
 		coops('wind', { date:'latest' }).then(function(j){
 			var d = j && j.data && j.data[0];
-			if(!d){ drawDial(null); return; }
+			if(!d){ windFromObs(); return; }
 			$('windSpd').textContent = Math.round(parseFloat(d.s));
 			var deg = d.d!=null ? parseFloat(d.d) : null;
 			$('windDir').textContent = (d.dr || (deg!=null?dirCardinal(deg):'—'));
 			$('windGust').textContent = (d.g!=null && d.g!=='' ) ? (Math.round(parseFloat(d.g))+' kt') : '—';
+			$('windSta').textContent = 'STA. ' + CFG.MET_STATION;
 			drawDial(deg); markUpdated(true);
-		}).catch(function(){ drawDial(null); });
+		}).catch(function(){ windFromObs(); });
 	}
 	drawDial(null);
 
-	// ---------- CONDITIONS ----------
-	function metOne(product, elId, fmt){
-		coops(product, { date:'latest' }).then(function(j){
-			var d=j && j.data && j.data[0];
-			$(elId).textContent = (d && d.v!=null && d.v!=='') ? fmt(parseFloat(d.v)) : '—';
-			$(elId).classList.toggle('miss', !(d && d.v!=null && d.v!==''));
+	// ---------- NWS OBSERVATIONS (shared ASOS source: KHPN, then KLGA) ----------
+	// Kings Point has no humidity/visibility sensors, and a CO-OPS outage takes
+	// out wind/temp/pressure too — the nearest ASOS stations fill both gaps.
+	// One merged observation is shared by all consumers (5-min memo).
+	var OBS_STATIONS = ['KHPN','KLGA'];
+	var obsProps = null, obsAt = 0;
+	function fetchObs(){
+		if(obsProps && (new Date().getTime() - obsAt) < 5*60*1000){ return Promise.resolve(obsProps); }
+		var FIELDS = ['relativeHumidity','visibility','temperature','barometricPressure','windSpeed','windDirection','windGust'];
+		var merged = {};
+		function missing(){ return FIELDS.some(function(k){ return !(merged[k] && merged[k].value != null); }); }
+		function step(i){
+			if(i >= OBS_STATIONS.length || !missing()){
+				obsProps = merged; obsAt = new Date().getTime();
+				return Promise.resolve(merged);
+			}
+			return nws('stations/'+OBS_STATIONS[i]+'/observations/latest').then(function(j){
+				var p = j && j.properties;
+				if(p){ FIELDS.forEach(function(k){
+					if(!(merged[k] && merged[k].value != null) && p[k] && p[k].value != null){ merged[k] = p[k]; }
+				}); }
+				return step(i+1);
+			}).catch(function(){ return step(i+1); });
+		}
+		return step(0);
+	}
+	function obsKts(m){ // windSpeed/windGust measurement -> knots (unit-aware)
+		if(!m || m.value == null) return null;
+		var u = m.unitCode || '';
+		if(u.indexOf('km_h') >= 0) return m.value / 1.852;
+		if(u.indexOf('m_s') >= 0)  return m.value * 1.94384;
+		return m.value;
+	}
+	function obsCell(elId, pick){
+		fetchObs().then(function(p){
+			var v = pick(p);
+			$(elId).textContent = (v != null) ? v : '—';
+			$(elId).classList.toggle('miss', v == null);
+			if(v != null) markUpdated(true);
 		}).catch(function(){});
 	}
-	function loadConditions(){
-		metOne('air_temperature','airTemp',function(v){return Math.round(v)+'°';});
-		metOne('water_temperature','waterTemp',function(v){return Math.round(v)+'°';});
-		metOne('air_pressure','pressure',function(v){return Math.round(v)+' mb';});
-		loadHumidityVisibility();
-	}
 
-	// Kings Point (CO-OPS met station) has no humidity/visibility sensors, so pull
-	// those from the nearest ASOS via NWS: try KHPN (Westchester/White Plains) first,
-	// fall back to KLGA (LaGuardia) for any field KHPN is missing.
-	var HV_STATIONS = ['KHPN','KLGA'];
-	function loadHumidityVisibility(){
-		var need = { humidity:true, visibility:true };
-		function apply(p){
-			if(need.humidity && p.relativeHumidity && p.relativeHumidity.value != null){
-				$('humidity').textContent = Math.round(p.relativeHumidity.value) + '%';
-				$('humidity').classList.remove('miss');
-				need.humidity = false;
+	// ---------- CONDITIONS ----------
+	// CO-OPS first; on failure/no-data fall back to the shared NWS observation
+	// (water temp has no ASOS equivalent, so it keeps the dash during outages).
+	function metOne(product, elId, fmt, fb){
+		coops(product, { date:'latest' }).then(function(j){
+			var d=j && j.data && j.data[0];
+			if(d && d.v!=null && d.v!==''){
+				$(elId).textContent = fmt(parseFloat(d.v));
+				$(elId).classList.remove('miss');
+			} else if(fb){ fb(); }
+			else {
+				$(elId).textContent = '—';
+				$(elId).classList.add('miss');
 			}
-			if(need.visibility && p.visibility && p.visibility.value != null){
-				$('visibility').textContent = (p.visibility.value / 1852).toFixed(1) + ' nm'; // meters -> nm
-				$('visibility').classList.remove('miss');
-				need.visibility = false;
-			}
-		}
-		function tryStation(i){
-			if(i >= HV_STATIONS.length || (!need.humidity && !need.visibility)) return;
-			nws('stations/'+HV_STATIONS[i]+'/observations/latest').then(function(j){
-				if(j && j.properties) apply(j.properties);
-				if(need.humidity || need.visibility){ tryStation(i+1); } else { markUpdated(true); }
-			}).catch(function(){ tryStation(i+1); });
-		}
-		tryStation(0);
+		}).catch(function(){ if(fb){ fb(); } });
+	}
+	function loadConditions(){
+		metOne('air_temperature','airTemp',function(v){return Math.round(v)+'°';}, function(){
+			obsCell('airTemp', function(p){ return (p.temperature && p.temperature.value!=null) ? Math.round(p.temperature.value*9/5+32)+'°' : null; });
+		});
+		metOne('water_temperature','waterTemp',function(v){return Math.round(v)+'°';});
+		metOne('air_pressure','pressure',function(v){return Math.round(v)+' mb';}, function(){
+			obsCell('pressure', function(p){ return (p.barometricPressure && p.barometricPressure.value!=null) ? Math.round(p.barometricPressure.value/100)+' mb' : null; });
+		});
+		// humidity + visibility always come from the ASOS observation
+		obsCell('humidity', function(p){ return (p.relativeHumidity && p.relativeHumidity.value!=null) ? Math.round(p.relativeHumidity.value)+'%' : null; });
+		obsCell('visibility', function(p){ return (p.visibility && p.visibility.value!=null) ? (p.visibility.value/1852).toFixed(1)+' nm' : null; });
 	}
 
 	// ---------- FORECAST ----------

@@ -38,6 +38,9 @@ add_action( 'wp_enqueue_scripts', function () {
 			OYC_VERSION,
 			true
 		);
+		wp_localize_script( 'oyc-harbor-mini', 'OYC_HM', array(
+			'bundled' => get_template_directory_uri() . '/assets/tide-predictions-8518091.json',
+		) );
 	}
 } );
 
