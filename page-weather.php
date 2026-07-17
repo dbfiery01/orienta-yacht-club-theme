@@ -467,8 +467,35 @@ nocache_headers();
 		metOne('air_temperature','airTemp',function(v){return Math.round(v)+'°';});
 		metOne('water_temperature','waterTemp',function(v){return Math.round(v)+'°';});
 		metOne('air_pressure','pressure',function(v){return Math.round(v)+' mb';});
-		metOne('humidity','humidity',function(v){return Math.round(v)+'%';});
-		metOne('visibility','visibility',function(v){return v.toFixed(1)+' nm';});
+		loadHumidityVisibility();
+	}
+
+	// Kings Point (CO-OPS met station) has no humidity/visibility sensors, so pull
+	// those from the nearest ASOS via NWS: try KHPN (Westchester/White Plains) first,
+	// fall back to KLGA (LaGuardia) for any field KHPN is missing.
+	var HV_STATIONS = ['KHPN','KLGA'];
+	function loadHumidityVisibility(){
+		var need = { humidity:true, visibility:true };
+		function apply(p){
+			if(need.humidity && p.relativeHumidity && p.relativeHumidity.value != null){
+				$('humidity').textContent = Math.round(p.relativeHumidity.value) + '%';
+				$('humidity').classList.remove('miss');
+				need.humidity = false;
+			}
+			if(need.visibility && p.visibility && p.visibility.value != null){
+				$('visibility').textContent = (p.visibility.value / 1852).toFixed(1) + ' nm'; // meters -> nm
+				$('visibility').classList.remove('miss');
+				need.visibility = false;
+			}
+		}
+		function tryStation(i){
+			if(i >= HV_STATIONS.length || (!need.humidity && !need.visibility)) return;
+			nws('stations/'+HV_STATIONS[i]+'/observations/latest').then(function(j){
+				if(j && j.properties) apply(j.properties);
+				if(need.humidity || need.visibility){ tryStation(i+1); } else { markUpdated(true); }
+			}).catch(function(){ tryStation(i+1); });
+		}
+		tryStation(0);
 	}
 
 	// ---------- FORECAST ----------
