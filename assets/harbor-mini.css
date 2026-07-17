@@ -104,3 +104,33 @@
 		gap: 10px;
 	}
 }
+
+/* Embedded form — when the widget sits INSIDE a harbor-guide card (e.g. the
+   "Weather and Tides" card with its links below it), the stats stack
+   vertically as label-left / value-right rows instead of spanning 4-across. */
+.harbor-card .oyc-harbor-mini {
+	margin: 6px 0 16px;
+	padding: 12px 14px;
+	line-height: 1.4;
+}
+.harbor-card .oyc-harbor-mini .ohm-head {
+	margin-bottom: 10px;
+}
+.harbor-card .oyc-harbor-mini .ohm-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+}
+.harbor-card .oyc-harbor-mini .ohm-cell {
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 10px;
+}
+.harbor-card .oyc-harbor-mini .ohm-v {
+	font-size: 15px;
+}
+.harbor-card .oyc-harbor-mini .ohm-cta {
+	margin-top: 10px;
+	font-size: 10.5px;
+}
