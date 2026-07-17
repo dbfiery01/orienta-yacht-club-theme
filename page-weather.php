@@ -317,19 +317,67 @@ nocache_headers();
 	}
 
 	// ---------- TIDES ----------
+	// Tide predictions are deterministic (harmonic), so a successfully-fetched
+	// window stays valid for its dates. We cache a wide (30-day) window in
+	// localStorage and fall back to it whenever the live NOAA feed is down —
+	// the board keeps showing correct tides straight through a NOAA outage.
 	var tideSeries = [];
+	var TIDE_CACHE_DAYS = 30;
+	function tideKey(kind){ return 'oyc_tide_' + CFG.TIDE_STATION + '_' + kind; }
+	function saveTideCache(kind, preds){
+		try{ localStorage.setItem(tideKey(kind), JSON.stringify({ at:new Date().getTime(), preds:preds })); }catch(e){}
+	}
+	function readTideCache(kind){
+		try{
+			var o = JSON.parse(localStorage.getItem(tideKey(kind)));
+			if(!o || !o.preds || !o.preds.length) return null;
+			// A window fetched >28 days ago may no longer cover today.
+			if(new Date().getTime() - o.at > 28*86400000) return null;
+			return o.preds;
+		}catch(e){ return null; }
+	}
+	function parsePreds(preds){ return preds.map(function(p){ return { t:new Date(p.t.replace(' ','T')), v:parseFloat(p.v) }; }); }
+	function setTideCached(cached){
+		var cap = document.querySelector('.tide-cap');
+		if(cap) cap.textContent = cached
+			? 'Predicted level — cached (live NOAA feed offline)'
+			: 'Predicted level, interpolated to the minute';
+	}
+	// Refresh the wide cache in the background (on load + every 6h) so the
+	// fallback stays current without hammering NOAA on every 30-min refresh.
+	function refreshTideCache(){
+		var start=new Date(); start.setHours(0,0,0,0);
+		coops('predictions', { begin_date:ymdhm(start), range:TIDE_CACHE_DAYS*24, datum:'MLLW', interval:'30' })
+			.then(function(j){ if(j && j.predictions && j.predictions.length) saveTideCache('series', j.predictions); }).catch(function(){});
+		coops('predictions', { begin_date:ymdhm(start), range:TIDE_CACHE_DAYS*24, datum:'MLLW', interval:'hilo' })
+			.then(function(j){ if(j && j.predictions && j.predictions.length) saveTideCache('hilo', j.predictions); }).catch(function(){});
+	}
 	function loadTides(){
 		var start=new Date(); start.setHours(0,0,0,0);
-		// 48h smooth series for the graph
+		// 48h smooth series for the graph — live, else the cached window sliced to now.
 		coops('predictions', { begin_date:ymdhm(start), range:48, datum:'MLLW', interval:'30' })
 			.then(function(j){
-				if(!j || !j.predictions) throw new Error('no predictions');
-				tideSeries = j.predictions.map(function(p){ return { t:new Date(p.t.replace(' ','T')), v:parseFloat(p.v) }; });
-				drawGraph(); updateCurrentTide(); markUpdated(true);
-			}).catch(function(){ /* keep last good */ });
-		// high/low list for "next tides"
+				if(!j || !j.predictions || !j.predictions.length) throw new Error('no predictions');
+				tideSeries = parsePreds(j.predictions);
+				drawGraph(); updateCurrentTide(); setTideCached(false); markUpdated(true);
+			}).catch(function(){
+				var c = readTideCache('series');
+				if(!c) return; // keep last good
+				var dayStart=new Date(); dayStart.setHours(0,0,0,0);
+				var end = dayStart.getTime() + 48*3600*1000;
+				var win = parsePreds(c).filter(function(p){ return p.t.getTime()>=dayStart.getTime() && p.t.getTime()<=end; });
+				tideSeries = (win.length>=2) ? win : parsePreds(c);
+				drawGraph(); updateCurrentTide(); setTideCached(true);
+			});
+		// high/low list for "next tides" — live, else cached.
 		coops('predictions', { begin_date:ymdhm(new Date()), range:48, datum:'MLLW', interval:'hilo' })
-			.then(function(j){ if(j && j.predictions) renderNextTides(j.predictions); });
+			.then(function(j){
+				if(!j || !j.predictions || !j.predictions.length) throw new Error('no hilo');
+				renderNextTides(j.predictions);
+			}).catch(function(){
+				var c = readTideCache('hilo');
+				if(c) renderNextTides(c);
+			});
 	}
 	function interp(series, when){
 		if(series.length<2) return null;
@@ -618,10 +666,12 @@ nocache_headers();
 	}
 
 	// ---------- INIT + refresh ----------
+	refreshTideCache();                                // seed the 30-day fallback cache
 	loadTides(); loadWind(); loadConditions(); loadForecast(); loadAlerts(); loadSunMoon();
 	setInterval(updateCurrentTide, 60*1000);          // re-interpolate current level each minute
 	setInterval(function(){ drawGraph(); }, 5*60*1000);
 	setInterval(loadTides, 30*60*1000);
+	setInterval(refreshTideCache, 6*60*60*1000);       // keep the fallback cache fresh
 	setInterval(loadWind, 5*60*1000);
 	setInterval(loadConditions, 10*60*1000);
 	setInterval(loadForecast, 30*60*1000);

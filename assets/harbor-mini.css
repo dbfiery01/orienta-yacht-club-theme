@@ -1,0 +1,106 @@
+/**
+ * [oyc_harbor_mini] — compact live harbor-conditions teaser that links to the
+ * full /weather/ board. Dark navy/gold to match the signage board, sized to
+ * drop into the harbor-guide card grid.
+ */
+.oyc-harbor-mini {
+	display: block;
+	text-decoration: none;
+	border-radius: 12px;
+	overflow: hidden;
+	background: linear-gradient(160deg, #0b2a4a, #04162a);
+	border: 1px solid rgba(212, 168, 81, 0.35);
+	padding: 14px 16px;
+	color: #f5efe2;
+	font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+	box-shadow: 0 6px 18px rgba(4, 22, 42, 0.18);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.oyc-harbor-mini:hover,
+.oyc-harbor-mini:focus {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 26px rgba(4, 22, 42, 0.28);
+	border-color: #d4a851;
+	color: #f5efe2;
+}
+.oyc-harbor-mini .ohm-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	font-size: 12px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #d4a851;
+	font-weight: 700;
+	margin-bottom: 12px;
+}
+.oyc-harbor-mini .ohm-live {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: #8fb0c8;
+	font-size: 10px;
+	letter-spacing: 0.1em;
+	font-weight: 600;
+}
+.oyc-harbor-mini .ohm-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #4ade80;
+	box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
+	animation: ohmPulse 2.4s infinite;
+}
+@keyframes ohmPulse {
+	0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45); }
+	70% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+.oyc-harbor-mini .ohm-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 12px;
+}
+.oyc-harbor-mini .ohm-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+.oyc-harbor-mini .ohm-k {
+	font-size: 9px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #8aa0b4;
+	white-space: nowrap;
+}
+.oyc-harbor-mini .ohm-v {
+	font-size: 16px;
+	font-weight: 700;
+	color: #fff;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.oyc-harbor-mini .ohm-cta {
+	margin-top: 12px;
+	font-size: 11px;
+	letter-spacing: 0.06em;
+	color: #d4a851;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.oyc-harbor-mini .ohm-arr {
+	transition: transform 0.15s ease;
+}
+.oyc-harbor-mini:hover .ohm-arr {
+	transform: translateX(3px);
+}
+@media (max-width: 480px) {
+	.oyc-harbor-mini .ohm-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 10px;
+	}
+}

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.72' );
+define( 'OYC_VERSION', '1.7.74' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -165,6 +165,11 @@ require_once get_template_directory() . '/inc/video-gallery.php';
  * and the /fishing/ → /boating/ redirect.
  */
 require_once get_template_directory() . '/inc/seo.php';
+
+/**
+ * [oyc_harbor_mini] — compact live harbor-conditions widget linking to /weather/.
+ */
+require_once get_template_directory() . '/inc/harbor-mini.php';
 
 /**
  * Inject Customizer-overridden section background images as inline CSS.
