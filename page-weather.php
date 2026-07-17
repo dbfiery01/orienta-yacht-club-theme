@@ -123,6 +123,7 @@ nocache_headers();
 	.wind-lab{display:flex;gap:18px;margin-top:8px}
 	.wind-lab .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 	.wind-lab .v{font-weight:700;font-size:15px}
+	.wind-arr-ico{display:inline-block;margin-right:6px;color:var(--teal);transition:transform .5s ease}
 
 	/* waves */
 	.wave-body{display:flex;align-items:center;gap:20px;margin-top:12px;flex-wrap:wrap}
@@ -226,7 +227,7 @@ nocache_headers();
 					<div class="wind-read">
 						<span class="wind-spd" id="windSpd">&mdash;</span>
 						<div class="wind-lab">
-							<div class="it"><div class="k">From</div><div class="v" id="windDir">&mdash;</div></div>
+							<div class="it"><div class="k">From</div><div class="v"><span class="wind-arr-ico" id="windArrow" style="display:none">&#10148;</span><span id="windDir">&mdash;</span></div></div>
 							<div class="it"><div class="k">Gusts</div><div class="v" id="windGust">&mdash;</div></div>
 						</div>
 					</div>
@@ -517,10 +518,19 @@ nocache_headers();
 		var needle='';
 		if(deg!=null){
 			var rr=(deg-90)*Math.PI/180;
-			var tipx=cx+Math.cos(rr)*(r-14), tipy=cy+Math.sin(rr)*(r-14);            // from side
+			var tipx=cx+Math.cos(rr)*(r-10), tipy=cy+Math.sin(rr)*(r-10);            // from side
 			var tailx=cx-Math.cos(rr)*(r-22), taily=cy-Math.sin(rr)*(r-22);
-			needle='<line x1="'+tailx.toFixed(1)+'" y1="'+taily.toFixed(1)+'" x2="'+tipx.toFixed(1)+'" y2="'+tipy.toFixed(1)+'" stroke="#d4a851" stroke-width="3.5" stroke-linecap="round"/>'
-				+ '<circle cx="'+tipx.toFixed(1)+'" cy="'+tipy.toFixed(1)+'" r="4" fill="#d4a851"/>';
+			// proper arrowhead at the tip (points to where the wind is FROM)
+			var w1x=tipx-Math.cos(rr-0.42)*12, w1y=tipy-Math.sin(rr-0.42)*12;
+			var w2x=tipx-Math.cos(rr+0.42)*12, w2y=tipy-Math.sin(rr+0.42)*12;
+			needle='<line x1="'+tailx.toFixed(1)+'" y1="'+taily.toFixed(1)+'" x2="'+((tipx+w1x+w2x)/3).toFixed(1)+'" y2="'+((tipy+w1y+w2y)/3).toFixed(1)+'" stroke="#d4a851" stroke-width="3.5" stroke-linecap="round"/>'
+				+ '<polygon points="'+tipx.toFixed(1)+','+tipy.toFixed(1)+' '+w1x.toFixed(1)+','+w1y.toFixed(1)+' '+w2x.toFixed(1)+','+w2y.toFixed(1)+'" fill="#d4a851"/>';
+		}
+		// inline arrow beside the cardinal readout — points the way the wind BLOWS
+		var arr=$('windArrow');
+		if(arr){
+			if(deg==null){ arr.style.display='none'; }
+			else{ arr.style.display='inline-block'; arr.style.transform='rotate('+(((deg+90)%360)).toFixed(0)+'deg)'; }
 		}
 		$('windDial').innerHTML = '<svg viewBox="0 0 120 120">'
 			+ '<circle cx="60" cy="60" r="'+r+'" fill="rgba(8,20,34,.6)" stroke="rgba(120,180,220,.25)"/>'
