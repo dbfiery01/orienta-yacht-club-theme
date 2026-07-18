@@ -33,3 +33,6 @@ error_log
 # (uncomment if needed)
 # assets/photos/
 # assets/oyc-logo.png
+
+# Claude Code personal settings (not shared)
+.claude/settings.local.json
