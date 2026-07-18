@@ -518,13 +518,14 @@ nocache_headers();
 		for(var tt=t0.getTime(); tt<=maxX; tt+=6*3600*1000){
 			var dt=new Date(tt); if(tt<minX) continue;
 			var gx=X(tt), lab=(dt.getHours()===0)?(MON[dt.getMonth()].slice(0,3)+' '+dt.getDate()):((dt.getHours()%12||12)+(dt.getHours()>=12?'p':'a'));
-			ticks+='<line x1="'+gx.toFixed(1)+'" y1="'+padT+'" x2="'+gx.toFixed(1)+'" y2="'+(H-padB)+'" stroke="rgba(120,180,220,.08)"/>';
+			var major = (dt.getHours()===0);
+			ticks+='<line x1="'+gx.toFixed(1)+'" y1="'+padT+'" x2="'+gx.toFixed(1)+'" y2="'+(H-padB)+'" stroke="rgba(245,239,226,'+(major?'.30':'.16')+')"'+(major?' stroke-width="1.5"':'')+'/>';
 			ticks+='<text class="axis" x="'+gx.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+lab+'</text>';
 		}
 		// now line
 		var nowX=X(Date.now());
 		var nowLine = (Date.now()>=minX&&Date.now()<=maxX)
-			? '<line x1="'+nowX.toFixed(1)+'" y1="'+padT+'" x2="'+nowX.toFixed(1)+'" y2="'+(H-padB)+'" stroke="#57a6d6" stroke-width="1.5" stroke-dasharray="4 4"/>'
+			? '<line x1="'+nowX.toFixed(1)+'" y1="'+padT+'" x2="'+nowX.toFixed(1)+'" y2="'+(H-padB)+'" stroke="#57a6d6" stroke-width="3" stroke-dasharray="6 4"/>'
 			  + '<circle cx="'+nowX.toFixed(1)+'" cy="'+Y(interp(tideSeries,new Date()).v).toFixed(1)+'" r="4.5" fill="#57a6d6"/>' : '';
 		svg.innerHTML =
 			'<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">'
