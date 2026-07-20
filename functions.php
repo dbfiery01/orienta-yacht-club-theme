@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.88' );
+define( 'OYC_VERSION', '1.7.89' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -166,11 +166,13 @@ require_once get_template_directory() . '/inc/video-gallery.php';
  */
 require_once get_template_directory() . '/inc/seo.php';
 
-/**
- * Baseline security response headers (clickjacking, MIME-sniff, referrer,
- * permissions). HTTPS/HSTS enforcement lives at the server level, not here.
+/*
+ * Security response headers are intentionally NOT set here. PHP-set headers do
+ * not survive the page cache (WP-Optimize serves stored HTML without running
+ * PHP), so X-Frame-Options / X-Content-Type-Options / Referrer-Policy /
+ * Permissions-Policy live in the root .htaccess instead, alongside the
+ * readme.html + license.txt deny rules. HTTPS redirect + HSTS: server/plugin.
  */
-require_once get_template_directory() . '/inc/security-headers.php';
 
 /**
  * [oyc_harbor_mini] — compact live harbor-conditions widget linking to /weather/.
