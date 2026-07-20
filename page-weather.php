@@ -18,6 +18,31 @@
  */
 
 nocache_headers();
+
+// Site menu for the slim nav bar — real primary menu when assigned, else the
+// same core links header.php falls back to.
+$oyc_weather_menu = '';
+if ( has_nav_menu( 'primary' ) ) {
+	$oyc_weather_menu = wp_nav_menu( array(
+		'theme_location' => 'primary',
+		'container'      => false,
+		'items_wrap'     => '<ul class="sitebar-menu">%3$s</ul>',
+		'depth'          => 1,
+		'echo'           => false,
+		'fallback_cb'    => '__return_empty_string',
+	) );
+}
+if ( ! $oyc_weather_menu ) {
+	$oyc_weather_menu = '<ul class="sitebar-menu">'
+		. '<li><a href="' . esc_url( home_url( '/' ) ) . '">Home</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/#about' ) ) . '">About</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/#membership' ) ) . '">Membership</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/#sailing' ) ) . '">Boating</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/#visitors' ) ) . '">Visitors</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/calendar/' ) ) . '">Calendar</a></li>'
+		. '<li><a href="' . esc_url( home_url( '/contact/' ) ) . '">Contact</a></li>'
+		. '</ul>';
+}
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -44,6 +69,19 @@ nocache_headers();
 	}
 	.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
 	.wrap{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:calc(100vh - 36px)}
+
+	/* ---- site menu bar ---- */
+	.sitebar{display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;
+		padding:9px 20px;border:1px solid var(--edge);border-radius:12px;background:var(--panel2)}
+	.sitebar-brand{color:var(--teal);font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+		font-size:13px;text-decoration:none;white-space:nowrap}
+	.sitebar-brand:hover{color:var(--ink)}
+	.sitebar-menu{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin-left:auto;padding:0}
+	.sitebar-menu li{margin:0}
+	.sitebar-menu a{color:var(--muted);text-decoration:none;font-size:13px;letter-spacing:.05em;
+		font-weight:600;transition:color .15s}
+	.sitebar-menu a:hover{color:var(--teal)}
+	@media (max-width:700px){ .sitebar{padding:9px 14px} .sitebar-menu{gap:4px 14px;margin-left:0} }
 
 	/* ---- top bar ---- */
 	.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;
@@ -165,6 +203,12 @@ nocache_headers();
 <body>
 
 <div class="wrap">
+	<!-- SITE MENU -->
+	<nav class="sitebar" aria-label="Site menu">
+		<a class="sitebar-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>">&#8962;&nbsp;OYC</a>
+		<?php echo $oyc_weather_menu; ?>
+	</nav>
+
 	<!-- TOP BAR -->
 	<div class="topbar">
 		<div class="brand">
