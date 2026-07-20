@@ -81,7 +81,22 @@ if ( ! $oyc_weather_menu ) {
 	.sitebar-menu a{color:var(--muted);text-decoration:none;font-size:13px;letter-spacing:.05em;
 		font-weight:600;transition:color .15s}
 	.sitebar-menu a:hover{color:var(--teal)}
-	@media (max-width:700px){ .sitebar{padding:9px 14px} .sitebar-menu{gap:4px 14px;margin-left:0} }
+	.sitebar-toggle{display:none;background:none;border:0;cursor:pointer;padding:8px;margin-left:auto}
+	.sitebar-bars{position:relative;display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}
+	.sitebar-bars::before,.sitebar-bars::after{content:"";position:absolute;left:0;width:20px;height:2px;
+		background:var(--ink);border-radius:2px;transition:transform .2s}
+	.sitebar-bars::before{top:-6px} .sitebar-bars::after{top:6px}
+	.sitebar.open .sitebar-bars{background:transparent}
+	.sitebar.open .sitebar-bars::before{transform:translateY(6px) rotate(45deg)}
+	.sitebar.open .sitebar-bars::after{transform:translateY(-6px) rotate(-45deg)}
+	@media (max-width:700px){
+		.sitebar{padding:9px 14px}
+		.sitebar-toggle{display:inline-flex}
+		.sitebar-menu{display:none;flex-direction:column;gap:2px;width:100%;margin:8px 0 0;
+			padding-top:8px;border-top:1px solid var(--edge)}
+		.sitebar.open .sitebar-menu{display:flex}
+		.sitebar-menu a{display:block;padding:9px 4px;font-size:15px}
+	}
 
 	/* ---- top bar ---- */
 	.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;
@@ -206,6 +221,7 @@ if ( ! $oyc_weather_menu ) {
 	<!-- SITE MENU -->
 	<nav class="sitebar" aria-label="Site menu">
 		<a class="sitebar-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>">&#8962;&nbsp;OYC</a>
+		<button class="sitebar-toggle" aria-expanded="false" aria-label="Menu"><span class="sitebar-bars" aria-hidden="true"></span></button>
 		<?php echo $oyc_weather_menu; ?>
 	</nav>
 
@@ -315,6 +331,17 @@ if ( ! $oyc_weather_menu ) {
 <script>
 (function(){
 	"use strict";
+
+	// ---------- SITE MENU (mobile hamburger) ----------
+	var sbNav = document.querySelector('.sitebar');
+	var sbBtn = document.querySelector('.sitebar-toggle');
+	if(sbNav && sbBtn){
+		sbBtn.addEventListener('click', function(){
+			var open = sbNav.classList.toggle('open');
+			sbBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+		});
+	}
+
 	// ===== EDITABLE CONFIG — verify against your Yodeck dashboard =====
 	var CFG = {
 		TIDE_STATION: '8518091',   // NOAA CO-OPS tide predictions (Mamaroneck, LI Sound)
