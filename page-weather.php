@@ -124,6 +124,18 @@ if ( ! $oyc_weather_menu ) {
 		display:flex;justify-content:space-between;align-items:center;gap:10px}
 	.card h2 .sta{color:var(--faint);font-size:10px;letter-spacing:.12em;font-weight:600}
 
+	/* card reorder controls */
+	.card h2{padding-right:58px}
+	.mover{position:absolute;top:11px;right:12px;display:flex;gap:4px;z-index:3}
+	.mv{background:rgba(245,239,226,.05);border:1px solid var(--edge);color:var(--faint);border-radius:6px;
+		width:24px;height:22px;font-size:10px;line-height:1;cursor:pointer;padding:0;
+		display:inline-flex;align-items:center;justify-content:center;transition:color .15s,background .15s}
+	.mv:hover{color:var(--teal);background:rgba(245,239,226,.12)}
+	.order-resetwrap{display:flex;justify-content:center;margin-top:-4px}
+	#orderReset{display:none;background:none;border:1px solid var(--edge);color:var(--faint);border-radius:999px;
+		padding:6px 16px;font-size:11px;letter-spacing:.06em;cursor:pointer;transition:color .15s,border-color .15s}
+	#orderReset:hover{color:var(--ink);border-color:var(--edge2)}
+
 	/* tide */
 	.tide-now{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
 	.tide-val{font-size:clamp(46px,6vw,74px);font-weight:800;line-height:.85;color:#fff}
@@ -240,22 +252,22 @@ if ( ! $oyc_weather_menu ) {
 
 	<div class="grid">
 		<!-- LEFT COLUMN -->
-		<div class="col">
-			<div class="card">
+		<div class="col" id="colA">
+			<div class="card" data-card="tide">
 				<h2>Current Tide Level <span class="sta" id="tideSta">STA. 8518091</span></h2>
 				<div class="tide-now"><span class="tide-val" id="tideVal">&mdash;</span><span class="tide-unit">ft MLLW</span></div>
 				<div class="trend" id="tideTrend"><span id="tideTrendAr">&mdash;</span> <span id="tideTrendTxt">&mdash;</span></div>
 				<div class="tide-cap">Predicted level, interpolated to the minute</div>
 			</div>
 
-			<div class="card">
+			<div class="card" data-card="next">
 				<h2>Next Tides</h2>
 				<div class="nt" id="nextTides">
 					<div class="nt-row"><span class="miss" style="grid-column:1/-1">Loading&hellip;</span></div>
 				</div>
 			</div>
 
-			<div class="card">
+			<div class="card" data-card="sunmoon">
 				<h2>Sun &amp; Moon</h2>
 				<div class="sm">
 					<div class="it"><span class="k">&#9728; Sunrise</span><span class="v" id="sunrise">&mdash;</span></div>
@@ -270,20 +282,20 @@ if ( ! $oyc_weather_menu ) {
 		</div>
 
 		<!-- CENTER COLUMN -->
-		<div class="col">
-			<div class="card graph-card">
+		<div class="col" id="colB">
+			<div class="card graph-card" data-card="graph">
 				<h2>48-Hour Tide Graph <span class="sta">NOAA Predictions</span></h2>
 				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
 			</div>
-			<div class="card">
+			<div class="card" data-card="forecast">
 				<h2>48-Hour Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 			</div>
 		</div>
 
 		<!-- RIGHT COLUMN -->
-		<div class="col">
-			<div class="card">
+		<div class="col" id="colC">
+			<div class="card" data-card="wind">
 				<h2>Wind <span class="sta" id="windSta">STA. 8516945</span></h2>
 				<div class="wind-body">
 					<div class="dial" id="windDial"></div>
@@ -296,7 +308,7 @@ if ( ! $oyc_weather_menu ) {
 					</div>
 				</div>
 			</div>
-			<div class="card">
+			<div class="card" data-card="waves">
 				<h2>Wave Conditions <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
 				<div class="wave-body">
 					<div class="wave-main"><span class="wave-val miss" id="waveHt">&mdash;</span><span class="wave-unit">seas</span></div>
@@ -308,7 +320,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="wave-cap" id="waveCap">Forecast seas, current period</div>
 			</div>
 
-			<div class="card" style="flex:1">
+			<div class="card" style="flex:1" data-card="cond">
 				<h2>Conditions</h2>
 				<div class="cond">
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
@@ -320,6 +332,8 @@ if ( ! $oyc_weather_menu ) {
 			</div>
 		</div>
 	</div>
+
+	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
 
 	<!-- ALERT -->
 	<div class="alertbar hidden" id="alertBar">
@@ -341,6 +355,62 @@ if ( ! $oyc_weather_menu ) {
 			sbBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
 		});
 	}
+
+	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
+	// One flat order of the 8 cards; desktop fills the columns 3/2/3 with it
+	// (middle column = the wide "featured" slots), mobile shows it as a list.
+	var ORDER_KEY = 'oyc_board_order_v1';
+	var DEFAULT_ORDER = ['tide','next','sunmoon','graph','forecast','wind','waves','cond'];
+	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
+	var ORDER_SPLIT = [3,2,3];
+	function getOrder(){
+		try{
+			var o = JSON.parse(localStorage.getItem(ORDER_KEY));
+			if(Array.isArray(o) && o.slice().sort().join() === DEFAULT_ORDER.slice().sort().join()){ return o; }
+		}catch(e){}
+		return DEFAULT_ORDER.slice();
+	}
+	function applyOrder(){
+		var o = getOrder(), i = 0, c, k, el;
+		for(c=0;c<3;c++){
+			for(k=0;k<ORDER_SPLIT[c];k++){
+				el = document.querySelector('[data-card="'+o[i++]+'"]');
+				if(el && ORDER_COLS[c]){ ORDER_COLS[c].appendChild(el); }
+			}
+		}
+		var rst = document.getElementById('orderReset');
+		if(rst){ rst.style.display = (o.join() === DEFAULT_ORDER.join()) ? 'none' : 'inline-flex'; }
+	}
+	// inject the ▲▼ controls into every card
+	(function(){
+		var cards = document.querySelectorAll('[data-card]'), i;
+		for(i=0;i<cards.length;i++){
+			var m = document.createElement('span');
+			m.className = 'mover';
+			m.innerHTML = '<button type="button" class="mv" data-mv="-1" aria-label="Move card earlier" title="Move up">&#9650;</button>'
+				+ '<button type="button" class="mv" data-mv="1" aria-label="Move card later" title="Move down">&#9660;</button>';
+			cards[i].appendChild(m);
+		}
+	})();
+	document.addEventListener('click', function(e){
+		var b = e.target.closest ? e.target.closest('.mv') : null;
+		if(b){
+			var card = b.closest('[data-card]');
+			var o = getOrder();
+			var i = o.indexOf(card.getAttribute('data-card'));
+			var j = i + parseInt(b.getAttribute('data-mv'), 10);
+			if(i < 0 || j < 0 || j >= o.length) return;
+			var t = o[i]; o[i] = o[j]; o[j] = t;
+			try{ localStorage.setItem(ORDER_KEY, JSON.stringify(o)); }catch(err){}
+			applyOrder();
+			return;
+		}
+		if(e.target.closest && e.target.closest('#orderReset')){
+			try{ localStorage.removeItem(ORDER_KEY); }catch(err){}
+			applyOrder();
+		}
+	});
+	applyOrder();
 
 	// ===== EDITABLE CONFIG — verify against your Yodeck dashboard =====
 	var CFG = {
