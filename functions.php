@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OYC_VERSION', '1.7.86' );
+define( 'OYC_VERSION', '1.7.87' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
@@ -165,6 +165,12 @@ require_once get_template_directory() . '/inc/video-gallery.php';
  * and the /fishing/ → /boating/ redirect.
  */
 require_once get_template_directory() . '/inc/seo.php';
+
+/**
+ * Baseline security response headers (clickjacking, MIME-sniff, referrer,
+ * permissions). HTTPS/HSTS enforcement lives at the server level, not here.
+ */
+require_once get_template_directory() . '/inc/security-headers.php';
 
 /**
  * [oyc_harbor_mini] — compact live harbor-conditions widget linking to /weather/.
