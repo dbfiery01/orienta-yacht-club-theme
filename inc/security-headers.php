@@ -33,10 +33,10 @@ add_action( 'send_headers', function () {
 		}
 	};
 
-	// SAMEORIGIN still allows the club's own pages to embed each other (and
-	// digital-signage players that load the URL directly), while blocking
-	// third-party framing / clickjacking.
-	$add( 'X-Frame-Options', 'SAMEORIGIN' );
+	// NOTE: X-Frame-Options (clickjacking) is intentionally handled by AIOS
+	// (Miscellaneous → Frames), not here — this module only covers the headers
+	// AIOS/NinjaFirewall have no setting for. The only-if-absent guard means it
+	// would defer to AIOS anyway.
 	$add( 'X-Content-Type-Options', 'nosniff' );
 	$add( 'Referrer-Policy', 'strict-origin-when-cross-origin' );
 	// Disable browser features the site doesn't use (kept minimal so media
