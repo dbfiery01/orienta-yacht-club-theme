@@ -168,9 +168,16 @@ if ( ! $oyc_weather_menu ) {
 
 	/* graph */
 	.graph-card{display:flex;flex-direction:column}
-	.graph-wrap{flex:1;min-height:150px;margin-top:8px;position:relative}
-	/* center column: the two featured cards split the height evenly */
-	#colB > .card{flex:1 1 0;min-height:0}
+	.graph-wrap{flex:1;min-height:190px;margin-top:8px;position:relative}
+	/* Center column: the two featured cards split the height evenly — but only
+	   in the 3-column layout, where the grid row gives the column a definite
+	   height. Once the grid stacks (<=1100px) the column is auto-height, so
+	   flex-basis:0 + min-height:0 would collapse both cards to nothing and
+	   .card{overflow:hidden} would clip the content away. */
+	@media (min-width:1101px){
+		#colB > .card{flex:1 1 0;min-height:0}
+		#colB > .graph-card .graph-wrap{min-height:150px}
+	}
 	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
 	#tideOutage .to-t{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:14px}
 	#tideOutage .to-s{color:var(--faint);font-size:12.5px;max-width:440px;line-height:1.5}
