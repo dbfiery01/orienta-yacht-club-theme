@@ -167,8 +167,10 @@ if ( ! $oyc_weather_menu ) {
 	.moon .shadow{position:absolute;inset:0;background:#0a1220;border-radius:50%}
 
 	/* graph */
-	.graph-card{flex:1;display:flex;flex-direction:column}
-	.graph-wrap{flex:1;min-height:190px;margin-top:8px;position:relative}
+	.graph-card{display:flex;flex-direction:column}
+	.graph-wrap{flex:1;min-height:150px;margin-top:8px;position:relative}
+	/* center column: the two featured cards split the height evenly */
+	#colB > .card{flex:1 1 0;min-height:0}
 	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
 	#tideOutage .to-t{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:14px}
 	#tideOutage .to-s{color:var(--faint);font-size:12.5px;max-width:440px;line-height:1.5}
@@ -283,13 +285,13 @@ if ( ! $oyc_weather_menu ) {
 
 		<!-- CENTER COLUMN -->
 		<div class="col" id="colB">
-			<div class="card graph-card" data-card="graph">
-				<h2>48-Hour Tide Graph <span class="sta">NOAA Predictions</span></h2>
-				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
-			</div>
 			<div class="card" data-card="forecast">
 				<h2>48-Hour Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
+			</div>
+			<div class="card graph-card" data-card="graph">
+				<h2>48-Hour Tide Graph <span class="sta">NOAA Predictions</span></h2>
+				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
 			</div>
 		</div>
 
@@ -359,8 +361,8 @@ if ( ! $oyc_weather_menu ) {
 	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
 	// One flat order of the 8 cards; desktop fills the columns 3/2/3 with it
 	// (middle column = the wide "featured" slots), mobile shows it as a list.
-	var ORDER_KEY = 'oyc_board_order_v1';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','graph','forecast','wind','waves','cond'];
+	var ORDER_KEY = 'oyc_board_order_v2';
+	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
 	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
 	var ORDER_SPLIT = [3,2,3];
 	function getOrder(){
