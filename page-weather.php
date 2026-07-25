@@ -169,13 +169,13 @@ if ( ! $oyc_weather_menu ) {
 	/* graph */
 	.graph-card{display:flex;flex-direction:column}
 	.graph-wrap{flex:1;min-height:190px;margin-top:8px;position:relative}
-	/* Center column: the two featured cards split the height evenly — but only
-	   in the 3-column layout, where the grid row gives the column a definite
-	   height. Once the grid stacks (<=1100px) the column is auto-height, so
-	   flex-basis:0 + min-height:0 would collapse both cards to nothing and
-	   .card{overflow:hidden} would clip the content away. */
+	/* Desktop only: make each column's LAST card grow so all three columns fill
+	   to the same height — their tops AND bottoms line up. Guarded to the
+	   3-column layout because once the grid stacks (<=1100px) the columns are
+	   auto-height, and growing + min-height:0 with .card{overflow:hidden} would
+	   collapse/clip the content away. */
 	@media (min-width:1101px){
-		#colB > .card{flex:1 1 0;min-height:0}
+		.grid .col > .card:last-child{flex:1 1 auto;min-height:0}
 		#colB > .graph-card .graph-wrap{min-height:150px}
 	}
 	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
@@ -329,7 +329,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="wave-cap" id="waveCap">Forecast seas, current period</div>
 			</div>
 
-			<div class="card" style="flex:1" data-card="cond">
+			<div class="card" data-card="cond">
 				<h2>Conditions</h2>
 				<div class="cond">
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
