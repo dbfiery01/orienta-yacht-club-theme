@@ -266,7 +266,7 @@ if ( ! $oyc_weather_menu ) {
 		<!-- LEFT COLUMN -->
 		<div class="col" id="colA">
 			<div class="card" data-card="tide">
-				<h2>Current Tide Level <span class="sta" id="tideSta">STA. 8518091</span></h2>
+				<h2>Current Tide Level <span class="sta" id="tideSta">NOAA</span></h2>
 				<div class="tide-now"><span class="tide-val" id="tideVal">&mdash;</span><span class="tide-unit">ft MLLW</span></div>
 				<div class="trend" id="tideTrend"><span id="tideTrendAr">&mdash;</span> <span id="tideTrendTxt">&mdash;</span></div>
 				<div class="tide-cap">Predicted level, interpolated to the minute</div>
@@ -433,7 +433,7 @@ if ( ! $oyc_weather_menu ) {
 		LAT: 40.939, LON: -73.734, // Mamaroneck (sun/moon + land+marine alerts)
 		EXRX_LAT: 40.8833, EXRX_LON: -73.7283 // NDBC 44022 / Execution Rocks (Open-Meteo wind + wave)
 	};
-	document.getElementById('tideSta').textContent = 'STA. ' + CFG.TIDE_STATION;
+	document.getElementById('tideSta').textContent = 'NOAA';
 	document.getElementById('windSta').textContent = 'STA. ' + CFG.MET_STATION;
 	document.getElementById('fcZone').textContent  = 'NWS Zone ' + CFG.NWS_ZONE;
 
@@ -765,7 +765,7 @@ if ( ! $oyc_weather_menu ) {
 				var deg = (c.wind_direction_10m != null) ? c.wind_direction_10m : null;
 				$('windDir').textContent = (deg != null) ? dirCardinal(deg) : '—';
 				$('windGust').textContent = (c.wind_gusts_10m != null) ? (Math.round(c.wind_gusts_10m)+' kt') : '—';
-				$('windSta').textContent = 'Execution Rocks · forecast';
+				$('windSta').textContent = 'Execution Rocks · current';
 				drawDial(deg); markUpdated(true);
 			}).catch(function(){ loadWindNoaa(); });
 	}
