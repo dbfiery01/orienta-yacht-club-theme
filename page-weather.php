@@ -176,6 +176,9 @@ if ( ! $oyc_weather_menu ) {
 	   collapse/clip the content away. */
 	@media (min-width:1101px){
 		.grid .col > .card:last-child{flex:1 1 auto;min-height:0}
+		/* Center column: forecast + tide graph split the column evenly, so the two
+		   featured cards are the same height (basis:0 shares space equally). */
+		#colB > .card{flex:1 1 0;min-height:0}
 		#colB > .graph-card .graph-wrap{min-height:150px}
 	}
 	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
