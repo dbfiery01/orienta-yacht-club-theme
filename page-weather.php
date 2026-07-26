@@ -498,7 +498,7 @@ if ( ! $oyc_weather_menu ) {
 		var cap = document.querySelector('.tide-cap');
 		if(!cap) return;
 		cap.textContent = (mode === 'cached')  ? 'Predicted level — cached (live NOAA feed offline)'
-		               : (mode === 'bundled') ? 'Predicted level — bundled predictions (live NOAA feed offline)'
+		               : (mode === 'bundled') ? 'Predicted level — harmonic tide forecast, interpolated to the minute'
 		               : (mode === 'down')    ? 'NOAA tide service unavailable — retrying automatically'
 		               : 'Predicted level, interpolated to the minute';
 	}
@@ -569,16 +569,35 @@ if ( ! $oyc_weather_menu ) {
 			.then(function(j){ if(j && j.predictions && j.predictions.length) saveTideCache('hilo', j.predictions); }).catch(function(){});
 	}
 	function loadTides(){
-		var start=new Date(); start.setHours(0,0,0,0);
-		// 48h smooth series for the graph — live, else cache, else bundled.
-		coops('predictions', { begin_date:ymdhm(start), range:48, datum:'MLLW', interval:'30' })
+		var dayStart=new Date(); dayStart.setHours(0,0,0,0);
+		var end = dayStart.getTime() + 48*3600*1000;
+		// LEAD with the club's manually-forecasted tide bundle (deterministic
+		// harmonic predictions synthesized from NOAA). It always covers the current
+		// dates, so the tide card + graph render instantly and stay correct
+		// regardless of NOAA uptime. Live NOAA is kept as a SECONDARY source only:
+		// refreshTideCache() pulls it in the background to keep the deep fallback
+		// cache warm, and loadTidesLive() is the fallback path if the bundle itself
+		// is ever unavailable. (The bundle file is not modified — only read first.)
+		bundledTides().then(function(ev){
+			var series = eventsToSeries(ev, dayStart.getTime(), end);
+			if(series.length < 2) throw new Error('bundle series too short');
+			tideSeries = series;
+			drawGraph(); updateCurrentTide(); renderNextTides(ev);
+			setTideCached('bundled'); markUpdated(true);
+		}).catch(function(){
+			loadTidesLive(dayStart, end);
+		});
+	}
+	// Fallback used only when the bundle can't be loaded: the original
+	// live-NOAA-first chain (live 30-min series → wide cache → outage notice, and
+	// live hi/lo → cache) for both the graph series and the "Next Tides" list.
+	function loadTidesLive(dayStart, end){
+		coops('predictions', { begin_date:ymdhm(dayStart), range:48, datum:'MLLW', interval:'30' })
 			.then(function(j){
 				if(!j || !j.predictions || !j.predictions.length) throw new Error('no predictions');
 				tideSeries = parsePreds(j.predictions);
 				drawGraph(); updateCurrentTide(); setTideCached('live'); markUpdated(true);
 			}).catch(function(){
-				var dayStart=new Date(); dayStart.setHours(0,0,0,0);
-				var end = dayStart.getTime() + 48*3600*1000;
 				var c = readTideCache('series');
 				if(c){
 					var win = parsePreds(c).filter(function(p){ return p.t.getTime()>=dayStart.getTime() && p.t.getTime()<=end; });
@@ -586,22 +605,15 @@ if ( ! $oyc_weather_menu ) {
 					drawGraph(); updateCurrentTide(); setTideCached('cached');
 					return;
 				}
-				bundledTides().then(function(ev){
-					var series = eventsToSeries(ev, dayStart.getTime(), end);
-					if(series.length < 2){ showTideOutage(); return; }
-					tideSeries = series;
-					drawGraph(); updateCurrentTide(); setTideCached('bundled');
-				}).catch(function(){ showTideOutage(); });
+				showTideOutage();
 			});
-		// high/low list for "next tides" — live, else cache, else bundled.
 		coops('predictions', { begin_date:ymdhm(new Date()), range:48, datum:'MLLW', interval:'hilo' })
 			.then(function(j){
 				if(!j || !j.predictions || !j.predictions.length) throw new Error('no hilo');
 				renderNextTides(j.predictions);
 			}).catch(function(){
 				var c = readTideCache('hilo');
-				if(c){ renderNextTides(c); return; }
-				bundledTides().then(function(ev){ renderNextTides(ev); }).catch(function(){});
+				if(c){ renderNextTides(c); }
 			});
 	}
 	function interp(series, when){
