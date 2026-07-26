@@ -300,7 +300,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 			</div>
 			<div class="card graph-card" data-card="graph">
-				<h2>48-Hour Tide Graph <span class="sta">NOAA Predictions</span></h2>
+				<h2>48-Hour Tide Graph <span class="sta">NOAA Forecast</span></h2>
 				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
 			</div>
 		</div>
