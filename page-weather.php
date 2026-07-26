@@ -266,7 +266,7 @@ if ( ! $oyc_weather_menu ) {
 		<!-- LEFT COLUMN -->
 		<div class="col" id="colA">
 			<div class="card" data-card="tide">
-				<h2>Current Tide Level <span class="sta" id="tideSta">NOAA</span></h2>
+				<h2>Tide Forecast <span class="sta" id="tideSta">NOAA</span></h2>
 				<div class="tide-now"><span class="tide-val" id="tideVal">&mdash;</span><span class="tide-unit">ft MLLW</span></div>
 				<div class="trend" id="tideTrend"><span id="tideTrendAr">&mdash;</span> <span id="tideTrendTxt">&mdash;</span></div>
 				<div class="tide-cap">Predicted level, interpolated to the minute</div>
@@ -300,7 +300,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 			</div>
 			<div class="card graph-card" data-card="graph">
-				<h2>48-Hour Tide Graph <span class="sta">NOAA Forecast</span></h2>
+				<h2>48-Hour Tide Forecast <span class="sta">NOAA Forecast</span></h2>
 				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
 			</div>
 		</div>
