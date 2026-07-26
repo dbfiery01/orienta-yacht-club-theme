@@ -430,7 +430,8 @@ if ( ! $oyc_weather_menu ) {
 		MET_STATION:  '8516945',   // NOAA CO-OPS wind/met (Kings Point, NY — nearest reporting)
 		NWS_ZONE:     'ANZ335',    // NWS marine forecast zone (LI Sound West)
 		CWF_OFFICE:   'OKX',       // NWS office issuing the Coastal Waters Forecast for ANZ3xx
-		LAT: 40.939, LON: -73.734  // Mamaroneck (sun/moon + land+marine alerts)
+		LAT: 40.939, LON: -73.734, // Mamaroneck (sun/moon + land+marine alerts)
+		EXRX_LAT: 40.8833, EXRX_LON: -73.7283 // NDBC 44022 / Execution Rocks (Open-Meteo wind + wave)
 	};
 	document.getElementById('tideSta').textContent = 'STA. ' + CFG.TIDE_STATION;
 	document.getElementById('windSta').textContent = 'STA. ' + CFG.MET_STATION;
@@ -752,7 +753,23 @@ if ( ! $oyc_weather_menu ) {
 			drawDial(deg); markUpdated(true);
 		}).catch(function(){});
 	}
+	// PRIMARY wind: Open-Meteo model at the Execution Rocks (44022) position — fills
+	// in while the UConn buoy is dark. Fallback chain: Kings Point CO-OPS → NWS ASOS.
 	function loadWind(){
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn')
+			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
+			.then(function(j){
+				var c = j && j.current;
+				if(!c || c.wind_speed_10m == null) throw new Error('no om wind');
+				$('windSpd').textContent = Math.round(c.wind_speed_10m);
+				var deg = (c.wind_direction_10m != null) ? c.wind_direction_10m : null;
+				$('windDir').textContent = (deg != null) ? dirCardinal(deg) : '—';
+				$('windGust').textContent = (c.wind_gusts_10m != null) ? (Math.round(c.wind_gusts_10m)+' kt') : '—';
+				$('windSta').textContent = 'Execution Rocks · forecast';
+				drawDial(deg); markUpdated(true);
+			}).catch(function(){ loadWindNoaa(); });
+	}
+	function loadWindNoaa(){
 		coops('wind', { date:'latest' }).then(function(j){
 			var d = j && j.data && j.data[0];
 			if(!d){ windFromObs(); return; }
@@ -866,10 +883,33 @@ if ( ! $oyc_weather_menu ) {
 		}).catch(function(){});
 	}
 
-	// Current-period wave conditions, derived from the same CWF text.
-	// "Seas" gives the significant wave height (always present); the optional
-	// "Wave Detail: <DIR> <ft> at <sec> seconds" line adds period + direction.
+	// PRIMARY wave source: Open-Meteo marine model at the Execution Rocks (44022)
+	// position — fills in while the UConn buoy is dark. Sets omWavesOk on success so
+	// the CWF-text fallback below won't overwrite it.
+	var omWavesOk = false;
+	function loadWavesOM(){
+		fetch('https://marine-api.open-meteo.com/v1/marine?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&current=wave_height,wave_direction,wave_period&length_unit=imperial')
+			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
+			.then(function(j){
+				var c = j && j.current;
+				if(!c || c.wave_height == null) throw new Error('no om waves');
+				omWavesOk = true;
+				var ht = c.wave_height;
+				$('waveHt').textContent = (ht < 1) ? '≤1 ft' : (Math.round(ht*10)/10)+' ft';
+				$('waveHt').classList.remove('miss');
+				$('wavePer').textContent = (c.wave_period != null) ? (Math.round(c.wave_period)+' s') : '—';
+				$('waveDir').textContent = (c.wave_direction != null) ? dirCardinal(c.wave_direction) : '—';
+				$('waveCap').textContent = 'Forecast seas — Execution Rocks';
+				markUpdated(true);
+			}).catch(function(){});   // leave the CWF-derived fallback to fill in
+	}
+
+	// FALLBACK wave source, derived from the same CWF text. "Seas" gives the
+	// significant wave height (always present); the optional "Wave Detail: <DIR>
+	// <ft> at <sec> seconds" line adds period + direction. Skipped once Open-Meteo
+	// has populated the card.
 	function renderWaves(periods){
+		if(omWavesOk) return;
 		if(!periods || !periods.length) return;
 		var cur = periods[0], body = cur.body || '';
 		var seas = body.match(/Seas\s+([^.,;]+)/i);
@@ -958,12 +998,13 @@ if ( ! $oyc_weather_menu ) {
 
 	// ---------- INIT + refresh ----------
 	refreshTideCache();                                // seed the 30-day fallback cache
-	loadTides(); loadWind(); loadConditions(); loadForecast(); loadAlerts(); loadSunMoon();
+	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadAlerts(); loadSunMoon();
 	setInterval(updateCurrentTide, 60*1000);          // re-interpolate current level each minute
 	setInterval(function(){ drawGraph(); }, 5*60*1000);
 	setInterval(loadTides, 30*60*1000);
 	setInterval(refreshTideCache, 6*60*60*1000);       // keep the fallback cache fresh
 	setInterval(loadWind, 5*60*1000);
+	setInterval(loadWavesOM, 15*60*1000);
 	setInterval(loadConditions, 10*60*1000);
 	setInterval(loadForecast, 30*60*1000);
 	setInterval(loadAlerts, 5*60*1000);
