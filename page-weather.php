@@ -194,17 +194,22 @@ if ( ! $oyc_weather_menu ) {
 	.fc-when{color:var(--teal);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;padding-top:2px}
 	.fc-txt{color:#cfe3f2;font-size:13.5px;line-height:1.5}
 
-	/* 48-hour outlook (hourly temp curve + precip %) */
-	.px-body{display:flex;flex-direction:column;gap:3px;margin-top:10px;flex:1;min-height:0}
-	.px-sum{color:#cfe3f2;font-size:13px;margin-bottom:1px}
-	.px-icons{display:flex}
-	.px-icons>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
-	.px-pop{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
-	.px-graph{flex:1;position:relative;min-height:70px}
-	.px-graph svg{width:100%;height:100%;display:block}
-	.px-times{display:flex}
-	.px-times>div{flex:1;text-align:center;font-size:11px;color:var(--muted);line-height:1.15;font-variant-numeric:tabular-nums}
-	.px-times .d{color:var(--teal);font-weight:800;letter-spacing:.04em}
+	/* 48-hour outlook — labelled rows: Sky (icons) / Rain (chance %) / Temp / time */
+	.precip-card{display:flex;flex-direction:column}
+	.px-body{display:flex;flex-direction:column;margin-top:10px;flex:1;min-height:0;justify-content:space-between}
+	.px-sum{color:#cfe3f2;font-size:13px}
+	.px-row{display:flex;align-items:center}
+	.px-lbl{flex:0 0 42px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;white-space:nowrap}
+	.px-cells{flex:1;display:flex;min-width:0}
+	.px-cells>div{flex:1;text-align:center;line-height:1.15}
+	.px-row--icons .px-cells>div{display:flex;justify-content:center;align-items:center}
+	.px-row--rain .px-cells>div,.px-row--tval .px-cells>div,.px-row--wdir .px-cells>div,.px-row--wspd .px-cells>div{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+	.px-row--tval .px-cells>div{color:#ef9a5a}
+	.px-row--wdir .px-cells>div{display:flex;justify-content:center;align-items:center;color:#9fbecb}
+	.px-row--wspd .px-cells>div{color:#e6c374}
+	.px-row--rain,.px-row--wdir{background:rgba(255,255,255,.035);border-radius:5px}
+	.px-row--time .px-cells>div{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+	.px-row--time .d{color:var(--teal);font-weight:800;letter-spacing:.04em}
 
 	/* wind */
 	.wind-body{display:flex;align-items:center;gap:16px;margin-top:12px}
@@ -312,7 +317,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 			</div>
 			<div class="card precip-card" data-card="precip">
-				<h2>48-Hour Outlook <span class="sta">Open-Meteo</span></h2>
+				<h2>48-Hour Outlook <span class="sta">Execution Rock</span></h2>
 				<div class="px-body" id="precipBody"><div class="fc-row"><span class="miss">Loading outlook&hellip;</span></div></div>
 			</div>
 			<div class="card graph-card" data-card="graph">
@@ -781,7 +786,7 @@ if ( ! $oyc_weather_menu ) {
 				var deg = (c.wind_direction_10m != null) ? c.wind_direction_10m : null;
 				$('windDir').textContent = (deg != null) ? dirCardinal(deg) : '—';
 				$('windGust').textContent = (c.wind_gusts_10m != null) ? (Math.round(c.wind_gusts_10m)+' kt') : '—';
-				$('windSta').textContent = 'Execution Rocks · current';
+				$('windSta').textContent = 'Execution Rock · current';
 				drawDial(deg); markUpdated(true);
 			}).catch(function(){ loadWindNoaa(); });
 	}
@@ -904,7 +909,9 @@ if ( ! $oyc_weather_menu ) {
 	// chance under each hour, a temperature curve with labels, and a time axis.
 	function loadPrecip(){
 		var body = $('precipBody'); if(!body) return;
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.LAT+'&longitude='+CFG.LON+'&hourly=temperature_2m,precipitation_probability,weather_code&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=3')
+		// Same Execution Rock position + live "current" block as the Wind card, so
+		// the outlook's "Now" wind matches the dial instead of the sheltered harbor.
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
 				var H = j && j.hourly; if(!H || !H.time) throw new Error('no hourly');
@@ -914,9 +921,12 @@ if ( ! $oyc_weather_menu ) {
 				var S = [];
 				for(var k=0;k<16;k++){ var i=s+k*3; if(i>=allT.length) break;
 					var pm=0; for(var q=0;q<3;q++){ var ii=i+q; if(ii<allT.length){ var pv=H.precipitation_probability[ii]; if(pv!=null && pv>pm) pm=pv; } }
-					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm });
+					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm, wspd:H.wind_speed_10m[i], wdir:H.wind_direction_10m[i] });
 				}
 				if(S.length < 4) throw new Error('short');
+				// Override the "Now" column's wind with the live current reading so it
+				// matches the Wind card exactly (same coords, same value).
+				if(j.current){ if(j.current.wind_speed_10m!=null) S[0].wspd=j.current.wind_speed_10m; if(j.current.wind_direction_10m!=null) S[0].wdir=j.current.wind_direction_10m; }
 				renderPrecip(S); markUpdated(true);
 			}).catch(function(){ if(/Loading/.test(body.textContent)) body.innerHTML = '<div class="fc-row"><span class="miss">Outlook unavailable</span></div>'; });
 	}
@@ -938,32 +948,20 @@ if ( ! $oyc_weather_menu ) {
 		return '<svg viewBox="0 0 24 24" width="22" height="22" style="overflow:visible">'+g+'</svg>';
 	}
 	function renderPrecip(S){
-		var n=S.length, Wd=1000, Ht=200, padT=24, padB=10;
 		var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 		function hourLbl(d){ var h=d.getHours(), ap=h>=12?'p':'a'; h=h%12||12; return h+ap; }
-		var temps=S.map(function(x){ return x.temp; });
-		var tmin=Math.min.apply(null,temps), tmax=Math.max.apply(null,temps);
-		var pd=(tmax-tmin)*0.22||2; tmin-=pd; tmax+=pd;
-		function X(j){ return (j+0.5)/n*Wd; }
-		function Y(t){ return padT+(1-(t-tmin)/(tmax-tmin))*(Ht-padT-padB); }
-		var d='', dots='', labels='', divs='';
-		for(var j=0;j<n;j++){
-			var x=X(j), y=Y(S[j].temp);
-			d+=(j?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';
-			dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#e6a441"/>';
-			labels+='<text x="'+x.toFixed(1)+'" y="'+(y-8).toFixed(1)+'" text-anchor="middle" fill="#f5efe2" font-size="13" font-weight="700" font-family="ui-monospace,Menlo,monospace">'+Math.round(S[j].temp)+'°</text>';
-			if(j>0 && S[j].t.getDate()!==S[j-1].t.getDate()){ var dx=(j/n*Wd); divs+='<line x1="'+dx.toFixed(1)+'" y1="'+(padT-6)+'" x2="'+dx.toFixed(1)+'" y2="'+(Ht-2)+'" stroke="rgba(245,239,226,.20)" stroke-width="1.3" stroke-dasharray="3 3"/>'; }
-		}
-		var area=d+'L'+X(n-1).toFixed(1)+' '+(Ht-1)+' L'+X(0).toFixed(1)+' '+(Ht-1)+' Z';
-		var svg='<svg viewBox="0 0 '+Wd+' '+Ht+'" preserveAspectRatio="none">'
-			+'<defs><linearGradient id="ptg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6a441" stop-opacity=".28"/><stop offset="1" stop-color="#e6a441" stop-opacity="0"/></linearGradient></defs>'
-			+divs+'<path d="'+area+'" fill="url(#ptg)"/>'
-			+'<path d="'+d+'" fill="none" stroke="#e6c374" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'
-			+dots+labels+'</svg>';
-		var icons='', times='';
+		// Arrow points the way the wind blows (downwind): rotate a north-pointing
+		// arrow by wind-from + 180°. title keeps the cardinal for hover/readers.
+		function windArrow(deg){ var rot=((deg+180)%360).toFixed(0); return '<svg viewBox="0 0 24 24" width="15" height="15" style="display:block;transform:rotate('+rot+'deg)"><path d="M12 4.5 L12 19.5 M7 10 L12 4.5 L17 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+		var n=S.length, temps=S.map(function(x){ return x.temp; });
+		var icons='', precips='', tvals='', wdirs='', wspds='', times='';
 		for(var m=0;m<n;m++){
-			var pv=S[m].precip, pcol = pv>=40?'#57a6d6':(pv>=15?'#8fb4cc':'#5f7180');
-			icons+='<div>'+wxIcon(S[m].code)+'<div class="px-pop" style="color:'+pcol+'">'+pv+'%</div></div>';
+			var pv=S[m].precip, pcol = pv>=40?'#57a6d6':(pv>=15?'#8fb4cc':'#6b8ba8');
+			icons+='<div>'+wxIcon(S[m].code)+'</div>';
+			precips+='<div style="color:'+pcol+'">'+pv+'%</div>';
+			tvals+='<div>'+Math.round(S[m].temp)+'°</div>';
+			wdirs+=(S[m].wdir!=null)?('<div title="'+dirCardinal(S[m].wdir)+'">'+windArrow(S[m].wdir)+'</div>'):'<div>—</div>';
+			wspds+='<div>'+((S[m].wspd!=null)?Math.round(S[m].wspd):'—')+'</div>';
 			var isNew=(m>0)&&(S[m].t.getDate()!==S[m-1].t.getDate());
 			times+='<div>'+(m===0?'Now':hourLbl(S[m].t))+(isNew?'<br><span class="d">'+DOW[S[m].t.getDay()]+'</span>':'')+'</div>';
 		}
@@ -973,9 +971,12 @@ if ( ! $oyc_weather_menu ) {
 		        : maxP>=20 ? ('Mostly dry, slight shower chance; highs near '+maxT+'°')
 		        : ('Dry through the period — highs near '+maxT+'°, lows near '+minT+'°');
 		$('precipBody').innerHTML = '<div class="px-sum">'+sum+'</div>'
-			+ '<div class="px-icons">'+icons+'</div>'
-			+ '<div class="px-graph">'+svg+'</div>'
-			+ '<div class="px-times">'+times+'</div>';
+			+ '<div class="px-row px-row--icons"><span class="px-lbl">Sky</span><div class="px-cells">'+icons+'</div></div>'
+			+ '<div class="px-row px-row--rain"><span class="px-lbl">Rain</span><div class="px-cells">'+precips+'</div></div>'
+			+ '<div class="px-row px-row--tval"><span class="px-lbl">Temp</span><div class="px-cells">'+tvals+'</div></div>'
+			+ '<div class="px-row px-row--wdir"><span class="px-lbl">Wind</span><div class="px-cells">'+wdirs+'</div></div>'
+			+ '<div class="px-row px-row--wspd"><span class="px-lbl">Kt</span><div class="px-cells">'+wspds+'</div></div>'
+			+ '<div class="px-row px-row--time"><span class="px-lbl"></span><div class="px-cells">'+times+'</div></div>';
 	}
 
 	// PRIMARY wave source: Open-Meteo marine model at the Execution Rocks (44022)
@@ -994,7 +995,7 @@ if ( ! $oyc_weather_menu ) {
 				$('waveHt').classList.remove('miss');
 				$('wavePer').textContent = (c.wave_period != null) ? (Math.round(c.wave_period)+' s') : '—';
 				$('waveDir').textContent = (c.wave_direction != null) ? dirCardinal(c.wave_direction) : '—';
-				$('waveCap').textContent = 'Forecast seas — Execution Rocks';
+				$('waveCap').textContent = 'Forecast seas — Execution Rock';
 				markUpdated(true);
 			}).catch(function(){});   // leave the CWF-derived fallback to fill in
 	}

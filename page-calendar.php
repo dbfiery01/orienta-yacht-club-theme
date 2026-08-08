@@ -370,6 +370,7 @@ const now = new Date();
 if (now.getFullYear() === 2026) { currentMonth = now.getMonth(); }
 else { currentMonth = 4; } // May
 loadCalWeather().then(render);
+setInterval(function(){ loadCalWeather().then(render); }, 30 * 60 * 1000); // keep weather fresh
 oycLoadEvents().then(function(){ render(); });
 
 // List-view date picker: jump the list to any month/day.
