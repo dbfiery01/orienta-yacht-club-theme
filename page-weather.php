@@ -194,6 +194,18 @@ if ( ! $oyc_weather_menu ) {
 	.fc-when{color:var(--teal);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;padding-top:2px}
 	.fc-txt{color:#cfe3f2;font-size:13.5px;line-height:1.5}
 
+	/* 48-hour outlook (hourly temp curve + precip %) */
+	.px-body{display:flex;flex-direction:column;gap:3px;margin-top:10px;flex:1;min-height:0}
+	.px-sum{color:#cfe3f2;font-size:13px;margin-bottom:1px}
+	.px-icons{display:flex}
+	.px-icons>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
+	.px-pop{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+	.px-graph{flex:1;position:relative;min-height:70px}
+	.px-graph svg{width:100%;height:100%;display:block}
+	.px-times{display:flex}
+	.px-times>div{flex:1;text-align:center;font-size:11px;color:var(--muted);line-height:1.15;font-variant-numeric:tabular-nums}
+	.px-times .d{color:var(--teal);font-weight:800;letter-spacing:.04em}
+
 	/* wind */
 	.wind-body{display:flex;align-items:center;gap:16px;margin-top:12px}
 	.dial{width:120px;height:120px;flex:none;position:relative}
@@ -299,6 +311,10 @@ if ( ! $oyc_weather_menu ) {
 				<h2>48-Hour Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 			</div>
+			<div class="card precip-card" data-card="precip">
+				<h2>48-Hour Outlook <span class="sta">Open-Meteo</span></h2>
+				<div class="px-body" id="precipBody"><div class="fc-row"><span class="miss">Loading outlook&hellip;</span></div></div>
+			</div>
 			<div class="card graph-card" data-card="graph">
 				<h2>48-Hour Tide Forecast <span class="sta">NOAA Forecast</span></h2>
 				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
@@ -369,12 +385,12 @@ if ( ! $oyc_weather_menu ) {
 	}
 
 	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
-	// One flat order of the 8 cards; desktop fills the columns 3/2/3 with it
+	// One flat order of the 9 cards; desktop fills the columns 3/3/3 with it
 	// (middle column = the wide "featured" slots), mobile shows it as a list.
-	var ORDER_KEY = 'oyc_board_order_v2';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
+	var ORDER_KEY = 'oyc_board_order_v3';
+	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','precip','graph','wind','waves','cond'];
 	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
-	var ORDER_SPLIT = [3,2,3];
+	var ORDER_SPLIT = [3,3,3];
 	function getOrder(){
 		try{
 			var o = JSON.parse(localStorage.getItem(ORDER_KEY));
@@ -883,6 +899,85 @@ if ( ! $oyc_weather_menu ) {
 		}).catch(function(){});
 	}
 
+	// 48-HOUR OUTLOOK — hourly temperature + precipitation-chance at the harbor
+	// (Open-Meteo, keyless + CORS-ok). Renders a weather-icon strip with the precip
+	// chance under each hour, a temperature curve with labels, and a time axis.
+	function loadPrecip(){
+		var body = $('precipBody'); if(!body) return;
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.LAT+'&longitude='+CFG.LON+'&hourly=temperature_2m,precipitation_probability,weather_code&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=3')
+			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
+			.then(function(j){
+				var H = j && j.hourly; if(!H || !H.time) throw new Error('no hourly');
+				var allT = H.time.map(function(t){ return new Date(t.replace(' ','T')); });
+				var now = new Date(), s = 0;
+				while(s < allT.length-1 && allT[s+1] <= now) s++;
+				var S = [];
+				for(var k=0;k<16;k++){ var i=s+k*3; if(i>=allT.length) break;
+					var pm=0; for(var q=0;q<3;q++){ var ii=i+q; if(ii<allT.length){ var pv=H.precipitation_probability[ii]; if(pv!=null && pv>pm) pm=pv; } }
+					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm });
+				}
+				if(S.length < 4) throw new Error('short');
+				renderPrecip(S); markUpdated(true);
+			}).catch(function(){ if(/Loading/.test(body.textContent)) body.innerHTML = '<div class="fc-row"><span class="miss">Outlook unavailable</span></div>'; });
+	}
+	function wxIcon(c){
+		var ray=[0,45,90,135,180,225,270,315].map(function(a){var r=a*Math.PI/180;return '<line x1="'+(12+Math.cos(r)*7.3).toFixed(1)+'" y1="'+(12+Math.sin(r)*7.3).toFixed(1)+'" x2="'+(12+Math.cos(r)*9.6).toFixed(1)+'" y2="'+(12+Math.sin(r)*9.6).toFixed(1)+'" stroke="#f3c34e" stroke-width="1.5" stroke-linecap="round"/>';}).join('');
+		var sun='<circle cx="12" cy="12" r="5" fill="#f3c34e"/>'+ray;
+		var cloud='<path d="M7.5 17a3.6 3.6 0 0 1 .2-7.2 5 5 0 0 1 9.5 1.3 3.3 3.3 0 0 1-.3 6.6Z" fill="#c3ccd6"/>';
+		var scloud='<circle cx="9" cy="8.5" r="3.4" fill="#f3c34e"/>'+cloud;
+		var drops='<g stroke="#57a6d6" stroke-width="1.7" stroke-linecap="round"><line x1="9" y1="18.5" x2="8.2" y2="21.5"/><line x1="12" y1="18.5" x2="11.2" y2="21.5"/><line x1="15" y1="18.5" x2="14.2" y2="21.5"/></g>';
+		var bolt='<polygon points="12.5,16.5 9.5,21.5 11.7,21.5 10.3,24.5 14.5,19.5 12.3,19.5" fill="#f3c34e"/>';
+		var fog='<g stroke="#b7c1cc" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="19.5" x2="17" y2="19.5"/><line x1="8.6" y1="22" x2="15.4" y2="22"/></g>';
+		var g;
+		if(c>=95) g=cloud+bolt;
+		else if((c>=51&&c<=67)||(c>=80&&c<=82)||(c>=71&&c<=86)) g=cloud+drops;
+		else if(c===45||c===48) g=cloud+fog;
+		else if(c===3) g=cloud;
+		else if(c===2) g=scloud;
+		else g=sun;
+		return '<svg viewBox="0 0 24 24" width="22" height="22" style="overflow:visible">'+g+'</svg>';
+	}
+	function renderPrecip(S){
+		var n=S.length, Wd=1000, Ht=200, padT=24, padB=10;
+		var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+		function hourLbl(d){ var h=d.getHours(), ap=h>=12?'p':'a'; h=h%12||12; return h+ap; }
+		var temps=S.map(function(x){ return x.temp; });
+		var tmin=Math.min.apply(null,temps), tmax=Math.max.apply(null,temps);
+		var pd=(tmax-tmin)*0.22||2; tmin-=pd; tmax+=pd;
+		function X(j){ return (j+0.5)/n*Wd; }
+		function Y(t){ return padT+(1-(t-tmin)/(tmax-tmin))*(Ht-padT-padB); }
+		var d='', dots='', labels='', divs='';
+		for(var j=0;j<n;j++){
+			var x=X(j), y=Y(S[j].temp);
+			d+=(j?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';
+			dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#e6a441"/>';
+			labels+='<text x="'+x.toFixed(1)+'" y="'+(y-8).toFixed(1)+'" text-anchor="middle" fill="#f5efe2" font-size="13" font-weight="700" font-family="ui-monospace,Menlo,monospace">'+Math.round(S[j].temp)+'°</text>';
+			if(j>0 && S[j].t.getDate()!==S[j-1].t.getDate()){ var dx=(j/n*Wd); divs+='<line x1="'+dx.toFixed(1)+'" y1="'+(padT-6)+'" x2="'+dx.toFixed(1)+'" y2="'+(Ht-2)+'" stroke="rgba(245,239,226,.20)" stroke-width="1.3" stroke-dasharray="3 3"/>'; }
+		}
+		var area=d+'L'+X(n-1).toFixed(1)+' '+(Ht-1)+' L'+X(0).toFixed(1)+' '+(Ht-1)+' Z';
+		var svg='<svg viewBox="0 0 '+Wd+' '+Ht+'" preserveAspectRatio="none">'
+			+'<defs><linearGradient id="ptg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6a441" stop-opacity=".28"/><stop offset="1" stop-color="#e6a441" stop-opacity="0"/></linearGradient></defs>'
+			+divs+'<path d="'+area+'" fill="url(#ptg)"/>'
+			+'<path d="'+d+'" fill="none" stroke="#e6c374" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'
+			+dots+labels+'</svg>';
+		var icons='', times='';
+		for(var m=0;m<n;m++){
+			var pv=S[m].precip, pcol = pv>=40?'#57a6d6':(pv>=15?'#8fb4cc':'#5f7180');
+			icons+='<div>'+wxIcon(S[m].code)+'<div class="px-pop" style="color:'+pcol+'">'+pv+'%</div></div>';
+			var isNew=(m>0)&&(S[m].t.getDate()!==S[m-1].t.getDate());
+			times+='<div>'+(m===0?'Now':hourLbl(S[m].t))+(isNew?'<br><span class="d">'+DOW[S[m].t.getDay()]+'</span>':'')+'</div>';
+		}
+		var maxT=Math.round(Math.max.apply(null,temps)), minT=Math.round(Math.min.apply(null,temps));
+		var maxP=Math.max.apply(null,S.map(function(x){ return x.precip; }));
+		var sum = maxP>=40 ? ('Showers possible — up to '+maxP+'% chance; highs near '+maxT+'°')
+		        : maxP>=20 ? ('Mostly dry, slight shower chance; highs near '+maxT+'°')
+		        : ('Dry through the period — highs near '+maxT+'°, lows near '+minT+'°');
+		$('precipBody').innerHTML = '<div class="px-sum">'+sum+'</div>'
+			+ '<div class="px-icons">'+icons+'</div>'
+			+ '<div class="px-graph">'+svg+'</div>'
+			+ '<div class="px-times">'+times+'</div>';
+	}
+
 	// PRIMARY wave source: Open-Meteo marine model at the Execution Rocks (44022)
 	// position — fills in while the UConn buoy is dark. Sets omWavesOk on success so
 	// the CWF-text fallback below won't overwrite it.
@@ -998,7 +1093,7 @@ if ( ! $oyc_weather_menu ) {
 
 	// ---------- INIT + refresh ----------
 	refreshTideCache();                                // seed the 30-day fallback cache
-	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadAlerts(); loadSunMoon();
+	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadPrecip(); loadAlerts(); loadSunMoon();
 	setInterval(updateCurrentTide, 60*1000);          // re-interpolate current level each minute
 	setInterval(function(){ drawGraph(); }, 5*60*1000);
 	setInterval(loadTides, 30*60*1000);
@@ -1007,6 +1102,7 @@ if ( ! $oyc_weather_menu ) {
 	setInterval(loadWavesOM, 15*60*1000);
 	setInterval(loadConditions, 10*60*1000);
 	setInterval(loadForecast, 30*60*1000);
+	setInterval(loadPrecip, 15*60*1000);
 	setInterval(loadAlerts, 5*60*1000);
 	setInterval(loadSunMoon, 30*60*1000);
 })();
