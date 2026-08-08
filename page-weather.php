@@ -245,6 +245,7 @@ if ( ! $oyc_weather_menu ) {
 	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
 		border:1px solid rgba(232,84,74,.5);background:rgba(60,16,14,.5)}
 	.alertbar.hidden{display:none}
+	.alertbar--card{border-radius:6px;margin:0 0 8px;flex-shrink:0}
 	.alert-tag{background:var(--red);color:#fff;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
 	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
@@ -319,6 +320,10 @@ if ( ! $oyc_weather_menu ) {
 			</div>
 			<div class="card precip-card" data-card="precip">
 				<h2>48-Hour Outlook <span class="sta">Execution Rock</span></h2>
+				<div class="alertbar alertbar--card hidden" id="outlookAlertBar">
+					<div class="alert-tag">&#9888; Alert</div>
+					<div class="marquee"><span id="outlookAlertText"></span></div>
+				</div>
 				<div class="px-body" id="precipBody"><div class="fc-row"><span class="miss">Loading outlook&hellip;</span></div></div>
 			</div>
 			<div class="card graph-card" data-card="graph">
@@ -1033,13 +1038,20 @@ if ( ! $oyc_weather_menu ) {
 	function loadAlerts(){
 		nws('alerts/active?point='+CFG.LAT+'%2C'+CFG.LON).then(function(j){
 			var f = (j && j.features) || [];
-			if(!f.length){ $('alertBar').classList.add('hidden'); return; }
+			if(!f.length){
+				$('alertBar').classList.add('hidden');
+				$('outlookAlertBar').classList.add('hidden');
+				return;
+			}
 			var parts = f.map(function(a){
 				var pr=a.properties||{};
 				return (pr.event||'Alert') + ' — ' + (pr.headline || pr.event || '');
 			});
-			$('alertText').textContent = parts.join('    •    ');
+			var txt = parts.join('    •    ');
+			$('alertText').textContent = txt;
 			$('alertBar').classList.remove('hidden');
+			$('outlookAlertText').textContent = txt;
+			$('outlookAlertBar').classList.remove('hidden');
 		}).catch(function(){});
 	}
 
