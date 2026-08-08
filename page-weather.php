@@ -254,7 +254,11 @@ if ( ! $oyc_weather_menu ) {
 	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
 
 	.miss{color:var(--faint)}
-	@media (max-width:1100px){ .grid{grid-template-columns:1fr}}
+	/* Mobile: minmax(0,1fr), NOT bare 1fr. A bare 1fr track is minmax(auto,1fr) —
+	   the auto minimum inherits the content's min-content width, so the no-wrap
+	   alert marquee text (~4000px) forces the whole track that wide. An explicit
+	   0 minimum caps the track at the viewport; the marquee then clips normally. */
+	@media (max-width:1100px){ .grid{grid-template-columns:minmax(0,1fr)}}
 	@media (max-width:560px){ .topbar{padding:12px 14px} .card{padding:14px} }
 </style>
 </head>
