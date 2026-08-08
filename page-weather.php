@@ -241,6 +241,7 @@ if ( ! $oyc_weather_menu ) {
 	.cond .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
 
 	/* alert */
+	.weather-disclaimer{text-align:center;color:rgba(255,255,255,0.55);font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
 	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
 		border:1px solid rgba(232,84,74,.5);background:rgba(60,16,14,.5)}
 	.alertbar.hidden{display:none}
@@ -367,6 +368,9 @@ if ( ! $oyc_weather_menu ) {
 	</div>
 
 	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
+
+	<!-- DISCLAIMER -->
+	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. The water always has the final word.</em></p>
 
 	<!-- ALERT -->
 	<div class="alertbar hidden" id="alertBar">
