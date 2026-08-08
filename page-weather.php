@@ -1045,7 +1045,9 @@ if ( ! $oyc_weather_menu ) {
 			}
 			var parts = f.map(function(a){
 				var pr=a.properties||{};
-				return (pr.event||'Alert') + ' — ' + (pr.headline || pr.event || '');
+				var txt = (pr.event||'Alert') + ' — ' + (pr.headline || pr.event || '');
+				if(pr.areaDesc){ txt += '    |    Coverage: ' + pr.areaDesc; }
+				return txt;
 			});
 			var txt = parts.join('    •    ');
 			$('alertText').textContent = txt;
