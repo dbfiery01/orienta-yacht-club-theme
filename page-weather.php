@@ -370,7 +370,7 @@ if ( ! $oyc_weather_menu ) {
 	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
 
 	<!-- DISCLAIMER -->
-	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. The water always has the final word.</em></p>
+	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
 
 	<!-- ALERT -->
 	<div class="alertbar hidden" id="alertBar">
