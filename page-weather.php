@@ -249,9 +249,9 @@ if ( ! $oyc_weather_menu ) {
 	.alert-tag{background:var(--red);color:#fff;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
 	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
-	.marquee span{display:inline-block;white-space:nowrap;padding-left:100%;color:#ffd9d4;font-size:14px;
+	.marquee span{display:inline-block;white-space:nowrap;color:#ffd9d4;font-size:14px;
 		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
-	@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
 
 	.miss{color:var(--faint)}
 	@media (max-width:1100px){ .grid{grid-template-columns:1fr}}
