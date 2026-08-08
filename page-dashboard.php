@@ -73,13 +73,11 @@ get_header();
 					array( 'url' => home_url( '/2026-fee-schedule/' ),    'label' => __( 'Fee Schedule', 'orienta-yacht-club' ) ),
 					array( 'url' => home_url( '/storm-warnings/' ),       'label' => __( 'Storm Warnings', 'orienta-yacht-club' ) ),
 					array( 'url' => 'https://www.youtube.com/channel/UCHLv9eaM0QjbaGQaBcg6vsA/streams', 'label' => __( 'Live Harbor Cameras', 'orienta-yacht-club' ), 'external' => true ),
-					array( 'url' => home_url( '/mamaroneck-harbor/' ),    'label' => __( 'Mamaroneck Harbor', 'orienta-yacht-club' ) ),
-					array( 'url' => home_url( '/sailing-instructions/' ), 'label' => __( 'Sailing Instructions', 'orienta-yacht-club' ) ),
 					array( 'url' => 'https://lisicos.uconn.edu/',         'label' => __( 'My Sound', 'orienta-yacht-club' ), 'external' => true ),
 					array( 'url' => 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club', 'label' => __( 'Dock Reservations', 'orienta-yacht-club' ), 'external' => true ),
 					array( 'url' => home_url( '/contact/' ),             'label' => __( 'Contact Club Office', 'orienta-yacht-club' ) ),
 				);
-				// Quick Links: 5 cards on the first row, 6 on the second (intentionally wider).
+				// Quick Links: 5 cards per row.
 				$oyc_render_dash = function ( $links ) {
 					foreach ( $links as $link ) {
 						$ext = ! empty( $link['external'] );
@@ -93,8 +91,7 @@ get_header();
 					}
 				};
 				?>
-				<div class="dashboard-grid dash-qrow dash-qrow--5"><?php $oyc_render_dash( array_slice( $dash_links, 0, 5 ) ); ?></div>
-				<div class="dashboard-grid dash-qrow dash-qrow--6"><?php $oyc_render_dash( array_slice( $dash_links, 5 ) ); ?></div>
+				<div class="dashboard-grid dash-qrow dash-qrow--5"><?php $oyc_render_dash( $dash_links ); ?></div>
 
 			</div><!-- .dashboard-main -->
 
