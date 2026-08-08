@@ -911,7 +911,7 @@ if ( ! $oyc_weather_menu ) {
 		var body = $('precipBody'); if(!body) return;
 		// Same Execution Rock position + live "current" block as the Wind card, so
 		// the outlook's "Now" wind matches the dial instead of the sheltered harbor.
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
 				var H = j && j.hourly; if(!H || !H.time) throw new Error('no hourly');
@@ -921,7 +921,7 @@ if ( ! $oyc_weather_menu ) {
 				var S = [];
 				for(var k=0;k<16;k++){ var i=s+k*3; if(i>=allT.length) break;
 					var pm=0; for(var q=0;q<3;q++){ var ii=i+q; if(ii<allT.length){ var pv=H.precipitation_probability[ii]; if(pv!=null && pv>pm) pm=pv; } }
-					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm, wspd:H.wind_speed_10m[i], wdir:H.wind_direction_10m[i] });
+					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm, cloud:H.cloud_cover[i], wspd:H.wind_speed_10m[i], wdir:H.wind_direction_10m[i] });
 				}
 				if(S.length < 4) throw new Error('short');
 				// Override the "Now" column's wind with the live current reading so it
@@ -930,21 +930,28 @@ if ( ! $oyc_weather_menu ) {
 				renderPrecip(S); markUpdated(true);
 			}).catch(function(){ if(/Loading/.test(body.textContent)) body.innerHTML = '<div class="fc-row"><span class="miss">Outlook unavailable</span></div>'; });
 	}
-	function wxIcon(c){
+	// Icon blends the WMO code with the hour's rain chance (pp %) and cloud cover
+	// (cc %) so a "mainly clear" code with a real shower chance still reads wet, and
+	// dry hours vary clear -> partly -> overcast instead of all showing the sun.
+	function wxIcon(c, pp, cc){
+		pp = (pp==null?0:pp); cc = (cc==null?0:cc);
 		var ray=[0,45,90,135,180,225,270,315].map(function(a){var r=a*Math.PI/180;return '<line x1="'+(12+Math.cos(r)*7.3).toFixed(1)+'" y1="'+(12+Math.sin(r)*7.3).toFixed(1)+'" x2="'+(12+Math.cos(r)*9.6).toFixed(1)+'" y2="'+(12+Math.sin(r)*9.6).toFixed(1)+'" stroke="#f3c34e" stroke-width="1.5" stroke-linecap="round"/>';}).join('');
 		var sun='<circle cx="12" cy="12" r="5" fill="#f3c34e"/>'+ray;
 		var cloud='<path d="M7.5 17a3.6 3.6 0 0 1 .2-7.2 5 5 0 0 1 9.5 1.3 3.3 3.3 0 0 1-.3 6.6Z" fill="#c3ccd6"/>';
 		var scloud='<circle cx="9" cy="8.5" r="3.4" fill="#f3c34e"/>'+cloud;
 		var drops='<g stroke="#57a6d6" stroke-width="1.7" stroke-linecap="round"><line x1="9" y1="18.5" x2="8.2" y2="21.5"/><line x1="12" y1="18.5" x2="11.2" y2="21.5"/><line x1="15" y1="18.5" x2="14.2" y2="21.5"/></g>';
+		var ldrops='<g stroke="#57a6d6" stroke-width="1.6" stroke-linecap="round"><line x1="10.5" y1="18.5" x2="9.9" y2="20.9"/><line x1="14" y1="18.5" x2="13.4" y2="20.9"/></g>';
 		var bolt='<polygon points="12.5,16.5 9.5,21.5 11.7,21.5 10.3,24.5 14.5,19.5 12.3,19.5" fill="#f3c34e"/>';
 		var fog='<g stroke="#b7c1cc" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="19.5" x2="17" y2="19.5"/><line x1="8.6" y1="22" x2="15.4" y2="22"/></g>';
 		var g;
-		if(c>=95) g=cloud+bolt;
-		else if((c>=51&&c<=67)||(c>=80&&c<=82)||(c>=71&&c<=86)) g=cloud+drops;
-		else if(c===45||c===48) g=cloud+fog;
-		else if(c===3) g=cloud;
-		else if(c===2) g=scloud;
-		else g=sun;
+		if(c>=95) g=cloud+bolt;                                                 // thunder
+		else if((c>=51&&c<=67)||(c>=80&&c<=82)||(c>=71&&c<=86)) g=cloud+drops;  // forecast rain/snow
+		else if(c===45||c===48) g=cloud+fog;                                    // fog
+		else if(pp>=45) g=cloud+drops;                                          // dry code but likely showers
+		else if(pp>=20) g=scloud+ldrops;                                        // slight shower chance (e.g. 22%)
+		else if(cc>=80||c===3) g=cloud;                                         // overcast
+		else if(cc>=40||c===2) g=scloud;                                        // partly cloudy
+		else g=sun;                                                             // clear
 		return '<svg viewBox="0 0 24 24" width="22" height="22" style="overflow:visible">'+g+'</svg>';
 	}
 	function renderPrecip(S){
@@ -957,7 +964,7 @@ if ( ! $oyc_weather_menu ) {
 		var icons='', precips='', tvals='', wdirs='', wspds='', times='';
 		for(var m=0;m<n;m++){
 			var pv=S[m].precip, pcol = pv>=40?'#57a6d6':(pv>=15?'#8fb4cc':'#6b8ba8');
-			icons+='<div>'+wxIcon(S[m].code)+'</div>';
+			icons+='<div>'+wxIcon(S[m].code, S[m].precip, S[m].cloud)+'</div>';
 			precips+='<div style="color:'+pcol+'">'+pv+'%</div>';
 			tvals+='<div>'+Math.round(S[m].temp)+'°</div>';
 			wdirs+=(S[m].wdir!=null)?('<div title="'+dirCardinal(S[m].wdir)+'">'+windArrow(S[m].wdir)+'</div>'):'<div>—</div>';
