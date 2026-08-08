@@ -104,6 +104,19 @@ get_header();
 	</div>
 </section>
 
+<style>
+	/* Per-day weather overlay on the month grid (Actual / Forecast / Average) */
+	.cal-wx{display:flex;flex-direction:column;align-items:flex-start;gap:1px;margin:3px 0 3px;line-height:1.2}
+	.cal-wx-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:#8a97a5;font-weight:700}
+	.cal-wx-r{display:flex;align-items:center;gap:5px}
+	.cal-wx-t{font-size:12px}
+	.cal-wx-t .hi{color:#e2574c;font-weight:800}
+	.cal-wx-t .lo{color:#3b82c4;font-weight:800;margin-left:3px}
+	.cal-wx-p{color:#6b7784;font-size:10.5px;display:inline-flex;align-items:center;gap:2px;margin-top:1px}
+	.cal-wx--average{opacity:.9}
+	.cal-wx--average .cal-wx-lbl{color:#a2adb8}
+</style>
+
 <script>
 /* ===== OYC Calendar — events loaded live from Calendarize it! ========= */
 let EVENTS = [];
@@ -141,6 +154,42 @@ function eventsFor(y, m) {
                .sort((a,b) => a.date.localeCompare(b.date));
 }
 
+/* ---- Daily weather overlay (Open-Meteo): hi/lo, precip, icon per day.
+       Past = "Actual", today..+16d = "Forecast", further out = month "Average". ---- */
+var WX = {};
+var WX_TODAY = (function(){ var t=new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })();
+var MONTH_AVG = [[39,26],[42,28],[50,34],[61,44],[71,54],[79,63],[84,69],[82,68],[75,61],[64,50],[53,41],[44,32]]; // coastal-Westchester normals [hi,lo]°F
+function loadCalWeather(){
+  var url='https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America/New_York&past_days=92&forecast_days=16';
+  return fetch(url,{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+    var D=j&&j.daily; if(!D||!D.time) return;
+    for(var i=0;i<D.time.length;i++){ var ds=D.time[i];
+      WX[ds]={ hi:D.temperature_2m_max[i], lo:D.temperature_2m_min[i], precip:D.precipitation_sum[i], code:D.weather_code[i], kind:(ds<WX_TODAY?'actual':'forecast') }; }
+  }).catch(function(){});
+}
+function avgFor(m){ return { hi:MONTH_AVG[m][0], lo:MONTH_AVG[m][1], precip:null, code:2, kind:'average' }; }
+function calWxIcon(c){
+  var ray=[0,45,90,135,180,225,270,315].map(function(a){var r=a*Math.PI/180;return '<line x1="'+(12+Math.cos(r)*7.3).toFixed(1)+'" y1="'+(12+Math.sin(r)*7.3).toFixed(1)+'" x2="'+(12+Math.cos(r)*9.6).toFixed(1)+'" y2="'+(12+Math.sin(r)*9.6).toFixed(1)+'" stroke="#f4b400" stroke-width="1.6" stroke-linecap="round"/>';}).join('');
+  var sun='<circle cx="12" cy="12" r="5" fill="#f4b400"/>'+ray;
+  var cloud='<path d="M7.5 17a3.6 3.6 0 0 1 .2-7.2 5 5 0 0 1 9.5 1.3 3.3 3.3 0 0 1-.3 6.6Z" fill="#9aa7b3"/>';
+  var scloud='<circle cx="9" cy="8.5" r="3.4" fill="#f4b400"/>'+cloud;
+  var drops='<g stroke="#3b82c4" stroke-width="1.7" stroke-linecap="round"><line x1="9" y1="18.5" x2="8.2" y2="21.5"/><line x1="12" y1="18.5" x2="11.2" y2="21.5"/><line x1="15" y1="18.5" x2="14.2" y2="21.5"/></g>';
+  var bolt='<polygon points="12.5,16.5 9.5,21.5 11.7,21.5 10.3,24.5 14.5,19.5 12.3,19.5" fill="#f4b400"/>';
+  var fog='<g stroke="#9aa7b3" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="19.5" x2="17" y2="19.5"/><line x1="8.6" y1="22" x2="15.4" y2="22"/></g>';
+  var g; if(c>=95)g=cloud+bolt; else if((c>=51&&c<=67)||(c>=80&&c<=82)||(c>=71&&c<=86))g=cloud+drops;
+  else if(c===45||c===48)g=cloud+fog; else if(c===3)g=cloud; else if(c===2)g=scloud; else g=sun;
+  return '<svg viewBox="0 0 24 24" width="20" height="20" style="overflow:visible">'+g+'</svg>';
+}
+function calDrop(){ return '<svg viewBox="0 0 24 24" width="10" height="10"><path d="M12 3C12 3 5.5 11.5 5.5 16a6.5 6.5 0 0 0 13 0C18.5 11.5 12 3 12 3Z" fill="#7fb3dc"/></svg>'; }
+function wxBlock(w){
+  var el=document.createElement('div'); el.className='cal-wx cal-wx--'+w.kind;
+  var t=w.kind==='actual'?'Actual':(w.kind==='average'?'Average':'Forecast');
+  var pin=(w.precip!=null)?(w.precip>=0.005?(Math.round(w.precip*100)/100):0):null;
+  var ps=(pin!=null)?('<span class="cal-wx-p">'+calDrop()+pin+' in</span>'):'';
+  el.innerHTML='<span class="cal-wx-lbl">'+t+'</span><div class="cal-wx-r"><span class="cal-wx-ico">'+calWxIcon(w.code)+'</span><span class="cal-wx-t"><b class="hi">'+Math.round(w.hi)+'°</b><b class="lo">'+Math.round(w.lo)+'°</b></span></div>'+ps;
+  return el;
+}
+
 function renderMonth() {
   document.getElementById('cal-month-label').textContent =
     `${months[currentMonth]} ${currentYear}`;
@@ -173,6 +222,11 @@ function renderMonth() {
     num.className = 'cal-day-num';
     num.textContent = d;
     cell.appendChild(num);
+
+    // weather: actual (past) / forecast (near) / month-average (far out)
+    var wx = WX[dateStr];
+    if (!wx && dateStr >= WX_TODAY) { wx = avgFor(currentMonth); }
+    if (wx) { cell.appendChild(wxBlock(wx)); }
 
     dayEvs.slice(0, 3).forEach(ev => {
       const pill = document.createElement('button');
@@ -315,6 +369,7 @@ document.addEventListener('keydown', e => { if (e.key==='Escape') closePopup(); 
 const now = new Date();
 if (now.getFullYear() === 2026) { currentMonth = now.getMonth(); }
 else { currentMonth = 4; } // May
+loadCalWeather().then(render);
 oycLoadEvents().then(function(){ render(); });
 
 // List-view date picker: jump the list to any month/day.
