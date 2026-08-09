@@ -236,8 +236,11 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 body.home .hero { background: #ffffff !important; min-height: 0 !important; padding: 7rem 0 2.4rem !important; border-bottom: 1px solid rgba(11,46,74,0.10) !important; }
 body.home .hero .hero-slides, body.home .hero .hero-overlay, body.home .hero-scroll { display: none !important; }
 body.home .hero .eyebrow { color: #1583cf !important; }
-body.home .hero h1 { color: #16324a !important; }
-body.home .hero .lede { color: #2a2a2a !important; }
+/* Size the headline to sit on ONE line at desktop widths (scales down + wraps on
+   phones), and let the intro paragraph run to the same edge as the headline
+   (was capped at 56ch, which left a big empty gap on the right). */
+body.home .hero h1 { color: #16324a !important; font-size: clamp(2.1rem, 4.7vw, 3.7rem); }
+body.home .hero .lede { color: #2a2a2a !important; max-width: none; }
 body.home .hero .btn-ghost { color: #0472c1 !important; border-color: #0472c1 !important; background: transparent !important; }
 body.home .hero .btn-ghost:hover { background: #0472c1 !important; color: #fff !important; }
 
