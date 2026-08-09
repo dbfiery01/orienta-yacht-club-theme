@@ -5,6 +5,9 @@
  * @package Orienta_Yacht_Club
  */
 
+// "Upcoming Events" banner between the menu bar and the photo reel (front page only).
+require_once get_template_directory() . '/inc/home-event-banner.php';
+
 get_header();
 ?>
 

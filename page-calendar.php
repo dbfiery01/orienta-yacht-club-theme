@@ -397,6 +397,13 @@ if ( window.matchMedia('(max-width: 520px)').matches ) {
   var _listBtn = document.querySelector('.cal-view-btn[data-view="list"]');
   if ( _listBtn ) { _listBtn.click(); }
 }
+
+// Open directly on the List view when linked with ?view=list (e.g. the home-page
+// "Upcoming Events" banner), on any screen size.
+if ( new URLSearchParams( window.location.search ).get('view') === 'list' ) {
+  var _lbURL = document.querySelector('.cal-view-btn[data-view="list"]');
+  if ( _lbURL && !_lbURL.classList.contains('active') ) { _lbURL.click(); }
+}
 </script>
 
 <?php get_footer(); ?>
