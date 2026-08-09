@@ -38,7 +38,7 @@ function oyc_home_event_banner() {
 	.oyc-ann__cta{margin-left:auto;font-weight:700;color:var(--brass-bright,#d4a851);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 	.oyc-ann__cta .arw{transition:transform .2s ease}
 	.oyc-ann:hover .oyc-ann__cta .arw{transform:translateX(3px)}
-	@media(max-width:640px){.oyc-ann__meta,.oyc-ann__sep{display:none}.oyc-ann__inner{gap:10px;padding:11px 14px}.oyc-ann__cta{font-size:.9rem}}
+	@media(max-width:640px){.oyc-ann .oyc-ann__kicker,.oyc-ann__meta,.oyc-ann__sep{display:none}.oyc-ann__inner{gap:10px;padding:10px 14px}.oyc-ann__title{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.oyc-ann__cta{flex:0 0 auto;font-size:.9rem}}
 	</style>
 	<a class="oyc-ann" id="oycAnn" href="<?php echo $cal_url; ?>" hidden>
 		<span class="oyc-ann__inner">

@@ -612,6 +612,14 @@ body.oyc-page-live-video-streaming .section { padding-top: 1rem; }
    meant to track the reel edge. */
 .site-header .container { width: min(1140px, 92%); }
 
+/* A legacy site-wide "Simple Custom CSS" rule (<style id="sccss">) caps
+   `.container { max-width: 1080px; width: 90% }`, which left the header and page
+   content narrower than the 1140px reel/banner and threw the home page out of
+   alignment. Override it with a higher-specificity selector (no !important
+   needed — `body .container` beats the plugin's bare `.container`) so every band
+   lines up at 1140. Mobile stays at 92%, so no horizontal overflow. */
+body .container { width: min(1140px, 92%); max-width: none; }
+
 /* 48) Center the nav menu within the reel-width header on desktop. The header
    was flush-right (justify-content: space-between); this switches .header-inner
    to a 3-col grid so the logo stays pinned at the left edge while the menu sits
