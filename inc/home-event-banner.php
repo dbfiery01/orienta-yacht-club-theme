@@ -26,7 +26,7 @@ function oyc_home_event_banner() {
 	$cal_url = esc_url( home_url( '/calendar/?view=list' ) );
 	?>
 	<style id="oyc-ann-css">
-	.oyc-ann{display:block;box-sizing:border-box;width:min(1052px,92%);margin:0 auto;background:var(--navy,#0a2949);color:var(--cream,#f5efe2);text-decoration:none;border-radius:10px;overflow:hidden;border:1px solid rgba(212,168,81,.35);box-shadow:0 6px 20px rgba(4,22,42,.14);transition:background .2s ease,box-shadow .2s ease}
+	.oyc-ann{display:block;box-sizing:border-box;width:min(1140px,92%);margin:0 auto;background:var(--navy,#0a2949);color:var(--cream,#f5efe2);text-decoration:none;border-radius:10px;overflow:hidden;border:1px solid rgba(212,168,81,.35);box-shadow:0 6px 20px rgba(4,22,42,.14);transition:background .2s ease,box-shadow .2s ease}
 	.oyc-ann[hidden]{display:none}
 	.oyc-ann:hover{background:#0d3358;box-shadow:0 8px 26px rgba(4,22,42,.22)}
 	.oyc-ann:focus-visible{outline:2px solid var(--brass-bright,#d4a851);outline-offset:2px}

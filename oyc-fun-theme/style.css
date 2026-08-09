@@ -222,7 +222,7 @@ body.oyc-page-reciprocity-list .entry-content thead td { background: #d4e4f3 !im
 
 
 /* 19) Photo carousel below the page title — static, auto-advances every 5s, with arrows */
-.oyc-carousel { position: relative; width: min(1052px, 92%); margin-inline: auto; background: transparent; line-height: 0; }
+.oyc-carousel { position: relative; width: min(1140px, 92%); margin-inline: auto; background: transparent; line-height: 0; }
 .oyc-carousel__viewport { overflow: hidden; padding: 8px 0; }
 .oyc-carousel__track { display: flex; will-change: transform; }
 .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell { flex: 0 0 300px !important; width: 300px !important; height: 100px !important; background-size: cover; background-position: center; display: block; position: relative; }
@@ -606,10 +606,11 @@ body.oyc-page-members-area .dashboard-grid.dash-qrow--6 { grid-template-columns:
 body.oyc-page-photo-gallery .section { background: transparent; padding-top: 1rem; }
 body.oyc-page-live-video-streaming .section { padding-top: 1rem; }
 
-/* 47) Header width matches the photo reel (1052px) so the nav menu doesn't
-   bleed past the carousel's left/right arrow buttons. The base .container is
-   1140px; narrowing to 1052px here aligns the menu edge with the reel edge. */
-.site-header .container { width: min(1052px, 92%); }
+/* 47) Header, photo reel, banner and page content are all unified at the base
+   1140px .container width so their left/right edges line up down the page. This
+   rule is kept explicit (matching the base) to document that the header edge is
+   meant to track the reel edge. */
+.site-header .container { width: min(1140px, 92%); }
 
 /* 48) Center the nav menu within the reel-width header on desktop. The header
    was flush-right (justify-content: space-between); this switches .header-inner
