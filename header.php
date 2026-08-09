@@ -1,3 +1,4 @@
+<?php require_once get_template_directory() . '/inc/header-weather.php'; // registers the nav weather glyph before wp_nav_menu()/wp_head() ?>
 <!doctype html>
 <?php /* oyc-rebuild v1.7.53 recovery — forces WP Pusher to overwrite this template */ ?>
 <html <?php language_attributes(); ?>>
