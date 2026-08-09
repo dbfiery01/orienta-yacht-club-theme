@@ -82,14 +82,34 @@ function oyc_home_event_banner() {
 				var evs=(((d&&d.EVENTS)||[])).filter(function(e){ return e.fc_start && e.title && e.fc_start>=todayStr; })
 					.sort(function(x,y){ return x.fc_start.localeCompare(y.fc_start) || (x.start||'').localeCompare(y.start||''); });
 				if(!evs.length){ return; }
-				var ev=evs[0], dt=new Date(ev.fc_start+'T00:00:00');
 				var DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 				var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
-				var when=DOW[dt.getDay()]+', '+MON[dt.getMonth()]+' '+dt.getDate();
-				var tm='';
-				if(!ev.allDay){ var m=/(\d{2}):(\d{2})/.exec(ev.start||''); if(m){ var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; tm=' · '+h12+':'+m[2]+' '+ap; } }
-				document.getElementById('oycAnnTitle').textContent=ev.title;
-				document.getElementById('oycAnnMeta').textContent=when+tm;
+				var MON_S=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+				function parseD(ds){ var p=ds.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+				// Natural-language join: "A", "A & B", "A, B & C", then "A, B & N more".
+				function joinNames(a){ if(a.length===1){return a[0];} if(a.length===2){return a[0]+' & '+a[1];} if(a.length===3){return a[0]+', '+a[1]+' & '+a[2];} return a[0]+', '+a[1]+' & '+(a.length-2)+' more'; }
+				// Everything sharing the soonest event's calendar week (Sun–Sat) rides
+				// on the banner together, joined by "&".
+				var first=evs[0], fd=parseD(first.fc_start);
+				var ws=new Date(fd); ws.setDate(fd.getDate()-fd.getDay());
+				var we=new Date(ws); we.setDate(ws.getDate()+6);
+				var week=evs.filter(function(e){ var d=parseD(e.fc_start); return d>=ws && d<=we; });
+				var titleStr, metaStr;
+				if(week.length===1){
+					titleStr=first.title;
+					metaStr=DOW[fd.getDay()]+', '+MON[fd.getMonth()]+' '+fd.getDate();
+					if(!first.allDay){ var m=/(\d{2}):(\d{2})/.exec(first.start||''); if(m){ var h=+m[1], ap=h<12?'AM':'PM', h12=h%12||12; metaStr+=' · '+h12+':'+m[2]+' '+ap; } }
+				} else {
+					titleStr=joinNames(week.map(function(e){ return e.title; }));
+					if(week.length<=3){
+						var pm=-1; // repeat the month only when it changes: "Aug 14 & 15", "Aug 30 & Sep 2"
+						metaStr=joinNames(week.map(function(e){ var dd=parseD(e.fc_start); var s=(dd.getMonth()===pm) ? String(dd.getDate()) : (MON_S[dd.getMonth()]+' '+dd.getDate()); pm=dd.getMonth(); return s; }));
+					} else {
+						metaStr=MON_S[ws.getMonth()]+' '+ws.getDate()+'–'+(we.getMonth()===ws.getMonth() ? we.getDate() : (MON_S[we.getMonth()]+' '+we.getDate()));
+					}
+				}
+				document.getElementById('oycAnnTitle').textContent=titleStr;
+				document.getElementById('oycAnnMeta').textContent=metaStr;
 				document.getElementById('oycAnnSep').hidden=false;
 				a.hidden=false; shown=true; place();
 			})
