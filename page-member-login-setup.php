@@ -49,7 +49,18 @@ get_header();
 		<div class="signup-form">
 			<?php
 			if ( shortcode_exists( 'wpmem_form' ) ) {
-				echo do_shortcode( '[wpmem_form register]' );
+				$oyc_reg_form = do_shortcode( '[wpmem_form register]' );
+				// Inject the optional profile fields (Country, Display Name, About Me,
+				// Emergency Contact) just before the Register button, so signup collects
+				// the same information as /edit-profile/.
+				if ( function_exists( 'oyc_signup_extra_fields_html' ) && false !== strpos( $oyc_reg_form, '<div class="button_div">' ) ) {
+					$oyc_reg_form = str_replace(
+						'<div class="button_div">',
+						oyc_signup_extra_fields_html() . '<div class="button_div">',
+						$oyc_reg_form
+					);
+				}
+				echo $oyc_reg_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WP-Members markup + individually-escaped fields.
 			} else {
 				// WP-Members deactivated — don't render a broken shortcode string.
 				?>

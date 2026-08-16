@@ -91,45 +91,25 @@ function oyc_signup_extra_fields() {
 	);
 }
 
-// Add the optional rows to the registration form (inserted just before the
-// password fields so the account credentials stay last).
-add_filter( 'wpmem_register_form_rows', function ( $rows, $tag ) {
-	if ( 'register' !== $tag || ! is_array( $rows ) ) {
-		return $rows;
-	}
-	$new = array();
+// Build the optional field rows (label + input) matching WP-Members' own markup,
+// repopulated from POST on a validation re-render. The page template injects this
+// into the register form before the submit button — more reliable across
+// WP-Members versions than its internal form-rows filter (which 3.5.6 ignores).
+function oyc_signup_extra_fields_html() {
+	$html = '';
 	foreach ( oyc_signup_extra_fields() as $f ) {
 		$meta = $f['meta'];
 		$val  = isset( $_POST[ $meta ] ) ? wp_unslash( $_POST[ $meta ] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- WP-Members owns the register nonce; value is escaped below for repopulation only.
 		if ( 'textarea' === $f['type'] ) {
-			$field = '<textarea name="' . esc_attr( $meta ) . '" id="' . esc_attr( $meta ) . '" class="textbox" rows="4">' . esc_textarea( $val ) . '</textarea>';
+			$input = '<textarea name="' . esc_attr( $meta ) . '" id="' . esc_attr( $meta ) . '" class="textbox" rows="4">' . esc_textarea( $val ) . '</textarea>';
 		} else {
-			$field = '<input name="' . esc_attr( $meta ) . '" type="' . esc_attr( $f['type'] ) . '" id="' . esc_attr( $meta ) . '" value="' . esc_attr( $val ) . '" class="textbox" />';
+			$input = '<input name="' . esc_attr( $meta ) . '" type="' . esc_attr( $f['type'] ) . '" id="' . esc_attr( $meta ) . '" value="' . esc_attr( $val ) . '" class="textbox" />';
 		}
-		$new[] = array(
-			'meta'         => $meta,
-			'type'         => $f['type'],
-			'value'        => $val,
-			'label_text'   => $f['label'],
-			'row_before'   => '',
-			'label'        => '<label for="' . esc_attr( $meta ) . '" class="text">' . esc_html( $f['label'] ) . '</label>',
-			'field_before' => '<div class="div_text">',
-			'field'        => $field,
-			'field_after'  => '</div>',
-			'row_after'    => '',
-		);
+		$html .= '<label for="' . esc_attr( $meta ) . '" class="text">' . esc_html( $f['label'] ) . '</label>'
+		       . '<div class="div_text">' . $input . '</div>';
 	}
-	// Find the first password row and insert our fields before it; else append.
-	$at = count( $rows );
-	foreach ( $rows as $i => $r ) {
-		if ( isset( $r['meta'] ) && in_array( $r['meta'], array( 'password', 'confirm_password' ), true ) ) {
-			$at = $i;
-			break;
-		}
-	}
-	array_splice( $rows, $at, 0, $new );
-	return $rows;
-}, 10, 2 );
+	return $html;
+}
 
 // Save the optional fields on registration to the same targets edit-profile uses.
 add_action( 'user_register', function ( $user_id ) {
