@@ -60,6 +60,14 @@ get_header();
 						$oyc_reg_form
 					);
 				}
+				// Replace WP-Members' default success message (which wrongly tells the
+				// member to log in with an emailed password) with the moderated-approval
+				// flow: the account is pending until an officer approves it.
+				$oyc_reg_form = preg_replace(
+					'/Congratulations!.*?emailed to you\./s',
+					esc_html__( 'Once your new account is approved — usually within a few days — you will receive an email to confirm your account and to create your password.', 'orienta-yacht-club' ),
+					$oyc_reg_form
+				);
 				echo $oyc_reg_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WP-Members markup + individually-escaped fields.
 			} else {
 				// WP-Members deactivated — don't render a broken shortcode string.
