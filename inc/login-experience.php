@@ -71,6 +71,97 @@ add_action( 'template_redirect', function () {
 	}
 } );
 
+/* ── Member Login Setup: extra OPTIONAL profile fields on registration ──────
+ * WP-Members' register form only carries its own configured fields. Add the
+ * remaining /edit-profile/ fields — Country, Display Name, About Me and
+ * Emergency Contact (name/phone/relationship) — so signup collects the same
+ * information, saving to the same meta the profile page reads. All optional.
+ *
+ * NOTE: relies on WP-Members' register-form-rows filter (version-specific);
+ * verify on staging that the fields render AND save. */
+
+function oyc_signup_extra_fields() {
+	return array(
+		array( 'meta' => 'billing_country',            'label' => 'Country',                        'type' => 'text' ),
+		array( 'meta' => 'display_name',               'label' => 'Display Name',                   'type' => 'text' ),
+		array( 'meta' => 'description',                'label' => 'About Me',                       'type' => 'textarea' ),
+		array( 'meta' => 'oyc_emergency_name',         'label' => 'Emergency Contact Name',         'type' => 'text' ),
+		array( 'meta' => 'oyc_emergency_phone',        'label' => 'Emergency Contact Phone',        'type' => 'tel' ),
+		array( 'meta' => 'oyc_emergency_relationship', 'label' => 'Emergency Contact Relationship', 'type' => 'text' ),
+	);
+}
+
+// Add the optional rows to the registration form (inserted just before the
+// password fields so the account credentials stay last).
+add_filter( 'wpmem_register_form_rows', function ( $rows, $tag ) {
+	if ( 'register' !== $tag || ! is_array( $rows ) ) {
+		return $rows;
+	}
+	$new = array();
+	foreach ( oyc_signup_extra_fields() as $f ) {
+		$meta = $f['meta'];
+		$val  = isset( $_POST[ $meta ] ) ? wp_unslash( $_POST[ $meta ] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- WP-Members owns the register nonce; value is escaped below for repopulation only.
+		if ( 'textarea' === $f['type'] ) {
+			$field = '<textarea name="' . esc_attr( $meta ) . '" id="' . esc_attr( $meta ) . '" class="textbox" rows="4">' . esc_textarea( $val ) . '</textarea>';
+		} else {
+			$field = '<input name="' . esc_attr( $meta ) . '" type="' . esc_attr( $f['type'] ) . '" id="' . esc_attr( $meta ) . '" value="' . esc_attr( $val ) . '" class="textbox" />';
+		}
+		$new[] = array(
+			'meta'         => $meta,
+			'type'         => $f['type'],
+			'value'        => $val,
+			'label_text'   => $f['label'],
+			'row_before'   => '',
+			'label'        => '<label for="' . esc_attr( $meta ) . '" class="text">' . esc_html( $f['label'] ) . '</label>',
+			'field_before' => '<div class="div_text">',
+			'field'        => $field,
+			'field_after'  => '</div>',
+			'row_after'    => '',
+		);
+	}
+	// Find the first password row and insert our fields before it; else append.
+	$at = count( $rows );
+	foreach ( $rows as $i => $r ) {
+		if ( isset( $r['meta'] ) && in_array( $r['meta'], array( 'password', 'confirm_password' ), true ) ) {
+			$at = $i;
+			break;
+		}
+	}
+	array_splice( $rows, $at, 0, $new );
+	return $rows;
+}, 10, 2 );
+
+// Save the optional fields on registration to the same targets edit-profile uses.
+add_action( 'user_register', function ( $user_id ) {
+	$submitted = false;
+	foreach ( oyc_signup_extra_fields() as $f ) {
+		if ( isset( $_POST[ $f['meta'] ] ) ) { $submitted = true; break; }
+	}
+	if ( ! $submitted ) {
+		return; // Not our form.
+	}
+	$user_update = array( 'ID' => $user_id );
+	foreach ( oyc_signup_extra_fields() as $f ) {
+		if ( ! isset( $_POST[ $f['meta'] ] ) ) {
+			continue;
+		}
+		$raw = wp_unslash( $_POST[ $f['meta'] ] ); // phpcs:ignore WordPress.Security.NonceVerification -- WP-Members verified the register nonce before user_register fires.
+		if ( 'description' === $f['meta'] ) {
+			$user_update['description'] = sanitize_textarea_field( $raw );
+		} elseif ( 'display_name' === $f['meta'] ) {
+			$dn = sanitize_text_field( $raw );
+			if ( '' !== $dn ) {
+				$user_update['display_name'] = $dn;
+			}
+		} else {
+			update_user_meta( $user_id, $f['meta'], sanitize_text_field( $raw ) );
+		}
+	}
+	if ( count( $user_update ) > 1 ) {
+		wp_update_user( $user_update );
+	}
+} );
+
 /* ── 2. Redirect after login → member dashboard ──────────── */
 
 add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
