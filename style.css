@@ -3244,3 +3244,72 @@ body.oyc-page-oyc-resources .dashboard-section { background: transparent; paddin
 
 /* Person/user icon inside CTA menu items (e.g. My Account) */
 .cta-icon { width: 1.05em; height: 1.05em; vertical-align: -0.18em; margin-right: 0.35em; flex: 0 0 auto; }
+
+/* ==========================================================================
+   Member signup (page-member-signup.php)
+   Account setup for existing members — NOT the membership application.
+   Mirrors .profile-layout so the two member-facing forms read as a pair.
+   ========================================================================== */
+.signup-layout {
+  max-width: 660px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.signup-intro { display: flex; flex-direction: column; gap: 1rem; }
+.signup-lede { font-size: 1.05rem; line-height: 1.65; color: var(--navy-ink); margin: 0; }
+
+/* The approval expectation belongs up front, not in a footnote — a member who
+   registers and then cannot get in will otherwise read it as broken. */
+.signup-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0.9rem 1.15rem;
+  border: 1px solid var(--brass);
+  border-left: 4px solid var(--brass);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--navy);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  box-shadow: var(--shadow-sm);
+}
+.signup-note svg { flex: 0 0 auto; margin-top: 0.2em; color: var(--brass); }
+
+/* WP-Members renders its own markup here; keep the theme's field rhythm. */
+.signup-form .wpmem_msg,
+.signup-form #wpmem_reg { margin: 0; }
+.signup-form input[type="text"],
+.signup-form input[type="email"],
+.signup-form input[type="password"],
+.signup-form input[type="url"],
+.signup-form input[type="tel"],
+.signup-form select,
+.signup-form textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.signup-alt {
+  border-top: 1px solid rgba(11,42,74,0.12);
+  padding-top: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.signup-alt-title { margin: 0; font-size: 1.15rem; color: var(--navy); }
+.signup-alt p { margin: 0; color: var(--navy-ink); }
+
+.signup-back { text-align: center; margin: 0; color: var(--navy-ink); font-size: 0.95rem; }
+.signup-back a { color: var(--harbor); font-weight: 700; text-decoration: none; }
+.signup-back a:hover { color: var(--navy); text-decoration: underline; }
+
+@media (max-width: 560px) {
+  .signup-alt { align-items: stretch; }
+  .signup-alt .btn-ghost-navy { text-align: center; }
+}

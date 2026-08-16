@@ -105,11 +105,56 @@ body.login {
 #nav, #backtoblog { text-align: center !important; padding: 0.4rem 0 !important; }
 #nav a, #backtoblog a { color: var(--harbor) !important; font-size: 0.88rem !important; text-decoration: none !important; }
 #nav a:hover, #backtoblog a:hover { color: var(--navy) !important; }
+/* Members-only login: hide the "← Go to Orienta Yacht Club" back-to-site link. */
+#backtoblog { display: none !important; }
 
-/* Our "Apply for membership" footer note */
+/* Our "Apply for membership" footer note (kept for any other caller) */
 .login-footer-note { text-align: center; color: #5a6b78; font-size: 0.9rem; margin: 14px auto 0; }
 .login-footer-note a { color: var(--harbor); font-weight: 600; text-decoration: none; }
 .login-footer-note a:hover { color: var(--navy); }
+
+/* Two routes below the form: set up a login, or apply to join.
+   Stacked rather than side by side so neither reads as the primary one, and so
+   the pair never has to fit two columns on a phone. */
+.login-routes {
+  width: 320px;
+  max-width: 100%;
+  margin: 18px auto 0;
+  padding: 14px 18px;
+  border: 1px solid rgba(11,42,74,0.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.72);
+  box-sizing: border-box;
+}
+.login-route { display: flex; flex-direction: column; gap: 2px; text-align: center; margin: 0; }
+.login-route + .login-route {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(11,42,74,0.10);
+}
+.login-route-q { color: #5a6b78; font-size: 0.86rem; line-height: 1.35; }
+.login-route a { color: var(--harbor); font-weight: 700; font-size: 0.92rem; text-decoration: none; }
+.login-route a:hover { color: var(--navy); text-decoration: underline; }
+
+/* Line shown when the members-only gate sent the visitor here */
+.login-gate-note {
+  width: 320px;
+  max-width: 100%;
+  margin: 0 auto 18px;
+  padding: 11px 14px;
+  border-left: 4px solid var(--brass);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--navy-ink);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  box-shadow: 0 2px 10px rgba(11,42,74,0.08);
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .login-routes, .login-gate-note { width: 100%; }
+}
 
 /* Notices / errors */
 #login_error,

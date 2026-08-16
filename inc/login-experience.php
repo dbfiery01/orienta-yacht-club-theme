@@ -26,13 +26,33 @@ add_action( 'login_enqueue_scripts', function () {
 add_filter( 'login_headerurl',  fn() => home_url( '/' ) );
 add_filter( 'login_headertext', fn() => get_bloginfo( 'name' ) );
 
-// Add "Not a member? Apply for membership →" and back-to-site link below the form
+// Two clearly separated routes below the form. The single old line ("Not a
+// member? Apply for membership") was the only option offered, which sent
+// existing members — who have already joined and just lack a login — into the
+// prospective-member application by mistake.
 add_action( 'login_footer', function () {
-	$apply_url = home_url( '/membership-application/' );
-	$home_url  = home_url( '/' );
-	echo '<p class="login-footer-note">' .
-		'Not a member? <a href="' . esc_url( $apply_url ) . '">Apply for membership &rarr;</a>' .
-		'</p>';
+	$signup_url = home_url( '/member-login-setup/' );
+	?>
+	<div class="login-routes">
+		<p class="login-route">
+			<span class="login-route-q"><?php esc_html_e( 'Already a member, but no login yet?', 'orienta-yacht-club' ); ?></span>
+			<a href="<?php echo esc_url( $signup_url ); ?>"><?php esc_html_e( 'Set up your login', 'orienta-yacht-club' ); ?> &rarr;</a>
+		</p>
+	</div>
+	<?php
+} );
+
+/* ── 1b. Explain why a visitor was bounced to the login screen ─────────────
+ * The members-only gate below redirects guests here silently, which reads as a
+ * glitch. The gate appends oyc_members_only=1, and this renders a short line
+ * above the form saying what happened. */
+add_filter( 'login_message', function ( $message ) {
+	if ( empty( $_GET['oyc_members_only'] ) ) {
+		return $message;
+	}
+	return $message . '<p class="login-gate-note">'
+		. esc_html__( 'That page is for club members. Sign in below, or set up your login if you have not yet.', 'orienta-yacht-club' )
+		. '</p>';
 } );
 
 // Show club name as page title above the form
@@ -105,11 +125,83 @@ add_action( 'template_redirect', function () {
 			'member-rental-agreement',  // real content page (club-rental-agreement 301-redirects here)
 		);
 	$is_members_only = in_array( $slug, $always_members, true ) || get_post_meta( $post_id, '_oyc_members_only', true );
-	if ( $is_members_only && ! is_user_logged_in() ) {
-		wp_redirect( wp_login_url( get_permalink() ) );
+	if ( ! $is_members_only ) {
+		return;
+	}
+	// Guests: send to the login screen, with a note explaining why.
+	if ( ! is_user_logged_in() ) {
+		wp_redirect( add_query_arg( 'oyc_members_only', '1', wp_login_url( get_permalink() ) ) );
 		exit;
 	}
+	// Signed in but not yet approved. Being logged in is not enough — a
+	// self-registered account an officer has not approved must not reach
+	// members-only content, or the approval step is decorative. Do NOT redirect
+	// to wp-login.php here: they are already authenticated, so login would bounce
+	// them straight back and loop. Stop with an explanation instead.
+	if ( ! oyc_user_may_view_members_content() ) {
+		wp_die(
+			'<h1>' . esc_html__( 'Your login is awaiting approval', 'orienta-yacht-club' ) . '</h1>'
+			. '<p>' . esc_html__( 'Thanks for signing up. A club officer still needs to confirm your membership before the members’ area opens up. You will get an email as soon as that is done.', 'orienta-yacht-club' ) . '</p>'
+			. '<p><a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'Return to the Orienta Yacht Club home page', 'orienta-yacht-club' ) . '</a></p>',
+			esc_html__( 'Awaiting approval', 'orienta-yacht-club' ),
+			array( 'response' => 403 )
+		);
+	}
 } );
+
+/**
+ * Cutover for moderated registration.
+ *
+ * Every account created BEFORE this moment predates self-registration and is
+ * trusted without an activation record. Set it to when moderated registration
+ * was switched on in Settings → WP-Members.
+ */
+if ( ! defined( 'OYC_MODERATION_START' ) ) {
+	define( 'OYC_MODERATION_START', '2026-07-23 00:00:00' );
+}
+
+/**
+ * Whether the current user is allowed to see members-only content.
+ *
+ * Logged in AND approved. Approval is WP-Members' `active` user meta, but this
+ * deliberately does NOT delegate to wpmem_is_user_activated(): that treats a
+ * MISSING value as "not activated" (its checks are `$var != 1`), so calling it
+ * would lock every long-standing member out of the members' area the moment
+ * moderated registration was switched on — none of them have an activation
+ * record. Nor can a missing value simply be trusted, or a freshly registered
+ * account would walk straight in if WP-Members happens not to stamp a 0.
+ *
+ * So: an explicit value decides it, and when there is no value at all the
+ * registration date does — which is correct either way.
+ *
+ * @return bool
+ */
+function oyc_user_may_view_members_content() {
+	if ( ! is_user_logged_in() ) {
+		return false;
+	}
+	// Admins always get through.
+	if ( current_user_can( 'manage_options' ) ) {
+		return true;
+	}
+
+	$user_id = get_current_user_id();
+	$active  = (string) get_user_meta( $user_id, 'active', true );
+
+	if ( '1' === $active ) {
+		return true;                      // approved by an officer
+	}
+	if ( '' !== $active ) {
+		return false;                     // explicit 0 — pending or deactivated
+	}
+
+	// No activation record at all: trust it only if the account predates moderation.
+	$user = get_userdata( $user_id );
+	if ( ! $user || empty( $user->user_registered ) ) {
+		return false;
+	}
+	return strtotime( $user->user_registered ) < strtotime( OYC_MODERATION_START );
+}
 
 // Mark pages as members-only via postmeta
 // Usage: add meta _oyc_members_only = 1 to any page post
@@ -138,6 +230,11 @@ add_filter( 'logout_redirect', fn() => home_url( '/' ) );
 /* ── 6. Replace "Howdy" in the WordPress admin toolbar ──────── */
 
 add_filter( 'gettext', function ( $translated, $original ) {
+	// Login screen: soften "Lost your password?" into a friendlier prompt (same
+	// password-reset link underneath).
+	if ( $original === 'Lost your password?' ) {
+		return 'Having Trouble Logging in?';
+	}
 	if ( $original === 'Howdy, %s' ) {
 		$hour = (int) current_time( 'H' );
 		if ( $hour < 12 ) {
