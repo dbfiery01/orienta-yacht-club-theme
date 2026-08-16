@@ -58,6 +58,19 @@ add_filter( 'login_message', function ( $message ) {
 // Show club name as page title above the form
 add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member Login' );
 
+// Never page-cache the login-setup page. It hosts the WP-Members registration
+// form, which carries a security nonce and is per-request dynamic — a cached
+// copy serves stale nonces (breaking submissions) and, as seen, can even cache
+// a blank/form-less version. DONOTCACHEPAGE is honoured by WP-Optimize et al.
+add_action( 'template_redirect', function () {
+	if ( is_page( 'member-login-setup' ) ) {
+		nocache_headers();
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+	}
+} );
+
 /* ── 2. Redirect after login → member dashboard ──────────── */
 
 add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
