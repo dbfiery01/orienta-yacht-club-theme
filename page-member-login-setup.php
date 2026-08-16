@@ -65,7 +65,7 @@ get_header();
 				// flow: the account is pending until an officer approves it.
 				$oyc_reg_form = preg_replace(
 					'/Congratulations!.*?emailed to you\./s',
-					esc_html__( 'Once your new account is approved — usually within a few days — you will receive an email to confirm your account and to create your password.', 'orienta-yacht-club' ),
+					esc_html__( 'Your registration has been received. Once your account is approved — usually within a few days — you can log in with the password that was emailed to you.', 'orienta-yacht-club' ),
 					$oyc_reg_form
 				);
 				echo $oyc_reg_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WP-Members markup + individually-escaped fields.
