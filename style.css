@@ -3282,8 +3282,29 @@ body.oyc-page-oyc-resources .dashboard-section { background: transparent; paddin
 .signup-note svg { flex: 0 0 auto; margin-top: 0.2em; color: var(--brass); }
 
 /* WP-Members renders its own markup here; keep the theme's field rhythm. */
-.signup-form .wpmem_msg,
-.signup-form #wpmem_reg { margin: 0; }
+.signup-form .wpmem_msg { margin: 0; }
+/* Match the /edit-profile/ form: white card, soft-filled fields, uppercase
+   labels, brass focus — so signing up and editing your profile feel identical. */
+.signup-form #wpmem_reg {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px;
+  box-shadow: 0 8px 28px rgba(11,42,74,0.08);
+}
+.signup-form fieldset { border: 0; padding: 0; margin: 0; }
+.signup-form fieldset legend {
+  display: block; width: 100%;
+  font-size: 1.15rem; font-weight: 700; color: var(--navy);
+  margin: 0 0 1.1rem; padding: 0;
+}
+.signup-form label.text {
+  display: block;
+  font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--navy); margin: 0 0 6px;
+}
+.signup-form label.text .req { color: var(--brass); }
 .signup-form input[type="text"],
 .signup-form input[type="email"],
 .signup-form input[type="password"],
@@ -3291,9 +3312,33 @@ body.oyc-page-oyc-resources .dashboard-section { background: transparent; paddin
 .signup-form input[type="tel"],
 .signup-form select,
 .signup-form textarea {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
+  font: inherit; font-size: 0.95rem;
+  padding: 10px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #F9F6F0;
+  color: var(--navy);
+  width: 100%; max-width: 100%; box-sizing: border-box;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.signup-form input:focus,
+.signup-form select:focus,
+.signup-form textarea:focus {
+  outline: 2px solid var(--brass); outline-offset: 1px;
+  border-color: var(--brass); background: #fff;
+}
+.signup-form .div_text, .signup-form .div_textarea { margin: 0 0 14px; }
+.signup-form .button_div { margin-top: 8px; }
+.signup-form .buttons,
+.signup-form input[type="submit"] {
+  background: var(--brass); border: 1px solid var(--brass);
+  color: var(--navy-ink); font-weight: 700; font-size: 0.95rem;
+  border-radius: 8px; padding: 11px 22px; width: auto; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.signup-form .buttons:hover,
+.signup-form input[type="submit"]:hover {
+  background: var(--brass-bright); border-color: var(--brass-bright);
 }
 
 .signup-alt {
