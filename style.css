@@ -1112,6 +1112,8 @@ p { margin: 0 0 1em; }
 }
 .profile-form__group input[type="text"],
 .profile-form__group input[type="email"],
+.profile-form__group input[type="tel"],
+.profile-form__group input[type="number"],
 .profile-form__group input[type="password"],
 .profile-form__group textarea {
   font: inherit;
