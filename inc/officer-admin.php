@@ -331,6 +331,54 @@ add_filter( 'wpseo_robots_array', function ( $robots ) {
 } );
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ * Critical hero CSS — printed inline rather than shipped in officer.css.
+ *
+ * The parent's body.has-hero-header .page-hero sets
+ * min-height: clamp(420px, 56vh, 560px) with 5.5rem/3.5rem padding, which is an
+ * exact specificity tie with our override, so the result depends on stylesheet
+ * order. Worse, WP-Optimize's minify bundle can serve a stale copy of
+ * officer.css after a deploy, dropping these rules entirely. Printing them at
+ * wp_head priority 999 puts them after every enqueued stylesheet and outside the
+ * bundle, so the compact hero cannot be defeated by cache state or load order.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+add_action( 'wp_head', function () {
+	if ( ! oyc_officer_is_officer_page() ) {
+		return;
+	}
+
+	$sel = 'body.oyc-officer-page';
+
+	$css = "
+{$sel} { background:#f5f9fd !important; }
+{$sel} .page-hero {
+	min-height:0 !important;
+	height:auto !important;
+	padding:92px 0 12px !important;
+	background:#fff !important;
+	background-image:none !important;
+	border-bottom:1px solid rgba(11,46,74,0.10) !important;
+	display:block !important;
+}
+{$sel} .page-hero::before,
+{$sel} .page-hero::after { display:none !important; }
+{$sel} .page-hero-title { color:#16324a !important; margin:0 !important; font-size:1.9rem !important; }
+{$sel} .page-hero-eyebrow {
+	color:#1583cf !important;
+	font-size:.85rem !important;
+	font-weight:600 !important;
+	letter-spacing:.1em !important;
+	text-transform:uppercase !important;
+	margin:0 0 .2rem !important;
+}
+{$sel} .section { padding-top:14px !important; padding-bottom:18px !important; }
+{$sel} .oyc-carousel { display:none !important; }
+";
+
+	echo "<style id=\"oyc-officer-hero\">" . wp_strip_all_tags( $css ) . "</style>\n";
+}, 999 );
+
+/* ─────────────────────────────────────────────────────────────────────────────
  * Assets
  * ───────────────────────────────────────────────────────────────────────────── */
 
