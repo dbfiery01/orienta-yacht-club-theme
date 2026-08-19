@@ -22,6 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * @param string $cap Capability required by the page.
  */
 function oyc_officer_guard( $cap = 'oyc_access_officer_area' ) {
+	global $oyc_is_officer_page;
+	$oyc_is_officer_page = true;
+
 	if ( ! is_user_logged_in() ) {
 		wp_safe_redirect( wp_login_url( get_permalink() ) );
 		exit;
@@ -177,7 +180,7 @@ function oyc_officer_sections() {
 			'key'      => 'hub',
 			'label'    => __( 'Officer Hub', 'orienta-yacht-club' ),
 			'cap'      => 'oyc_access_officer_area',
-			'template' => 'page-officer-hub.php',
+			'template' => 'page-officers.php',
 			'slug'     => 'officers',
 		),
 		array(
@@ -257,7 +260,7 @@ function oyc_officer_nav( $current = '' ) {
  */
 function oyc_officer_templates() {
 	return array(
-		'page-officer-hub.php',
+		'page-officers.php',
 		'page-officer-events.php',
 		'page-officer-messages.php',
 		'page-officer-members.php',
@@ -265,12 +268,25 @@ function oyc_officer_templates() {
 }
 
 /**
- * Whether the current request is an officer-area page. Template-based rather
- * than slug-based so renaming a page cannot change the answer.
+ * Whether the current request is an officer-area page.
+ *
+ * Set by oyc_officer_guard(), which every officer template calls before
+ * get_header() — i.e. before wp_enqueue_scripts, body_class and wp_head all
+ * run. is_page_template() alone is NOT sufficient: WordPress's template
+ * hierarchy auto-matches page-{slug}.php to a page of that slug, so these
+ * pages render the officer template with no _wp_page_template meta set and
+ * is_page_template() returns false. The flag is true whenever an officer
+ * template is actually executing, however WordPress resolved it.
  *
  * @return bool
  */
 function oyc_officer_is_officer_page() {
+	global $oyc_is_officer_page;
+
+	if ( ! empty( $oyc_is_officer_page ) ) {
+		return true;
+	}
+
 	return is_page_template( oyc_officer_templates() );
 }
 

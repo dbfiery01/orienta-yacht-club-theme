@@ -1,7 +1,9 @@
 <?php
 /**
  * Template Name: Officer Hub
- * Landing page for the front-end officer area.
+ * Landing page for the front-end officer area. Named page-officers.php so the
+ * template hierarchy auto-matches the /officers/ page without needing the
+ * template assigned in Page Attributes.
  *
  * @package Orienta_Yacht_Club
  */
