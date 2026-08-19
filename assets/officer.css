@@ -4,6 +4,17 @@
  * officer screens read as part of the club site rather than a bolted-on admin.
  */
 
+/* The eyebrow is styled in the parent theme only under .page-hero--dashboard.
+   The officer pages use the standard .page-hero, so carry the styling here. */
+.page-hero .page-hero-eyebrow {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin: 0 0 0.35rem;
+}
+
 .officer-section { padding-top: 2rem; }
 
 .officer-intro {

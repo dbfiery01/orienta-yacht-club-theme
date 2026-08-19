@@ -47,7 +47,7 @@ if ( current_user_can( 'oyc_manage_members' ) ) {
 get_header();
 ?>
 
-<div class="page-hero page-hero--dashboard">
+<div class="page-hero">
 	<div class="container">
 		<p class="page-hero-eyebrow"><?php esc_html_e( 'Officer Area', 'orienta-yacht-club' ); ?></p>
 		<h1 class="page-hero-title"><?php echo esc_html( $first_name ); ?></h1>

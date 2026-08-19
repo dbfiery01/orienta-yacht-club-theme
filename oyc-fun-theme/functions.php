@@ -96,7 +96,12 @@ add_filter( 'wpcf7_mail_components', function ( $components, $contact_form = nul
 // Static, auto-advances every 10s, with left/right arrows.
 add_action( 'wp_footer', function () {
 	// No photo reel on these pages (per request) — they get the tighter layout.
-	if ( is_page( array( 'videos', 'members-area', 'photo-gallery', 'live-video-streaming', 'dock-and-dine', 'mamaroneck-harbor' ) ) ) {
+	if ( is_page( array( 'videos', 'members-area', 'photo-gallery', 'live-video-streaming', 'dock-and-dine', 'mamaroneck-harbor', 'officers', 'officer-events', 'officer-messages', 'officer-members' ) ) ) {
+		return;
+	}
+	// The officer area is an admin surface, not a showcase — no reel. Checked by
+	// template as well as slug above, so renaming a page cannot bring it back.
+	if ( function_exists( 'oyc_officer_is_officer_page' ) && oyc_officer_is_officer_page() ) {
 		return;
 	}
 	// Collect home-* and header-* photos from the parent theme, plus any

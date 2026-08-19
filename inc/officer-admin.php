@@ -238,6 +238,59 @@ function oyc_officer_nav( $current = '' ) {
 	echo '</nav>';
 }
 
+/**
+ * The officer area's page templates.
+ *
+ * @return string[]
+ */
+function oyc_officer_templates() {
+	return array(
+		'page-officer-hub.php',
+		'page-officer-events.php',
+		'page-officer-messages.php',
+		'page-officer-members.php',
+	);
+}
+
+/**
+ * Whether the current request is an officer-area page. Template-based rather
+ * than slug-based so renaming a page cannot change the answer.
+ *
+ * @return bool
+ */
+function oyc_officer_is_officer_page() {
+	return is_page_template( oyc_officer_templates() );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Search engines — the officer area must never be indexed.
+ *
+ * Guests are redirected to login so a crawler never sees content, but the URLs
+ * are still discoverable. Covers Yoast (string and array forms, as inc/seo.php
+ * does) and core's wp_robots for the case where Yoast is inactive.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+add_filter( 'wp_robots', function ( $robots ) {
+	if ( oyc_officer_is_officer_page() ) {
+		$robots['noindex']  = true;
+		$robots['nofollow'] = true;
+		unset( $robots['index'], $robots['follow'] );
+	}
+	return $robots;
+} );
+
+add_filter( 'wpseo_robots', function ( $robots ) {
+	return oyc_officer_is_officer_page() ? 'noindex, nofollow' : $robots;
+} );
+
+add_filter( 'wpseo_robots_array', function ( $robots ) {
+	if ( oyc_officer_is_officer_page() && is_array( $robots ) ) {
+		$robots['index']  = 'noindex';
+		$robots['follow'] = 'nofollow';
+	}
+	return $robots;
+} );
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * Assets
  * ───────────────────────────────────────────────────────────────────────────── */
@@ -247,14 +300,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		return;
 	}
 
-	$templates = array(
-		'page-officer-hub.php',
-		'page-officer-events.php',
-		'page-officer-messages.php',
-		'page-officer-members.php',
-	);
-
-	if ( ! is_page_template( $templates ) ) {
+	if ( ! oyc_officer_is_officer_page() ) {
 		return;
 	}
 

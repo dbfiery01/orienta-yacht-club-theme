@@ -110,7 +110,7 @@ $oyc_events = get_posts( array(
 get_header();
 ?>
 
-<div class="page-hero page-hero--dashboard">
+<div class="page-hero">
 	<div class="container">
 		<p class="page-hero-eyebrow"><?php esc_html_e( 'Officer Area', 'orienta-yacht-club' ); ?></p>
 		<h1 class="page-hero-title"><?php esc_html_e( 'Calendar Events', 'orienta-yacht-club' ); ?></h1>
