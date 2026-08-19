@@ -41,12 +41,18 @@ body.oyc-officer-page .page-hero-eyebrow {
   margin: 0 0 0.2rem;
 }
 
-body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
+/* The parent's .section is 6rem top and bottom. The site's compact interior
+   pages cut that right down (child theme, about page: 12px / 16px). Match it —
+   the officer screens are dense admin views, not showcase pages. */
+body.oyc-officer-page .section {
+  padding-top: 14px;
+  padding-bottom: 18px;
+}
 
 .officer-intro {
   max-width: 62ch;
   color: rgba(4, 22, 42, 0.72);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 /* ── Navigation ─────────────────────────────────────────────────────────── */
@@ -56,11 +62,11 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
   flex-wrap: wrap;
   gap: 0.25rem;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 1.75rem;
+  margin-bottom: 1rem;
 }
 
 .officer-nav__link {
-  padding: 0.65rem 1.1rem;
+  padding: 0.5rem 0.95rem;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--navy);
@@ -139,16 +145,16 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
   background: #fff;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  margin-bottom: 1.75rem;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
   box-shadow: var(--shadow-sm);
 }
 
 .officer-panel--danger { border-color: rgba(160, 44, 44, 0.35); }
 
 .officer-panel__title {
-  margin: 0 0 1.25rem;
-  font-size: 1.25rem;
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
   color: var(--navy-ink);
 }
 
@@ -162,7 +168,7 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
 
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 
-.officer-form__row { margin-bottom: 1.1rem; }
+.officer-form__row { margin-bottom: 0.7rem; }
 
 .officer-form__row label,
 .officer-form__row legend {
@@ -218,7 +224,7 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
 }
 
 .officer-form__subhead {
-  margin: 1.75rem 0 1rem;
+  margin: 1.1rem 0 0.7rem;
   font-size: 1rem;
   color: var(--navy);
   border-top: 1px solid var(--line);
@@ -256,7 +262,7 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
 .officer-search input[type="search"] {
@@ -309,7 +315,7 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
 .officer-table th,
 .officer-table td {
   text-align: left;
-  padding: 0.7rem 0.6rem;
+  padding: 0.4rem 0.55rem;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
@@ -499,3 +505,38 @@ body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
   background: #fff;
   text-decoration: none;
 }
+
+/* ── Collapsible panel ──────────────────────────────────────────────────────
+   Secondary forms (e.g. Add a Member Account) stay closed so the roster is not
+   pushed down the page by a form you are usually not using. */
+
+.officer-panel--collapsible { padding: 0; }
+
+.officer-panel--collapsible > summary {
+  padding: 0.9rem 1.25rem;
+  margin: 0;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.officer-panel--collapsible > summary::-webkit-details-marker { display: none; }
+
+.officer-panel--collapsible > summary::before {
+  content: "+";
+  font-weight: 700;
+  color: var(--brass);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.officer-panel--collapsible[open] > summary::before { content: "\2212"; }
+
+.officer-panel--collapsible[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1rem;
+}
+
+.officer-panel--collapsible > .officer-form { padding: 0 1.25rem 1.25rem; }

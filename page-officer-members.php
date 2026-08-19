@@ -408,8 +408,8 @@ get_header();
 				<?php endif; ?>
 			</div>
 
-			<div class="officer-panel">
-				<h2 class="officer-panel__title"><?php esc_html_e( 'Add a Member Account', 'orienta-yacht-club' ); ?></h2>
+			<details class="officer-panel officer-panel--collapsible">
+				<summary class="officer-panel__title"><?php esc_html_e( 'Add a Member Account', 'orienta-yacht-club' ); ?></summary>
 
 				<form method="post" class="officer-form">
 					<?php wp_nonce_field( 'oyc_user_create', 'oyc_user_create_nonce' ); ?>
@@ -448,7 +448,7 @@ get_header();
 
 					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Create Account', 'orienta-yacht-club' ); ?></button>
 				</form>
-			</div>
+			</details>
 
 		<?php endif; ?>
 
