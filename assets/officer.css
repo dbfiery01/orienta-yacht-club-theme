@@ -428,3 +428,48 @@
 
   .officer-message__date { margin-left: 0; width: 100%; }
 }
+
+/* ── Officer block on the Member Dashboard ──────────────────────────────── */
+
+.dashboard-officer {
+  background: var(--cream-soft);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brass);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-officer .dashboard-heading { margin-top: 0; }
+
+.dashboard-officer__intro {
+  font-size: 0.88rem;
+  color: rgba(4, 22, 42, 0.62);
+  margin: 0 0 0.85rem;
+}
+
+.dashboard-officer__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dashboard-officer__links li { margin: 0 0 0.4rem; }
+
+.dashboard-officer__links a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--navy);
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.dashboard-officer__links a:hover {
+  border-color: var(--brass);
+  background: #fff;
+  text-decoration: none;
+}

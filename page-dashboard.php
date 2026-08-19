@@ -96,6 +96,25 @@ get_header();
 			</div><!-- .dashboard-main -->
 
 			<aside class="dashboard-side">
+
+				<?php if ( current_user_can( 'oyc_access_officer_area' ) && function_exists( 'oyc_officer_sections' ) ) : ?>
+					<div class="dashboard-officer">
+						<h2 class="dashboard-heading"><?php esc_html_e( 'Officer Area', 'orienta-yacht-club' ); ?></h2>
+						<p class="dashboard-officer__intro">
+							<?php esc_html_e( 'Club administration. Only officers see this.', 'orienta-yacht-club' ); ?>
+						</p>
+						<ul class="dashboard-officer__links">
+							<?php foreach ( oyc_officer_sections() as $oyc_section ) : ?>
+								<li>
+									<a href="<?php echo esc_url( $oyc_section['url'] ); ?>">
+										<?php echo esc_html( $oyc_section['label'] ); ?>
+									</a>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					</div>
+				<?php endif; ?>
+
 				<div class="dashboard-account">
 					<h2 class="dashboard-heading"><?php esc_html_e( 'Your Account', 'orienta-yacht-club' ); ?></h2>
 					<div class="dashboard-account-row">

@@ -300,7 +300,8 @@ add_action( 'wp_enqueue_scripts', function () {
 		return;
 	}
 
-	if ( ! oyc_officer_is_officer_page() ) {
+	// Also loads on the Member Dashboard, which renders the officer link block.
+	if ( ! oyc_officer_is_officer_page() && ! is_page_template( 'page-dashboard.php' ) ) {
 		return;
 	}
 
