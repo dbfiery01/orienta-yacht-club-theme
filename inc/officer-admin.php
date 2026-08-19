@@ -215,6 +215,18 @@ function oyc_officer_sections() {
 }
 
 /**
+ * The officer sections minus the hub itself, for places that are already a hub
+ * (the hub page's own tiles, the dashboard block).
+ *
+ * @return array
+ */
+function oyc_officer_subsections() {
+	return array_values( array_filter( oyc_officer_sections(), function ( $s ) {
+		return 'hub' !== $s['key'];
+	} ) );
+}
+
+/**
  * Render the officer sub-navigation.
  *
  * @param string $current Key of the active section.

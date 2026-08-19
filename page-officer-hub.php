@@ -14,9 +14,7 @@ $user       = wp_get_current_user();
 $first_name = $user->first_name ? $user->first_name : $user->display_name;
 
 // Section tiles, minus the hub itself.
-$oyc_tiles = array_values( array_filter( oyc_officer_sections(), function ( $s ) {
-	return 'hub' !== $s['key'];
-} ) );
+$oyc_tiles = oyc_officer_subsections();
 
 // Counts shown on the tiles.
 $oyc_counts = array();
