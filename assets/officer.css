@@ -5,49 +5,86 @@
  */
 
 /* ── Page hero ──────────────────────────────────────────────────────────────
-   The parent's .page-hero is a tall dark photo-gradient band. Every real
-   interior page overrides it with the site's compact white title band (see the
-   child theme's oyc-immersive rules, and the Sailing Instructions block that
-   solves this same problem for a page outside the immersive list).
-   The officer pages take that same treatment: the large top padding is
-   clearance for the fixed header, so the visible band stays short. Keyed on
-   .oyc-officer-page, which is set by template, not slug. */
+   The parent's .page-hero is a tall dark photo-gradient band. No real interior
+   page renders it — they all override it with the site's compact white title
+   band (child theme: oyc-immersive, and the Sailing Instructions block for a
+   page outside that list). The officer pages take the same treatment.
 
-body.oyc-officer-page { background: #f5f9fd; }
+   Keyed on BOTH the template-driven .oyc-officer-page class and the parent's
+   slug classes, so the styling holds even if one of those is missing.
+   !important throughout, matching how the child theme states these overrides. */
 
-body.oyc-officer-page .page-hero {
-  background: #fff;
-  background-image: none;
-  border-bottom: 1px solid rgba(11, 46, 74, 0.10);
-  min-height: 0;
-  padding: 92px 0 12px;
-  color: inherit;
+body.oyc-officer-page,
+body.oyc-page-officers,
+body.oyc-page-officer-events,
+body.oyc-page-officer-messages,
+body.oyc-page-officer-members { background: #f5f9fd !important; }
+
+body.oyc-officer-page .page-hero,
+body.oyc-page-officers .page-hero,
+body.oyc-page-officer-events .page-hero,
+body.oyc-page-officer-messages .page-hero,
+body.oyc-page-officer-members .page-hero {
+  background: #fff !important;
+  background-image: none !important;
+  border-bottom: 1px solid rgba(11, 46, 74, 0.10) !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 92px 0 12px !important;
+  color: inherit !important;
 }
 
 body.oyc-officer-page .page-hero::before,
-body.oyc-officer-page .page-hero::after { display: none; }
+body.oyc-officer-page .page-hero::after,
+body.oyc-page-officers .page-hero::before,
+body.oyc-page-officers .page-hero::after,
+body.oyc-page-officer-events .page-hero::before,
+body.oyc-page-officer-events .page-hero::after,
+body.oyc-page-officer-messages .page-hero::before,
+body.oyc-page-officer-messages .page-hero::after,
+body.oyc-page-officer-members .page-hero::before,
+body.oyc-page-officer-members .page-hero::after { display: none !important; }
 
-body.oyc-officer-page .page-hero-title {
-  color: #16324a;
-  margin: 0;
+body.oyc-officer-page .page-hero-title,
+body.oyc-page-officers .page-hero-title,
+body.oyc-page-officer-events .page-hero-title,
+body.oyc-page-officer-messages .page-hero-title,
+body.oyc-page-officer-members .page-hero-title {
+  color: #16324a !important;
+  margin: 0 !important;
 }
 
-body.oyc-officer-page .page-hero-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #1583cf;
-  margin: 0 0 0.2rem;
+body.oyc-officer-page .page-hero-eyebrow,
+body.oyc-page-officers .page-hero-eyebrow,
+body.oyc-page-officer-events .page-hero-eyebrow,
+body.oyc-page-officer-messages .page-hero-eyebrow,
+body.oyc-page-officer-members .page-hero-eyebrow {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: #1583cf !important;
+  margin: 0 0 0.2rem !important;
 }
 
 /* The parent's .section is 6rem top and bottom. The site's compact interior
-   pages cut that right down (child theme, about page: 12px / 16px). Match it —
-   the officer screens are dense admin views, not showcase pages. */
-body.oyc-officer-page .section {
-  padding-top: 14px;
-  padding-bottom: 18px;
+   pages cut that right down (child theme, about page: 12px / 16px). */
+body.oyc-officer-page .section,
+body.oyc-page-officers .section,
+body.oyc-page-officer-events .section,
+body.oyc-page-officer-messages .section,
+body.oyc-page-officer-members .section {
+  padding-top: 14px !important;
+  padding-bottom: 18px !important;
 }
+
+/* Belt and braces: the photo reel is excluded in PHP, but if it ever slips
+   through it must not appear on an admin screen. */
+body.oyc-officer-page .oyc-carousel,
+body.oyc-page-officers .oyc-carousel,
+body.oyc-page-officer-events .oyc-carousel,
+body.oyc-page-officer-messages .oyc-carousel,
+body.oyc-page-officer-members .oyc-carousel { display: none !important; }
 
 .officer-intro {
   max-width: 62ch;
