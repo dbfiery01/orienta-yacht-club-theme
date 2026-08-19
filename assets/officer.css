@@ -4,18 +4,44 @@
  * officer screens read as part of the club site rather than a bolted-on admin.
  */
 
-/* The eyebrow is styled in the parent theme only under .page-hero--dashboard.
-   The officer pages use the standard .page-hero, so carry the styling here. */
-.page-hero .page-hero-eyebrow {
+/* ── Page hero ──────────────────────────────────────────────────────────────
+   The parent's .page-hero is a tall dark photo-gradient band. Every real
+   interior page overrides it with the site's compact white title band (see the
+   child theme's oyc-immersive rules, and the Sailing Instructions block that
+   solves this same problem for a page outside the immersive list).
+   The officer pages take that same treatment: the large top padding is
+   clearance for the fixed header, so the visible band stays short. Keyed on
+   .oyc-officer-page, which is set by template, not slug. */
+
+body.oyc-officer-page { background: #f5f9fd; }
+
+body.oyc-officer-page .page-hero {
+  background: #fff;
+  background-image: none;
+  border-bottom: 1px solid rgba(11, 46, 74, 0.10);
+  min-height: 0;
+  padding: 92px 0 12px;
+  color: inherit;
+}
+
+body.oyc-officer-page .page-hero::before,
+body.oyc-officer-page .page-hero::after { display: none; }
+
+body.oyc-officer-page .page-hero-title {
+  color: #16324a;
+  margin: 0;
+}
+
+body.oyc-officer-page .page-hero-eyebrow {
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass);
-  margin: 0 0 0.35rem;
+  color: #1583cf;
+  margin: 0 0 0.2rem;
 }
 
-.officer-section { padding-top: 2rem; }
+body.oyc-officer-page .officer-section { padding-top: 1.75rem; }
 
 .officer-intro {
   max-width: 62ch;

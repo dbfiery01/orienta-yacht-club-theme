@@ -274,6 +274,17 @@ function oyc_officer_is_officer_page() {
 	return is_page_template( oyc_officer_templates() );
 }
 
+/**
+ * Body class for the officer pages so their CSS is keyed on the template rather
+ * than the page slug (renaming a page must not change the styling).
+ */
+add_filter( 'body_class', function ( $classes ) {
+	if ( oyc_officer_is_officer_page() ) {
+		$classes[] = 'oyc-officer-page';
+	}
+	return $classes;
+} );
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * Search engines — the officer area must never be indexed.
  *
