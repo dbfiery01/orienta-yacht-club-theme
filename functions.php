@@ -116,6 +116,17 @@ require_once get_template_directory() . '/inc/application-handler.php';
 require_once get_template_directory() . '/inc/admin-inbox.php';
 
 /**
+ * Officer area: the Club Officer role, its capabilities, and the audit log.
+ */
+require_once get_template_directory() . '/inc/officer-roles.php';
+
+/**
+ * Officer area: shared guards, user-management guardrails, notices and nav for
+ * the front-end officer pages (page-officer-*.php).
+ */
+require_once get_template_directory() . '/inc/officer-admin.php';
+
+/**
  * Contact-form spam protection: honeypot that flags bot submissions as spam
  * (blocks the email and keeps them out of the OYC Inbox).
  */

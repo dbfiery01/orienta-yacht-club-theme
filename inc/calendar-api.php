@@ -150,8 +150,8 @@ add_action( 'before_delete_post', function ( $id ) {
 } );
 
 add_action( 'rest_api_init', function () {
-	$can_edit   = function () { return current_user_can( 'edit_posts' ); };
-	$can_delete = function () { return current_user_can( 'delete_posts' ); };
+	$can_edit   = function () { return current_user_can( 'oyc_manage_events' ); };
+	$can_delete = function () { return current_user_can( 'oyc_manage_events' ); };
 
 	register_rest_route( 'oyc/v1', '/events', array(
 		array( 'methods' => 'GET',  'callback' => 'oyc_rest_list_events',   'permission_callback' => $can_edit ),
@@ -193,15 +193,37 @@ function oyc_rest_create_event( $req ) {
 	), 201 );
 }
 
-function oyc_rest_delete_event( $req ) {
-	$id = (int) $req['id'];
+/**
+ * Delete an event and its Calendarize it! occurrence-index row, then clear the
+ * calendar cache. Shared by the REST route and the officer events page.
+ *
+ * @param int $id Event post ID.
+ * @return string|WP_Error Deleted event title, or WP_Error if it was not an event.
+ */
+function oyc_delete_calendar_event( $id ) {
+	$id = (int) $id;
+
 	if ( 'events' !== get_post_type( $id ) ) {
-		return new WP_REST_Response( array( 'error' => 'Not an event' ), 404 );
+		return new WP_Error( 'oyc_not_event', 'Not an event' );
 	}
+
 	$title = get_the_title( $id );
 	wp_delete_post( $id, true );
+
 	global $wpdb;
 	$wpdb->delete( $wpdb->prefix . 'rhc_events', array( 'post_id' => $id ) );
 	oyc_rhc_clear_cache();
+
+	return $title;
+}
+
+function oyc_rest_delete_event( $req ) {
+	$id    = (int) $req['id'];
+	$title = oyc_delete_calendar_event( $id );
+
+	if ( is_wp_error( $title ) ) {
+		return new WP_REST_Response( array( 'error' => $title->get_error_message() ), 404 );
+	}
+
 	return array( 'deleted' => true, 'id' => $id, 'title' => $title );
 }
