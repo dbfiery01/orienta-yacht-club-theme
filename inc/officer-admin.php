@@ -214,6 +214,13 @@ function oyc_officer_sections() {
 			'slug'     => 'officer-messages',
 		),
 		array(
+			'key'      => 'applications',
+			'label'    => __( 'Applications', 'orienta-yacht-club' ),
+			'cap'      => 'oyc_manage_applications',
+			'template' => 'page-officer-applications.php',
+			'slug'     => 'officer-applications',
+		),
+		array(
 			'key'      => 'members',
 			'label'    => __( 'Members', 'orienta-yacht-club' ),
 			'cap'      => 'oyc_manage_members',
@@ -279,6 +286,7 @@ function oyc_officer_templates() {
 		'page-officers.php',
 		'page-officer-events.php',
 		'page-officer-messages.php',
+		'page-officer-applications.php',
 		'page-officer-members.php',
 	);
 }

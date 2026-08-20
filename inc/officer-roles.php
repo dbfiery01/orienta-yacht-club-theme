@@ -13,7 +13,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /** Bump to re-run role registration after changing the capability list. */
-define( 'OYC_OFFICER_ROLES_VERSION', '1.0.0' );
+define( 'OYC_OFFICER_ROLES_VERSION', '1.1.0' );
 
 /**
  * Capabilities the officer area recognises.
@@ -25,6 +25,7 @@ function oyc_officer_caps() {
 		'oyc_access_officer_area',
 		'oyc_manage_events',
 		'oyc_manage_messages',
+		'oyc_manage_applications',
 		'oyc_manage_members',
 	);
 }
