@@ -15,6 +15,15 @@ oyc_officer_guard( 'oyc_access_officer_area' );
 $user       = wp_get_current_user();
 $first_name = $user->first_name ? $user->first_name : $user->display_name;
 
+$hour = (int) current_time( 'H' );
+if ( $hour < 12 ) {
+	$greeting = __( 'Good morning', 'orienta-yacht-club' );
+} elseif ( $hour < 18 ) {
+	$greeting = __( 'Good afternoon', 'orienta-yacht-club' );
+} else {
+	$greeting = __( 'Good evening', 'orienta-yacht-club' );
+}
+
 // Section tiles, minus the hub itself.
 $oyc_tiles = oyc_officer_subsections();
 
@@ -50,7 +59,7 @@ get_header();
 <div class="page-hero">
 	<div class="container">
 		<p class="page-hero-eyebrow"><?php esc_html_e( 'Officer Area', 'orienta-yacht-club' ); ?></p>
-		<h1 class="page-hero-title"><?php echo esc_html( $first_name ); ?></h1>
+		<h1 class="page-hero-title"><?php esc_html_e( 'Officer Hub', 'orienta-yacht-club' ); ?></h1>
 	</div>
 </div>
 
@@ -61,7 +70,14 @@ get_header();
 		<?php oyc_officer_render_notices(); ?>
 
 		<p class="officer-intro">
-			<?php esc_html_e( 'Manage the club calendar, read messages from the website, and administer member accounts. Changes here go live on the public site immediately.', 'orienta-yacht-club' ); ?>
+			<?php
+			printf(
+				/* translators: 1: greeting, 2: member first name */
+				esc_html__( '%1$s %2$s. Manage the club calendar, read messages from the website, and administer member accounts. Changes here go live on the public site immediately.', 'orienta-yacht-club' ),
+				esc_html( rtrim( $greeting, ',' ) ),
+				esc_html( $first_name )
+			);
+			?>
 		</p>
 
 		<div class="officer-tiles">

@@ -155,18 +155,34 @@ function oyc_officer_can_delete_user( $target_id ) {
  * @param string $fallback_slug Slug to use if no page uses that template.
  * @return string
  */
-function oyc_officer_page_url( $template, $fallback_slug ) {
-	$pages = get_pages( array(
-		'meta_key'   => '_wp_page_template',
-		'meta_value' => $template,
-		'number'     => 1,
-	) );
+function oyc_officer_page_url( $template, $slug ) {
+	// Slug first. These pages are defined by slug — the template hierarchy matches
+	// page-{slug}.php automatically — and it resolves to exactly one page.
+	// get_pages() with meta_key/meta_value is NOT safe here: when no page has the
+	// template assigned (the normal case, since the hierarchy sets no
+	// _wp_page_template meta) it does not reliably filter, and every link ends up
+	// pointing at whichever page comes back first.
+	$page = get_page_by_path( $slug );
 
-	if ( ! empty( $pages ) ) {
-		return get_permalink( $pages[0]->ID );
+	if ( $page ) {
+		return get_permalink( $page );
 	}
 
-	return home_url( '/' . $fallback_slug . '/' );
+	// Otherwise honour a page that has the template explicitly assigned.
+	$ids = get_posts( array(
+		'post_type'      => 'page',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+		'meta_key'       => '_wp_page_template',
+		'meta_value'     => $template,
+	) );
+
+	if ( $ids ) {
+		return get_permalink( $ids[0] );
+	}
+
+	return home_url( '/' . $slug . '/' );
 }
 
 /**
