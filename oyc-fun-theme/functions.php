@@ -12,11 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 // Parent base styles (parent enqueues get_stylesheet_uri(), which in a child
 // theme points at THIS theme, so load the parent's CSS explicitly first).
 add_action( 'wp_enqueue_scripts', function () {
+	$parent_css = get_template_directory() . '/style.css';
+
 	wp_enqueue_style(
 		'oyc-parent-style',
 		get_template_directory_uri() . '/style.css',
 		array(),
-		'fun-base'
+		// Was the fixed string 'fun-base', so browsers cached the parent stylesheet
+		// indefinitely and never saw a deploy. Bust it on file mtime instead.
+		file_exists( $parent_css ) ? (string) filemtime( $parent_css ) : OYC_VERSION
 	);
 }, 5 );
 

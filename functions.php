@@ -12,7 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Keep this in step with the Version: header in style.css — it cache-busts the
 // theme's enqueued assets (including assets/login.css), so letting it drift
 // means edited CSS keeps serving stale to returning visitors.
-define( 'OYC_VERSION', '1.7.92' );
+// Derived from the style.css header so the asset cache-buster cannot drift out
+// of step with the theme version (it sat at 1.7.92 for a dozen releases).
+define( 'OYC_VERSION', wp_get_theme( get_template() )->get( 'Version' ) ?: '1.7.104' );
 
 // Strip any [TEST] prefix — runs at priority 9999 to catch anything added late.
 add_filter( 'wp_mail', function ( $args ) {
