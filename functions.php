@@ -121,6 +121,12 @@ require_once get_template_directory() . '/inc/admin-inbox.php';
 require_once get_template_directory() . '/inc/officer-roles.php';
 
 /**
+ * Scope the Google Maps JS API (google-api3 / rhc_gmap3) to pages that use it —
+ * Calendarize it! enqueues ~1.3MB of it on every page.
+ */
+require_once get_template_directory() . '/inc/google-maps-scope.php';
+
+/**
  * Officer area: shared guards, user-management guardrails, notices and nav for
  * the front-end officer pages (page-officer-*.php).
  */
