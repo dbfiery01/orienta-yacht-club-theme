@@ -307,6 +307,41 @@ function oyc_officer_is_officer_page() {
 }
 
 /**
+ * Pin the four officer slugs to their templates.
+ *
+ * These slugs are a fixed contract, but which template renders them is not
+ * guaranteed: the template hierarchy matches page-{slug}.php only when no
+ * template is assigned, and a stale or mistaken _wp_page_template value in
+ * Page Attributes silently overrides it — which is how /officers/ ends up
+ * rendering the members view on one environment but not another.
+ *
+ * Resolving from the slug here makes the URL authoritative on every install,
+ * regardless of what any individual site's page meta happens to say.
+ */
+add_filter( 'template_include', function ( $template ) {
+	if ( ! is_page() ) {
+		return $template;
+	}
+
+	$map = array(
+		'officers'         => 'page-officers.php',
+		'officer-events'   => 'page-officer-events.php',
+		'officer-messages' => 'page-officer-messages.php',
+		'officer-members'  => 'page-officer-members.php',
+	);
+
+	$slug = get_post_field( 'post_name', get_queried_object_id() );
+
+	if ( ! isset( $map[ $slug ] ) ) {
+		return $template;
+	}
+
+	$located = locate_template( $map[ $slug ] );
+
+	return $located ? $located : $template;
+}, 99 );
+
+/**
  * Body class for the officer pages so their CSS is keyed on the template rather
  * than the page slug (renaming a page must not change the styling).
  */
