@@ -495,3 +495,9 @@
 }
 
 .officer-panel--collapsible > .officer-form { padding: 0 1.25rem 1.25rem; }
+
+.dashboard-officer__cta {
+  display: block;
+  margin-top: 0.85rem;
+  text-align: center;
+}

@@ -112,6 +112,10 @@ get_header();
 								</li>
 							<?php endforeach; ?>
 						</ul>
+						<a class="btn btn-primary dashboard-officer__cta"
+						   href="<?php echo esc_url( oyc_officer_page_url( 'page-officers.php', 'officers' ) ); ?>">
+							<?php esc_html_e( 'Officer Hub', 'orienta-yacht-club' ); ?>
+						</a>
 					</div>
 				<?php endif; ?>
 
