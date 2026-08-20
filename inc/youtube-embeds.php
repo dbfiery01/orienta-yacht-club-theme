@@ -23,8 +23,18 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /**
- * Add the attributes a modern YouTube embed needs, and mark the iframe so
- * lazy-loaders leave its src alone.
+ * Replace a YouTube iframe with a thumbnail that opens the video on YouTube.
+ *
+ * The embedded player returns "Error 153 — video player configuration error" on
+ * this site even with correct markup: the videos are public and embeddable
+ * (their oEmbed endpoints all return 200), the iframe carries allow and
+ * referrerpolicy, lazy-loading is disabled on it, and the page sends no header
+ * that would interfere. The failure is inside YouTube's player and is not
+ * something the embedding page can fix.
+ *
+ * A thumbnail facade always works, weighs a few KB against the player's ~800KB,
+ * and loads no third-party scripts. Filterable so embeds can be restored if
+ * YouTube starts cooperating again.
  *
  * @param string $html The oEmbed HTML.
  * @return string
@@ -34,48 +44,55 @@ function oyc_fix_youtube_embed_html( $html ) {
 		return $html;
 	}
 
-	if ( ! preg_match( '~(youtube(-nocookie)?\.com|youtu\.be)~i', $html ) ) {
+	/**
+	 * Return true to keep the real YouTube iframe instead of the facade.
+	 *
+	 * @param bool $use_player Whether to embed the player.
+	 */
+	if ( apply_filters( 'oyc_youtube_use_player', false ) ) {
 		return $html;
 	}
 
-	$add = array();
-
-	// The player needs these to configure itself; old cached markup has neither.
-	if ( ! preg_match( '~\sallow\s*=~i', $html ) ) {
-		$add[] = 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"';
+	// data-src as well as src: a lazy-loader may already have swapped it out.
+	if ( ! preg_match( '~(?:data-)?src=["\']https?://(?:www\.)?youtube(?:-nocookie)?\.com/embed/([A-Za-z0-9_-]{11})~i', $html, $m ) ) {
+		return $html;
 	}
 
-	if ( ! preg_match( '~\sreferrerpolicy\s*=~i', $html ) ) {
-		$add[] = 'referrerpolicy="strict-origin-when-cross-origin"';
+	$id    = $m[1];
+	$title = preg_match( '~title=["\']([^"\']*)~i', $html, $t ) ? $t[1] : __( 'Club video', 'orienta-yacht-club' );
+
+	return sprintf(
+		'<a class="oyc-yt" href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">'
+			. '<img class="oyc-yt__thumb" src="%3$s" alt="" loading="lazy" width="480" height="360" />'
+			. '<span class="oyc-yt__play" aria-hidden="true"></span>'
+		. '</a>',
+		esc_url( 'https://www.youtube.com/watch?v=' . $id ),
+		esc_attr( sprintf( __( 'Watch %s on YouTube', 'orienta-yacht-club' ), $title ) ),
+		esc_url( 'https://img.youtube.com/vi/' . $id . '/hqdefault.jpg' )
+	);
+}
+
+/**
+ * Content-level pass, for iframes written directly into a post rather than
+ * produced by oEmbed. Replaces each iframe individually — oyc_fix_youtube_embed_html()
+ * returns a single facade, so it must never be handed a whole document.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function oyc_fix_youtube_embeds_in_content( $content ) {
+	if ( ! is_string( $content ) || false === stripos( $content, '<iframe' ) ) {
+		return $content;
 	}
 
-	// Opt out of JS lazy-loading: swapping src from about:blank loses the
-	// embedding context. Native loading="lazy" gives the same benefit safely.
-	if ( ! preg_match( '~\sdata-no-lazy\s*=~i', $html ) ) {
-		$add[] = 'data-no-lazy="1"';
-		$add[] = 'data-skip-lazy="1"';
-	}
-
-	if ( ! preg_match( '~\sloading\s*=~i', $html ) ) {
-		$add[] = 'loading="lazy"';
-	}
-
-	if ( $add ) {
-		$html = preg_replace( '~<iframe~i', '<iframe ' . implode( ' ', $add ), $html, 1 );
-	}
-
-	// Lazy-load plugins key off these class names.
-	if ( preg_match( '~<iframe[^>]*\sclass\s*=\s*"([^"]*)"~i', $html, $m ) ) {
-		if ( false === stripos( $m[1], 'no-lazyload' ) ) {
-			$html = str_replace( 'class="' . $m[1] . '"', 'class="' . $m[1] . ' no-lazyload skip-lazy"', $html );
-		}
-	} else {
-		$html = preg_replace( '~<iframe~i', '<iframe class="no-lazyload skip-lazy"', $html, 1 );
-	}
-
-	return $html;
+	return preg_replace_callback(
+		'~<iframe\b[^>]*>.*?</iframe>|<iframe\b[^>]*/?>~is',
+		function ( $m ) {
+			return oyc_fix_youtube_embed_html( $m[0] );
+		},
+		$content
+	);
 }
 
 add_filter( 'embed_oembed_html', 'oyc_fix_youtube_embed_html', 20 );
-add_filter( 'oembed_result', 'oyc_fix_youtube_embed_html', 20 );
-add_filter( 'the_content', 'oyc_fix_youtube_embed_html', 20 );
+add_filter( 'the_content', 'oyc_fix_youtube_embeds_in_content', 21 );
