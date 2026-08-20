@@ -99,7 +99,7 @@ get_header();
 
 				<?php if ( current_user_can( 'oyc_access_officer_area' ) && function_exists( 'oyc_officer_subsections' ) ) : ?>
 					<div class="dashboard-officer">
-						<h2 class="dashboard-heading"><?php esc_html_e( 'Officer Area', 'orienta-yacht-club' ); ?></h2>
+						<h2 class="dashboard-heading"><?php esc_html_e( 'Administration', 'orienta-yacht-club' ); ?></h2>
 						<p class="dashboard-officer__intro">
 							<?php esc_html_e( 'Club administration. Only officers see this.', 'orienta-yacht-club' ); ?>
 						</p>
