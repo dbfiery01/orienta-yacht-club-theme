@@ -183,6 +183,13 @@ require_once get_template_directory() . '/inc/photo-gallery.php';
 require_once get_template_directory() . '/inc/video-gallery.php';
 
 /**
+ * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
+ * fetched, and old cached embeds lack the allow/referrerpolicy attributes the
+ * player now requires (YouTube "Error 153").
+ */
+require_once get_template_directory() . '/inc/youtube-embeds.php';
+
+/**
  * SEO: staging noindex, LocalBusiness schema, per-page titles/descriptions,
  * and the /fishing/ → /boating/ redirect.
  */
