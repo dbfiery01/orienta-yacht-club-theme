@@ -159,6 +159,29 @@ if ( isset( $_POST['oyc_user_reset_nonce'] ) &&
 	}
 }
 
+/* ── Confirm membership ───────────────────────────────────────────────────────
+ * Sets WP-Members' `active` meta to 1, which is what
+ * oyc_user_may_view_members_content() reads to allow the members' area.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+if ( isset( $_POST['oyc_user_confirm_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_user_confirm_nonce'] ) ), 'oyc_user_confirm' ) ) {
+
+	$cid = (int) ( $_POST['user_id'] ?? 0 );
+
+	if ( ! oyc_officer_can_manage_user( $cid ) ) {
+		oyc_officer_notice( __( 'You do not have permission to manage that account.', 'orienta-yacht-club' ), 'error' );
+	} else {
+		$who = get_userdata( $cid );
+		update_user_meta( $cid, 'active', '1' );
+		oyc_audit_log( 'user.confirm', sprintf( 'Confirmed membership for "%s"', $who->user_login ), $cid );
+		oyc_officer_notice( sprintf(
+			__( '%s is confirmed and can now reach the members\' area.', 'orienta-yacht-club' ),
+			$who->display_name
+		) );
+	}
+}
+
 /* ── Delete ───────────────────────────────────────────────────────────────── */
 
 if ( isset( $_POST['oyc_user_delete_nonce'] ) &&
@@ -364,6 +387,7 @@ get_header();
 							<th scope="col"><?php esc_html_e( 'Username', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'orienta-yacht-club' ); ?></span></th>
 						</tr>
 					</thead>
@@ -376,13 +400,28 @@ get_header();
 							// recorded, which made the Name column read as usernames.
 							$u_name     = trim( $u->first_name . ' ' . $u->last_name );
 							$u_name     = '' !== $u_name ? $u_name : $u->display_name;
+							$u_state    = oyc_user_approval_state( $u->ID );
 						?>
 							<tr>
 								<td><?php echo esc_html( $u_name ); ?></td>
 								<td><?php echo esc_html( $u->user_login ); ?></td>
 								<td><a href="mailto:<?php echo esc_attr( $u->user_email ); ?>"><?php echo esc_html( $u->user_email ); ?></a></td>
 								<td><?php echo esc_html( $u_role ? translate_user_role( wp_roles()->get_names()[ $u_role ] ?? $u_role ) : '—' ); ?></td>
+								<td>
+									<span class="officer-status officer-status--<?php echo esc_attr( $u_state ); ?>">
+										<?php echo esc_html( oyc_user_approval_label( $u_state ) ); ?>
+									</span>
+								</td>
 								<td class="officer-table__actions">
+									<?php if ( $manageable && 'approved' !== $u_state ) : ?>
+										<form method="post" style="display:inline">
+											<?php wp_nonce_field( 'oyc_user_confirm', 'oyc_user_confirm_nonce' ); ?>
+											<input type="hidden" name="user_id" value="<?php echo esc_attr( $u->ID ); ?>" />
+											<button type="submit" class="officer-btn officer-btn--confirm">
+												<?php esc_html_e( 'Confirm', 'orienta-yacht-club' ); ?>
+											</button>
+										</form>
+									<?php endif; ?>
 									<?php if ( $manageable ) : ?>
 										<a class="officer-btn" href="<?php echo esc_url( add_query_arg( 'edit_user', $u->ID, get_permalink() ) ); ?>">
 											<?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?>

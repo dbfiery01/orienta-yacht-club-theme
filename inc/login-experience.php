@@ -264,27 +264,80 @@ function oyc_user_may_view_members_content() {
 	if ( ! is_user_logged_in() ) {
 		return false;
 	}
-	// Admins always get through.
-	if ( current_user_can( 'manage_options' ) ) {
-		return true;
+
+	return in_array(
+		oyc_user_approval_state( get_current_user_id() ),
+		array( 'approved', 'legacy' ),
+		true
+	);
+}
+
+/**
+ * Approval state of any account, as one of:
+ *
+ *   'approved' — explicit `active` = 1, or an administrator
+ *   'legacy'   — no activation record, but registered before moderation began,
+ *                so trusted (these accounts predate self-registration)
+ *   'pending'  — needs approving: an explicit non-1 value, or no record on an
+ *                account created after moderation began
+ *   'unknown'  — no such user
+ *
+ * Splitting this out of oyc_user_may_view_members_content() lets the officer
+ * roster report on any account, not just the current one. The reasoning about a
+ * missing value is unchanged and is the subtle part: a MISSING value cannot be
+ * read as "not activated" (that would lock out every long-standing member) nor
+ * simply trusted (a fresh registration would walk straight in), so the
+ * registration date decides it.
+ *
+ * @param int $user_id User ID.
+ * @return string
+ */
+function oyc_user_approval_state( $user_id ) {
+	$user = get_userdata( (int) $user_id );
+
+	if ( ! $user ) {
+		return 'unknown';
 	}
 
-	$user_id = get_current_user_id();
-	$active  = (string) get_user_meta( $user_id, 'active', true );
+	if ( user_can( $user, 'manage_options' ) ) {
+		return 'approved';
+	}
+
+	$active = (string) get_user_meta( $user->ID, 'active', true );
 
 	if ( '1' === $active ) {
-		return true;                      // approved by an officer
+		return 'approved';                // approved by an officer
 	}
 	if ( '' !== $active ) {
-		return false;                     // explicit 0 — pending or deactivated
+		return 'pending';                 // explicit 0 — pending or deactivated
 	}
 
-	// No activation record at all: trust it only if the account predates moderation.
-	$user = get_userdata( $user_id );
-	if ( ! $user || empty( $user->user_registered ) ) {
-		return false;
+	if ( empty( $user->user_registered ) ) {
+		return 'pending';
 	}
-	return strtotime( $user->user_registered ) < strtotime( OYC_MODERATION_START );
+
+	return strtotime( $user->user_registered ) < strtotime( OYC_MODERATION_START )
+		? 'legacy'
+		: 'pending';
+}
+
+/**
+ * Human label for an approval state.
+ *
+ * @param string $state From oyc_user_approval_state().
+ * @return string
+ */
+function oyc_user_approval_label( $state ) {
+	switch ( $state ) {
+		case 'approved':
+			return __( 'Confirmed', 'orienta-yacht-club' );
+		case 'legacy':
+			return __( 'Long-standing', 'orienta-yacht-club' );
+		case 'pending':
+			return __( 'Not confirmed', 'orienta-yacht-club' );
+		default:
+			return __( 'Unknown', 'orienta-yacht-club' );
+	}
 }
 
 // Mark pages as members-only via postmeta
