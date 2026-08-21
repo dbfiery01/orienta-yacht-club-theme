@@ -194,6 +194,112 @@ function oyc_rest_create_event( $req ) {
 }
 
 /**
+ * Whether an event carries a Calendarize it! repeat rule.
+ *
+ * Events created here are always single occurrences — oyc_create_calendar_event()
+ * writes the recurrence fields blank. Anything with a rule was built in the
+ * Calendarize it! admin, and the simple officer form cannot represent it.
+ *
+ * @param int $id Event post ID.
+ * @return bool
+ */
+function oyc_event_is_recurring( $id ) {
+	foreach ( array( 'fc_rrule', 'fc_interval', 'fc_rdate' ) as $key ) {
+		if ( '' !== trim( (string) get_post_meta( $id, $key, true ) ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Update an existing event's title, description, dates and calendars.
+ *
+ * Deliberately narrow: it writes only the fields the officer form owns. Colour,
+ * click behaviour, map, and every recurrence field (fc_rrule, fc_interval,
+ * fc_exdate, fc_rdate, fc_dow_except, fc_end_interval) are left untouched, so
+ * editing an event built in Calendarize it! cannot silently flatten its repeat
+ * rule. Callers should still refuse recurring events — see
+ * oyc_event_is_recurring() — but this is the backstop.
+ *
+ * @param int   $id   Event post ID.
+ * @param array $args title, content, start, end, allday, calendar.
+ * @return true|WP_Error
+ */
+function oyc_update_calendar_event( $id, $args ) {
+	$id = (int) $id;
+
+	if ( 'events' !== get_post_type( $id ) ) {
+		return new WP_Error( 'oyc_not_event', 'Not an event' );
+	}
+
+	$d = wp_parse_args( $args, array(
+		'title'    => '',
+		'content'  => '',
+		'start'    => '',
+		'end'      => '',
+		'allday'   => true,
+		'calendar' => array(),
+	) );
+
+	if ( '' === trim( (string) $d['title'] ) || '' === trim( (string) $d['start'] ) ) {
+		return new WP_Error( 'oyc_missing', 'title and start are required' );
+	}
+
+	$start_date = substr( (string) $d['start'], 0, 10 );
+	$end_date   = $d['end'] ? substr( (string) $d['end'], 0, 10 ) : $start_date;
+	$allday     = ! empty( $d['allday'] );
+
+	if ( $allday ) {
+		$start_time = '';
+		$end_time   = '';
+		$start_dt   = $start_date . ' 00:00:00';
+		$end_dt     = $end_date . ' 00:00:00';
+	} else {
+		$start_time = trim( substr( (string) $d['start'], 11 ) );
+		$start_time = $start_time ? $start_time : '00:00:00';
+		$end_time   = $d['end'] ? trim( substr( (string) $d['end'], 11 ) ) : $start_time;
+		$end_time   = $end_time ? $end_time : $start_time;
+		$start_dt   = $start_date . ' ' . $start_time;
+		$end_dt     = $end_date . ' ' . $end_time;
+	}
+
+	$res = wp_update_post( array(
+		'ID'           => $id,
+		'post_title'   => $d['title'],
+		'post_content' => $d['content'],
+	), true );
+
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+
+	// Only the date/time fields the form owns.
+	$meta = array(
+		'fc_allday'         => $allday ? '1' : '',
+		'fc_start'          => $start_date,
+		'fc_end'            => $end_date,
+		'fc_start_time'     => $start_time,
+		'fc_end_time'       => $end_time,
+		'fc_start_datetime' => $start_dt,
+		'fc_end_datetime'   => $end_dt,
+		'fc_range_start'    => $start_dt,
+		'fc_range_end'      => $end_dt,
+	);
+	foreach ( $meta as $k => $v ) {
+		update_post_meta( $id, $k, $v );
+	}
+
+	wp_set_object_terms( $id, array_map( 'intval', (array) $d['calendar'] ), 'calendar' );
+
+	// Rewrites the occurrence-index row (delete + insert) and clears the cache.
+	oyc_rhc_index_event( $id, $start_dt, $end_dt, $allday );
+
+	return true;
+}
+
+/**
  * Delete an event and its Calendarize it! occurrence-index row, then clear the
  * calendar cache. Shared by the REST route and the officer events page.
  *

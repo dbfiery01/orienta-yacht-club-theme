@@ -10,6 +10,59 @@ require_once get_template_directory() . '/inc/officer-admin.php';
 
 oyc_officer_guard( 'oyc_manage_events' );
 
+/* ── Update ───────────────────────────────────────────────────────────────── */
+
+if ( isset( $_POST['oyc_event_update_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_event_update_nonce'] ) ), 'oyc_event_update' ) ) {
+
+	$up_id = (int) ( $_POST['event_id'] ?? 0 );
+
+	if ( ! $up_id || 'events' !== get_post_type( $up_id ) ) {
+		oyc_officer_notice( __( 'That event no longer exists.', 'orienta-yacht-club' ), 'error' );
+	} elseif ( oyc_event_is_recurring( $up_id ) ) {
+		oyc_officer_notice( __( 'That is a repeating event and has to be edited in WordPress.', 'orienta-yacht-club' ), 'error' );
+	} else {
+		$allday     = ! empty( $_POST['event_allday'] );
+		$start_date = sanitize_text_field( wp_unslash( $_POST['event_start_date'] ?? '' ) );
+		$end_date   = sanitize_text_field( wp_unslash( $_POST['event_end_date']   ?? '' ) );
+		$start_time = sanitize_text_field( wp_unslash( $_POST['event_start_time'] ?? '' ) );
+		$end_time   = sanitize_text_field( wp_unslash( $_POST['event_end_time']   ?? '' ) );
+		$end_date   = $end_date ? $end_date : $start_date;
+
+		if ( $allday ) {
+			$start = $start_date;
+			$end   = $end_date;
+		} else {
+			$start_time = $start_time ? $start_time . ':00' : '00:00:00';
+			$end_time   = $end_time   ? $end_time   . ':00' : $start_time;
+			$start      = $start_date . ' ' . $start_time;
+			$end        = $end_date . ' ' . $end_time;
+		}
+
+		$result = oyc_update_calendar_event( $up_id, array(
+			'title'    => sanitize_text_field( wp_unslash( $_POST['event_title'] ?? '' ) ),
+			'content'  => wp_kses_post( wp_unslash( $_POST['event_content'] ?? '' ) ),
+			'start'    => $start,
+			'end'      => $end,
+			'allday'   => $allday,
+			'calendar' => array_map( 'intval', (array) ( $_POST['event_calendar'] ?? array() ) ),
+		) );
+
+		if ( is_wp_error( $result ) ) {
+			oyc_officer_notice(
+				sprintf( __( 'The event could not be saved: %s', 'orienta-yacht-club' ), $result->get_error_message() ),
+				'error'
+			);
+		} else {
+			if ( function_exists( 'oyc_bump_cal_rev' ) ) {
+				oyc_bump_cal_rev();
+			}
+			oyc_audit_log( 'event.update', sprintf( 'Updated event "%s"', get_the_title( $up_id ) ), $up_id );
+			oyc_officer_notice( sprintf( __( '"%s" was updated.', 'orienta-yacht-club' ), get_the_title( $up_id ) ) );
+		}
+	}
+}
+
 /* ── Create ───────────────────────────────────────────────────────────────── */
 
 if ( isset( $_POST['oyc_event_nonce'] ) &&
@@ -85,6 +138,14 @@ if ( isset( $_POST['oyc_event_delete_nonce'] ) &&
 
 /* ── Data for the view ────────────────────────────────────────────────────── */
 
+$oyc_edit_id = (int) ( $_GET['edit_event'] ?? 0 );
+$oyc_edit    = ( $oyc_edit_id && 'events' === get_post_type( $oyc_edit_id ) ) ? get_post( $oyc_edit_id ) : null;
+
+if ( $oyc_edit && oyc_event_is_recurring( $oyc_edit->ID ) ) {
+	oyc_officer_notice( __( 'That is a repeating event. Repeat rules have to be edited in WordPress.', 'orienta-yacht-club' ), 'error' );
+	$oyc_edit = null;
+}
+
 $oyc_cal_terms = get_terms( array( 'taxonomy' => 'calendar', 'hide_empty' => false ) );
 if ( is_wp_error( $oyc_cal_terms ) ) {
 	$oyc_cal_terms = array();
@@ -107,6 +168,18 @@ $oyc_events = get_posts( array(
 	),
 ) );
 
+// Prefill values: the edited event, or blank for a new one.
+$oyc_v = array(
+	'title'    => $oyc_edit ? $oyc_edit->post_title : '',
+	'content'  => $oyc_edit ? $oyc_edit->post_content : '',
+	'allday'   => $oyc_edit ? ( '1' === get_post_meta( $oyc_edit->ID, 'fc_allday', true ) ) : true,
+	'start'    => $oyc_edit ? get_post_meta( $oyc_edit->ID, 'fc_start', true ) : '',
+	'end'      => $oyc_edit ? get_post_meta( $oyc_edit->ID, 'fc_end', true ) : '',
+	'stime'    => $oyc_edit ? substr( (string) get_post_meta( $oyc_edit->ID, 'fc_start_time', true ), 0, 5 ) : '',
+	'etime'    => $oyc_edit ? substr( (string) get_post_meta( $oyc_edit->ID, 'fc_end_time', true ), 0, 5 ) : '',
+	'cal'      => $oyc_edit ? wp_get_object_terms( $oyc_edit->ID, 'calendar', array( 'fields' => 'ids' ) ) : array(),
+);
+
 get_header();
 ?>
 
@@ -124,37 +197,50 @@ get_header();
 		<?php oyc_officer_render_notices(); ?>
 
 		<div class="officer-panel">
-			<h2 class="officer-panel__title"><?php esc_html_e( 'Add an Event', 'orienta-yacht-club' ); ?></h2>
+			<h2 class="officer-panel__title">
+				<?php
+				echo $oyc_edit
+					? esc_html( sprintf( __( 'Editing “%s”', 'orienta-yacht-club' ), $oyc_edit->post_title ) )
+					: esc_html__( 'Add an Event', 'orienta-yacht-club' );
+				?>
+			</h2>
 
 			<form method="post" class="officer-form">
-				<?php wp_nonce_field( 'oyc_event_create', 'oyc_event_nonce' ); ?>
+				<?php
+				if ( $oyc_edit ) {
+					wp_nonce_field( 'oyc_event_update', 'oyc_event_update_nonce' );
+					printf( '<input type="hidden" name="event_id" value="%d" />', (int) $oyc_edit->ID );
+				} else {
+					wp_nonce_field( 'oyc_event_create', 'oyc_event_nonce' );
+				}
+				?>
 
 				<div class="officer-form__row">
 					<label for="event_title"><?php esc_html_e( 'Event Title', 'orienta-yacht-club' ); ?></label>
-					<input type="text" id="event_title" name="event_title" required />
+					<input type="text" id="event_title" name="event_title" value="<?php echo esc_attr( $oyc_v['title'] ); ?>" required />
 				</div>
 
 				<div class="officer-form__row officer-form__row--check">
-					<input type="checkbox" id="event_allday" name="event_allday" value="1" checked />
+					<input type="checkbox" id="event_allday" name="event_allday" value="1" <?php checked( $oyc_v['allday'] ); ?> />
 					<label for="event_allday"><?php esc_html_e( 'All-day event', 'orienta-yacht-club' ); ?></label>
 				</div>
 
 				<div class="officer-form__grid">
 					<div class="officer-form__row">
 						<label for="event_start_date"><?php esc_html_e( 'Start Date', 'orienta-yacht-club' ); ?></label>
-						<input type="date" id="event_start_date" name="event_start_date" required />
+						<input type="date" id="event_start_date" name="event_start_date" value="<?php echo esc_attr( $oyc_v['start'] ); ?>" required />
 					</div>
 					<div class="officer-form__row">
 						<label for="event_start_time"><?php esc_html_e( 'Start Time', 'orienta-yacht-club' ); ?></label>
-						<input type="time" id="event_start_time" name="event_start_time" />
+						<input type="time" id="event_start_time" name="event_start_time" value="<?php echo esc_attr( $oyc_v['stime'] ); ?>" />
 					</div>
 					<div class="officer-form__row">
 						<label for="event_end_date"><?php esc_html_e( 'End Date', 'orienta-yacht-club' ); ?></label>
-						<input type="date" id="event_end_date" name="event_end_date" />
+						<input type="date" id="event_end_date" name="event_end_date" value="<?php echo esc_attr( $oyc_v['end'] ); ?>" />
 					</div>
 					<div class="officer-form__row">
 						<label for="event_end_time"><?php esc_html_e( 'End Time', 'orienta-yacht-club' ); ?></label>
-						<input type="time" id="event_end_time" name="event_end_time" />
+						<input type="time" id="event_end_time" name="event_end_time" value="<?php echo esc_attr( $oyc_v['etime'] ); ?>" />
 					</div>
 				</div>
 
@@ -164,7 +250,7 @@ get_header();
 						<div class="officer-checks">
 							<?php foreach ( $oyc_cal_terms as $term ) : ?>
 								<label class="officer-check">
-									<input type="checkbox" name="event_calendar[]" value="<?php echo esc_attr( $term->term_id ); ?>" />
+									<input type="checkbox" name="event_calendar[]" value="<?php echo esc_attr( $term->term_id ); ?>" <?php checked( in_array( (int) $term->term_id, (array) $oyc_v['cal'], true ) ); ?> />
 									<?php echo esc_html( $term->name ); ?>
 								</label>
 							<?php endforeach; ?>
@@ -174,10 +260,15 @@ get_header();
 
 				<div class="officer-form__row">
 					<label for="event_content"><?php esc_html_e( 'Description', 'orienta-yacht-club' ); ?> <span class="officer-form__optional">(<?php esc_html_e( 'optional', 'orienta-yacht-club' ); ?>)</span></label>
-					<textarea id="event_content" name="event_content" rows="4"></textarea>
+					<textarea id="event_content" name="event_content" rows="4"><?php echo esc_textarea( $oyc_v['content'] ); ?></textarea>
 				</div>
 
-				<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Add Event', 'orienta-yacht-club' ); ?></button>
+				<button type="submit" class="btn btn-primary">
+					<?php echo $oyc_edit ? esc_html__( 'Save Changes', 'orienta-yacht-club' ) : esc_html__( 'Add Event', 'orienta-yacht-club' ); ?>
+				</button>
+				<?php if ( $oyc_edit ) : ?>
+					<a class="officer-btn" href="<?php echo esc_url( get_permalink() ); ?>"><?php esc_html_e( 'Cancel', 'orienta-yacht-club' ); ?></a>
+				<?php endif; ?>
 			</form>
 		</div>
 
@@ -215,6 +306,17 @@ get_header();
 								</td>
 								<td><?php echo esc_html( $ev_end ? mysql2date( 'D j M Y', $ev_end ) : '—' ); ?></td>
 								<td class="officer-table__actions">
+									<?php if ( oyc_event_is_recurring( $ev->ID ) ) : ?>
+										<a class="officer-btn" href="<?php echo esc_url( get_edit_post_link( $ev->ID ) ); ?>"
+										   title="<?php esc_attr_e( 'This event repeats. Repeat rules can only be edited in WordPress.', 'orienta-yacht-club' ); ?>">
+											<?php esc_html_e( 'Repeats — edit in WordPress', 'orienta-yacht-club' ); ?>
+										</a>
+									<?php else : ?>
+										<a class="officer-btn" href="<?php echo esc_url( add_query_arg( 'edit_event', $ev->ID, get_permalink() ) ); ?>">
+											<?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?>
+										</a>
+									<?php endif; ?>
+
 									<form method="post" onsubmit="return confirm('<?php echo esc_js( __( 'Delete this event? This cannot be undone.', 'orienta-yacht-club' ) ); ?>');">
 										<?php wp_nonce_field( 'oyc_event_delete', 'oyc_event_delete_nonce' ); ?>
 										<input type="hidden" name="event_id" value="<?php echo esc_attr( $ev->ID ); ?>" />

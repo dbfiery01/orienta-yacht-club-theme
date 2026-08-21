@@ -106,6 +106,10 @@ get_header();
 		<?php oyc_officer_nav( 'messages' ); ?>
 		<?php oyc_officer_render_notices(); ?>
 
+		<p class="officer-intro">
+			<?php esc_html_e( 'Every enquiry sent through the website is kept here permanently, whether or not you reply by email. Opening a message marks it read — there is nothing to tick off.', 'orienta-yacht-club' ); ?>
+		</p>
+
 		<div class="officer-toolbar">
 			<div class="officer-filters">
 				<a class="officer-btn<?php echo 'all' === $oyc_filter ? ' is-current' : ''; ?>"
@@ -143,7 +147,7 @@ get_header();
 					$body    = get_post_meta( $mid, 'oyc_msg_your_message', true );
 					$rcv     = get_post_meta( $mid, 'oyc_msg_received_at', true );
 				?>
-					<details class="officer-message<?php echo $is_read ? '' : ' is-unread'; ?>">
+					<details class="officer-message<?php echo $is_read ? '' : ' is-unread'; ?>" data-msg-id="<?php echo esc_attr( $mid ); ?>">
 						<summary class="officer-message__summary">
 							<span class="officer-message__from"><?php echo esc_html( $name ? $name : __( '(no name)', 'orienta-yacht-club' ) ); ?></span>
 							<span class="officer-message__type"><?php echo esc_html( $inquiry ); ?></span>
@@ -215,6 +219,29 @@ get_header();
 
 	</div>
 </section>
+
+<?php if ( $oyc_query->have_posts() || $oyc_unread ) : ?>
+<script>
+(function () {
+	var endpoint = <?php echo wp_json_encode( esc_url_raw( rest_url( 'oyc/v1/message-read/' ) ) ); ?>;
+	var nonce    = <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?>;
+
+	document.querySelectorAll('.officer-message[data-msg-id]').forEach(function (el) {
+		el.addEventListener('toggle', function () {
+			if (!el.open || el.dataset.marked === '1') { return; }
+			el.dataset.marked = '1';
+			el.classList.remove('is-unread');
+
+			fetch(endpoint + el.dataset.msgId, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'X-WP-Nonce': nonce }
+			}).catch(function () { /* the manual button remains as a fallback */ });
+		});
+	});
+}());
+</script>
+<?php endif; ?>
 
 <?php
 get_footer();

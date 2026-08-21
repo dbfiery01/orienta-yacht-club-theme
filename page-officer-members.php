@@ -372,9 +372,13 @@ get_header();
 							$u_roles    = (array) $u->roles;
 							$u_role     = $u_roles ? $u_roles[0] : '';
 							$manageable = oyc_officer_can_manage_user( $u->ID );
+							// display_name defaults to the username when no real name is
+							// recorded, which made the Name column read as usernames.
+							$u_name     = trim( $u->first_name . ' ' . $u->last_name );
+							$u_name     = '' !== $u_name ? $u_name : $u->display_name;
 						?>
 							<tr>
-								<td><?php echo esc_html( $u->display_name ); ?></td>
+								<td><?php echo esc_html( $u_name ); ?></td>
 								<td><?php echo esc_html( $u->user_login ); ?></td>
 								<td><a href="mailto:<?php echo esc_attr( $u->user_email ); ?>"><?php echo esc_html( $u->user_email ); ?></a></td>
 								<td><?php echo esc_html( $u_role ? translate_user_role( wp_roles()->get_names()[ $u_role ] ?? $u_role ) : '—' ); ?></td>

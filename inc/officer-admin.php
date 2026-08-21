@@ -403,6 +403,36 @@ add_action( 'wp_head', function () {
 }, 999 );
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ * Messages read-state
+ *
+ * The site inbox is the club's permanent record of every website enquiry — it
+ * outlives mail filters and officer turnover. Officers reply from club email, so
+ * requiring them to also tick "mark read" here is friction nobody will keep up
+ * with. Opening a message marks it read instead, matching the wp-admin inbox, so
+ * the unread count means "nobody has looked at this yet".
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+add_action( 'rest_api_init', function () {
+	register_rest_route( 'oyc/v1', '/message-read/(?P<id>\d+)', array(
+		'methods'             => 'POST',
+		'permission_callback' => function () {
+			return current_user_can( 'oyc_manage_messages' );
+		},
+		'callback'            => function ( $req ) {
+			$id = (int) $req['id'];
+
+			if ( 'oyc_message' !== get_post_type( $id ) ) {
+				return new WP_REST_Response( array( 'error' => 'Not a message' ), 404 );
+			}
+
+			update_post_meta( $id, 'oyc_msg_read', '1' );
+
+			return array( 'read' => true, 'id' => $id );
+		},
+	) );
+} );
+
+/* ─────────────────────────────────────────────────────────────────────────────
  * Assets
  * ───────────────────────────────────────────────────────────────────────────── */
 
