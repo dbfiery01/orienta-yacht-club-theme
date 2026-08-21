@@ -13,6 +13,99 @@ require_once get_template_directory() . '/inc/officer-admin.php';
 
 oyc_officer_guard( 'oyc_manage_applications' );
 
+/* ── CSV export ───────────────────────────────────────────────────────────────
+ * Runs before any output so the download headers are clean. Exports everything
+ * matching the current search, not just the page on screen.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+if ( isset( $_POST['oyc_app_export_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_app_export_nonce'] ) ), 'oyc_app_export' ) ) {
+
+	$export_search = sanitize_text_field( wp_unslash( $_POST['export_q'] ?? '' ) );
+
+	$columns = array(
+		'submitted_at'          => __( 'Submitted', 'orienta-yacht-club' ),
+		'first_name'            => __( 'First name', 'orienta-yacht-club' ),
+		'last_name'             => __( 'Last name', 'orienta-yacht-club' ),
+		'email'                 => __( 'Email', 'orienta-yacht-club' ),
+		'mobile_phone'          => __( 'Mobile', 'orienta-yacht-club' ),
+		'home_phone'            => __( 'Home phone', 'orienta-yacht-club' ),
+		'address'               => __( 'Address', 'orienta-yacht-club' ),
+		'city'                  => __( 'City', 'orienta-yacht-club' ),
+		'state'                 => __( 'State', 'orienta-yacht-club' ),
+		'zip'                   => __( 'Postal code', 'orienta-yacht-club' ),
+		'employer'              => __( 'Employer', 'orienta-yacht-club' ),
+		'family_names'          => __( 'Family', 'orienta-yacht-club' ),
+		'owns_boat'             => __( 'Owns a boat', 'orienta-yacht-club' ),
+		'boat_description'      => __( 'Boat', 'orienta-yacht-club' ),
+		'boat_location'         => __( 'Kept at', 'orienta-yacht-club' ),
+		'previous_boats'        => __( 'Previous boats', 'orienta-yacht-club' ),
+		'boating_experience'    => __( 'Experience', 'orienta-yacht-club' ),
+		'boating_duration'      => __( 'Years boating', 'orienta-yacht-club' ),
+		'boating_frequency'     => __( 'How often', 'orienta-yacht-club' ),
+		'competence_rating'     => __( 'Self-rating', 'orienta-yacht-club' ),
+		'has_licenses'          => __( 'Licences', 'orienta-yacht-club' ),
+		'training_courses'      => __( 'Training', 'orienta-yacht-club' ),
+		'join_reason'           => __( 'Reason for joining', 'orienta-yacht-club' ),
+		'join_reason_other'     => __( 'Reason (other)', 'orienta-yacht-club' ),
+		'know_members'          => __( 'Knows members', 'orienta-yacht-club' ),
+		'know_members_who'      => __( 'Who', 'orienta-yacht-club' ),
+		'other_club'            => __( 'Member elsewhere', 'orienta-yacht-club' ),
+		'other_club_which'      => __( 'Which club', 'orienta-yacht-club' ),
+		'previous_club'         => __( 'Previous club', 'orienta-yacht-club' ),
+		'previous_club_details' => __( 'Previous club detail', 'orienta-yacht-club' ),
+		'skills_to_contribute'  => __( 'Skills offered', 'orienta-yacht-club' ),
+		'hear_source'           => __( 'Heard about us via', 'orienta-yacht-club' ),
+		'hear_source_other'     => __( 'Heard via (other)', 'orienta-yacht-club' ),
+	);
+
+	$export_args = array(
+		'post_type'      => 'oyc_application',
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+	);
+	if ( $export_search ) {
+		$export_args['s'] = $export_search;
+	}
+
+	$ids = get_posts( $export_args );
+
+	oyc_audit_log(
+		'application.export',
+		sprintf( 'Exported %d application(s) to CSV', count( $ids ) )
+	);
+
+	$filename = 'oyc-applications-' . current_time( 'Y-m-d' ) . '.csv';
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+	while ( ob_get_level() ) {
+		ob_end_clean();
+	}
+
+	$out = fopen( 'php://output', 'w' );
+
+	// BOM so Excel reads UTF-8 correctly.
+	fwrite( $out, "\xEF\xBB\xBF" );
+	fputcsv( $out, array_values( $columns ) );
+
+	foreach ( $ids as $app ) {
+		$row = array();
+		foreach ( array_keys( $columns ) as $key ) {
+			$row[] = (string) get_post_meta( $app, 'oyc_app_' . $key, true );
+		}
+		fputcsv( $out, $row );
+	}
+
+	fclose( $out );
+	exit;
+}
+
 /* ── Actions ──────────────────────────────────────────────────────────────── */
 
 if ( isset( $_POST['oyc_app_nonce'] ) &&
@@ -125,12 +218,26 @@ get_header();
 				<?php endif; ?>
 			</form>
 
-			<p class="officer-count">
-				<?php printf(
-					esc_html( _n( '%d application', '%d applications', (int) $oyc_query->found_posts, 'orienta-yacht-club' ) ),
-					(int) $oyc_query->found_posts
-				); ?>
-			</p>
+			<div class="officer-toolbar__right">
+				<p class="officer-count">
+					<?php printf(
+						esc_html( _n( '%d application', '%d applications', (int) $oyc_query->found_posts, 'orienta-yacht-club' ) ),
+						(int) $oyc_query->found_posts
+					); ?>
+				</p>
+
+				<?php if ( $oyc_query->found_posts ) : ?>
+					<form method="post">
+						<?php wp_nonce_field( 'oyc_app_export', 'oyc_app_export_nonce' ); ?>
+						<input type="hidden" name="export_q" value="<?php echo esc_attr( $oyc_search ); ?>" />
+						<button type="submit" class="officer-btn">
+							<?php echo $oyc_search
+								? esc_html__( 'Export these to CSV', 'orienta-yacht-club' )
+								: esc_html__( 'Export all to CSV', 'orienta-yacht-club' ); ?>
+						</button>
+					</form>
+				<?php endif; ?>
+			</div>
 		</div>
 
 		<?php if ( ! $oyc_query->have_posts() ) : ?>

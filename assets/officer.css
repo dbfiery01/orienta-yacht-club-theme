@@ -513,3 +513,12 @@
 }
 
 .officer-app__group:first-of-type { margin-top: 0.6rem; }
+
+.officer-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.officer-toolbar__right .officer-count { margin-bottom: 0; }
