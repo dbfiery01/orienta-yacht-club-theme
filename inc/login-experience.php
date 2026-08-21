@@ -322,6 +322,21 @@ function oyc_user_approval_state( $user_id ) {
 }
 
 /**
+ * Whether an account has been explicitly confirmed.
+ *
+ * Distinct from oyc_user_approval_state() === 'approved' only in intent: a
+ * long-standing account reaches the members' area on its registration date
+ * rather than a decision, so it is *allowed* but not *confirmed*, and an officer
+ * should still be able to confirm it.
+ *
+ * @param int $user_id User ID.
+ * @return bool
+ */
+function oyc_user_is_confirmed( $user_id ) {
+	return 'approved' === oyc_user_approval_state( $user_id );
+}
+
+/**
  * Human label for an approval state.
  *
  * @param string $state From oyc_user_approval_state().

@@ -423,7 +423,7 @@ get_header();
 									</span>
 								</td>
 								<td class="officer-table__actions">
-									<?php if ( $manageable && 'pending' === $u_state ) : ?>
+									<?php if ( $manageable && ! oyc_user_is_confirmed( $u->ID ) ) : ?>
 										<form method="post" style="display:inline">
 											<?php wp_nonce_field( 'oyc_user_confirm', 'oyc_user_confirm_nonce' ); ?>
 											<input type="hidden" name="user_id" value="<?php echo esc_attr( $u->ID ); ?>" />
