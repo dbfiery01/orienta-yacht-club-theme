@@ -23,6 +23,7 @@ $oyc_profile_fields = array(
 	'billing_city'               => __( 'City', 'orienta-yacht-club' ),
 	'billing_state'              => __( 'State', 'orienta-yacht-club' ),
 	'billing_postcode'           => __( 'Postal Code', 'orienta-yacht-club' ),
+	'billing_country'            => __( 'Country', 'orienta-yacht-club' ),
 	'oyc_emergency_name'         => __( 'Emergency Contact Name', 'orienta-yacht-club' ),
 	'oyc_emergency_phone'        => __( 'Emergency Contact Phone', 'orienta-yacht-club' ),
 	'oyc_emergency_relationship' => __( 'Emergency Contact Relationship', 'orienta-yacht-club' ),
@@ -90,6 +91,9 @@ if ( isset( $_POST['oyc_user_update_nonce'] ) &&
 			'first_name'   => sanitize_text_field( wp_unslash( $_POST['first_name'] ?? '' ) ),
 			'last_name'    => sanitize_text_field( wp_unslash( $_POST['last_name'] ?? '' ) ),
 			'display_name' => sanitize_text_field( wp_unslash( $_POST['display_name'] ?? '' ) ),
+			// Core user field rather than meta, and a textarea — sanitize_text_field
+			// would flatten the line breaks.
+			'description'  => sanitize_textarea_field( wp_unslash( $_POST['description'] ?? '' ) ),
 		);
 
 		$new_email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
@@ -303,6 +307,12 @@ get_header();
 								<?php endforeach; ?>
 							</select>
 						<?php endif; ?>
+					</div>
+
+					<div class="officer-form__row">
+						<label for="description"><?php esc_html_e( 'About Me', 'orienta-yacht-club' ); ?></label>
+						<textarea id="description" name="description" rows="3"><?php echo esc_textarea( $oyc_edit->description ); ?></textarea>
+						<p class="officer-form__hint"><?php esc_html_e( 'The member can also edit this on their own profile page.', 'orienta-yacht-club' ); ?></p>
 					</div>
 
 					<h3 class="officer-form__subhead"><?php esc_html_e( 'Contact & Emergency Details', 'orienta-yacht-club' ); ?></h3>
