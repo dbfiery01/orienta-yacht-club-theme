@@ -398,7 +398,7 @@ get_header();
 							<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
-							<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'orienta-yacht-club' ); ?></span></th>
+							<th scope="col"><?php esc_html_e( 'Profile', 'orienta-yacht-club' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -423,7 +423,7 @@ get_header();
 									</span>
 								</td>
 								<td class="officer-table__actions">
-									<?php if ( $manageable && 'approved' !== $u_state ) : ?>
+									<?php if ( $manageable && 'pending' === $u_state ) : ?>
 										<form method="post" style="display:inline">
 											<?php wp_nonce_field( 'oyc_user_confirm', 'oyc_user_confirm_nonce' ); ?>
 											<input type="hidden" name="user_id" value="<?php echo esc_attr( $u->ID ); ?>" />
