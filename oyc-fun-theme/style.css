@@ -271,10 +271,14 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
 .oyc-carousel-backdrop { position: fixed; inset: 0; background: #0a233d; z-index: 99999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
 .oyc-carousel-zoom { width: min(92vw, 1100px); height: min(82vh, 640px); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 8px; box-shadow: 0 24px 70px rgba(0,0,0,0.6); }
 
-/* 24b) Portrait reel photos: bias the cover-crop toward the hulls/horizon so the
-   3:1 banner cells show the boats instead of cutting them off at the waterline.
-   The zoom lightbox above uses `contain`, so the full frame still shows on click. */
+/* 24b) Per-photo reel crops: the cells are 3:1 banners cropped with `cover`, so
+   photos that aren't wide banners get a vertical bias that keeps the boats in
+   frame. The zoom lightbox above uses `contain`, so the full frame still shows
+   on click.
+   - light-winds (portrait): bias DOWN so both hulls show, not just sails.
+   - sunset-sail (near-square): bias UP so the masthead isn't clipped. */
 .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-light-winds.jpg"] { background-position: center 58%; }
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-sunset-sail.jpg"] { background-position: center 45%; }
 
 /* 25) Prev/next arrows inside the zoom lightbox */
 .oyc-zoom-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 54px; height: 54px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: #16324a; font-size: 2rem; line-height: 1; cursor: pointer; z-index: 100000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
