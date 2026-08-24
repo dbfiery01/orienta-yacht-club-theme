@@ -367,10 +367,11 @@ if ( ! $oyc_weather_menu ) {
 				<h2>Conditions</h2>
 				<div class="cond">
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
+					<div class="cell"><div class="v" id="hiLoTemp">&mdash;</div><div class="k">Today Hi / Lo</div></div>
 					<div class="cell"><div class="v" id="waterTemp">&mdash;</div><div class="k">Water Temp</div></div>
 					<div class="cell"><div class="v" id="pressure">&mdash;</div><div class="k">Pressure</div></div>
 					<div class="cell"><div class="v" id="humidity">&mdash;</div><div class="k">Humidity</div></div>
-					<div class="cell full"><div class="v" id="visibility">&mdash;</div><div class="k">Visibility</div></div>
+					<div class="cell"><div class="v" id="visibility">&mdash;</div><div class="k">Visibility</div></div>
 				</div>
 			</div>
 		</div>
@@ -924,9 +925,16 @@ if ( ! $oyc_weather_menu ) {
 		var body = $('precipBody'); if(!body) return;
 		// Same Execution Rock position + live "current" block as the Wind card, so
 		// the outlook's "Now" wind matches the dial instead of the sheltered harbor.
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&daily=temperature_2m_max,temperature_2m_min&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
+				// Today's forecast hi/lo -> Conditions card, beside the live air temp.
+				var D = j && j.daily;
+				if(D && D.temperature_2m_max && D.temperature_2m_max.length && D.temperature_2m_min && D.temperature_2m_min.length){
+					$('hiLoTemp').innerHTML = '<span style="color:#ef9a5a">'+Math.round(D.temperature_2m_max[0])+'&deg;</span>'
+						+ '<span style="color:var(--faint)"> / </span>'
+						+ '<span style="color:#57a6d6">'+Math.round(D.temperature_2m_min[0])+'&deg;</span>';
+				}
 				var H = j && j.hourly; if(!H || !H.time) throw new Error('no hourly');
 				var allT = H.time.map(function(t){ return new Date(t.replace(' ','T')); });
 				var now = new Date(), s = 0;
