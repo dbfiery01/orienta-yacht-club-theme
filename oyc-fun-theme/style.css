@@ -279,6 +279,10 @@ body.home .hero .eyebrow { margin-top: 0 !important; }
    - sunset-sail (near-square): bias UP so the masthead isn't clipped. */
 .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-light-winds.jpg"] { background-position: center 58%; }
 .oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-sunset-sail.jpg"] { background-position: center 45%; }
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-ketch-at-sunset.jpg"] { background-position: center 35%; }  /* full sails + hull */
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-sunset-foredeck.jpg"] { background-position: center 25%; }  /* sun on the horizon */
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-harbor-moorings.jpg"] { background-position: center 20%; }  /* boats, not empty water */
+.oyc-carousel .oyc-carousel__track > .oyc-carousel__cell[data-img="header-evening-sail.jpg"] { background-position: center 75%; }  /* boat sits low in frame */
 
 /* 25) Prev/next arrows inside the zoom lightbox */
 .oyc-zoom-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 54px; height: 54px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.92); color: #16324a; font-size: 2rem; line-height: 1; cursor: pointer; z-index: 100000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
