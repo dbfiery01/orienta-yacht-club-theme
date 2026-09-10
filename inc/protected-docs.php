@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function oyc_protected_docs() {
 	return array(
 		'slip-waiting-list' => array(
-			'src'      => '2025/10/Slip-Wait-List-Oct-2025.pdf',
+			'src'      => '2026/09/Slip-Wait-LIst-Aug-2026.pdf',
 			'download' => 'Slip-Waiting-List.pdf',
 		),
 		'dock-assignments'  => array(
@@ -62,24 +62,30 @@ function oyc_protect_doc( $key ) {
 
 	$opt = 'oyc_protected_doc_' . $key;
 	$cur = (string) get_option( $opt, '' );
-	if ( $cur && file_exists( $cur ) ) {
-		return true; // already protected
-	}
 
 	$up  = wp_upload_dir();
 	$dir = $up['basedir'] . '/oyc-protected';
 	$src = $up['basedir'] . '/' . ltrim( $docs[ $key ]['src'], '/' );
 
+	// If the registry source is NOT sitting in public uploads, there's nothing
+	// new to move — keep whatever is already protected. (Once a file has been
+	// moved into the deny-all folder it no longer exists at its uploads path,
+	// so this is the steady state.)
+	if ( ! file_exists( $src ) ) {
+		return ( $cur && file_exists( $cur ) );
+	}
+
+	// A source file IS present in public uploads → move it into the deny-all
+	// folder and point the option at it, SUPERSEDING any previously-protected
+	// version. This is how a document gets UPDATED: upload the new PDF to the
+	// Media Library, set its path as `src`, deploy — the new file replaces the
+	// old one and its public upload URL stops resolving.
 	if ( ! file_exists( $dir ) ) {
 		wp_mkdir_p( $dir );
 	}
 	// Block direct web access to everything in the folder.
 	file_put_contents( $dir . '/.htaccess', "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n" );
 	file_put_contents( $dir . '/index.html', '' );
-
-	if ( ! file_exists( $src ) ) {
-		return false; // nothing to move (not uploaded, or already moved away)
-	}
 
 	$dest = $dir . '/' . $key . '-' . wp_generate_password( 16, false, false ) . '.pdf';
 	if ( @rename( $src, $dest ) || ( @copy( $src, $dest ) && @unlink( $src ) ) ) {
@@ -150,9 +156,10 @@ function oyc_retire_doc( $relpath ) {
  */
 add_action( 'admin_init', function () {
 	foreach ( array_keys( oyc_protected_docs() ) as $key ) {
-		if ( ! get_option( 'oyc_protected_doc_' . $key, '' ) ) {
-			oyc_protect_doc( $key );
-		}
+		// Always run — protect_doc self-skips unless a new source PDF is present
+		// in public uploads (which is how an updated document gets picked up and
+		// supersedes the previous version).
+		oyc_protect_doc( $key );
 	}
 	foreach ( oyc_retired_docs() as $relpath ) {
 		oyc_retire_doc( $relpath );
