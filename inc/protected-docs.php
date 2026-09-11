@@ -34,8 +34,66 @@ function oyc_protected_docs() {
 			'src'      => '2025/03/2025-Dock-assignment.pdf',
 			'download' => 'Dock-Assignments.pdf',
 		),
+		// Governance documents. No PII, but they are club member documents and
+		// their pages are members-only, so the files must not be readable at a
+		// public uploads URL either. Page embeds are rewritten automatically by
+		// oyc_rewrite_protected_doc_links() below, so no page edit is needed.
+		'constitution-and-bylaws' => array(
+			'src'      => '2026/06/OYC-COnstitution-and-Bylaws-10-7-24.pdf',
+			'download' => 'OYC-Constitution-and-Bylaws.pdf',
+		),
+		'member-guidelines' => array(
+			'src'      => '2026/06/OYC-Member-Guidline-10-7-24.pdf',
+			'download' => 'OYC-Member-Guidelines.pdf',
+		),
+		'rental-agreement'  => array(
+			'src'      => '2026/06/Rental-Agreement-2024-v2.pdf',
+			'download' => 'OYC-Club-Rental-Agreement.pdf',
+		),
 	);
 }
+
+/**
+ * Rewrite public uploads URLs for registered documents to their members-only
+ * /member-doc/{key}/ URL.
+ *
+ * A page embeds its PDF by its original uploads URL. Once oyc_protect_doc()
+ * moves that file into the deny-all folder the original URL stops resolving,
+ * so the embed has to point at the streaming endpoint instead. Doing it in a
+ * filter (rather than editing page content) keeps the page markup portable and
+ * means the move and the link can never get out of step in either direction.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function oyc_rewrite_protected_doc_links( $content ) {
+	if ( ! is_string( $content ) || false === strpos( $content, '/uploads/' ) ) {
+		return $content;
+	}
+
+	$up      = wp_upload_dir();
+	$baseurl = isset( $up['baseurl'] ) ? rtrim( $up['baseurl'], '/' ) : '';
+	if ( '' === $baseurl ) {
+		return $content;
+	}
+
+	foreach ( oyc_protected_docs() as $key => $doc ) {
+		$public = $baseurl . '/' . ltrim( $doc['src'], '/' );
+		if ( false === strpos( $content, $public ) ) {
+			continue;
+		}
+		$target = oyc_protected_doc_url( $key );
+		// Cover https, http and protocol-relative forms of the same URL.
+		$content = str_replace(
+			array( $public, set_url_scheme( $public, 'http' ), preg_replace( '#^https?:#', '', $public ) ),
+			$target,
+			$content
+		);
+	}
+
+	return $content;
+}
+add_filter( 'the_content', 'oyc_rewrite_protected_doc_links', 20 );
 
 /**
  * Members-only URL used to reach a protected document.
@@ -110,6 +168,19 @@ function oyc_retired_docs() {
 		'2025/06/2025-Fleet-Roster-First-Edition.pdf',
 		'2025/06/2025-Fleet-Roster-Second-Edition.pdf',
 		'2025/06/2025-Fleet-Roster-Third-Edition.pdf',
+		// The Final Edition was uploaded in January 2026 and never registered,
+		// so it stayed publicly downloadable while every other roster edition
+		// was retired. It carries ~150 regular and ~50 associate member
+		// entries with home addresses, emails and phone numbers. Nothing links
+		// it: the Fleet Roster page renders the roster itself.
+		'2026/01/2025-Fleet-Roster-Final-Edition.pdf',
+		// Superseded copies of the governance documents. Unreferenced by any
+		// page; the live versions are the 2026/06 uploads registered above.
+		'2024/12/Rental-Agreement-2024-v2.pdf',
+		'2024/12/Rental-Agreement-12-9-24.pdf',
+		'2024/10/OYC-Member-Guidline-10-7-24.pdf',
+		'2024/10/OYC-COnstitution-and-Bylaws-10-7-24.pdf',
+		'2022/09/OYC-Member-Guidelines-2022.pdf',
 	);
 }
 
