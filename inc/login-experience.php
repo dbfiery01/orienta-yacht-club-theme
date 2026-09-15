@@ -591,9 +591,9 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 	$person_icon = '<svg class="cta-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ';
 
 	if ( ! is_user_logged_in() ) {
-		// Logged out: drop "Join", turn "Login" into "Reservations" → Dockwa
-		// (new tab), then append a clear "Member Login" item with the person icon.
-		$ref = null;
+		// Logged out: drop "Join". Insert a clear "Member Login" item, then turn
+		// "Login" into "Reservations" → Dockwa (new tab) directly BELOW it, so
+		// Member Login sits above Reservations in the (mobile) menu.
 		$out = array();
 		foreach ( $items as $item ) {
 			$title = strtolower( trim( wp_strip_all_tags( $item->title ) ) );
@@ -601,24 +601,27 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 				continue; // drop Join to free up room on the menu line
 			}
 			if ( 'login' === $title ) {
-				$item->title  = __( 'Reservations', 'orienta-yacht-club' );
-				$item->url    = 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient';
-				$item->target = '_blank';
-				$item->xfn    = 'noopener';
-				$ref          = $item;
+				// Member Login first — the primary action (filled brass pill).
+				$login          = clone $item;
+				$login->ID      = 'oyc-member-login';
+				$login->db_id   = 0;
+				$login->title   = $person_icon . __( 'Member Login', 'orienta-yacht-club' );
+				$login->url     = wp_login_url( home_url( '/members-area/' ) );
+				$login->target  = '';
+				$login->xfn     = '';
+				$login->classes = array( 'menu-item', 'cta', 'cta--login', 'cta--member-login' );
+				$out[]          = $login;
+
+				// Then Reservations (Dockwa) directly below Member Login.
+				$item->title   = __( 'Reservations', 'orienta-yacht-club' );
+				$item->url     = 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient';
+				$item->target  = '_blank';
+				$item->xfn     = 'noopener';
+				$item->classes = array( 'menu-item', 'cta', 'cta--reservations' );
+				$out[]         = $item;
+				continue;
 			}
 			$out[] = $item;
-		}
-		if ( $ref ) {
-			$login          = clone $ref;
-			$login->ID      = 'oyc-member-login';
-			$login->db_id   = 0;
-			$login->title   = $person_icon . __( 'Member Login', 'orienta-yacht-club' );
-			$login->url     = wp_login_url( home_url( '/members-area/' ) );
-			$login->target  = '';
-			$login->xfn     = '';
-			$login->classes = array( 'menu-item', 'cta', 'cta--login' );
-			$out[]          = $login;
 		}
 		return $out;
 	}
