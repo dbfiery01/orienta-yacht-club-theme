@@ -101,7 +101,11 @@ if ( ! $oyc_weather_menu ) {
 
 	/* ---- top bar ---- */
 	.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;
-		padding:8px 20px;border:1px solid var(--edge);border-radius:16px;background:var(--panel2);flex-wrap:wrap}
+		padding:12px 24px;border:1px solid var(--edge);border-radius:16px;background:var(--panel2);flex-wrap:wrap}
+	.tb-brand{display:inline-flex;align-items:center;line-height:0;text-decoration:none}
+	.tb-logo{height:48px;width:auto;display:block}
+	.tb-brand:hover .tb-logo{opacity:.85}
+	.tb-title{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:13px;margin-bottom:3px}
 	.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 	.brand h1{font-weight:800;letter-spacing:.06em;font-size:clamp(16px,1.8vw,24px);text-transform:uppercase;
 		background:linear-gradient(180deg,#16324a,#1583cf);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -272,31 +276,20 @@ if ( ! $oyc_weather_menu ) {
 <body>
 
 <div class="wrap">
-	<!-- SITE MENU -->
-	<nav class="sitebar" aria-label="Site menu">
-		<a class="sitebar-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'sitebar-logo' ); ?></a>
-		<button class="sitebar-toggle" aria-expanded="false" aria-label="Menu"><span class="sitebar-bars" aria-hidden="true"></span></button>
-		<?php echo $oyc_weather_menu; ?>
-	</nav>
-	<script>
-	/* This standalone board doesn't load the lazy-load plugin's swap script, so a
-	   rewritten logo <img> would sit on its 1x1 placeholder. Promote the real
-	   source immediately. */
-	(function(){var i=document.querySelector('.sitebar-logo');if(!i)return;var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}})();
-	</script>
-
-	<!-- TOP BAR -->
+	<!-- HEADER: burgee logo left · Live Conditions + live clock right -->
 	<div class="topbar">
-		<div class="brand">
-			<h1>Live Conditions</h1>
-			<span class="sub">Mamaroneck Harbor</span>
-		</div>
+		<a class="tb-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'tb-logo' ); ?></a>
 		<div class="clockwrap">
+			<div class="tb-title">Live Conditions</div>
 			<div class="updated"><span class="dot" id="statusDot"></span><span id="updated">Connecting&hellip;</span></div>
 			<div class="clock mono"><span id="clock">--:--:--</span><span class="ap" id="ampm">--</span></div>
 			<div class="datestr" id="datestr">&mdash;</div>
 		</div>
 	</div>
+	<script>
+	/* Standalone board: promote the lazy-load placeholder logo to its real src. */
+	(function(){var i=document.querySelector('.tb-logo');if(!i)return;var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}})();
+	</script>
 
 	<!-- ALERT (prominent, at the top) -->
 	<div class="alertbar hidden" id="alertBar">
