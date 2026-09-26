@@ -73,9 +73,9 @@ if ( ! $oyc_weather_menu ) {
 
 	/* ---- site menu bar ---- */
 	.sitebar{display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;
-		padding:9px 20px;border:1px solid var(--edge);border-radius:12px;background:var(--panel2)}
+		padding:16px 22px;border:1px solid var(--edge);border-radius:12px;background:var(--panel2)}
 	.sitebar-brand{display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap;line-height:0}
-	.sitebar-logo{height:30px;width:auto;display:block}
+	.sitebar-logo{height:42px;width:auto;display:block}
 	.sitebar-brand:hover .sitebar-logo{opacity:.85}
 	.sitebar-menu{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin-left:auto;padding:0}
 	.sitebar-menu li{margin:0}
@@ -100,10 +100,10 @@ if ( ! $oyc_weather_menu ) {
 	}
 
 	/* ---- top bar ---- */
-	.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;
-		padding:14px 20px;border:1px solid var(--edge);border-radius:16px;background:var(--panel2);flex-wrap:wrap}
+	.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;
+		padding:8px 20px;border:1px solid var(--edge);border-radius:16px;background:var(--panel2);flex-wrap:wrap}
 	.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-	.brand h1{font-weight:800;letter-spacing:.06em;font-size:clamp(20px,2.4vw,34px);text-transform:uppercase;
+	.brand h1{font-weight:800;letter-spacing:.06em;font-size:clamp(16px,1.8vw,24px);text-transform:uppercase;
 		background:linear-gradient(180deg,#16324a,#1583cf);-webkit-background-clip:text;background-clip:text;color:transparent}
 	.brand .sub{color:var(--teal);letter-spacing:.22em;font-size:12px;text-transform:uppercase;font-weight:700}
 	.clockwrap{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
@@ -111,7 +111,7 @@ if ( ! $oyc_weather_menu ) {
 	.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 0 rgba(74,222,128,.5)}
 	.dot.ok{background:var(--green);animation:pulse 2.4s infinite}
 	@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.45)}70%{box-shadow:0 0 0 7px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
-	.clock{font-size:clamp(26px,3.4vw,44px);font-weight:700;line-height:1;letter-spacing:.02em}
+	.clock{font-size:clamp(22px,2.6vw,32px);font-weight:700;line-height:1;letter-spacing:.02em}
 	.clock .ap{font-size:.5em;color:var(--teal);margin-left:.25em;font-weight:700}
 	.datestr{color:var(--muted);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
 
