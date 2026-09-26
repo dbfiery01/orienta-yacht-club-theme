@@ -278,6 +278,12 @@ if ( ! $oyc_weather_menu ) {
 		<button class="sitebar-toggle" aria-expanded="false" aria-label="Menu"><span class="sitebar-bars" aria-hidden="true"></span></button>
 		<?php echo $oyc_weather_menu; ?>
 	</nav>
+	<script>
+	/* This standalone board doesn't load the lazy-load plugin's swap script, so a
+	   rewritten logo <img> would sit on its 1x1 placeholder. Promote the real
+	   source immediately. */
+	(function(){var i=document.querySelector('.sitebar-logo');if(!i)return;var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}})();
+	</script>
 
 	<!-- TOP BAR -->
 	<div class="topbar">
