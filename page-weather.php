@@ -192,8 +192,8 @@ if ( ! $oyc_weather_menu ) {
 	#tideOutage .to-t{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:14px}
 	#tideOutage .to-s{color:var(--faint);font-size:12.5px;max-width:440px;line-height:1.5}
 	svg.tidegraph{width:100%;height:100%;display:block}
-	.axis{fill:var(--faint);font-size:11px;font-family:ui-monospace,Menlo,monospace}
-	.hilo-lbl{fill:var(--ink);font-size:12px;font-weight:700;font-family:ui-monospace,Menlo,monospace;text-anchor:middle}
+	.axis{fill:var(--muted);font-size:19px;font-family:ui-monospace,Menlo,monospace}
+	.hilo-lbl{fill:var(--ink);font-size:21px;font-weight:700;font-family:ui-monospace,Menlo,monospace;text-anchor:middle}
 
 	/* forecast */
 	.fc{display:flex;flex-direction:column;gap:12px;margin-top:12px}
@@ -292,6 +292,12 @@ if ( ! $oyc_weather_menu ) {
 		</div>
 	</div>
 
+	<!-- ALERT (prominent, above the forecast table) -->
+	<div class="alertbar hidden" id="alertBar">
+		<div class="alert-tag">&#9888; Marine Alert</div>
+		<div class="marquee"><span id="alertText"></span></div>
+	</div>
+
 	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
 
 	<div class="grid">
@@ -382,12 +388,6 @@ if ( ! $oyc_weather_menu ) {
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
-
-	<!-- ALERT -->
-	<div class="alertbar hidden" id="alertBar">
-		<div class="alert-tag">&#9888; Marine Alert</div>
-		<div class="marquee"><span id="alertText"></span></div>
-	</div>
 </div>
 
 <script>
