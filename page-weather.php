@@ -63,7 +63,7 @@ if ( ! $oyc_weather_menu ) {
 	*{box-sizing:border-box;margin:0;padding:0}
 	html,body{height:100%}
 	body{
-		font-family:"Arial Narrow","Helvetica Neue",Arial,sans-serif;
+		font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 		background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,var(--bg1) 50%,var(--bg2) 100%);
 		color:var(--ink); min-height:100vh; padding:18px; overflow-x:hidden;
 		-webkit-font-smoothing:antialiased;
