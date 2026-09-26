@@ -52,18 +52,19 @@ if ( ! $oyc_weather_menu ) {
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
 <style>
 	:root{
-		/* OYC brand palette — navy ground, brass-gold primary accent, harbor-blue contrast.
-		   Var names --teal/--amber kept for a minimal diff; values are now brand colors. */
-		--bg1:#0b2a4a; --bg2:#04162a; --panel:rgba(11,42,74,.55); --panel2:rgba(7,32,58,.72);
-		--edge:rgba(245,239,226,.12); --edge2:rgba(245,239,226,.24);
-		--ink:#f5efe2; --muted:#aeb9c8; --faint:#84909f;
-		--teal:#d4a851; --teal2:#b08a3e; --amber:#57a6d6; --red:#c0392b; --green:#4ade80;
+		/* OYC light palette — white "readout sheet" cards on a soft harbor-light
+		   ground, navy ink, brass-gold + harbor-blue accents (matches the forecast
+		   table). Var names --teal (gold) / --amber (harbor) kept for a minimal diff. */
+		--bg1:#eaf1f8; --bg2:#dde8f2; --panel:#ffffff; --panel2:#ffffff;
+		--edge:#e0e7f0; --edge2:#cbd8e6;
+		--ink:#16324a; --muted:#5a6b7d; --faint:#8a99a8;
+		--teal:#b0842f; --teal2:#916b26; --amber:#1583cf; --red:#c0392b; --green:#2e9e5b;
 	}
 	*{box-sizing:border-box;margin:0;padding:0}
 	html,body{height:100%}
 	body{
 		font-family:"Arial Narrow","Helvetica Neue",Arial,sans-serif;
-		background:radial-gradient(1200px 700px at 70% -10%,#12283f 0%,var(--bg1) 45%,var(--bg2) 100%);
+		background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,var(--bg1) 50%,var(--bg2) 100%);
 		color:var(--ink); min-height:100vh; padding:18px; overflow-x:hidden;
 		-webkit-font-smoothing:antialiased;
 	}
@@ -103,7 +104,7 @@ if ( ! $oyc_weather_menu ) {
 		padding:14px 20px;border:1px solid var(--edge);border-radius:16px;background:var(--panel2);flex-wrap:wrap}
 	.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 	.brand h1{font-weight:800;letter-spacing:.06em;font-size:clamp(20px,2.4vw,34px);text-transform:uppercase;
-		background:linear-gradient(180deg,#fff,#bfe4f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+		background:linear-gradient(180deg,#16324a,#1583cf);-webkit-background-clip:text;background-clip:text;color:transparent}
 	.brand .sub{color:var(--teal);letter-spacing:.22em;font-size:12px;text-transform:uppercase;font-weight:700}
 	.clockwrap{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 	.updated{color:var(--muted);font-size:12px;letter-spacing:.04em;display:flex;align-items:center;gap:7px}
@@ -120,23 +121,23 @@ if ( ! $oyc_weather_menu ) {
 	.col{display:flex;flex-direction:column;gap:16px}
 	.card{border:1px solid var(--edge);border-radius:16px;background:var(--panel);
 		padding:16px 18px;position:relative;overflow:hidden}
-	.card h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);font-weight:700;
+	.card h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);font-weight:700;
 		display:flex;justify-content:space-between;align-items:center;gap:10px}
 	.card h2 .sta{color:var(--faint);font-size:10px;letter-spacing:.12em;font-weight:600}
 	/* Card-title links (-> /radar/): same treatment as the site's tile-heading
 	   links — inherit color, gold underline, and the standard external ↗️ mark. */
 	.card h2 a.h2link{color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,168,81,.5);
 		transition:color .15s,border-color .15s}
-	.card h2 a.h2link:hover{color:#fff;border-bottom-color:var(--teal)}
+	.card h2 a.h2link:hover{color:var(--amber);border-bottom-color:var(--amber)}
 	.card h2 a.h2link::after{content:"\00A0\2197\FE0F";font-size:.8em;opacity:.7}
 
 	/* card reorder controls */
 	.card h2{padding-right:58px}
 	.mover{position:absolute;top:11px;right:12px;display:flex;gap:4px;z-index:3}
-	.mv{background:rgba(245,239,226,.05);border:1px solid var(--edge);color:var(--faint);border-radius:6px;
+	.mv{background:#eef3f8;border:1px solid var(--edge);color:var(--muted);border-radius:6px;
 		width:24px;height:22px;font-size:10px;line-height:1;cursor:pointer;padding:0;
 		display:inline-flex;align-items:center;justify-content:center;transition:color .15s,background .15s}
-	.mv:hover{color:var(--teal);background:rgba(245,239,226,.12)}
+	.mv:hover{color:var(--amber);background:#e2eaf3}
 	.order-resetwrap{display:flex;justify-content:center;margin-top:-4px}
 	#orderReset{display:none;background:none;border:1px solid var(--edge);color:var(--faint);border-radius:999px;
 		padding:6px 16px;font-size:11px;letter-spacing:.06em;cursor:pointer;transition:color .15s,border-color .15s}
@@ -144,7 +145,7 @@ if ( ! $oyc_weather_menu ) {
 
 	/* tide */
 	.tide-now{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
-	.tide-val{font-size:clamp(46px,6vw,74px);font-weight:800;line-height:.85;color:#fff}
+	.tide-val{font-size:clamp(46px,6vw,74px);font-weight:800;line-height:.85;color:var(--ink)}
 	.tide-unit{color:var(--muted);font-size:15px;letter-spacing:.14em;padding-bottom:10px;font-weight:700}
 	.trend{margin-top:12px;display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;
 		text-transform:uppercase;font-size:14px}
@@ -198,7 +199,7 @@ if ( ! $oyc_weather_menu ) {
 	.fc{display:flex;flex-direction:column;gap:12px;margin-top:12px}
 	.fc-row{display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:start}
 	.fc-when{color:var(--teal);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;padding-top:2px}
-	.fc-txt{color:#cfe3f2;font-size:13.5px;line-height:1.5}
+	.fc-txt{color:#35566b;font-size:13.5px;line-height:1.5}
 
 	/* 48-hour outlook — labelled rows: Sky (icons) / Rain (chance %) / Temp / time */
 	.precip-card{display:flex;flex-direction:column}
@@ -222,7 +223,7 @@ if ( ! $oyc_weather_menu ) {
 	.dial{width:120px;height:120px;flex:none;position:relative}
 	.dial svg{width:100%;height:100%;transform:rotate(0deg)}
 	.wind-read{display:flex;flex-direction:column}
-	.wind-spd{font-size:52px;font-weight:800;line-height:.9;color:#fff}
+	.wind-spd{font-size:52px;font-weight:800;line-height:.9;color:var(--ink)}
 	.wind-lab{display:flex;gap:18px;margin-top:8px}
 	.wind-lab .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 	.wind-lab .v{font-weight:700;font-size:15px}
@@ -231,7 +232,7 @@ if ( ! $oyc_weather_menu ) {
 	/* waves */
 	.wave-body{display:flex;align-items:center;gap:20px;margin-top:12px;flex-wrap:wrap}
 	.wave-main{display:flex;align-items:flex-end;gap:8px}
-	.wave-val{font-size:44px;font-weight:800;line-height:.9;color:#fff}
+	.wave-val{font-size:44px;font-weight:800;line-height:.9;color:var(--ink)}
 	.wave-unit{color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding-bottom:6px;font-weight:700}
 	.wave-lab{display:flex;gap:18px}
 	.wave-lab .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
@@ -243,20 +244,20 @@ if ( ! $oyc_weather_menu ) {
 		background:var(--edge);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
 	.cond .cell{background:var(--panel);padding:14px 14px}
 	.cond .cell.full{grid-column:1/-1}
-	.cond .v{font-size:24px;font-weight:800;color:#fff}
+	.cond .v{font-size:24px;font-weight:800;color:var(--ink)}
 	.cond .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
 
 	/* alert */
-	.weather-disclaimer{text-align:center;color:rgba(255,255,255,0.55);font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
+	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
 	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
-		border:1px solid rgba(232,84,74,.5);background:rgba(60,16,14,.5)}
+		border:1px solid rgba(192,57,43,.45);background:rgba(192,57,43,.10)}
 	.alertbar.hidden{display:none}
 	.alertbar--card{border-radius:6px;margin:0 0 8px;flex-shrink:0}
 	.alert-tag{background:var(--red);color:#fff;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
 		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
 	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
 	.marquee span{display:inline-block;white-space:nowrap;color:#ffd9d4;font-size:14px;
-		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
+		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite;color:#8f2d20}
 	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
 
 	.miss{color:var(--faint)}
@@ -720,7 +721,7 @@ if ( ! $oyc_weather_menu ) {
 			var dt=new Date(tt); if(tt<minX) continue;
 			var gx=X(tt), lab=(dt.getHours()===0)?(MON[dt.getMonth()].slice(0,3)+' '+dt.getDate()):((dt.getHours()%12||12)+(dt.getHours()>=12?'p':'a'));
 			var major = (dt.getHours()===0);
-			ticks+='<line x1="'+gx.toFixed(1)+'" y1="'+padT+'" x2="'+gx.toFixed(1)+'" y2="'+(H-padB)+'" stroke="rgba(245,239,226,'+(major?'.30':'.16')+')"'+(major?' stroke-width="1.5"':'')+'/>';
+			ticks+='<line x1="'+gx.toFixed(1)+'" y1="'+padT+'" x2="'+gx.toFixed(1)+'" y2="'+(H-padB)+'" stroke="rgba(11,42,74,'+(major?'.16':'.08')+')"'+(major?' stroke-width="1.5"':'')+'/>';
 			ticks+='<text class="axis" x="'+gx.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+lab+'</text>';
 		}
 		// now line
@@ -734,7 +735,7 @@ if ( ! $oyc_weather_menu ) {
 			+ '<stop offset="1" stop-color="#d4a851" stop-opacity="0"/></linearGradient></defs>'
 			+ ticks
 			+ '<path d="'+area+'" fill="url(#tg)"/>'
-			+ '<path d="'+d+'" fill="none" stroke="#e6c374" stroke-width="2.4" stroke-linejoin="round"/>'
+			+ '<path d="'+d+'" fill="none" stroke="#b0842f" stroke-width="2.4" stroke-linejoin="round"/>'
 			+ marks + nowLine;
 	}
 
