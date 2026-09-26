@@ -146,6 +146,12 @@ require_once get_template_directory() . '/inc/contact-spam.php';
 require_once get_template_directory() . '/inc/phone-links.php';
 
 /**
+ * Weather board forecast table (multi-model hourly + observed-buoy waves) and
+ * its server-side NDBC buoy proxy.
+ */
+require_once get_template_directory() . '/inc/forecast-table.php';
+
+/**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
  */
 require_once get_template_directory() . '/inc/pwa.php';

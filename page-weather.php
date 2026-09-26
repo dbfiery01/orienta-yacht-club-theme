@@ -291,6 +291,8 @@ if ( ! $oyc_weather_menu ) {
 		</div>
 	</div>
 
+	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
+
 	<div class="grid">
 		<!-- LEFT COLUMN -->
 		<div class="col" id="colA">
@@ -327,14 +329,6 @@ if ( ! $oyc_weather_menu ) {
 			<div class="card" data-card="forecast">
 				<h2>48-Hour Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
 				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
-			</div>
-			<div class="card precip-card" data-card="precip">
-				<h2>48-Hour Outlook <span class="sta">Execution Rock</span></h2>
-				<div class="alertbar alertbar--card hidden" id="outlookAlertBar">
-					<div class="alert-tag">&#9888; Alert</div>
-					<div class="marquee"><span id="outlookAlertText"></span></div>
-				</div>
-				<div class="px-body" id="precipBody"><div class="fc-row"><span class="miss">Loading outlook&hellip;</span></div></div>
 			</div>
 			<div class="card graph-card" data-card="graph">
 				<h2>48-Hour Tide Forecast <span class="sta">NOAA Forecast</span></h2>
@@ -413,7 +407,7 @@ if ( ! $oyc_weather_menu ) {
 	// One flat order of the 9 cards; desktop fills the columns 3/3/3 with it
 	// (middle column = the wide "featured" slots), mobile shows it as a list.
 	var ORDER_KEY = 'oyc_board_order_v3';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','precip','graph','wind','waves','cond'];
+	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
 	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
 	var ORDER_SPLIT = [3,3,3];
 	function getOrder(){
@@ -928,34 +922,20 @@ if ( ! $oyc_weather_menu ) {
 	// (Open-Meteo, keyless + CORS-ok). Renders a weather-icon strip with the precip
 	// chance under each hour, a temperature curve with labels, and a time axis.
 	function loadPrecip(){
-		var body = $('precipBody'); if(!body) return;
-		// Same Execution Rock position + live "current" block as the Wind card, so
-		// the outlook's "Now" wind matches the dial instead of the sheltered harbor.
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=temperature_2m,precipitation_probability,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m&daily=temperature_2m_max,temperature_2m_min&current=wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=kn&timezone=America/New_York&forecast_days=3')
+		// The 48-Hour Outlook card was replaced by the full-width forecast table
+		// (inc/forecast-table.php). This light fetch now only feeds the Conditions
+		// card's today Hi/Lo from the Execution Rock daily forecast.
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=1')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
-				// Today's forecast hi/lo -> Conditions card, beside the live air temp.
 				var D = j && j.daily;
 				if(D && D.temperature_2m_max && D.temperature_2m_max.length && D.temperature_2m_min && D.temperature_2m_min.length){
 					$('hiLoTemp').innerHTML = '<span style="color:#ef9a5a">'+Math.round(D.temperature_2m_max[0])+'&deg;</span>'
 						+ '<span style="color:var(--faint)"> / </span>'
 						+ '<span style="color:#57a6d6">'+Math.round(D.temperature_2m_min[0])+'&deg;</span>';
+					markUpdated(true);
 				}
-				var H = j && j.hourly; if(!H || !H.time) throw new Error('no hourly');
-				var allT = H.time.map(function(t){ return new Date(t.replace(' ','T')); });
-				var now = new Date(), s = 0;
-				while(s < allT.length-1 && allT[s+1] <= now) s++;
-				var S = [];
-				for(var k=0;k<16;k++){ var i=s+k*3; if(i>=allT.length) break;
-					var pm=0; for(var q=0;q<3;q++){ var ii=i+q; if(ii<allT.length){ var pv=H.precipitation_probability[ii]; if(pv!=null && pv>pm) pm=pv; } }
-					S.push({ t:allT[i], temp:H.temperature_2m[i], code:H.weather_code[i], precip:pm, cloud:H.cloud_cover[i], wspd:H.wind_speed_10m[i], wdir:H.wind_direction_10m[i] });
-				}
-				if(S.length < 4) throw new Error('short');
-				// Override the "Now" column's wind with the live current reading so it
-				// matches the Wind card exactly (same coords, same value).
-				if(j.current){ if(j.current.wind_speed_10m!=null) S[0].wspd=j.current.wind_speed_10m; if(j.current.wind_direction_10m!=null) S[0].wdir=j.current.wind_direction_10m; }
-				renderPrecip(S); markUpdated(true);
-			}).catch(function(){ if(/Loading/.test(body.textContent)) body.innerHTML = '<div class="fc-row"><span class="miss">Outlook unavailable</span></div>'; });
+			}).catch(function(){});
 	}
 	// Icon blends the WMO code with the hour's rain chance (pp %) and cloud cover
 	// (cc %) so a "mainly clear" code with a real shower chance still reads wet, and
@@ -1058,7 +1038,6 @@ if ( ! $oyc_weather_menu ) {
 			var f = (j && j.features) || [];
 			if(!f.length){
 				$('alertBar').classList.add('hidden');
-				$('outlookAlertBar').classList.add('hidden');
 				return;
 			}
 			var parts = f.map(function(a){
@@ -1070,8 +1049,6 @@ if ( ! $oyc_weather_menu ) {
 			var txt = parts.join('    •    ');
 			$('alertText').textContent = txt;
 			$('alertBar').classList.remove('hidden');
-			$('outlookAlertText').textContent = txt;
-			$('outlookAlertBar').classList.remove('hidden');
 		}).catch(function(){});
 	}
 
