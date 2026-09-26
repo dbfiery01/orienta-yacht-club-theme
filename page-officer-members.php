@@ -18,6 +18,7 @@ require_once ABSPATH . 'wp-admin/includes/user.php';
 oyc_officer_guard( 'oyc_manage_members' );
 
 $oyc_profile_fields = array(
+	'oyc_member_since'           => __( 'Member Since (e.g. June 2022)', 'orienta-yacht-club' ),
 	'billing_address_1'          => __( 'Street Address', 'orienta-yacht-club' ),
 	'billing_address_2'          => __( 'Address Line 2', 'orienta-yacht-club' ),
 	'billing_city'               => __( 'City', 'orienta-yacht-club' ),

@@ -121,7 +121,21 @@ get_header();
 						<div class="dashboard-account-info">
 							<p><strong><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->display_name ); ?></p>
 							<p><strong><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $user->user_email ); ?></p>
-							<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></p>
+							<?php
+							// True membership start when an officer has set it (the account's
+							// user_registered only records when the WordPress login was created,
+							// which for migrated members is years after they actually joined).
+							$oyc_since    = get_user_meta( $user->ID, 'oyc_member_since', true );
+							$oyc_since_ts = $oyc_since ? strtotime( $oyc_since ) : false;
+							if ( $oyc_since_ts ) {
+								$oyc_since_txt = date( 'F Y', $oyc_since_ts );
+							} elseif ( $oyc_since ) {
+								$oyc_since_txt = $oyc_since; // unparseable — show as typed
+							} else {
+								$oyc_since_txt = date( 'F Y', strtotime( $user->user_registered ) );
+							}
+							?>
+							<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_since_txt ); ?></p>
 						</div>
 						<div class="dashboard-account-actions">
 							<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
