@@ -74,9 +74,9 @@ if ( ! $oyc_weather_menu ) {
 	/* ---- site menu bar ---- */
 	.sitebar{display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;
 		padding:9px 20px;border:1px solid var(--edge);border-radius:12px;background:var(--panel2)}
-	.sitebar-brand{color:var(--teal);font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-		font-size:13px;text-decoration:none;white-space:nowrap}
-	.sitebar-brand:hover{color:var(--ink)}
+	.sitebar-brand{display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap;line-height:0}
+	.sitebar-logo{height:30px;width:auto;display:block}
+	.sitebar-brand:hover .sitebar-logo{opacity:.85}
 	.sitebar-menu{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin-left:auto;padding:0}
 	.sitebar-menu li{margin:0}
 	.sitebar-menu a{color:var(--muted);text-decoration:none;font-size:13px;letter-spacing:.05em;
@@ -274,7 +274,7 @@ if ( ! $oyc_weather_menu ) {
 <div class="wrap">
 	<!-- SITE MENU -->
 	<nav class="sitebar" aria-label="Site menu">
-		<a class="sitebar-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>">&#8962;&nbsp;OYC</a>
+		<a class="sitebar-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'sitebar-logo' ); ?></a>
 		<button class="sitebar-toggle" aria-expanded="false" aria-label="Menu"><span class="sitebar-bars" aria-hidden="true"></span></button>
 		<?php echo $oyc_weather_menu; ?>
 	</nav>
@@ -282,8 +282,8 @@ if ( ! $oyc_weather_menu ) {
 	<!-- TOP BAR -->
 	<div class="topbar">
 		<div class="brand">
-			<h1>Orienta Yacht Club</h1>
-			<span class="sub">Mamaroneck Harbor &middot; Live Conditions</span>
+			<h1>Live Conditions</h1>
+			<span class="sub">Mamaroneck Harbor</span>
 		</div>
 		<div class="clockwrap">
 			<div class="updated"><span class="dot" id="statusDot"></span><span id="updated">Connecting&hellip;</span></div>
