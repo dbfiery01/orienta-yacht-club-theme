@@ -292,13 +292,11 @@ if ( ! $oyc_weather_menu ) {
 		</div>
 	</div>
 
-	<!-- ALERT (prominent, above the forecast table) -->
+	<!-- ALERT (prominent, at the top) -->
 	<div class="alertbar hidden" id="alertBar">
 		<div class="alert-tag">&#9888; Marine Alert</div>
 		<div class="marquee"><span id="alertText"></span></div>
 	</div>
-
-	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
 
 	<div class="grid">
 		<!-- LEFT COLUMN -->
@@ -385,6 +383,8 @@ if ( ! $oyc_weather_menu ) {
 	</div>
 
 	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
+
+	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
