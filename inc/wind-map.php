@@ -386,15 +386,52 @@ function loadStorms(){
 	}).catch(function(){});
 }
 loadStorms();
+loadERFC(); /* Execution Rock point-forecast series (matches the Marine Forecast board) */
 function setER(s){if(!s)return;
 	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
 	document.getElementById('erGust').textContent=s.gust!=null?Math.round(s.gust)+' kt':'—';
 	document.getElementById('erDir').textContent=card(s.dir)+' '+Math.round(s.dir)+'°';
 	document.getElementById('erPres').textContent=s.mb!=null?Math.round(s.mb)+' mb':'—';
 	document.getElementById('erTemp').textContent=s.tempF!=null?Math.round(s.tempF)+'°F':'—';
-	document.getElementById('erPrecip').textContent=s.precip!=null?s.precip.toFixed(2)+' in':'—';
+	/* precip: probability % from the point forecast (matches the Marine Forecast
+	   board); falls back to the grid's amount in inches if only that is available */
+	document.getElementById('erPrecip').textContent=(s.pop!=null?Math.round(s.pop)+'%':(s.precip!=null?s.precip.toFixed(2)+' in':'—'));
 	document.getElementById('erWave').textContent=s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—';}
-function updateER(ti){setER(sampleBest(ER.lat,ER.lon,ti));}
+
+/* Execution Rock point-forecast series — the SAME cached exact-point, hourly,
+   BLEND (best_match) data the Marine Forecast table uses, so the map's ER
+   readout agrees with the board instead of drifting from the coarse
+   0.2°/3-hourly wind grid it visualises. */
+var ERFC=null;
+function erKey(h,base){var k=base+'_best_match';return h[k]!==undefined?k:base;}
+function loadERFC(){
+	fetchT(AJAX+'?action=oyc_marine_fc',12000).then(function(r){return r.json();}).then(function(res){
+		if(!res||!res.ok||!res.wx||!res.wx.hourly)return;
+		var wx=res.wx,h=wx.hourly,off=(wx.utc_offset_seconds||0)*1000;
+		var t=h.time.map(function(s){return Date.parse(s+':00Z')-off;});
+		var wave={};
+		if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];});}
+		ERFC={t:t,
+			kt:h[erKey(h,'wind_speed_10m')], gust:h[erKey(h,'wind_gusts_10m')], dir:h[erKey(h,'wind_direction_10m')],
+			mb:h[erKey(h,'pressure_msl')], tempF:h[erKey(h,'temperature_2m')], pop:h[erKey(h,'precipitation_probability')],
+			waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;})};
+		setER(erAt(curEpoch()));
+	}).catch(function(){});
+}
+function erFromFC(ep){
+	if(!ERFC||!ERFC.t.length)return null;
+	var T=ERFC.t,n=T.length;
+	function at(i){return {kt:ERFC.kt[i],gust:ERFC.gust[i],dir:ERFC.dir[i],mb:ERFC.mb[i],tempF:ERFC.tempF[i],pop:ERFC.pop?ERFC.pop[i]:null,waveFt:ERFC.waveFt[i]};}
+	if(ep<=T[0])return at(0);
+	if(ep>=T[n-1])return at(n-1);
+	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=at(i-1),b=at(i);
+		var li=function(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;};
+		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt)};}}
+	return at(n-1);
+}
+/* prefer the point forecast; fall back to the grid until it loads / if it fails */
+function erAt(epoch){return erFromFC(epoch)||erAtEpoch(epoch);}
+function updateER(ti){setER(erAt(new Date(TIMES[ti]).getTime()));}
 function erAtEpoch(epoch){
 	if(!LOCAL.loaded||TIMES.length<2)return null;
 	var e0=new Date(TIMES[0]).getTime(),step=(new Date(TIMES[1]).getTime()-e0);
@@ -755,12 +792,12 @@ function showRadar(i){
 	var off=RV.frames[i].off,t=Date.now()+off*60000,d=new Date(t);
 	var tag=off>0?' · forecast':(off<0?' · recent':' · now');
 	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
-		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erAtEpoch(t));return;}
+		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erAt(t));return;}
 	var step=fcStep(t),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
 	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.82);}
 	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.82,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
 	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+tag+'</small>';
-	setER(erAtEpoch(t));updateStormsAt(t);
+	setER(erAt(t));updateStormsAt(t);
 }
 
 /* ---------- unified slider / play ---------- */
