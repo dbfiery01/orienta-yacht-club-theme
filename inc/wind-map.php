@@ -119,7 +119,7 @@ function oyc_wind_map_html( $embed = false ) {
    the view tabs then lead the header row */
 #oycwm.embed .hd{padding:2px 18px 8px}
 #oycwm.embed .hd h2{display:none}
-#oycwm.embed #map{height:460px}
+#oycwm.embed #map{height:690px}
 /* keep the GRIB download on the board but compact — just the button, dropping
    the heading and description paragraphs that made the block tall */
 #oycwm.embed .card.dl{padding:8px 18px 4px}
