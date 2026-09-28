@@ -179,7 +179,7 @@ a{color:var(--harbor)}
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
-			<span class="hint">NWS NEXRAD radar (past) &middot; HRRR precip forecast (ahead) &middot; 15-min steps to +8&nbsp;h</span>
+			<span class="hint">NOAA HRRR precipitation &middot; recent past &rarr; +8&nbsp;h &middot; 15-min steps</span>
 		</div>
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
@@ -195,7 +195,7 @@ a{color:var(--harbor)}
 			<div class="hovertip" id="hoverTip"></div>
 			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
 		</div>
-		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar: NWS NEXRAD via <a href="https://mesonet.agron.iastate.edu" target="_blank" rel="noopener">Iowa Environmental Mesonet</a>.</div>
+		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar = HRRR precipitation via Open-Meteo.</div>
 	</div>
 
 	<!-- GRIB DOWNLOAD -->
@@ -317,9 +317,6 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
 /* default view: Mamaroneck harbor / western Sound (set at map init above) */
-/* radar in its own pane with a CSS blur so NEXRAD's ~1 km pixels read smooth
-   (blurring the pane, not each tile, avoids tile-seam artifacts) */
-map.createPane('radarpane');map.getPane('radarpane').style.zIndex=350;map.getPane('radarpane').style.filter='blur(1.2px)';map.getPane('radarpane').style.pointerEvents='none';
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
 var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
@@ -571,7 +568,7 @@ function maybeSwitchGrid(){
 	var want=chooseGrid();
 	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
 	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();drawHL(activeGrid,curTi);
-		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Long Island Sound to Cape Cod ')+'&middot; Open-Meteo (GFS). Radar: NWS NEXRAD.';}
+		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Long Island Sound to Cape Cod ')+'&middot; Open-Meteo (GFS). Radar = HRRR precip.';}
 }
 map.on('zoomend',maybeSwitchGrid);
 
@@ -677,22 +674,18 @@ function loadBasin(){
 	});
 }
 
-/* ---------- RADAR + PRECIP FORECAST ----------
-   Behind "now": observed NWS NEXRAD base reflectivity (IEM tiles, browser-
-   upscaled + a light pane blur so the ~1 km pixels read smooth). Ahead of now:
-   NOAA HRRR precipitation (Open-Meteo minutely_15) rendered as a smooth field,
-   clearly labelled a forecast. 15-minute steps, ~45 min past → +8 h ahead. */
-var RV={frames:[],layer:null,idx:0,loaded:false};
-var FC={PP15:[],tEpoch:[],loaded:false,loading:false},fcOverlay=null;
+/* ---------- RADAR — precipitation (NOAA HRRR via Open-Meteo) ----------
+   The whole timeline (recent past → +8 h) is ONE smooth, supersampled precip
+   field, so the "radar" reads consistently defined & smooth. (NEXRAD tiles were
+   dropped — they looked blocky next to the smooth forecast field.) 15-min steps. */
+var FC={PP15:[],tEpoch:[],loaded:false,loading:false},fcOverlay=null,RV={frames:[],idx:0,loaded:false};
 /* precip rate (mm / 15 min) → radar-style intensity colour */
 var PRECIP_RADAR_STOPS=[[0.1,[142,199,255]],[0.4,[74,156,240]],[1,[46,204,113]],[2.5,[241,196,15]],[5,[230,126,34]],[10,[231,76,60]],[20,[176,58,122]]];
 function precipRadarColor(mm){if(mm==null||mm<0.05)return null;return rampColor(mm,PRECIP_RADAR_STOPS);}
-function iemURL(off){return 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913'
-	+(off?'-m'+(off<10?'0'+off:off)+'m':'')+'/{z}/{x}/{y}.png';}
 function loadFC(cb){
 	if(FC.loaded){cb&&cb();return;}if(FC.loading)return;FC.loading=true;
 	var url='https://api.open-meteo.com/v1/forecast?latitude='+LOCAL.LAT.join(',')+'&longitude='+LOCAL.LON.join(',')
-		+'&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
+		+'&minutely_15=precipitation&past_minutes=60&forecast_minutely_15=40&timezone=America%2FNew_York';
 	fetchT(url,15000).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(arr){
 		var list=Array.isArray(arr)?arr:[arr];
 		FC.PP15=list.map(function(p){return (p.minutely_15&&p.minutely_15.precipitation)||[];});
@@ -702,45 +695,25 @@ function loadFC(cb){
 	}).catch(function(){FC.loading=false;});
 }
 function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd=Math.abs(FC.tEpoch[i]-t);if(dd<bd){bd=dd;best=i;}}return best;}
-function fmtAhead(min){if(min<60)return '+'+min+' min';var h=Math.floor(min/60),m=min%60;return '+'+h+'h'+(m?' '+m+'m':'');}
+function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+h+'h'+(m?' '+m+'m':'');}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	var past=[45,30,15,0].map(function(o){return {kind:'radar',off:o};});
-	var fut=[];for(var m=15;m<=480;m+=15)fut.push({kind:'fc',min:m});
-	RV.frames=past.concat(fut);RV.idx=past.length-1;RV.loaded=true;
-	loadFC();/* warm the forecast so scrubbing ahead is ready */
-	cb&&cb();
+	var offs=[-45,-30,-15,0];for(var m=15;m<=480;m+=15)offs.push(m);
+	RV.frames=offs.map(function(o){return {off:o};});RV.idx=3;RV.loaded=true;
+	loadFC();cb&&cb();
 }
-function radarTile(off){var url=iemURL(off);
-	if(RV.layer)RV.layer.setUrl(url);
-	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
-	if(RV.layer.setOpacity)RV.layer.setOpacity(0.78);setRadarBlur();}
-/* Soften NEXRAD's pixel edges proportionally to how big each ~1 km cell is on
-   screen (bigger when zoomed in) — keeps the real reflectivity structure but
-   removes the hard blocky look, without the washed-out feel of tile upscaling. */
-function setRadarBlur(){var px=Math.max(0.6,Math.min(5,Math.pow(2,map.getZoom())/118*0.11));
-	if(map.getPane('radarpane'))map.getPane('radarpane').style.filter='blur('+px.toFixed(1)+'px)';}
 function showRadar(i){
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
-	var fr=RV.frames[i];
-	if(fr.kind==='radar'){
-		if(fcOverlay)fcOverlay.setOpacity(0);
-		radarTile(fr.off);
-		var t=Date.now()-fr.off*60000,d=new Date(t);
-		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+(fr.off===0?'now · radar':'-'+fr.off+' min · radar')+'</small>';
-		setER(erAtEpoch(t));return;
-	}
-	/* forecast frame */
-	if(RV.layer)RV.layer.setOpacity(0);
-	var tf=Date.now()+fr.min*60000,df=new Date(tf);
+	var off=RV.frames[i].off,t=Date.now()+off*60000,d=new Date(t);
+	var tag=off>0?' · forecast':(off<0?' · recent':' · now');
 	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
-		tlabel.innerHTML=df.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtAhead(fr.min)+' · loading…</small>';setER(erAtEpoch(tf));return;}
-	var step=fcStep(tf),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
-	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.8);}
-	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.8,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
-	tlabel.innerHTML=df.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtAhead(fr.min)+' · forecast</small>';
-	setER(erAtEpoch(tf));
+		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erAtEpoch(t));return;}
+	var step=fcStep(t),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
+	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.82);}
+	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.82,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
+	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+tag+'</small>';
+	setER(erAtEpoch(t));
 }
 
 /* ---------- unified slider / play ---------- */
@@ -798,7 +771,7 @@ document.getElementById('tgPrecip').addEventListener('change',function(){pickFie
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
-map.on('moveend',function(){if(mode==='radar'){setRadarBlur();if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
+map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
 
 loadLocal();
 })();
