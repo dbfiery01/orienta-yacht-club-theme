@@ -256,8 +256,11 @@ if ( ! $oyc_weather_menu ) {
 	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
 	/* embedded Wind & Radar map card */
 	.windmap-card{margin-top:14px}
-	.windmap-embed{width:100%;margin-top:12px}
+	/* break the map out of the card padding so it fills edge-to-edge (card clips
+	   the rounded bottom corners via overflow:hidden) */
+	.windmap-embed{width:auto;margin:12px -18px -16px;overflow:hidden}
 	.windmap-embed #oycwm.embed{width:100%}
+	@media (max-width:560px){ .windmap-embed{margin:12px -14px -14px} }
 	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
 		border:1px solid rgba(192,57,43,.45);background:rgba(192,57,43,.10)}
 	.alertbar.hidden{display:none}
@@ -394,7 +397,7 @@ if ( ! $oyc_weather_menu ) {
 
 	<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
 	<div class="card windmap-card">
-		<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind &amp; Radar Map</a> <span class="sta">Interactive</span></h2>
+		<h2>Wind &amp; Radar Map <span class="sta">Interactive</span></h2>
 		<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
 	</div>
 
