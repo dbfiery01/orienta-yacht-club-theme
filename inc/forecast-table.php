@@ -56,6 +56,42 @@ function oyc_buoy_proxy() {
 	wp_send_json( $out );
 }
 
+/* ── All live LIS buoys as an array (for the Wind page's Wave tab markers) ──
+   Same NDBC source as oyc_buoy, but returns every station currently reporting
+   waves, each with coordinates, instead of just the first live one. ── */
+add_action( 'wp_ajax_oyc_buoys',        'oyc_buoys_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_buoys', 'oyc_buoys_proxy' );
+function oyc_buoys_proxy() {
+	$cached = get_transient( 'oyc_buoys_obs' );
+	if ( false !== $cached ) { wp_send_json( $cached ); }
+
+	$stations = array(
+		array( '44022', 'Execution Rocks',  40.883, -73.728 ),
+		array( '44040', 'Western LI Sound', 40.956, -73.580 ),
+	);
+	$out = array();
+	foreach ( $stations as $st ) {
+		$resp = wp_remote_get( 'https://www.ndbc.noaa.gov/data/realtime2/' . $st[0] . '.txt', array( 'timeout' => 6 ) );
+		if ( is_wp_error( $resp ) || 200 !== (int) wp_remote_retrieve_response_code( $resp ) ) { continue; }
+		$rows = preg_split( '/\r?\n/', trim( (string) wp_remote_retrieve_body( $resp ) ) );
+		$p = null;
+		foreach ( $rows as $ln ) { $ln = trim( $ln ); if ( '' === $ln || '#' === $ln[0] ) { continue; } $p = preg_split( '/\s+/', $ln ); break; }
+		if ( ! $p || count( $p ) < 12 || 'MM' === $p[8] ) { continue; }
+		$obs = gmmktime( (int) $p[3], (int) $p[4], 0, (int) $p[1], (int) $p[2], (int) $p[0] );
+		$age = ( time() - $obs ) / 60;
+		if ( $age > 180 ) { continue; }
+		$out[] = array(
+			'id' => $st[0], 'station' => $st[1], 'lat' => $st[2], 'lon' => $st[3],
+			'ft' => round( (float) $p[8] * 3.28084, 1 ),
+			'dir' => ( 'MM' === $p[11] ) ? null : (float) $p[11],
+			'dpd' => ( 'MM' === $p[9] ) ? null : (float) $p[9],
+			'ageMin' => (int) round( $age ),
+		);
+	}
+	set_transient( 'oyc_buoys_obs', $out, 20 * MINUTE_IN_SECONDS );
+	wp_send_json( $out );
+}
+
 /* ── Markup + scoped styles + widget script ──────────────────────────────── */
 function oyc_forecast_table_html() {
 	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );

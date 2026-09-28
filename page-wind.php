@@ -93,6 +93,9 @@ a{color:var(--harbor)}
 .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
+.buoy-mk{background:none;border:none}
+.buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
+.buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
 /* pins & callouts */
 .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:3px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .pin-co .co-t .co-ll{font-weight:600;color:var(--faint);font-size:.66rem}
@@ -134,6 +137,7 @@ a{color:var(--harbor)}
 				<button id="tabRadar" role="tab" aria-selected="false">Radar</button>
 				<button id="tabTemp" role="tab" aria-selected="false">Temp</button>
 				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
+				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 		</div>
@@ -147,6 +151,7 @@ a{color:var(--harbor)}
 				<div class="st-item"><span class="v" id="erPres">&mdash;</span><span class="k">Pressure</span></div>
 				<div class="st-item"><span class="v" id="erTemp">&mdash;</span><span class="k">Temp</span></div>
 				<div class="st-item"><span class="v" id="erPrecip">&mdash;</span><span class="k">Precip</span></div>
+				<div class="st-item"><span class="v" id="erWave">&mdash;</span><span class="k">Waves</span></div>
 			</div>
 		</div>
 
@@ -156,6 +161,7 @@ a{color:var(--harbor)}
 			<label><input type="checkbox" id="tgIso"> Isobars</label>
 			<label><input type="checkbox" id="tgTemp"> Temp</label>
 			<label><input type="checkbox" id="tgPrecip"> Precip</label>
+			<label><input type="checkbox" id="tgWave"> Waves</label>
 			<span class="hint">Zoom out for the Atlantic pattern &middot; temp shades the whole basin, precip the Sound</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -195,6 +201,7 @@ a{color:var(--harbor)}
 <script>
 (function(){
 "use strict";
+var AJAX=<?php echo wp_json_encode( $oyc_ajax ); ?>;
 var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638','#b23a2a','#8f2d20'];
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
@@ -213,6 +220,9 @@ function rampColor(v,stops){if(v==null||isNaN(v))return null;if(v<=stops[0][0])r
 	return stops[stops.length-1][1].concat(255);}
 function tempColor(v){return rampColor(v,TEMP_STOPS);}
 function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECIP_STOPS);}
+var WAVE_COLS=['#bfe9ef','#7fd0c8','#5bb98f','#e6d24a','#e08b3a','#cf5638','#8f2d6b'];
+var WAVE_STOPS=[[0.3,[191,233,239]],[1,[127,208,200]],[2,[91,185,143]],[4,[230,210,74]],[7,[224,139,58]],[11,[143,45,107]]];
+function waveColor(v){if(v==null||v<0.15)return null;return rampColor(v,WAVE_STOPS);}/* v in feet */
 
 /* ---------- grid factory ---------- */
 function makeGrid(o){
@@ -253,8 +263,8 @@ function sampleGrid(g,lat,lon,ti){
 	var r0=Math.max(0,Math.floor(fr)),c0=Math.max(0,Math.floor(fc));
 	var r1=Math.min(r0+1,g.NY-1),c1=Math.min(c0+1,g.NX-1);
 	var dr=fr-r0,dc=fc-c0;
-	function at(arr,r,c){return (arr[r*g.NX+c]||[])[ti];}
-	function bil(arr){var a=at(arr,r0,c0),b=at(arr,r0,c1),c_=at(arr,r1,c0),d=at(arr,r1,c1);
+	function at(arr,r,c,tx){return (arr[r*g.NX+c]||[])[tx==null?ti:tx];}
+	function bil(arr,tx){var a=at(arr,r0,c0,tx),b=at(arr,r0,c1,tx),c_=at(arr,r1,c0,tx),d=at(arr,r1,c1,tx);
 		if(a==null||b==null||c_==null||d==null)return null;
 		return a*(1-dr)*(1-dc)+b*(1-dr)*dc+c_*dr*(1-dc)+d*dr*dc;}
 	function uv(r,c){var sp=at(g.SP,r,c)||0,d=(at(g.DR,r,c)||0)*Math.PI/180;return [-sp*Math.sin(d),-sp*Math.cos(d)];}
@@ -265,7 +275,9 @@ function sampleGrid(g,lat,lon,ti){
 	var dir=(Math.atan2(-uu,-vv)*180/Math.PI+360)%360;
 	var mb=bil(g.PR);var gu=g.gust?bil(g.GU):null;
 	var tp=(g.TP&&g.TP.length)?bil(g.TP):null;var pp=(g.PP&&g.PP.length)?bil(g.PP):null;
-	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp};
+	var wti=(g.wvMap&&g.wvMap[ti]!=null)?g.wvMap[ti]:ti;
+	var wv=(g.WV&&g.WV.length)?bil(g.WV,wti):null;
+	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp,waveFt:wv==null?null:wv*3.28084};
 }
 function sampleBest(lat,lon,ti){
 	if(lat<=LOCAL.LA1&&lat>=LOCAL.LA2&&lon>=LOCAL.LO1&&lon<=LOCAL.LO2){var s=sampleGrid(LOCAL,lat,lon,ti);if(s)return s;}
@@ -306,7 +318,8 @@ function setER(s){if(!s)return;
 	document.getElementById('erDir').textContent=card(s.dir)+' '+Math.round(s.dir)+'°';
 	document.getElementById('erPres').textContent=s.mb!=null?Math.round(s.mb)+' mb':'—';
 	document.getElementById('erTemp').textContent=s.tempF!=null?Math.round(s.tempF)+'°F':'—';
-	document.getElementById('erPrecip').textContent=s.precip!=null?s.precip.toFixed(2)+' in':'—';}
+	document.getElementById('erPrecip').textContent=s.precip!=null?s.precip.toFixed(2)+' in':'—';
+	document.getElementById('erWave').textContent=s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—';}
 function updateER(ti){setER(sampleBest(ER.lat,ER.lon,ti));}
 function erAtEpoch(epoch){
 	if(!LOCAL.loaded||TIMES.length<2)return null;
@@ -316,7 +329,7 @@ function erAtEpoch(epoch){
 	var a=sampleGrid(LOCAL,ER.lat,ER.lon,i0),b=sampleGrid(LOCAL,ER.lat,ER.lon,i1);
 	if(!a||!b)return a||b;
 	function li(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;}
-	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip)};
+	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip),waveFt:li(a.waveFt,b.waveFt)};
 }
 
 /* ---------- pinned passage points ---------- */
@@ -329,7 +342,8 @@ function pinContent(lat,lon,ti){
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
 		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
-		+(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in precip</span></span>':'')+'</div>';
+		+(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'')
+		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
 	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">click pin to remove</div></div>';
 }
 function addPin(lat,lon){
@@ -344,6 +358,21 @@ function addPin(lat,lon){
 function removePin(pin){map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+
+/* ---------- live NDBC buoy markers (shown in the Wave view) ---------- */
+var buoyLayer=L.layerGroup(),buoysLoaded=false;
+function loadBuoys(cb){
+	if(buoysLoaded){cb&&cb();return;}
+	fetchT(AJAX+'?action=oyc_buoys',9000).then(function(r){return r.json();}).then(function(list){
+		buoyLayer.clearLayers();
+		(list||[]).forEach(function(b){
+			var lbl=b.ft.toFixed(1)+' ft'+(b.dpd?' @ '+Math.round(b.dpd)+'s':'')+'<br>'+b.station+' · '+b.ageMin+'m ago';
+			var html='<div class="buoy-ic">&#9670;<span class="buoy-lbl">'+lbl+'</span></div>';
+			L.marker([b.lat,b.lon],{icon:L.divIcon({className:'buoy-mk',html:html,iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(buoyLayer);
+		});
+		buoysLoaded=true;cb&&cb();
+	}).catch(function(){buoysLoaded=true;/* offline / hauled out — no markers */});
+}
 
 /* ---------- overlays (arrows + isobars) ---------- */
 /* GRIB / station-model wind barbs: staff points into the wind (toward the
@@ -398,6 +427,7 @@ var fieldMode=null,fieldOverlay=null;
 function effectiveField(){
 	if(mode==='temp')return 'temp';
 	if(mode==='precip')return 'precip';
+	if(mode==='wave')return 'wave';
 	if(mode==='wind')return fieldMode;
 	return null;
 }
@@ -408,14 +438,19 @@ function fieldDataURL(g,arr,ti,ramp){
 		if(col){d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=col[3];}else d[i+3]=0;}
 	ctx.putImageData(img,0,0);return cv.toDataURL();
 }
+function clearField(){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}}
 function drawField(){
 	var ef=effectiveField();
-	if(!ef){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}return;}
-	var g=activeGrid,arr=(ef==='temp')?g.TP:(g===LOCAL?LOCAL.PP:null),ramp=(ef==='temp')?tempColor:precipColor;
-	if(!g.loaded||!arr||!arr.length){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}return;}
-	var url=fieldDataURL(g,arr,curTi,ramp),bounds=[[g.LA2,g.LO1],[g.LA1,g.LO2]];
+	if(!ef){clearField();return;}
+	var g=activeGrid;
+	if(ef==='wave'&&!g.wvLoaded){clearField();loadWaves(g,function(){if(effectiveField()==='wave')showWind(curTi);});return;}
+	var arr=(ef==='temp')?g.TP:(ef==='precip')?(g===LOCAL?LOCAL.PP:null):g.WV;
+	var ramp=(ef==='temp')?tempColor:(ef==='precip')?precipColor:waveColor;
+	var fti=(ef==='wave'&&g.wvMap&&g.wvMap[curTi]!=null)?g.wvMap[curTi]:curTi;
+	if(!g.loaded||!arr||!arr.length){clearField();return;}
+	var url=fieldDataURL(g,arr,fti,ramp),bounds=[[g.LA2,g.LO1],[g.LA1,g.LO2]];
 	if(fieldOverlay){fieldOverlay.setBounds(bounds);fieldOverlay.setUrl(url);}
-	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:(ef==='temp'?0.55:0.6),interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
+	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:(ef==='temp'?0.55:0.62),interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
 }
 function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.className='legend';
 	lg.innerHTML=l0+' <span class="sc">'+cols.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</span> '+l1;}
@@ -424,6 +459,7 @@ function updateLegend(){
 	var ef=effectiveField();
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
+	if(ef==='wave')return setLegend('calm','12+ ft',WAVE_COLS);
 	setLegend('0 kt','40+ kt',RAMP);}
 
 /* ---------- velocity layer ----------
@@ -469,7 +505,7 @@ map.on('mousemove',function(e){
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
 	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(2)+', '+lon.toFixed(2)+'</span>'
-		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'');
+		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'');
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
 
@@ -480,6 +516,34 @@ function omURL(lat,lon,vars){return 'https://api.open-meteo.com/v1/forecast?lati
    (plain fetch has no timeout — a stalled Open-Meteo call would hang forever). */
 function fetchT(url,ms){var ctl=new AbortController();var id=setTimeout(function(){ctl.abort();},ms||12000);
 	return fetch(url,{signal:ctl.signal}).then(function(r){clearTimeout(id);return r;},function(e){clearTimeout(id);throw e;});}
+
+/* ---------- waves (Open-Meteo Marine = NOAA WaveWatch III) ----------
+   Loaded lazily per grid the first time the Wave view is opened. The marine
+   model resolves open ocean & offshore coastal water only — the enclosed Sound
+   comes back null (transparent); the NDBC buoy markers cover the Sound itself.
+   Marine's time axis is offset from the weather grid, so map each weather frame
+   to the nearest marine step (g.wvMap). Wave height in metres → feet at read. */
+function omMarineURL(lat,lon){return 'https://marine-api.open-meteo.com/v1/marine?latitude='+lat.join(',')+'&longitude='+lon.join(',')
+	+'&hourly=wave_height&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
+function loadWaves(g,cb){
+	if(g.wvLoaded){cb&&cb();return;}
+	if(g.wvLoading)return;
+	g.wvLoading=true;
+	var N=g.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
+	g.WV=new Array(N);var wvt=null,ci=0,CONC=2;
+	function fc(idx,tries){var a=chunks[idx][0],b=chunks[idx][1];
+		return fetchT(omMarineURL(g.LAT.slice(a,b),g.LON.slice(a,b)),15000)
+			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;}}})
+			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);});});
+	}
+	function pump(){if(ci>=chunks.length)return Promise.resolve();var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fc(ci,0));
+		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});}
+	pump().then(function(){
+		if(wvt){g.wvMap=TIMES.map(function(t){var tt=new Date(t).getTime(),best=0,bd=1e15;for(var i=0;i<wvt.length;i++){var d=Math.abs(new Date(wvt[i]).getTime()-tt);if(d<bd){bd=d;best=i;}}return best;});}
+		g.wvLoaded=true;g.wvLoading=false;cb&&cb();
+	});
+}
 
 function loadLocal(tries){
 	LOCAL.loading=true;tries=tries||0;
@@ -496,6 +560,7 @@ function loadLocal(tries){
 		buildVL(LOCAL,NOWI);showWind(NOWI);
 		document.getElementById('st').textContent='7-day forecast · '+TIMES.length+' frames · '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
 		loadBasin();
+		loadWaves(LOCAL,function(){updateER(curTi);});
 	}).catch(function(e){
 		if(tries<2){setTimeout(function(){loadLocal(tries+1);},1500);return;}
 		document.getElementById('st').textContent='Wind field unavailable ('+e+')';
@@ -569,11 +634,12 @@ function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterva
 /* ---------- view tabs (Wind | Radar | Temp | Precip) ---------- */
 function setMode(m){
 	stop();mode=m;
-	['wind','radar','temp','precip'].forEach(function(x){var b=document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1));
-		if(b){b.classList.toggle('on',m===x);b.setAttribute('aria-selected',m===x);}});
+	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave']].forEach(function(x){var b=document.getElementById(x[1]);
+		if(b){b.classList.toggle('on',m===x[0]);b.setAttribute('aria-selected',m===x[0]);}});
 	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
 	document.getElementById('radarLayers').style.display=m==='radar'?'flex':'none';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
+	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);
 		updateLegend();drawField();
@@ -596,13 +662,18 @@ document.getElementById('tabWind').addEventListener('click',function(){setMode('
 document.getElementById('tabRadar').addEventListener('click',function(){setMode('radar');});
 document.getElementById('tabTemp').addEventListener('click',function(){setMode('temp');});
 document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
+document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
 
 /* ---------- layer toggles ---------- */
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
 document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);});
 document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
-document.getElementById('tgTemp').addEventListener('change',function(){if(this.checked){fieldMode='temp';document.getElementById('tgPrecip').checked=false;}else if(fieldMode==='temp'){fieldMode=null;}drawField();updateLegend();});
-document.getElementById('tgPrecip').addEventListener('change',function(){if(this.checked){fieldMode='precip';document.getElementById('tgTemp').checked=false;}else if(fieldMode==='precip'){fieldMode=null;}drawField();updateLegend();});
+function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
+	if(cb.checked){fieldMode=which;for(var k in ids){if(k!==which)document.getElementById(ids[k]).checked=false;}}
+	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();}
+document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
+document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
+document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs(LOCAL,Math.min(NOWI,Math.max(0,TIMES.length-1)),1);}else map.removeLayer(arrowsLayer);});
 
 loadLocal();
