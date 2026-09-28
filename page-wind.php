@@ -2,11 +2,22 @@
 /**
  * Template Name: Wind
  *
- * Self-hosted animated wind map over the western Long Island Sound (Leaflet +
- * leaflet-velocity, fed by Open-Meteo's GFS-based grid) with a 7-day time
- * slider and toggleable static layers (wind arrows, isobars), plus a
- * "Download GRIB" button that serves the latest GFS regional GRIB2 (see
- * inc/grib-endpoint.php) for members' nav software.
+ * Self-hosted marine map over the western Long Island Sound and, on zoom-out,
+ * the whole North Atlantic (Leaflet + leaflet-velocity, fed by Open-Meteo's
+ * GFS-based grid). Two in-page views on one map:
+ *
+ *   • Wind  — animated 7-day wind field with a time slider, toggleable static
+ *             layers (wind arrows, isobars), a hover read-out, and click-to-pin
+ *             "passage points" whose callouts track the slider (click a pin
+ *             again to remove it). Zoom out past the Sound and the field
+ *             switches to a coarse North-Atlantic grid so members can read the
+ *             broad synoptic pattern out to Bermuda, Europe and Africa.
+ *   • Radar — OYC-hosted precipitation radar (RainViewer tiles) with its own
+ *             ±2 h loop, replacing the old Windy hand-off.
+ *
+ * A fixed Execution Rock read-out (wind / gust / direction / pressure) tracks
+ * whichever slider is active in both views. A "Download GRIB" button serves the
+ * latest GFS regional GRIB2 (see inc/grib-endpoint.php) for members' nav apps.
  *
  * Auto-renders for a Page with slug "wind" (page-{slug} hierarchy),
  * or assign this template to any Page.
@@ -22,7 +33,7 @@ $oyc_ajax = esc_url( admin_url( 'admin-ajax.php' ) );
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Wind — Mamaroneck Harbor · Orienta Yacht Club</title>
+<title>Wind &amp; Radar — Mamaroneck Harbor · Orienta Yacht Club</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.css">
 <style>
@@ -33,8 +44,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 .wrap{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 a{color:var(--harbor)}
 /* header */
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;
-	padding:10px 22px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;padding:10px 22px;border:1px solid var(--line);border-radius:16px;background:#fff}
 .tb-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .tb-brand{display:inline-flex;align-items:center;line-height:0;text-decoration:none}
 .tb-logo{height:44px;width:auto;display:block}
@@ -44,33 +54,56 @@ a{color:var(--harbor)}
 .tb-nav a:hover{color:var(--harbor)}
 /* cards */
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 22px rgba(11,42,74,.08);overflow:hidden}
-.hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:14px 18px 8px}
+.hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 18px 8px}
 .hd h2{margin:0;font-size:1.12rem;color:var(--navy);font-weight:700}
-.hd .loc{font-size:.83rem;color:var(--mute)}
 .hd .st{margin-left:auto;font-size:.75rem;color:var(--mute)}
+/* view tabs */
+.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
+.tabs button.on{background:var(--harbor);color:#fff}
+/* execution rock strip */
+.erbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:2px 18px 6px;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#fbfdff,#f3f8fd)}
+.erbar .er-name{font-weight:800;color:var(--navy);font-size:.82rem;letter-spacing:.02em;display:flex;align-items:center;gap:7px}
+.erbar .er-stats{display:flex;flex-wrap:wrap;gap:4px 18px;margin-left:auto}
+.erbar .st-item{display:flex;flex-direction:column;line-height:1.15}
+.erbar .st-item .v{font-weight:800;color:var(--ink);font-size:1.02rem}
+.erbar .st-item .k{font-size:.64rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
 .layers{display:flex;flex-wrap:wrap;gap:6px 8px;padding:2px 18px 8px}
 .layers label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.78rem;font-weight:600;color:var(--ink);cursor:pointer;user-select:none}
 .layers label:hover{border-color:var(--harbor)}
 .layers input{accent-color:var(--harbor)}
+.layers .hint{color:var(--faint);font-size:.74rem;align-self:center}
 .legend{display:flex;align-items:center;gap:2px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);flex-wrap:wrap}
 .legend .sc{display:flex;height:12px;border-radius:3px;overflow:hidden;width:190px;margin:0 8px}
 .legend .sc i{flex:1}
+.legend.radar .sc i:nth-child(1){background:#8ec7ff}.legend.radar .sc i:nth-child(2){background:#4a9cf0}.legend.radar .sc i:nth-child(3){background:#2ecc71}.legend.radar .sc i:nth-child(4){background:#f1c40f}.legend.radar .sc i:nth-child(5){background:#e67e22}.legend.radar .sc i:nth-child(6){background:#e74c3c}.legend.radar .sc i:nth-child(7){background:#b03a7a}
 .ctrl{display:flex;align-items:center;gap:12px;padding:8px 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel)}
 .ctrl button{border:1px solid var(--line);background:#fff;color:var(--navy);width:38px;height:34px;border-radius:9px;cursor:pointer;font-size:15px;flex:none}
 .ctrl button:hover{border-color:var(--harbor)}
 .ctrl input[type=range]{flex:1;accent-color:var(--harbor);min-width:120px}
 .ctrl .tlabel{font-weight:700;color:var(--navy);font-size:.9rem;white-space:nowrap;min-width:150px;text-align:right}
 .ctrl .tlabel small{display:block;font-weight:600;color:var(--mute);font-size:.72rem}
-#map{height:min(62vh,560px);width:100%;background:#dbe7f0}
+.mapwrap{position:relative}
+#map{height:min(64vh,600px);width:100%;background:#dbe7f0}
+.hovertip{position:absolute;z-index:600;pointer-events:none;background:rgba(11,42,74,.92);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block}
+.tiphelp{position:absolute;z-index:590;left:12px;bottom:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
 .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
+/* pins & callouts */
+.pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:3px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pin-co .co-t .co-ll{font-weight:600;color:var(--faint);font-size:.66rem}
+.pin-co .co-row{display:flex;gap:12px;font-size:.78rem}
+.pin-co .co-row .v{font-weight:800;color:var(--ink)}
+.pin-co .co-row .k{color:var(--mute);font-size:.7rem}
+.pin-co .co-x{margin-top:5px;font-size:.66rem;color:var(--faint)}
+.leaflet-popup-content{margin:9px 12px}
 /* download card */
 .dl{padding:16px 18px}
 .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
 .dl p{color:var(--mute);font-size:.86rem;line-height:1.5;margin:6px 0}
-.dl-btn{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:var(--harbor);color:#fff;
-	text-decoration:none;font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:999px;transition:.15s}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:var(--harbor);color:#fff;text-decoration:none;font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:999px;transition:.15s}
 .dl-btn:hover{background:#0f6fb0}
 .dl .apps{color:var(--faint);font-size:.78rem;margin-top:10px}
 .disclaimer{text-align:center;color:var(--mute);font-size:.82rem;font-style:italic}
@@ -81,32 +114,61 @@ a{color:var(--harbor)}
 	<div class="topbar">
 		<div class="tb-left">
 			<a class="tb-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'tb-logo' ); ?></a>
-			<div class="tb-title">Mamaroneck Harbor &middot; Wind</div>
+			<div class="tb-title">Mamaroneck Harbor &middot; Wind &amp; Radar</div>
 		</div>
 		<nav class="tb-nav" aria-label="Weather pages">
 			<a href="<?php echo esc_url( home_url( '/weather/' ) ); ?>">Live Conditions</a>
-			<a href="<?php echo esc_url( home_url( '/radar/' ) ); ?>">Radar</a>
 		</nav>
 	</div>
 	<script>/* standalone page: promote the lazy-load placeholder logo to its real src */
 	(function(){var i=document.querySelector('.tb-logo');if(!i)return;var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}})();</script>
 
-	<!-- WIND MAP -->
+	<!-- WIND & RADAR MAP -->
 	<div class="card">
-		<div class="hd"><h2>Wind Map</h2><span class="loc">Western Long Island Sound &middot; 7-day wind field</span><span class="st" id="st">Loading&hellip;</span></div>
-		<div class="layers">
+		<div class="hd">
+			<h2>Wind &amp; Radar Map</h2>
+			<div class="tabs" id="viewTabs" role="tablist">
+				<button id="tabWind" class="on" role="tab" aria-selected="true">Wind</button>
+				<button id="tabRadar" role="tab" aria-selected="false">Radar</button>
+			</div>
+			<span class="st" id="st">Loading&hellip;</span>
+		</div>
+
+		<div class="erbar">
+			<div class="er-name">&#9678; <span>Execution Rock</span></div>
+			<div class="er-stats" id="erStats">
+				<div class="st-item"><span class="v" id="erWind">&mdash;</span><span class="k">Wind</span></div>
+				<div class="st-item"><span class="v" id="erGust">&mdash;</span><span class="k">Gust</span></div>
+				<div class="st-item"><span class="v" id="erDir">&mdash;</span><span class="k">From</span></div>
+				<div class="st-item"><span class="v" id="erPres">&mdash;</span><span class="k">Pressure</span></div>
+			</div>
+		</div>
+
+		<div class="layers" id="windLayers">
 			<label><input type="checkbox" id="tgParticles" checked> Animated</label>
 			<label><input type="checkbox" id="tgArrows"> Wind arrows</label>
 			<label><input type="checkbox" id="tgIso"> Isobars</label>
+			<span class="hint">Zoom out for the North-Atlantic pattern &middot; zoom in for the Sound</span>
 		</div>
-		<div class="legend">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
+		<div class="layers" id="radarLayers" style="display:none">
+			<label><input type="checkbox" id="tgRadarWind"> Wind arrows</label>
+			<span class="hint">Precipitation radar &middot; last 2&nbsp;h + short nowcast</span>
+		</div>
+
+		<div class="legend" id="legend">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
+
 		<div class="ctrl">
 			<button id="play" title="Play/pause">&#9654;</button>
-			<input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Forecast time">
+			<input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Time">
 			<div class="tlabel" id="tlabel">&mdash;<small>&nbsp;</small></div>
 		</div>
-		<div id="map"></div>
-		<div class="foot">Wind &amp; pressure from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based), 0.15&deg; grid, 3-hourly to 7 days.</div>
+
+		<div class="mapwrap">
+			<div id="map"></div>
+			<div class="hovertip" id="hoverTip"></div>
+			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
+		</div>
+		<div class="foot" id="foot">Wind &amp; pressure from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar from <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a>.</div>
 	</div>
 
 	<!-- GRIB DOWNLOAD -->
@@ -124,87 +186,310 @@ a{color:var(--harbor)}
 <script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.js"></script>
 <script>
 (function(){
+"use strict";
 var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638','#b23a2a','#8f2d20'];
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
+var KT=1.94384;
+var ER={lat:40.8783,lon:-73.7340};
 
-var LA1=41.3,LA2=40.5,LO1=-74.1,LO2=-72.3,DX=0.15,DY=0.15;
-var NY=Math.round((LA1-LA2)/DY)+1,NX=Math.round((LO2-LO1)/DX)+1;
-var lats=[],lons=[],i,j;
-for(i=0;i<NY;i++)lats.push(+(LA1-i*DY).toFixed(2));
-for(j=0;j<NX;j++)lons.push(+(LO1+j*DX).toFixed(2));
-var LAT=[],LON=[];
-for(i=0;i<NY;i++)for(j=0;j<NX;j++){LAT.push(lats[i]);LON.push(lons[j]);}
-var HDR={parameterCategory:2,nx:NX,ny:NY,lo1:LO1,lo2:LO2,la1:LA1,la2:LA2,dx:DX,dy:DY};
+/* ---------- grid factory ---------- */
+function makeGrid(o){
+	var g={LA1:o.LA1,LA2:o.LA2,LO1:o.LO1,LO2:o.LO2,DX:o.DX,DY:o.DY,gust:!!o.gust,loaded:false,loading:false};
+	g.NY=Math.round((g.LA1-g.LA2)/g.DY)+1;g.NX=Math.round((g.LO2-g.LO1)/g.DX)+1;
+	g.lats=[];g.lons=[];var i,j;
+	for(i=0;i<g.NY;i++)g.lats.push(+(g.LA1-i*g.DY).toFixed(3));
+	for(j=0;j<g.NX;j++)g.lons.push(+(g.LO1+j*g.DX).toFixed(3));
+	g.LAT=[];g.LON=[];
+	for(i=0;i<g.NY;i++)for(j=0;j<g.NX;j++){g.LAT.push(g.lats[i]);g.LON.push(g.lons[j]);}
+	g.HDR={parameterCategory:2,nx:g.NX,ny:g.NY,lo1:g.LO1,lo2:g.LO2,la1:g.LA1,la2:g.LA2,dx:g.DX,dy:g.DY};
+	g.SP=[];g.DR=[];g.PR=[];g.GU=[];g.FRAMES=[];
+	return g;
+}
+var LOCAL=makeGrid({LA1:41.3,LA2:40.5,LO1:-74.1,LO2:-72.3,DX:0.15,DY:0.15,gust:true});
+var BASIN=makeGrid({LA1:62,LA2:20,LO1:-82,LO2:8,DX:2.0,DY:2.0,gust:false});
 
-var map=L.map('map').setView([40.92,-73.4],9);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(map);
-map.fitBounds([[LA2,LO1],[LA1,LO2]]);
+var TIMES=[],NOWI=0;               /* master 3-hourly time axis (shared) */
+function frame(g,ti){
+	var u=new Array(g.LAT.length),v=new Array(g.LAT.length);
+	for(var k=0;k<g.LAT.length;k++){var sp=g.SP[k][ti]||0,dr=(g.DR[k][ti]||0)*Math.PI/180;u[k]=-sp*Math.sin(dr);v[k]=-sp*Math.cos(dr);}
+	return [{header:Object.assign({parameterNumber:2,refTime:TIMES[ti],forecastTime:0},g.HDR),data:u},
+			{header:Object.assign({parameterNumber:3,refTime:TIMES[ti],forecastTime:0},g.HDR),data:v}];
+}
+function buildFrames(g){g.FRAMES=[];for(var t=0;t<TIMES.length;t++)g.FRAMES.push(frame(g,t));}
 
-var SP=[],DR=[],PR=[],TIMES=[],FRAMES=[],vl=null,NOWI=0,playing=false,timer=null,curTi=0;
-var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup();
-var slider=document.getElementById('slider'),tlabel=document.getElementById('tlabel'),playBtn=document.getElementById('play');
-
-function frame(ti){var u=new Array(LAT.length),v=new Array(LAT.length);
-	for(var k=0;k<LAT.length;k++){var sp=SP[k][ti]||0,dr=(DR[k][ti]||0)*Math.PI/180;u[k]=-sp*Math.sin(dr);v[k]=-sp*Math.cos(dr);}
-	return [{header:Object.assign({parameterNumber:2,refTime:TIMES[ti],forecastTime:0},HDR),data:u},
-			{header:Object.assign({parameterNumber:3,refTime:TIMES[ti],forecastTime:0},HDR),data:v}];}
+/* bilinear sample of a grid at (lat,lon) for time index ti -> {kt,dir,mb,gust} or null */
+function sampleGrid(g,lat,lon,ti){
+	if(!g||!g.loaded)return null;
+	var fr=(g.LA1-lat)/g.DY,fc=(lon-g.LO1)/g.DX;
+	if(fr<-0.001||fr>g.NY-1+0.001||fc<-0.001||fc>g.NX-1+0.001)return null;
+	var r0=Math.max(0,Math.floor(fr)),c0=Math.max(0,Math.floor(fc));
+	var r1=Math.min(r0+1,g.NY-1),c1=Math.min(c0+1,g.NX-1);
+	var dr=fr-r0,dc=fc-c0;
+	function at(arr,r,c){return (arr[r*g.NX+c]||[])[ti];}
+	function bil(arr){var a=at(arr,r0,c0),b=at(arr,r0,c1),c_=at(arr,r1,c0),d=at(arr,r1,c1);
+		if(a==null||b==null||c_==null||d==null)return null;
+		return a*(1-dr)*(1-dc)+b*(1-dr)*dc+c_*dr*(1-dc)+d*dr*dc;}
+	function uv(r,c){var sp=at(g.SP,r,c)||0,d=(at(g.DR,r,c)||0)*Math.PI/180;return [-sp*Math.sin(d),-sp*Math.cos(d)];}
+	var q00=uv(r0,c0),q01=uv(r0,c1),q10=uv(r1,c0),q11=uv(r1,c1);
+	var uu=q00[0]*(1-dr)*(1-dc)+q01[0]*(1-dr)*dc+q10[0]*dr*(1-dc)+q11[0]*dr*dc;
+	var vv=q00[1]*(1-dr)*(1-dc)+q01[1]*(1-dr)*dc+q10[1]*dr*(1-dc)+q11[1]*dr*dc;
+	var sp=Math.sqrt(uu*uu+vv*vv);
+	var dir=(Math.atan2(-uu,-vv)*180/Math.PI+360)%360;
+	var mb=bil(g.PR);var gu=g.gust?bil(g.GU):null;
+	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT};
+}
+function sampleBest(lat,lon,ti){
+	if(lat<=LOCAL.LA1&&lat>=LOCAL.LA2&&lon>=LOCAL.LO1&&lon<=LOCAL.LO2){var s=sampleGrid(LOCAL,lat,lon,ti);if(s)return s;}
+	return sampleGrid(BASIN,lat,lon,ti);
+}
+var CARD=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function card(d){return CARD[Math.round(d/22.5)%16];}
 function fmt(iso){var d=new Date(iso);return {big:(d.getHours()%12||12)+' '+(d.getHours()>=12?'PM':'AM'),small:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})};}
 
-function drawArrows(ti){arrowsLayer.clearLayers();
-	for(var k=0;k<LAT.length;k++){var sp=(SP[k][ti]||0)*1.94384,dir=DR[k][ti]||0;
+/* ---------- map ---------- */
+var map=L.map('map',{worldCopyJump:true}).setView([40.92,-73.4],9);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
+map.fitBounds([[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]]);
+
+var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup();
+var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
+var slider=document.getElementById('slider'),tlabel=document.getElementById('tlabel'),playBtn=document.getElementById('play');
+
+/* ---------- Execution Rock strip + marker ---------- */
+var erMarker=L.circleMarker([ER.lat,ER.lon],{radius:6,color:'#b08a3e',weight:2,fillColor:'#f7d774',fillOpacity:1}).addTo(map);
+erMarker.bindTooltip('Execution Rock',{direction:'top',offset:[0,-6]});
+function setER(s){if(!s)return;
+	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
+	document.getElementById('erGust').textContent=s.gust!=null?Math.round(s.gust)+' kt':'—';
+	document.getElementById('erDir').textContent=card(s.dir)+' '+Math.round(s.dir)+'°';
+	document.getElementById('erPres').textContent=s.mb!=null?Math.round(s.mb)+' mb':'—';}
+function updateER(ti){setER(sampleBest(ER.lat,ER.lon,ti));}
+function erAtEpoch(epoch){
+	if(!LOCAL.loaded||TIMES.length<2)return null;
+	var e0=new Date(TIMES[0]).getTime(),step=(new Date(TIMES[1]).getTime()-e0);
+	var f=(epoch-e0)/step;if(f<0)f=0;if(f>TIMES.length-1)f=TIMES.length-1;
+	var i0=Math.floor(f),i1=Math.min(i0+1,TIMES.length-1),fr=f-i0;
+	var a=sampleGrid(LOCAL,ER.lat,ER.lon,i0),b=sampleGrid(LOCAL,ER.lat,ER.lon,i1);
+	if(!a||!b)return a||b;
+	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:(a.mb+(b.mb-a.mb)*fr),gust:(a.gust!=null&&b.gust!=null)?a.gust+(b.gust-a.gust)*fr:a.gust};
+}
+
+/* ---------- pinned passage points ---------- */
+var pins=[];
+function pinContent(lat,lon,ti){
+	var s=sampleBest(lat,lon,ti);
+	var ll=lat.toFixed(2)+', '+lon.toFixed(2);
+	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">click pin to remove</div></div>';
+	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
+		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
+		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
+	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+'<div class="co-x">click pin to remove</div></div>';
+}
+function addPin(lat,lon){
+	var m=L.circleMarker([lat,lon],{radius:6,color:'#0b2a4a',weight:2,fillColor:'#1583cf',fillOpacity:1}).addTo(map);
+	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,className:'pin-pop'})
+		.setLatLng([lat,lon]).setContent(pinContent(lat,lon,curTi));
+	m.bindPopup(p);m.openPopup();
+	var pin={marker:m,popup:p,lat:lat,lon:lon};
+	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
+	pins.push(pin);
+}
+function removePin(pin){map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
+function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti));}
+map.on('click',function(e){if(mode!=='wind')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+
+/* ---------- overlays (arrows + isobars) ---------- */
+function drawArrows(g,ti,stride){arrowsLayer.clearLayers();
+	for(var r=0;r<g.NY;r+=stride)for(var c=0;c<g.NX;c+=stride){var k=r*g.NX+c;
+		var sp=(g.SP[k][ti]||0)*KT,dir=g.DR[k][ti]||0;
 		var len=Math.min(20,7+sp*0.55),col=spdColor(sp),rot=(dir+180)%360;
 		var html='<svg width="30" height="30" viewBox="-15 -15 30 30" style="overflow:visible"><g transform="rotate('+rot+')">'
 			+'<line x1="0" y1="'+(len/2).toFixed(1)+'" x2="0" y2="'+(-len/2).toFixed(1)+'" stroke="'+col+'" stroke-width="2.2"/>'
 			+'<path d="M0,'+(-len/2).toFixed(1)+' L3.5,'+(-len/2+5).toFixed(1)+' L-3.5,'+(-len/2+5).toFixed(1)+' Z" fill="'+col+'"/></g></svg>';
-		L.marker([LAT[k],LON[k]],{icon:L.divIcon({className:'',html:html,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false}).addTo(arrowsLayer);
+		L.marker([g.lats[r],g.lons[c]],{icon:L.divIcon({className:'',html:html,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false}).addTo(arrowsLayer);
 	}}
-function drawIso(ti){isoLayer.clearLayers();
-	var P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=PR[r*NX+c][ti];}
+function drawIso(g,ti,step){isoLayer.clearLayers();
+	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
 	var mn=1e9,mx=-1e9;for(r=0;r<NY;r++)for(c=0;c<NX;c++){if(P[r][c]<mn)mn=P[r][c];if(P[r][c]>mx)mx=P[r][c];}
-	var STEP=1,latAt=function(r){return lats[r];},lonAt=function(c){return lons[c];};
 	function lerp(a,b,t,axa,axb){return axa+(axb-axa)*((t-a)/(b-a));}
-	for(var thr=Math.ceil(mn/STEP)*STEP;thr<=mx;thr+=STEP){
+	for(var thr=Math.ceil(mn/step)*step;thr<=mx;thr+=step){
 		for(r=0;r<NY-1;r++)for(c=0;c<NX-1;c++){
 			var tl=P[r][c],tr=P[r][c+1],br=P[r+1][c+1],bl=P[r+1][c],pts=[];
-			if((tl-thr)*(tr-thr)<0)pts.push([latAt(r),lerp(tl,tr,thr,lonAt(c),lonAt(c+1))]);
-			if((tr-thr)*(br-thr)<0)pts.push([lerp(tr,br,thr,latAt(r),latAt(r+1)),lonAt(c+1)]);
-			if((bl-thr)*(br-thr)<0)pts.push([latAt(r+1),lerp(bl,br,thr,lonAt(c),lonAt(c+1))]);
-			if((tl-thr)*(bl-thr)<0)pts.push([lerp(tl,bl,thr,latAt(r),latAt(r+1)),lonAt(c)]);
+			if((tl-thr)*(tr-thr)<0)pts.push([g.lats[r],lerp(tl,tr,thr,g.lons[c],g.lons[c+1])]);
+			if((tr-thr)*(br-thr)<0)pts.push([lerp(tr,br,thr,g.lats[r],g.lats[r+1]),g.lons[c+1]]);
+			if((bl-thr)*(br-thr)<0)pts.push([g.lats[r+1],lerp(bl,br,thr,g.lons[c],g.lons[c+1])]);
+			if((tl-thr)*(bl-thr)<0)pts.push([lerp(tl,bl,thr,g.lats[r],g.lats[r+1]),g.lons[c]]);
 			if(pts.length>=2){
-				L.polyline([pts[0],pts[1]],{color:'#37506b',weight:1.4,opacity:.85,interactive:false}).addTo(isoLayer);
-				if(pts.length===4)L.polyline([pts[2],pts[3]],{color:'#37506b',weight:1.4,opacity:.85,interactive:false}).addTo(isoLayer);
-				if(r%2===0&&c===Math.floor(NX/2))L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[26,12]}),interactive:false}).addTo(isoLayer);
+				L.polyline([pts[0],pts[1]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
+				if(pts.length===4)L.polyline([pts[2],pts[3]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
+				if(r%3===0&&c===Math.floor(NX/2))L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[26,12]}),interactive:false}).addTo(isoLayer);
 			}
 		}
 	}}
-function refreshOverlays(){if(document.getElementById('tgArrows').checked)drawArrows(curTi);if(document.getElementById('tgIso').checked)drawIso(curTi);}
-function show(ti){ti=Math.max(0,Math.min(FRAMES.length-1,ti));curTi=ti;slider.value=ti;
-	if(vl)vl.setData(FRAMES[ti]);var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';refreshOverlays();}
+function refreshOverlays(){var g=activeGrid;
+	if(document.getElementById('tgArrows').checked)drawArrows(g,curTi,g===BASIN?2:1);
+	if(document.getElementById('tgIso').checked)drawIso(g,curTi,g===BASIN?4:1);}
 
-var url='https://api.open-meteo.com/v1/forecast?latitude='+LAT.join(',')+'&longitude='+LON.join(',')
-	+'&hourly=wind_speed_10m,wind_direction_10m,pressure_msl&wind_speed_unit=ms&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-fetch(url).then(function(r){return r.json();}).then(function(arr){
-	if(!Array.isArray(arr))throw new Error('grid');
-	TIMES=arr[0].hourly.time;
-	for(var k=0;k<arr.length;k++){SP.push(arr[k].hourly.wind_speed_10m);DR.push(arr[k].hourly.wind_direction_10m);PR.push(arr[k].hourly.pressure_msl);}
-	var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
-	for(t=0;t<TIMES.length;t++)FRAMES.push(frame(t));
-	slider.max=FRAMES.length-1;
+/* ---------- velocity layer (rebuilt on grid switch for per-grid tuning) ---------- */
+function velOpts(g){return g===BASIN
+	?{maxVelocity:28,velocityScale:0.003,particleAge:90,particleMultiplier:1/420,lineWidth:1.6}
+	:{maxVelocity:20,velocityScale:0.006,particleAge:110,particleMultiplier:1/260,lineWidth:2.2};}
+function buildVL(g,ti){
+	if(vl){map.removeLayer(vl);vl=null;}
+	var o=velOpts(g);
 	vl=L.velocityLayer({displayValues:true,displayOptions:{velocityType:'Wind',position:'bottomleft',emptyString:'No wind data',showCardinal:true,speedUnit:'kt',directionString:'From',speedString:'Wind'},
-		data:FRAMES[NOWI],maxVelocity:20,velocityScale:0.012,lineWidth:2.2,particleAge:80,particleMultiplier:1/260,colorScale:RAMP,frameRate:20});
-	vl.addTo(map);
-	show(NOWI);
-	document.getElementById('st').textContent='7-day forecast · '+FRAMES.length+' frames · updated '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
-}).catch(function(e){document.getElementById('st').textContent='Wind field unavailable ('+e+')';});
+		data:g.FRAMES[ti],maxVelocity:o.maxVelocity,velocityScale:o.velocityScale,lineWidth:o.lineWidth,particleAge:o.particleAge,particleMultiplier:o.particleMultiplier,colorScale:RAMP,frameRate:20});
+	if(mode==='wind'&&document.getElementById('tgParticles').checked)vl.addTo(map);
+}
 
+/* ---------- wind-mode render ---------- */
+function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
+	if(vl&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
+	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
+	refreshOverlays();updatePins(ti);updateER(ti);}
+
+/* ---------- grid switching by zoom ---------- */
+function chooseGrid(){return map.getZoom()>=8?LOCAL:BASIN;}
+function maybeSwitchGrid(){
+	if(mode!=='wind')return;
+	var want=chooseGrid();
+	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
+	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();
+		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'North-Atlantic wind field ':'Western Long Island Sound ')+'&middot; Open-Meteo (GFS). Radar from RainViewer.';}
+}
+map.on('zoomend',maybeSwitchGrid);
+
+/* ---------- hover pointer ---------- */
+var hoverTip=document.getElementById('hoverTip');
+map.on('mousemove',function(e){
+	if(!activeGrid.loaded){hoverTip.style.display='none';return;}
+	var lon=((e.latlng.lng+540)%360)-180;
+	var s=sampleBest(e.latlng.lat,lon,curTi);
+	if(!s){hoverTip.style.display='none';return;}
+	hoverTip.style.display='block';
+	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
+	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(2)+', '+lon.toFixed(2)+'</span>'
+		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'');
+});
+map.on('mouseout',function(){hoverTip.style.display='none';});
+
+/* ---------- Open-Meteo loaders ---------- */
+function omURL(lat,lon,vars){return 'https://api.open-meteo.com/v1/forecast?latitude='+lat.join(',')+'&longitude='+lon.join(',')
+	+'&hourly='+vars+'&wind_speed_unit=ms&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
+
+function loadLocal(){
+	LOCAL.loading=true;
+	fetch(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl'))
+	.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+	.then(function(arr){
+		if(!Array.isArray(arr))throw new Error('grid');
+		TIMES=arr[0].hourly.time;
+		for(var k=0;k<arr.length;k++){LOCAL.SP.push(arr[k].hourly.wind_speed_10m);LOCAL.DR.push(arr[k].hourly.wind_direction_10m);LOCAL.GU.push(arr[k].hourly.wind_gusts_10m);LOCAL.PR.push(arr[k].hourly.pressure_msl);}
+		var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
+		buildFrames(LOCAL);LOCAL.loaded=true;LOCAL.loading=false;
+		activeGrid=LOCAL;slider.max=TIMES.length-1;
+		buildVL(LOCAL,NOWI);showWind(NOWI);
+		document.getElementById('st').textContent='7-day forecast · '+TIMES.length+' frames · '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
+		loadBasin();
+	}).catch(function(e){document.getElementById('st').textContent='Wind field unavailable ('+e+')';});
+}
+
+/* chunked basin loader with limited concurrency + retry/backoff */
+function loadBasin(){
+	if(BASIN.loaded||BASIN.loading)return;BASIN.loading=true;
+	var N=BASIN.LAT.length,CH=150,chunks=[];
+	for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
+	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);
+	var ci=0,CONC=2;
+	function fetchChunk(idx,tries){
+		var a=chunks[idx][0],b=chunks[idx][1];
+		var la=BASIN.LAT.slice(a,b),lo=BASIN.LON.slice(a,b);
+		return fetch(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl'))
+			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];
+				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;}
+			}).catch(function(){
+				if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
+			});
+	}
+	function pump(){
+		if(ci>=chunks.length)return Promise.resolve();
+		var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fetchChunk(ci,0));
+		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});
+	}
+	pump().then(function(){
+		for(var i=0;i<N;i++){if(!BASIN.SP[i]){BASIN.SP[i]=TIMES.map(function(){return 0;});BASIN.DR[i]=TIMES.map(function(){return 0;});BASIN.PR[i]=TIMES.map(function(){return 1013;});}}
+		buildFrames(BASIN);BASIN.loaded=true;BASIN.loading=false;
+		maybeSwitchGrid();
+	});
+}
+
+/* ---------- RADAR (RainViewer) ---------- */
+var RV={host:'',frames:[],layer:null,idx:0,loaded:false};
+function rvURL(fr){return RV.host+fr.path+'/256/{z}/{x}/{y}/4/1_1.png';}
+function loadRadar(cb){
+	if(RV.loaded){cb&&cb();return;}
+	fetch('https://api.rainviewer.com/public/weather-maps.json').then(function(r){return r.json();}).then(function(j){
+		RV.host=j.host;var past=(j.radar&&j.radar.past)||[],now=(j.radar&&j.radar.nowcast)||[];
+		RV.frames=past.concat(now);RV.idx=Math.max(0,past.length-1);RV.loaded=true;cb&&cb();
+	}).catch(function(){document.getElementById('st').textContent='Radar unavailable — try again shortly';});
+}
+function showRadar(i){
+	if(!RV.frames.length)return;
+	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
+	var fr=RV.frames[i];
+	if(RV.layer)RV.layer.setUrl(rvURL(fr));
+	else{RV.layer=L.tileLayer(rvURL(fr),{opacity:0.72,zIndex:400,maxZoom:19,tileSize:256});RV.layer.addTo(map);}
+	var d=new Date(fr.time*1000),dm=Math.round((fr.time*1000-Date.now())/60000);
+	var rel=dm===0?'now':(dm>0?'+'+dm+' min':dm+' min');
+	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+rel+'</small>';
+	setER(erAtEpoch(fr.time*1000));
+}
+
+/* ---------- unified slider / play ---------- */
+function show(i){mode==='wind'?showWind(i):showRadar(i);}
 slider.addEventListener('input',function(){stop();show(+slider.value);});
 playBtn.addEventListener('click',function(){playing?stop():play();});
-function play(){if(!FRAMES.length)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';timer=setInterval(function(){var n=+slider.value+1;if(n>=FRAMES.length)n=0;show(n);},700);}
+function play(){var max=(mode==='wind'?TIMES.length:RV.frames.length);if(!max)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';
+	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},mode==='wind'?700:450);}
 function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterval(timer);timer=null;}}
-document.getElementById('tgParticles').addEventListener('change',function(){if(this.checked){if(vl)vl.addTo(map);}else if(vl)map.removeLayer(vl);});
-document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawArrows(curTi);}else map.removeLayer(arrowsLayer);});
-document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);drawIso(curTi);}else map.removeLayer(isoLayer);});
+
+/* ---------- view tabs ---------- */
+function setMode(m){
+	stop();mode=m;
+	document.getElementById('tabWind').classList.toggle('on',m==='wind');
+	document.getElementById('tabRadar').classList.toggle('on',m==='radar');
+	document.getElementById('tabWind').setAttribute('aria-selected',m==='wind');
+	document.getElementById('tabRadar').setAttribute('aria-selected',m==='radar');
+	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
+	document.getElementById('radarLayers').style.display=m==='radar'?'flex':'none';
+	document.getElementById('legend').className='legend'+(m==='radar'?' radar':'');
+	document.getElementById('legend').firstChild.textContent=m==='radar'?'light ':'0 kt ';
+	document.getElementById('legend').lastChild.textContent=m==='radar'?' heavy':' 40+ kt';
+	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
+	if(m==='radar'){
+		if(vl)map.removeLayer(vl);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);
+		loadRadar(function(){slider.max=Math.max(0,RV.frames.length-1);showRadar(RV.idx);});
+	}else{
+		if(RV.layer){map.removeLayer(RV.layer);RV.layer=null;}
+		slider.max=Math.max(0,TIMES.length-1);
+		if(vl&&document.getElementById('tgParticles').checked)vl.addTo(map);
+		if(document.getElementById('tgArrows').checked)arrowsLayer.addTo(map);
+		if(document.getElementById('tgIso').checked)isoLayer.addTo(map);
+		showWind(Math.min(curTi,Math.max(0,TIMES.length-1)));
+	}
+}
+document.getElementById('tabWind').addEventListener('click',function(){setMode('wind');});
+document.getElementById('tabRadar').addEventListener('click',function(){setMode('radar');});
+
+/* ---------- layer toggles ---------- */
+document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;if(this.checked){if(vl)vl.addTo(map);}else if(vl)map.removeLayer(vl);});
+document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);});
+document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
+document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawArrows(LOCAL,Math.min(NOWI,Math.max(0,TIMES.length-1)),1);}else map.removeLayer(arrowsLayer);});
+
+loadLocal();
 })();
 </script>
 </body>
