@@ -19,7 +19,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm *{box-sizing:border-box;margin:0;padding:0}
 #oycwm{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 	color:var(--ink);padding:18px;-webkit-font-smoothing:antialiased}
-#oycwm .wrap{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+/* min-height:0 guards against a host page's global `.wrap{min-height:100vh}`
+   leaking in and stretching the card (the /weather/ board defines exactly that) */
+#oycwm .wrap{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:0}
 #oycwm a{color:var(--harbor)}
 #oycwm .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;padding:10px 22px;border:1px solid var(--line);border-radius:16px;background:#fff}
 #oycwm .tb-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
