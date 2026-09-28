@@ -168,16 +168,34 @@ function oyc_storms_proxy() {
    loader swallows errors) then silently shows nothing. Serve both from a shared
    server cache so no visitor hits Open-Meteo directly. The LOCAL grid is a fixed
    0.2° box (LI Sound → Cape Cod), regenerated here to match the JS makeGrid(). */
-function oyc_local_grid_csv() {
-	$LA1 = 42.2; $LA2 = 40.4; $LO1 = -74.2; $LO2 = -69.8; $DX = 0.2; $DY = 0.2;
-	$ny = (int) round( ( $LA1 - $LA2 ) / $DY ) + 1;   // 10 rows
-	$nx = (int) round( ( $LO2 - $LO1 ) / $DX ) + 1;   // 23 cols
+/* Fixed lat/lon point list for a box, row-major — mirrors the JS makeGrid(). */
+function oyc_grid_points( $la1, $la2, $lo1, $lo2, $dx, $dy ) {
+	$ny = (int) round( ( $la1 - $la2 ) / $dy ) + 1;
+	$nx = (int) round( ( $lo2 - $lo1 ) / $dx ) + 1;
 	$lats = array(); $lons = array();
-	for ( $i = 0; $i < $ny; $i++ ) { $lats[] = round( $LA1 - $i * $DY, 3 ); }
-	for ( $j = 0; $j < $nx; $j++ ) { $lons[] = round( $LO1 + $j * $DX, 3 ); }
+	for ( $i = 0; $i < $ny; $i++ ) { $lats[] = round( $la1 - $i * $dy, 3 ); }
+	for ( $j = 0; $j < $nx; $j++ ) { $lons[] = round( $lo1 + $j * $dx, 3 ); }
 	$lat = array(); $lon = array();
 	for ( $i = 0; $i < $ny; $i++ ) { for ( $j = 0; $j < $nx; $j++ ) { $lat[] = $lats[ $i ]; $lon[] = $lons[ $j ]; } }
+	return array( $lat, $lon );
+}
+/* Named grids — must match the JS makeGrid() constants in wind-map.php. */
+function oyc_named_grid( $name ) {
+	if ( 'basin' === $name ) { return oyc_grid_points( 63, -27, -102, 18, 3.0, 3.0 ); }   // 31x41 = 1271
+	return oyc_grid_points( 42.2, 40.4, -74.2, -69.8, 0.2, 0.2 );                          // local 10x23 = 230
+}
+function oyc_local_grid_csv() {
+	list( $lat, $lon ) = oyc_named_grid( 'local' );
 	return array( implode( ',', $lat ), implode( ',', $lon ) );
+}
+/* CSV lat/lon for one client chunk [chunk*$ch, +$ch) — $ch MUST match the JS
+   chunk size for that dataset (basin wind CH=150, waves CH=140). null if out of range. */
+function oyc_chunk_csv( $lat, $lon, $chunk, $ch ) {
+	$n = count( $lat );
+	$a = $chunk * $ch;
+	if ( $a < 0 || $a >= $n ) { return null; }
+	$len = min( $ch, $n - $a );
+	return array( implode( ',', array_slice( $lat, $a, $len ) ), implode( ',', array_slice( $lon, $a, $len ) ) );
 }
 
 /* Serve a raw JSON body (already-encoded string) and stop — avoids decoding and
@@ -225,4 +243,36 @@ function oyc_wind_radar_proxy() {
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
 	oyc_om_cached( 'oyc_wind_radar', $url, 10 * MINUTE_IN_SECONDS );
+}
+
+/* BASIN wind field (Atlantic 3° grid), one client chunk per request so each
+   stays small & separately cached. ?chunk=N — CH=150 MUST match the JS loadBasin
+   chunk size. Cached 15 min. */
+add_action( 'wp_ajax_oyc_wind_basin',        'oyc_wind_basin_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_wind_basin', 'oyc_wind_basin_proxy' );
+function oyc_wind_basin_proxy() {
+	$chunk = isset( $_GET['chunk'] ) ? max( 0, (int) $_GET['chunk'] ) : 0;
+	list( $lat, $lon ) = oyc_named_grid( 'basin' );
+	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 150 );
+	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
+	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $cs[0] . '&longitude=' . $cs[1]
+		. '&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
+		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+	oyc_om_cached( 'oyc_wind_basin_' . $chunk, $url, 15 * MINUTE_IN_SECONDS );
+}
+
+/* Wave field (Open-Meteo Marine) for the Wave tab, one client chunk per request.
+   ?grid=local|basin&chunk=N — CH=140 MUST match the JS loadWaves chunk size.
+   Waves move slowly → cached 30 min. */
+add_action( 'wp_ajax_oyc_waves',        'oyc_waves_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_waves', 'oyc_waves_proxy' );
+function oyc_waves_proxy() {
+	$grid  = ( isset( $_GET['grid'] ) && 'basin' === $_GET['grid'] ) ? 'basin' : 'local';
+	$chunk = isset( $_GET['chunk'] ) ? max( 0, (int) $_GET['chunk'] ) : 0;
+	list( $lat, $lon ) = oyc_named_grid( $grid );
+	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 140 );
+	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
+	$url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $cs[0] . '&longitude=' . $cs[1]
+		. '&hourly=wave_height&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+	oyc_om_cached( 'oyc_waves_' . $grid . '_' . $chunk, $url, 30 * MINUTE_IN_SECONDS );
 }

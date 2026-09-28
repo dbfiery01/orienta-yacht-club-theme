@@ -246,7 +246,7 @@ function windFillColor(vms){if(vms==null||isNaN(vms))return null;return rampColo
 
 /* ---------- grid factory ---------- */
 function makeGrid(o){
-	var g={LA1:o.LA1,LA2:o.LA2,LO1:o.LO1,LO2:o.LO2,DX:o.DX,DY:o.DY,gust:!!o.gust,loaded:false,loading:false};
+	var g={name:o.name||'',LA1:o.LA1,LA2:o.LA2,LO1:o.LO1,LO2:o.LO2,DX:o.DX,DY:o.DY,gust:!!o.gust,loaded:false,loading:false};
 	g.NY=Math.round((g.LA1-g.LA2)/g.DY)+1;g.NX=Math.round((g.LO2-g.LO1)/g.DX)+1;
 	g.lats=[];g.lons=[];var i,j;
 	for(i=0;i<g.NY;i++)g.lats.push(+(g.LA1-i*g.DY).toFixed(3));
@@ -260,11 +260,11 @@ function makeGrid(o){
 }
 /* Regional grid — all of Long Island Sound east to Cape Cod / Nantucket, at a
    coarser 0.2 deg so the wider box stays a single Open-Meteo call. */
-var LOCAL=makeGrid({LA1:42.2,LA2:40.4,LO1:-74.2,LO2:-69.8,DX:0.2,DY:0.2,gust:true});
+var LOCAL=makeGrid({name:'local',LA1:42.2,LA2:40.4,LO1:-74.2,LO2:-69.8,DX:0.2,DY:0.2,gust:true});
 /* Whole Atlantic basin: Greenland/Iceland south to Brazil & southern Africa,
    Gulf/Caribbean west to the West-African coast. 3 deg keeps this large box
    light enough to fetch client-side while still resolving synoptic patterns. */
-var BASIN=makeGrid({LA1:63,LA2:-27,LO1:-102,LO2:18,DX:3.0,DY:3.0,gust:false});
+var BASIN=makeGrid({name:'basin',LA1:63,LA2:-27,LO1:-102,LO2:18,DX:3.0,DY:3.0,gust:false});
 
 var TIMES=[],NOWI=0;               /* master 3-hourly time axis (shared) */
 function frame(g,ti){
@@ -629,11 +629,9 @@ map.on('mousemove',function(e){
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
 
-/* ---------- Open-Meteo loaders ---------- */
-function omURL(lat,lon,vars){return 'https://api.open-meteo.com/v1/forecast?latitude='+lat.join(',')+'&longitude='+lon.join(',')
-	+'&hourly='+vars+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
-/* fetch with an abort timeout so a hung request becomes a retriable error
-   (plain fetch has no timeout — a stalled Open-Meteo call would hang forever). */
+/* ---------- Open-Meteo loaders (all via cached admin-ajax proxies) ----------
+   fetch with an abort timeout so a hung request becomes a retriable error
+   (plain fetch has no timeout — a stalled call would hang forever). */
 function fetchT(url,ms){var ctl=new AbortController();var id=setTimeout(function(){ctl.abort();},ms||12000);
 	return fetch(url,{signal:ctl.signal}).then(function(r){clearTimeout(id);return r;},function(e){clearTimeout(id);throw e;});}
 
@@ -643,16 +641,15 @@ function fetchT(url,ms){var ctl=new AbortController();var id=setTimeout(function
    comes back null (transparent); the NDBC buoy markers cover the Sound itself.
    Marine's time axis is offset from the weather grid, so map each weather frame
    to the nearest marine step (g.wvMap). Wave height in metres → feet at read. */
-function omMarineURL(lat,lon){return 'https://marine-api.open-meteo.com/v1/marine?latitude='+lat.join(',')+'&longitude='+lon.join(',')
-	+'&hourly=wave_height&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
 function loadWaves(g,cb){
 	if(g.wvLoaded){cb&&cb();return;}
 	if(g.wvLoading)return;
 	g.wvLoading=true;
 	var N=g.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
 	g.WV=new Array(N);var wvt=null,ci=0,CONC=2;
-	function fc(idx,tries){var a=chunks[idx][0],b=chunks[idx][1];
-		return fetchT(omMarineURL(g.LAT.slice(a,b),g.LON.slice(a,b)),15000)
+	function fc(idx,tries){var a=chunks[idx][0];
+		/* cached per-chunk server proxy (CH=140 matches oyc_waves) */
+		return fetchT(AJAX+'?action=oyc_waves&grid='+(g.name||'local')+'&chunk='+idx,15000)
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;}}})
 			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);});});
@@ -697,9 +694,9 @@ function loadBasin(){
 	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);BASIN.TP=new Array(N);
 	var ci=0,CONC=2;
 	function fetchChunk(idx,tries){
-		var a=chunks[idx][0],b=chunks[idx][1];
-		var la=BASIN.LAT.slice(a,b),lo=BASIN.LON.slice(a,b);
-		return fetchT(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'),12000)
+		var a=chunks[idx][0];
+		/* cached per-chunk server proxy (CH=150 matches oyc_wind_basin) */
+		return fetchT(AJAX+'?action=oyc_wind_basin&chunk='+idx,12000)
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];
 				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}
