@@ -415,23 +415,32 @@ function loadERFC(){
 			kt:h[erKey(h,'wind_speed_10m')], gust:h[erKey(h,'wind_gusts_10m')], dir:h[erKey(h,'wind_direction_10m')],
 			mb:h[erKey(h,'pressure_msl')], tempF:h[erKey(h,'temperature_2m')], pop:h[erKey(h,'precipitation_probability')],
 			waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;})};
-		setER(erAt(curEpoch()));
+		/* refresh the readout for the frame the slider is on right now */
+		if(mode==='radar'){var fr=RV.frames[RV.idx];setER(erForFrame(curEpoch(),!!(fr&&fr.off===0)));}
+		else setER(erForFrame(new Date(TIMES[curTi]).getTime(), curTi===NOWI));
 	}).catch(function(){});
 }
+function erfcAt(i){return {kt:ERFC.kt[i],gust:ERFC.gust[i],dir:ERFC.dir[i],mb:ERFC.mb[i],tempF:ERFC.tempF[i],pop:ERFC.pop?ERFC.pop[i]:null,waveFt:ERFC.waveFt[i]};}
 function erFromFC(ep){
 	if(!ERFC||!ERFC.t.length)return null;
 	var T=ERFC.t,n=T.length;
-	function at(i){return {kt:ERFC.kt[i],gust:ERFC.gust[i],dir:ERFC.dir[i],mb:ERFC.mb[i],tempF:ERFC.tempF[i],pop:ERFC.pop?ERFC.pop[i]:null,waveFt:ERFC.waveFt[i]};}
-	if(ep<=T[0])return at(0);
-	if(ep>=T[n-1])return at(n-1);
-	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=at(i-1),b=at(i);
+	if(ep<=T[0])return erfcAt(0);
+	if(ep>=T[n-1])return erfcAt(n-1);
+	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=erfcAt(i-1),b=erfcAt(i);
 		var li=function(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;};
 		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt)};}}
-	return at(n-1);
+	return erfcAt(n-1);
 }
+/* the point forecast at the nearest actual hour (no interpolation) — so the
+   "now" slider position shows the same hour the Marine Forecast board does */
+function erFCnearest(ep){if(!ERFC||!ERFC.t.length)return null;var T=ERFC.t,best=0,bd=1e15;
+	for(var i=0;i<T.length;i++){var dd=Math.abs(T[i]-ep);if(dd<bd){bd=dd;best=i;}}return erfcAt(best);}
 /* prefer the point forecast; fall back to the grid until it loads / if it fails */
 function erAt(epoch){return erFromFC(epoch)||erAtEpoch(epoch);}
-function updateER(ti){setER(erAt(new Date(TIMES[ti]).getTime()));}
+/* at the live "now" frame, snap to the current wall-clock hour (matches the
+   board exactly); other frames interpolate to the frame's time */
+function erForFrame(epoch,isNow){if(isNow){var s=erFCnearest(Date.now());if(s)return s;return erAtEpoch(Date.now());}return erAt(epoch);}
+function updateER(ti){setER(erForFrame(new Date(TIMES[ti]).getTime(), ti===NOWI));}
 function erAtEpoch(epoch){
 	if(!LOCAL.loaded||TIMES.length<2)return null;
 	var e0=new Date(TIMES[0]).getTime(),step=(new Date(TIMES[1]).getTime()-e0);
@@ -792,12 +801,12 @@ function showRadar(i){
 	var off=RV.frames[i].off,t=Date.now()+off*60000,d=new Date(t);
 	var tag=off>0?' · forecast':(off<0?' · recent':' · now');
 	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
-		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erAt(t));return;}
+		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erForFrame(t,off===0));return;}
 	var step=fcStep(t),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
 	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.82);}
 	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.82,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
 	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+tag+'</small>';
-	setER(erAt(t));updateStormsAt(t);
+	setER(erForFrame(t,off===0));updateStormsAt(t);
 }
 
 /* ---------- unified slider / play ---------- */
