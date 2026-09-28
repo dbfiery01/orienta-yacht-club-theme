@@ -341,7 +341,7 @@ placeLayer.addTo(map);
 
 /* Home port — Orienta Yacht Club, East Basin of Mamaroneck Harbor (325 E Boston
    Post Rd, between Derecktor and McMichael). Visible in every view. */
-L.marker([40.95,-73.73],{icon:L.divIcon({className:'oyc-mk',html:'<div class="oyc-ic"><i class="oyc-dot"></i><span class="oyc-lbl">OYC</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000})
+L.marker([40.9486,-73.7296],{icon:L.divIcon({className:'oyc-mk',html:'<div class="oyc-ic"><i class="oyc-dot"></i><span class="oyc-lbl">OYC</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000})
 	.addTo(map).bindTooltip('Orienta Yacht Club · Mamaroneck Harbor',{direction:'top',offset:[6,-6]});
 function setER(s){if(!s)return;
 	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
