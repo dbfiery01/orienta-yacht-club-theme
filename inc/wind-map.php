@@ -757,7 +757,9 @@ function loadLocal(tries){
 		activeGrid=LOCAL;slider.max=TIMES.length-1;
 		buildVL(LOCAL,NOWI);showWind(NOWI);updateLegend();
 		document.getElementById('st').textContent='7-day forecast · '+TIMES.length+' frames · '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
-		loadBasin();
+		/* basin grid is deferred — maybeSwitchGrid() loads it on demand the first
+		   time you zoom out to the Atlantic, so the harbor view doesn't fire its 9
+		   proxy calls (cuts the initial admin-ajax burst that could trip host 429s) */
 		loadWaves(LOCAL,function(){updateER(curTi);});
 	}).catch(function(e){
 		if(tries<2){setTimeout(function(){loadLocal(tries+1);},1500);return;}
