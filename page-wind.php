@@ -152,7 +152,9 @@ a{color:var(--harbor)}
 			<label><input type="checkbox" id="tgParticles" checked> Animated</label>
 			<label><input type="checkbox" id="tgArrows"> Wind arrows</label>
 			<label><input type="checkbox" id="tgIso"> Isobars</label>
-			<span class="hint">Zoom out for the North-Atlantic pattern &middot; zoom in for the Sound</span>
+			<label><input type="checkbox" id="tgTemp"> Temp</label>
+			<label><input type="checkbox" id="tgPrecip"> Precip</label>
+			<span class="hint">Zoom out for the Atlantic pattern &middot; temp shades the whole basin, precip the Sound</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind arrows</label>
@@ -196,6 +198,19 @@ document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
 var KT=1.94384;
 var ER={lat:40.8783,lon:-73.7340};
+
+/* ---- overlay color ramps (temp °F, precip in/3h) ---- */
+var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
+var PRECIP_COLS=['#c9e8ff','#6db8ff','#3b7cff','#7d4bd6','#c0392b'];
+var RADAR_COLS=['#8ec7ff','#4a9cf0','#2ecc71','#f1c40f','#e67e22','#e74c3c','#b03a7a'];
+var TEMP_STOPS=[[0,[59,76,192]],[32,[123,168,220]],[45,[147,196,125]],[60,[255,217,102]],[75,[230,145,56]],[90,[204,0,0]]];
+var PRECIP_STOPS=[[0.01,[201,232,255]],[0.05,[109,184,255]],[0.10,[59,124,255]],[0.25,[125,75,214]],[0.60,[192,57,43]]];
+function lerpC(a,b,t){return [Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];}
+function rampColor(v,stops){if(v==null||isNaN(v))return null;if(v<=stops[0][0])return stops[0][1].concat(255);
+	for(var i=1;i<stops.length;i++){if(v<=stops[i][0]){var t=(v-stops[i-1][0])/(stops[i][0]-stops[i-1][0]);return lerpC(stops[i-1][1],stops[i][1],t).concat(255);}}
+	return stops[stops.length-1][1].concat(255);}
+function tempColor(v){return rampColor(v,TEMP_STOPS);}
+function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECIP_STOPS);}
 
 /* ---------- grid factory ---------- */
 function makeGrid(o){
@@ -357,6 +372,32 @@ function refreshOverlays(){var g=activeGrid;
 	if(document.getElementById('tgArrows').checked)drawArrows(g,curTi,g===BASIN?2:1);
 	if(document.getElementById('tgIso').checked)drawIso(g,curTi,g===BASIN?4:1);}
 
+/* ---- temp / precip color-field overlays (rendered from the active grid as a
+   small canvas the browser upsamples into a smooth field) ---- */
+var fieldMode=null,fieldOverlay=null;
+function fieldDataURL(g,arr,ti,ramp){
+	var cv=document.createElement('canvas');cv.width=g.NX;cv.height=g.NY;var ctx=cv.getContext('2d');
+	var img=ctx.createImageData(g.NX,g.NY),d=img.data;
+	for(var r=0;r<g.NY;r++)for(var c=0;c<g.NX;c++){var col=ramp((arr[r*g.NX+c]||[])[ti]),i=(r*g.NX+c)*4;
+		if(col){d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=col[3];}else d[i+3]=0;}
+	ctx.putImageData(img,0,0);return cv.toDataURL();
+}
+function drawField(){
+	if(mode!=='wind'||!fieldMode){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}return;}
+	var g=activeGrid,arr=(fieldMode==='temp')?g.TP:(g===LOCAL?LOCAL.PP:null),ramp=(fieldMode==='temp')?tempColor:precipColor;
+	if(!g.loaded||!arr||!arr.length){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}return;}
+	var url=fieldDataURL(g,arr,curTi,ramp),bounds=[[g.LA2,g.LO1],[g.LA1,g.LO2]];
+	if(fieldOverlay){fieldOverlay.setBounds(bounds);fieldOverlay.setUrl(url);}
+	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:(fieldMode==='temp'?0.55:0.6),interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
+}
+function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.className='legend';
+	lg.innerHTML=l0+' <span class="sc">'+cols.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</span> '+l1;}
+function updateLegend(){
+	if(mode==='radar')return setLegend('light','heavy',RADAR_COLS);
+	if(fieldMode==='temp')return setLegend('0°F','90°F',TEMP_COLS);
+	if(fieldMode==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
+	setLegend('0 kt','40+ kt',RAMP);}
+
 /* ---------- velocity layer (rebuilt on grid switch for per-grid tuning) ---------- */
 function velOpts(g){return g===BASIN
 	?{maxVelocity:28,velocityScale:0.003,particleAge:90,particleMultiplier:1/420,lineWidth:1.6}
@@ -373,7 +414,7 @@ function buildVL(g,ti){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();updatePins(ti);updateER(ti);}
+	refreshOverlays();drawField();updatePins(ti);updateER(ti);}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){return map.getZoom()>=8?LOCAL:BASIN;}
@@ -381,7 +422,7 @@ function maybeSwitchGrid(){
 	if(mode!=='wind')return;
 	var want=chooseGrid();
 	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
-	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();
+	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();
 		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Western Long Island Sound ')+'&middot; Open-Meteo (GFS). Radar: NWS NEXRAD.';}
 }
 map.on('zoomend',maybeSwitchGrid);
@@ -502,10 +543,8 @@ function setMode(m){
 	document.getElementById('tabRadar').setAttribute('aria-selected',m==='radar');
 	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
 	document.getElementById('radarLayers').style.display=m==='radar'?'flex':'none';
-	document.getElementById('legend').className='legend'+(m==='radar'?' radar':'');
-	document.getElementById('legend').firstChild.textContent=m==='radar'?'light ':'0 kt ';
-	document.getElementById('legend').lastChild.textContent=m==='radar'?' heavy':' 40+ kt';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
+	updateLegend();drawField();
 	if(m==='radar'){
 		if(vl)map.removeLayer(vl);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);
 		loadRadar(function(){slider.max=Math.max(0,RV.frames.length-1);showRadar(RV.idx);});
@@ -525,6 +564,8 @@ document.getElementById('tabRadar').addEventListener('click',function(){setMode(
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;if(this.checked){if(vl)vl.addTo(map);}else if(vl)map.removeLayer(vl);});
 document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);});
 document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
+document.getElementById('tgTemp').addEventListener('change',function(){if(this.checked){fieldMode='temp';document.getElementById('tgPrecip').checked=false;}else if(fieldMode==='temp'){fieldMode=null;}drawField();updateLegend();});
+document.getElementById('tgPrecip').addEventListener('change',function(){if(this.checked){fieldMode='precip';document.getElementById('tgTemp').checked=false;}else if(fieldMode==='precip'){fieldMode=null;}drawField();updateLegend();});
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawArrows(LOCAL,Math.min(NOWI,Math.max(0,TIMES.length-1)),1);}else map.removeLayer(arrowsLayer);});
 
 loadLocal();
