@@ -97,6 +97,13 @@ a{color:var(--harbor)}
 .buoy-mk{background:none;border:none}
 .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
 .buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
+/* pressure centres (H / L) */
+.hl-mk{background:none;border:none}
+.hl{transform:translate(-50%,-50%);text-align:center;font-family:Georgia,"Times New Roman",serif;font-weight:800;font-size:27px;line-height:.8}
+.hl b{display:block;text-shadow:0 0 3px #fff,0 0 5px #fff,0 0 6px #fff}
+.hl.lo b{color:#c0392b}
+.hl.hi b{color:#1f6fb0}
+.hl span{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:10px;font-weight:700;color:#26384a;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 3px #fff;margin-top:1px}
 /* pins & callouts */
 .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:3px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .pin-co .co-t .co-ll{font-weight:600;color:var(--faint);font-size:.66rem}
@@ -306,7 +313,7 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.92,-73.4],9);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
 map.fitBounds([[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]]);
 
-var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup();
+var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
 var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
 var slider=document.getElementById('slider'),tlabel=document.getElementById('tlabel'),playBtn=document.getElementById('play');
 
@@ -433,6 +440,22 @@ function refreshOverlays(){var g=activeGrid;
 	if(document.getElementById('tgArrows').checked)drawBarbs(g,curTi,g===BASIN?2:1);
 	if(document.getElementById('tgIso').checked)drawIso(g,curTi,g===BASIN?4:1);}
 
+/* Mark pressure centres (H / L) at local maxima / minima of the MSLP field.
+   A cell must be the strict extremum over a (2R+1)² window AND differ from the
+   window mean by >= THR mb, which suppresses noise on the near-uniform regional
+   grid and leaves the real synoptic centres on the basin view. */
+function drawHL(g,ti){hlLayer.clearLayers();
+	var NY=g.NY,NX=g.NX,R=2,THR=1.6;
+	function P(r,c){return g.PR[r*NX+c][ti];}
+	for(var r=R;r<NY-R;r++)for(var c=R;c<NX-R;c++){
+		var v=P(r,c),isL=true,isH=true,sum=0,n=0;
+		for(var dr=-R;dr<=R&&(isL||isH);dr++)for(var dc=-R;dc<=R;dc++){if(!dr&&!dc)continue;var nv=P(r+dr,c+dc);if(nv==null)continue;sum+=nv;n++;if(nv<=v)isL=false;if(nv>=v)isH=false;}
+		if((isL||isH)&&n){var mean=sum/n;if(Math.abs(v-mean)<THR)continue;
+			var lo=isL,html='<div class="hl '+(lo?'lo':'hi')+'"><b>'+(lo?'L':'H')+'</b><span>'+Math.round(v)+'</span></div>';
+			L.marker([g.lats[r],g.lons[c]],{icon:L.divIcon({className:'hl-mk',html:html,iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(hlLayer);
+		}
+	}}
+
 /* ---- temp / precip color-field overlays (rendered from the active grid as a
    small canvas the browser upsamples into a smooth field) ---- */
 var fieldMode=null,fieldOverlay=null;
@@ -499,7 +522,7 @@ function buildVL(g,ti){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();updatePins(ti);updateER(ti);}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -508,7 +531,7 @@ function maybeSwitchGrid(){
 	if(mode==='radar')return;
 	var want=chooseGrid();
 	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
-	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();
+	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();drawHL(activeGrid,curTi);
 		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Long Island Sound to Cape Cod ')+'&middot; Open-Meteo (GFS). Radar: NWS NEXRAD.';}
 }
 map.on('zoomend',maybeSwitchGrid);
@@ -659,7 +682,7 @@ function setMode(m){
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
 	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
-		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);
+		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);
 		updateLegend();drawField();
 		loadRadar(function(){slider.max=Math.max(0,RV.frames.length-1);showRadar(RV.idx);});
 		return;
