@@ -713,8 +713,13 @@ function loadRadar(cb){
 }
 function radarTile(off){var url=iemURL(off);
 	if(RV.layer)RV.layer.setUrl(url);
-	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxNativeZoom:9,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
-	if(RV.layer.setOpacity)RV.layer.setOpacity(0.78);}
+	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
+	if(RV.layer.setOpacity)RV.layer.setOpacity(0.78);setRadarBlur();}
+/* Soften NEXRAD's pixel edges proportionally to how big each ~1 km cell is on
+   screen (bigger when zoomed in) — keeps the real reflectivity structure but
+   removes the hard blocky look, without the washed-out feel of tile upscaling. */
+function setRadarBlur(){var px=Math.max(0.6,Math.min(5,Math.pow(2,map.getZoom())/118*0.11));
+	if(map.getPane('radarpane'))map.getPane('radarpane').style.filter='blur('+px.toFixed(1)+'px)';}
 function showRadar(i){
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
@@ -793,7 +798,7 @@ document.getElementById('tgPrecip').addEventListener('change',function(){pickFie
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
-map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
+map.on('moveend',function(){if(mode==='radar'){setRadarBlur();if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
 
 loadLocal();
 })();
