@@ -179,7 +179,7 @@ a{color:var(--harbor)}
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
-			<span class="hint">NWS NEXRAD base reflectivity &middot; last ~50&nbsp;min (US coverage)</span>
+			<span class="hint">NWS NEXRAD radar (past) &middot; HRRR precip forecast (ahead) &middot; 15-min steps to +8&nbsp;h</span>
 		</div>
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
@@ -677,30 +677,65 @@ function loadBasin(){
 	});
 }
 
-/* ---------- RADAR (NWS NEXRAD via Iowa Environmental Mesonet) ----------
-   IEM serves the national NEXRAD base-reflectivity composite as map tiles at
-   full zoom (RainViewer capped radar at z7 — far too coarse for the harbor).
-   The "-mNNm" layers are the mosaic 5 minutes … 50 minutes ago, giving a
-   ~50-minute loop in 5-minute steps. US coverage only, which is exactly right
-   for a Sound club; the transatlantic view is the wind field, not radar. */
+/* ---------- RADAR + PRECIP FORECAST ----------
+   Behind "now": observed NWS NEXRAD base reflectivity (IEM tiles, browser-
+   upscaled + a light pane blur so the ~1 km pixels read smooth). Ahead of now:
+   NOAA HRRR precipitation (Open-Meteo minutely_15) rendered as a smooth field,
+   clearly labelled a forecast. 15-minute steps, ~45 min past → +8 h ahead. */
 var RV={frames:[],layer:null,idx:0,loaded:false};
-var IEM_OFFS=[50,45,40,35,30,25,20,15,10,5,0];
+var FC={PP15:[],tEpoch:[],loaded:false,loading:false},fcOverlay=null;
+/* precip rate (mm / 15 min) → radar-style intensity colour */
+var PRECIP_RADAR_STOPS=[[0.1,[142,199,255]],[0.4,[74,156,240]],[1,[46,204,113]],[2.5,[241,196,15]],[5,[230,126,34]],[10,[231,76,60]],[20,[176,58,122]]];
+function precipRadarColor(mm){if(mm==null||mm<0.05)return null;return rampColor(mm,PRECIP_RADAR_STOPS);}
 function iemURL(off){return 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913'
 	+(off?'-m'+(off<10?'0'+off:off)+'m':'')+'/{z}/{x}/{y}.png';}
+function loadFC(cb){
+	if(FC.loaded){cb&&cb();return;}if(FC.loading)return;FC.loading=true;
+	var url='https://api.open-meteo.com/v1/forecast?latitude='+LOCAL.LAT.join(',')+'&longitude='+LOCAL.LON.join(',')
+		+'&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
+	fetchT(url,15000).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(arr){
+		var list=Array.isArray(arr)?arr:[arr];
+		FC.PP15=list.map(function(p){return (p.minutely_15&&p.minutely_15.precipitation)||[];});
+		var tm=(list[0].minutely_15&&list[0].minutely_15.time)||[];
+		FC.tEpoch=tm.map(function(t){return new Date(t).getTime();});
+		FC.loaded=true;FC.loading=false;cb&&cb();
+	}).catch(function(){FC.loading=false;});
+}
+function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd=Math.abs(FC.tEpoch[i]-t);if(dd<bd){bd=dd;best=i;}}return best;}
+function fmtAhead(min){if(min<60)return '+'+min+' min';var h=Math.floor(min/60),m=min%60;return '+'+h+'h'+(m?' '+m+'m':'');}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	RV.frames=IEM_OFFS.map(function(off){return {off:off};});
-	RV.idx=RV.frames.length-1;RV.loaded=true;cb&&cb();
+	var past=[45,30,15,0].map(function(o){return {kind:'radar',off:o};});
+	var fut=[];for(var m=15;m<=480;m+=15)fut.push({kind:'fc',min:m});
+	RV.frames=past.concat(fut);RV.idx=past.length-1;RV.loaded=true;
+	loadFC();/* warm the forecast so scrubbing ahead is ready */
+	cb&&cb();
 }
+function radarTile(off){var url=iemURL(off);
+	if(RV.layer)RV.layer.setUrl(url);
+	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxNativeZoom:9,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
+	if(RV.layer.setOpacity)RV.layer.setOpacity(0.78);}
 function showRadar(i){
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
-	var fr=RV.frames[i],url=iemURL(fr.off),t=Date.now()-fr.off*60000;
-	if(RV.layer)RV.layer.setUrl(url);
-	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxNativeZoom:9,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
-	var d=new Date(t);
-	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+(fr.off===0?'now':'-'+fr.off+' min')+'</small>';
-	setER(erAtEpoch(t));
+	var fr=RV.frames[i];
+	if(fr.kind==='radar'){
+		if(fcOverlay)fcOverlay.setOpacity(0);
+		radarTile(fr.off);
+		var t=Date.now()-fr.off*60000,d=new Date(t);
+		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+(fr.off===0?'now · radar':'-'+fr.off+' min · radar')+'</small>';
+		setER(erAtEpoch(t));return;
+	}
+	/* forecast frame */
+	if(RV.layer)RV.layer.setOpacity(0);
+	var tf=Date.now()+fr.min*60000,df=new Date(tf);
+	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
+		tlabel.innerHTML=df.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtAhead(fr.min)+' · loading…</small>';setER(erAtEpoch(tf));return;}
+	var step=fcStep(tf),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
+	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.8);}
+	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.8,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
+	tlabel.innerHTML=df.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtAhead(fr.min)+' · forecast</small>';
+	setER(erAtEpoch(tf));
 }
 
 /* ---------- unified slider / play ---------- */
@@ -727,6 +762,7 @@ function setMode(m){
 		return;
 	}
 	if(RV.layer){map.removeLayer(RV.layer);RV.layer=null;}
+	if(fcOverlay){map.removeLayer(fcOverlay);fcOverlay=null;}
 	slider.max=Math.max(0,TIMES.length-1);
 	if(m==='wind'){
 		setParticlesVisible(document.getElementById('tgParticles').checked);
