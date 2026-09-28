@@ -75,30 +75,39 @@ function oyc_grib_send( $bin, $run ) {
 add_action( 'wp_ajax_oyc_storms',        'oyc_storms_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_storms', 'oyc_storms_proxy' );
 function oyc_storms_proxy() {
-	$cached = get_transient( 'oyc_storms_atl' );
+	$cached = get_transient( 'oyc_storms_atl_v2' );
 	if ( false !== $cached ) { wp_send_json( $cached ); }
 
 	$out  = array();
+	$hit  = false;
 	$resp = wp_remote_get( 'https://www.nhc.noaa.gov/CurrentStorms.json', array( 'timeout' => 8, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
 	if ( ! is_wp_error( $resp ) && 200 === (int) wp_remote_retrieve_response_code( $resp ) ) {
+		$hit = true;
 		$j = json_decode( (string) wp_remote_retrieve_body( $resp ), true );
 		$storms = ( is_array( $j ) && isset( $j['activeStorms'] ) && is_array( $j['activeStorms'] ) ) ? $j['activeStorms'] : array();
 		foreach ( $storms as $s ) {
 			$id = isset( $s['id'] ) ? (string) $s['id'] : '';
-			if ( 0 !== strpos( $id, 'AL' ) ) { continue; }   // Atlantic basin only
+			if ( 0 !== stripos( $id, 'AL' ) ) { continue; }  // Atlantic basin only (ids are lowercase, e.g. "al062026")
 			if ( ! isset( $s['latitudeNumeric'], $s['longitudeNumeric'] ) ) { continue; }
+			$lat = (float) $s['latitudeNumeric'];
+			$lon = (float) $s['longitudeNumeric'];
+			// Force hemisphere sign from the labelled string fields (numeric sign varies).
+			if ( isset( $s['latitude'] )  && false !== stripos( (string) $s['latitude'],  'S' ) ) { $lat = -abs( $lat ); }
+			if ( isset( $s['longitude'] ) && false !== stripos( (string) $s['longitude'], 'W' ) ) { $lon = -abs( $lon ); }
 			$out[] = array(
 				'name' => isset( $s['name'] ) ? $s['name'] : '',
 				'cls'  => isset( $s['classification'] ) ? $s['classification'] : '',
 				'kt'   => isset( $s['intensity'] ) ? (int) $s['intensity'] : null,
 				'mb'   => isset( $s['pressure'] ) ? (int) $s['pressure'] : null,
-				'lat'  => (float) $s['latitudeNumeric'],
-				'lon'  => (float) $s['longitudeNumeric'],
+				'lat'  => $lat,
+				'lon'  => $lon,
 				'dir'  => isset( $s['movementDir'] ) ? $s['movementDir'] : null,
 				'spd'  => isset( $s['movementSpeed'] ) ? $s['movementSpeed'] : null,
 			);
 		}
 	}
-	set_transient( 'oyc_storms_atl', $out, 30 * MINUTE_IN_SECONDS );
+	// Cache a good result for 30 min; cache a failed/empty fetch only briefly so a
+	// transient outage doesn't hide storms for half an hour.
+	set_transient( 'oyc_storms_atl_v2', $out, ( $hit ? 30 : 8 ) * MINUTE_IN_SECONDS );
 	wp_send_json( $out );
 }
