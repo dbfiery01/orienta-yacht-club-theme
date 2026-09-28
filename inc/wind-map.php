@@ -105,13 +105,21 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .dl-btn:hover{background:#0f6fb0}
 #oycwm .dl .apps{color:var(--faint);font-size:.78rem;margin-top:10px}
 #oycwm .disclaimer{text-align:center;color:var(--mute);font-size:.82rem;font-style:italic}
-#oycwm.embed{padding:0;background:transparent}
+/* ---- embedded (card on /weather/): dissolve the component's own frame so it
+   fills the host card flush and reads as one piece with it ---- */
+#oycwm.embed{padding:0;background:transparent;min-height:0}
 #oycwm.embed .topbar, #oycwm.embed .disclaimer{display:none}
-#oycwm.embed .wrap{gap:12px}
+#oycwm.embed .wrap{gap:0;max-width:none;margin:0}
+/* drop the inner card chrome (border / shadow / radius / white fill) — the host
+   .card already provides the panel, border and rounded corners */
+#oycwm.embed .card{border:0;border-radius:0;box-shadow:none;background:transparent}
+/* the host card's <h2> already titles this, so hide the component's own title;
+   the view tabs then lead the header row */
+#oycwm.embed .hd{padding:2px 18px 8px}
+#oycwm.embed .hd h2{display:none}
 #oycwm.embed #map{height:560px}
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
-#oycwm.embed{min-height:0}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">
