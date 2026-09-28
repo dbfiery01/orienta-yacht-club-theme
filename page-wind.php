@@ -168,8 +168,8 @@ a{color:var(--harbor)}
 		</div>
 
 		<div class="layers" id="windLayers">
-			<label><input type="checkbox" id="tgParticles" checked> Animated</label>
-			<label><input type="checkbox" id="tgWindColor" checked> Wind color</label>
+			<label><input type="checkbox" id="tgParticles"> Animated</label>
+			<label><input type="checkbox" id="tgWindColor"> Wind color</label>
 			<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
 			<label><input type="checkbox" id="tgIso"> Isobars</label>
 			<label><input type="checkbox" id="tgTemp"> Temp</label>
@@ -182,7 +182,7 @@ a{color:var(--harbor)}
 			<span class="hint">NWS NEXRAD base reflectivity &middot; last ~50&nbsp;min (US coverage)</span>
 		</div>
 
-		<div class="legend" id="legend">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
+		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
 
 		<div class="ctrl">
 			<button id="play" title="Play/pause">&#9654;</button>
