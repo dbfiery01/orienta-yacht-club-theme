@@ -160,3 +160,69 @@ function oyc_storms_proxy() {
 	set_transient( 'oyc_storms_atl_v3', $out, ( $hit ? 30 : 8 ) * MINUTE_IN_SECONDS );
 	wp_send_json( $out );
 }
+
+/* ── Wind-map Open-Meteo proxies (cached) ───────────────────────────────────
+   The /wind/ map (and its embed on /weather/) fetches Open-Meteo per visitor:
+   the LOCAL wind grid on load, and the HRRR precip nowcast in Radar mode. On a
+   public board that trips Open-Meteo's per-IP 429 limit — the radar (whose
+   loader swallows errors) then silently shows nothing. Serve both from a shared
+   server cache so no visitor hits Open-Meteo directly. The LOCAL grid is a fixed
+   0.2° box (LI Sound → Cape Cod), regenerated here to match the JS makeGrid(). */
+function oyc_local_grid_csv() {
+	$LA1 = 42.2; $LA2 = 40.4; $LO1 = -74.2; $LO2 = -69.8; $DX = 0.2; $DY = 0.2;
+	$ny = (int) round( ( $LA1 - $LA2 ) / $DY ) + 1;   // 10 rows
+	$nx = (int) round( ( $LO2 - $LO1 ) / $DX ) + 1;   // 23 cols
+	$lats = array(); $lons = array();
+	for ( $i = 0; $i < $ny; $i++ ) { $lats[] = round( $LA1 - $i * $DY, 3 ); }
+	for ( $j = 0; $j < $nx; $j++ ) { $lons[] = round( $LO1 + $j * $DX, 3 ); }
+	$lat = array(); $lon = array();
+	for ( $i = 0; $i < $ny; $i++ ) { for ( $j = 0; $j < $nx; $j++ ) { $lat[] = $lats[ $i ]; $lon[] = $lons[ $j ]; } }
+	return array( implode( ',', $lat ), implode( ',', $lon ) );
+}
+
+/* Serve a raw JSON body (already-encoded string) and stop — avoids decoding and
+   re-encoding the large multi-point Open-Meteo payloads on every cache hit. */
+function oyc_send_raw_json( $body ) {
+	if ( ! headers_sent() ) { header( 'Content-Type: application/json; charset=utf-8' ); }
+	echo $body; // phpcs:ignore WordPress.Security.EscapeOutput — upstream JSON served verbatim
+	wp_die();
+}
+
+/* Fetch $url, cache the raw body under $key for $ttl on success, and serve it.
+   On failure serve "[]" WITHOUT caching so the client retries (its parser treats
+   an empty array as "no data" → retry). */
+function oyc_om_cached( $key, $url, $ttl ) {
+	$body = get_transient( $key );
+	if ( false !== $body ) { oyc_send_raw_json( $body ); }
+	$r = wp_remote_get( $url, array( 'timeout' => 15, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$body = (string) wp_remote_retrieve_body( $r );
+		$c = ( '' !== $body ) ? $body[0] : '';
+		if ( '[' === $c || '{' === $c ) {           // looks like JSON
+			set_transient( $key, $body, $ttl );
+			oyc_send_raw_json( $body );
+		}
+	}
+	oyc_send_raw_json( '[]' );
+}
+
+/* LOCAL wind field — 7-day, 3-hourly. Cached 15 min. */
+add_action( 'wp_ajax_oyc_wind_local',        'oyc_wind_local_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_wind_local', 'oyc_wind_local_proxy' );
+function oyc_wind_local_proxy() {
+	list( $lat, $lon ) = oyc_local_grid_csv();
+	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
+		. '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'
+		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+	oyc_om_cached( 'oyc_wind_local', $url, 15 * MINUTE_IN_SECONDS );
+}
+
+/* HRRR precip nowcast for Radar mode — 15-min steps. Cached 10 min (near-real-time). */
+add_action( 'wp_ajax_oyc_wind_radar',        'oyc_wind_radar_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_wind_radar', 'oyc_wind_radar_proxy' );
+function oyc_wind_radar_proxy() {
+	list( $lat, $lon ) = oyc_local_grid_csv();
+	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
+		. '&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
+	oyc_om_cached( 'oyc_wind_radar', $url, 10 * MINUTE_IN_SECONDS );
+}

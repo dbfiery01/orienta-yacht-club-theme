@@ -668,10 +668,12 @@ function loadWaves(g,cb){
 function loadLocal(tries){
 	LOCAL.loading=true;tries=tries||0;
 	LOCAL.SP=[];LOCAL.DR=[];LOCAL.GU=[];LOCAL.PR=[];LOCAL.TP=[];LOCAL.PP=[];
-	fetchT(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'),15000)
+	/* cached server proxy (admin-ajax) so visitors never hit Open-Meteo directly
+	   — avoids the per-IP 429 that left the field "unavailable" on the board */
+	fetchT(AJAX+'?action=oyc_wind_local',15000)
 	.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 	.then(function(arr){
-		if(!Array.isArray(arr))throw new Error('grid');
+		if(!Array.isArray(arr)||!arr.length||!arr[0].hourly)throw new Error('grid');
 		TIMES=arr[0].hourly.time;
 		for(var k=0;k<arr.length;k++){LOCAL.SP.push(arr[k].hourly.wind_speed_10m);LOCAL.DR.push(arr[k].hourly.wind_direction_10m);LOCAL.GU.push(arr[k].hourly.wind_gusts_10m);LOCAL.PR.push(arr[k].hourly.pressure_msl);LOCAL.TP.push(arr[k].hourly.temperature_2m);LOCAL.PP.push(arr[k].hourly.precipitation);}
 		var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
@@ -727,15 +729,20 @@ var PRECIP_RADAR_STOPS=[[0.1,[142,199,255]],[0.4,[74,156,240]],[1,[46,204,113]],
 function precipRadarColor(mm){if(mm==null||mm<0.05)return null;return rampColor(mm,PRECIP_RADAR_STOPS);}
 function loadFC(cb){
 	if(FC.loaded){cb&&cb();return;}if(FC.loading)return;FC.loading=true;
-	var url='https://api.open-meteo.com/v1/forecast?latitude='+LOCAL.LAT.join(',')+'&longitude='+LOCAL.LON.join(',')
-		+'&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
-	fetchT(url,15000).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(arr){
+	/* cached server proxy — same reason as the wind grid (radar was silently
+	   blank whenever the direct Open-Meteo call got 429'd) */
+	fetchT(AJAX+'?action=oyc_wind_radar',15000).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(arr){
 		var list=Array.isArray(arr)?arr:[arr];
+		if(!list.length||!list[0].minutely_15)throw new Error('radar');
 		FC.PP15=list.map(function(p){return (p.minutely_15&&p.minutely_15.precipitation)||[];});
 		var tm=(list[0].minutely_15&&list[0].minutely_15.time)||[];
 		FC.tEpoch=tm.map(function(t){return new Date(t).getTime();});
 		FC.loaded=true;FC.loading=false;cb&&cb();
-	}).catch(function(){FC.loading=false;});
+	}).catch(function(){FC.loading=false;
+		/* one delayed retry (e.g. the proxy cache is still warming) so the radar
+		   recovers without needing the user to nudge the slider */
+		if(!FC.retried){FC.retried=true;setTimeout(function(){if(!FC.loaded&&mode==='radar')loadFC(cb);},1500);}
+	});
 }
 function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd=Math.abs(FC.tEpoch[i]-t);if(dd<bd){bd=dd;best=i;}}return best;}
 function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+h+'h'+(m?' '+m+'m':'');}
