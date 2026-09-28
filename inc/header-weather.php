@@ -19,6 +19,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/*
+ * Cached current-conditions proxy for the glyph. The icon is on EVERY page, so
+ * a direct per-visitor Open-Meteo call both hammered the API and — when it got
+ * 429-rate-limited — silently left the glyph hidden. One shared 15-min cache
+ * fixes both. Endpoint: admin-ajax.php?action=oyc_header_wx
+ */
+add_action( 'wp_ajax_oyc_header_wx',        'oyc_header_wx_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_header_wx', 'oyc_header_wx_proxy' );
+function oyc_header_wx_proxy() {
+	$cached = get_transient( 'oyc_header_wx' );
+	if ( false !== $cached ) { wp_send_json( $cached ); }
+
+	$url = 'https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734'
+		. '&current=weather_code,cloud_cover,temperature_2m&temperature_unit=fahrenheit&timezone=America%2FNew_York';
+	$r   = wp_remote_get( $url, array( 'timeout' => 8, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	$out = array( 'ok' => false );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$j = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+		if ( is_array( $j ) && isset( $j['current']['temperature_2m'] ) ) {
+			$c   = $j['current'];
+			$out = array(
+				'ok'    => true,
+				'code'  => (int) $c['weather_code'],
+				'cloud' => isset( $c['cloud_cover'] ) ? (int) $c['cloud_cover'] : null,
+				'temp'  => (int) round( $c['temperature_2m'] ),
+			);
+		}
+	}
+	// Cache a good reading 15 min; cache a miss only briefly so the glyph recovers fast.
+	set_transient( 'oyc_header_wx', $out, ( $out['ok'] ? 15 : 2 ) * MINUTE_IN_SECONDS );
+	wp_send_json( $out );
+}
+
 // Prepend the weather link as the first item of the primary nav.
 add_filter( 'wp_nav_menu_items', function ( $items, $args ) {
 	if ( ! isset( $args->theme_location ) || 'primary' !== $args->theme_location ) {
@@ -67,13 +100,15 @@ add_action( 'wp_footer', function () {
 			return G('<circle cx="12" cy="12" r="4.2"/>'+sunRays);                                                              // clear
 		}
 		var LABEL={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Drizzle',56:'Freezing drizzle',57:'Freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+		var AJAX=<?php echo wp_json_encode( esc_url_raw( admin_url( 'admin-ajax.php' ) ) ); ?>;
 		function load(){
-			fetch('https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734&current=weather_code,cloud_cover,temperature_2m&temperature_unit=fahrenheit&timezone=America/New_York',{cache:'no-store'})
+			/* cached server proxy (admin-ajax) — reliable, and no per-visitor Open-Meteo 429 */
+			fetch(AJAX+'?action=oyc_header_wx',{cache:'no-store'})
 				.then(function(r){ return r.json(); })
 				.then(function(d){
-					var cur=d&&d.current; if(!cur||cur.temperature_2m==null) return;
-					var code=cur.weather_code, temp=Math.round(cur.temperature_2m), label=LABEL[code]||'Weather';
-					icoEl.innerHTML=glyph(code, cur.cloud_cover);
+					if(!d||!d.ok||d.temp==null) return;
+					var code=d.code, temp=d.temp, label=LABEL[code]||'Weather';
+					icoEl.innerHTML=glyph(code, d.cloud);
 					tempEl.textContent=temp+'°';
 					link.setAttribute('title', label+' · '+temp+'° — harbor weather');
 					link.setAttribute('aria-label', label+', '+temp+' degrees. Open the weather page.');
