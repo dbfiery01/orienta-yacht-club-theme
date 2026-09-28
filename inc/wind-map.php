@@ -452,17 +452,31 @@ function erAtEpoch(epoch){
 	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip),waveFt:li(a.waveFt,b.waveFt)};
 }
 
+/* Reading for a clicked/hovered point: AT Execution Rock use the exact point
+   forecast (so a pin there matches the ER readout and the Marine Forecast board);
+   anywhere else use the grid field the map actually draws. Keeps every per-point
+   readout — ER bar, passage pins, hover — consistent across all tabs. */
+function nearER(lat,lon){return Math.abs(lat-ER.lat)<0.03&&Math.abs(lon-ER.lon)<0.03;}
+function readPoint(lat,lon,ti){
+	if(ERFC&&nearER(lat,lon)&&TIMES[ti]!=null){var s=erForFrame(new Date(TIMES[ti]).getTime(),ti===NOWI);if(s)return s;}
+	return sampleBest(lat,lon,ti);
+}
+
 /* ---------- pinned passage points ---------- */
 var pins=[];
 function pinContent(lat,lon,ti){
-	var s=sampleBest(lat,lon,ti);
+	var s=readPoint(lat,lon,ti);
 	var ll=lat.toFixed(4)+', '+lon.toFixed(4);
 	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
+		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
 		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
+	/* precip: probability % from the point forecast, else grid amount in inches */
+	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">precip</span></span>')
+		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
-		+(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'')
+		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
 	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
@@ -666,7 +680,7 @@ var hoverTip=document.getElementById('hoverTip');
 map.on('mousemove',function(e){
 	if(!activeGrid.loaded){hoverTip.style.display='none';return;}
 	var lon=((e.latlng.lng+540)%360)-180;
-	var s=sampleBest(e.latlng.lat,lon,curTi);
+	var s=readPoint(e.latlng.lat,lon,curTi);
 	if(!s){hoverTip.style.display='none';return;}
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
