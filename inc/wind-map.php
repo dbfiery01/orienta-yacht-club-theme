@@ -76,7 +76,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .gs-mk{background:none;border:none}
-#oycwm .gs-mk svg{filter:drop-shadow(0 0 1px rgba(255,255,255,.9))}
+#oycwm .gs-arrow{will-change:transform}
+#oycwm .gs-flow{animation:oycgsflow 1.7s linear infinite}
+#oycwm .gs-flow svg{display:block;filter:drop-shadow(0 0 1px rgba(255,255,255,.95))}
+@keyframes oycgsflow{0%{transform:translateY(6px);opacity:.05}25%{opacity:1}70%{opacity:1}100%{transform:translateY(-8px);opacity:.05}}
+@media (prefers-reduced-motion:reduce){#oycwm .gs-flow{animation:none;opacity:1;transform:none}}
 #oycwm .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
 #oycwm .storm-mk{background:none;border:none}
 #oycwm .storm-ic{position:relative;transform:translate(-50%,-50%)}
@@ -241,10 +245,11 @@ function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECI
 var WAVE_COLS=['#bfe9ef','#7fd0c8','#5bb98f','#e6d24a','#e08b3a','#cf5638','#8f2d6b'];
 var WAVE_STOPS=[[0.3,[191,233,239]],[1,[127,208,200]],[2,[91,185,143]],[4,[230,210,74]],[7,[224,139,58]],[11,[143,45,107]]];
 function waveColor(v){if(v==null||v<0.15)return null;return rampColor(v,WAVE_STOPS);}/* v in feet */
-/* Gulf Stream ocean-current speed (kt) — the fast core (~3-5 kt) reads warm */
-var GS_COLS=['#bcdcf0','#66a8de','#57bd93','#ecd24a','#e78b39','#d23b2d','#93285e'];
-var GS_STOPS=[[0.5,[188,220,240]],[1,[102,168,222]],[2,[87,189,147]],[3,[236,210,74]],[4,[231,139,57]],[5,[210,59,45]],[6,[147,40,94]]];
-function gsColor(v){if(v==null||v<0.5)return null;return rampColor(v,GS_STOPS);}/* v in knots */
+/* Gulf Stream ocean-current speed (kt) — saturated so the band reads boldly over
+   the light ocean base; the fast core (~2.5-5 kt) runs yellow→red */
+var GS_COLS=['#3a97dc','#2f6fc4','#22b06a','#ecc233','#f0861c','#e03526','#a01f6b'];
+var GS_STOPS=[[0.3,[58,151,220]],[0.8,[47,111,196]],[1.5,[34,176,106]],[2.5,[236,194,51]],[3.5,[240,134,28]],[4.5,[224,53,38]],[6,[160,31,107]]];
+function gsColor(v){if(v==null||v<0.3)return null;return rampColor(v,GS_STOPS);}/* v in knots */
 /* Windy-style continuous wind-speed fill (spectral ramp, kt) — painted under
    the white particle streaks so the whole speed field & lows read at a glance. */
 var WINDFILL_COLS=['#3a6bb0','#54aeae','#79c58a','#c3de77','#f2e15a','#f4b04a','#ef7d43','#df4e3c','#b23150','#7d2b6b'];
@@ -705,17 +710,19 @@ function drawGulf(ti){
 	if(!GS.loaded)return;
 	var gt=gsTiFor(ti),bounds=[[GS.LA2,GS.LO1],[GS.LA1,GS.LO2]];
 	var url=fieldDataURL(GS,GS.SPD,gt,gsColor);
-	if(gsOverlay){gsOverlay.setBounds(bounds);gsOverlay.setUrl(url);gsOverlay.setOpacity(0.6);}
-	else{gsOverlay=L.imageOverlay(url,bounds,{opacity:0.6,interactive:false});gsOverlay.addTo(map);if(gsOverlay.setZIndex)gsOverlay.setZIndex(348);}
-	/* flow arrows where the current is meaningful (the stream), on a 2° lattice so
-	   the corridor stays legible and the redraw stays light */
+	if(gsOverlay){gsOverlay.setBounds(bounds);gsOverlay.setUrl(url);gsOverlay.setOpacity(0.85);}
+	else{gsOverlay=L.imageOverlay(url,bounds,{opacity:0.85,interactive:false});gsOverlay.addTo(map);if(gsOverlay.setZIndex)gsOverlay.setZIndex(348);}
+	/* flowing arrows along the stream — full 1° lattice traces the current; each
+	   arrow drifts downstream (CSS), staggered so it reads as flow */
 	gsArrows.clearLayers();
-	for(var r=0;r<GS.NY;r+=2)for(var c=0;c<GS.NX;c+=2){
+	for(var r=0;r<GS.NY;r++)for(var c=0;c<GS.NX;c++){
 		var idx=r*GS.NX+c,sp=(GS.SPD[idx]||[])[gt],dr=(GS.DIR[idx]||[])[gt];
-		if(sp==null||sp<1.2||dr==null)continue;
-		var col=gsColor(sp)||[80,120,180];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
-		var html='<svg width="20" height="20" viewBox="0 0 20 20" style="transform:rotate('+Math.round(dr)+'deg)"><line x1="10" y1="17" x2="10" y2="6" stroke="'+hex+'" stroke-width="2.2"/><path d="M10 2.5 L6 9 L14 9 Z" fill="'+hex+'"/></svg>';
-		L.marker([GS.lats[r],GS.lons[c]],{icon:L.divIcon({className:'gs-mk',html:html,iconSize:[20,20],iconAnchor:[10,10]}),interactive:false,keyboard:false}).addTo(gsArrows);
+		if(sp==null||sp<0.8||dr==null)continue;
+		var col=gsColor(sp)||[47,111,196];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
+		var delay=(-((idx%17)*0.1)).toFixed(1);
+		var html='<div class="gs-arrow" style="transform:rotate('+Math.round(dr)+'deg)"><div class="gs-flow" style="animation-delay:'+delay+'s">'
+			+'<svg width="24" height="24" viewBox="0 0 24 24"><line x1="12" y1="21" x2="12" y2="7" stroke="'+hex+'" stroke-width="2.6"/><path d="M12 2 L7 10 L17 10 Z" fill="'+hex+'"/></svg></div></div>';
+		L.marker([GS.lats[r],GS.lons[c]],{icon:L.divIcon({className:'gs-mk',html:html,iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false}).addTo(gsArrows);
 	}
 }
 /* current speed/dir at a hovered point, for the readout tooltip */
