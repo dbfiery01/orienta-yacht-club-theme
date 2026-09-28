@@ -206,7 +206,7 @@ var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638',
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
 var KT=1.94384;
-var ER={lat:40.8783,lon:-73.7340};
+var ER={lat:40.8833,lon:-73.7283}; /* NDBC 44022 / Execution Rocks — same point the /weather/ board uses */
 
 /* ---- overlay color ramps (temp °F, precip in/3h) ---- */
 var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
@@ -223,6 +223,11 @@ function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECI
 var WAVE_COLS=['#bfe9ef','#7fd0c8','#5bb98f','#e6d24a','#e08b3a','#cf5638','#8f2d6b'];
 var WAVE_STOPS=[[0.3,[191,233,239]],[1,[127,208,200]],[2,[91,185,143]],[4,[230,210,74]],[7,[224,139,58]],[11,[143,45,107]]];
 function waveColor(v){if(v==null||v<0.15)return null;return rampColor(v,WAVE_STOPS);}/* v in feet */
+/* Windy-style continuous wind-speed fill (spectral ramp, kt) — painted under
+   the white particle streaks so the whole speed field & lows read at a glance. */
+var WINDFILL_COLS=['#3a6bb0','#54aeae','#79c58a','#c3de77','#f2e15a','#f4b04a','#ef7d43','#df4e3c','#b23150','#7d2b6b'];
+var WINDFILL_STOPS=[[0,[58,107,176]],[5,[84,174,174]],[9,[121,197,138]],[13,[195,222,119]],[18,[242,225,90]],[23,[244,176,74]],[30,[239,125,67]],[40,[223,78,60]],[52,[178,49,80]],[65,[125,43,107]]];
+function windFillColor(vms){if(vms==null||isNaN(vms))return null;return rampColor(vms*KT,WINDFILL_STOPS);}
 
 /* ---------- grid factory ---------- */
 function makeGrid(o){
@@ -276,7 +281,13 @@ function sampleGrid(g,lat,lon,ti){
 	var mb=bil(g.PR);var gu=g.gust?bil(g.GU):null;
 	var tp=(g.TP&&g.TP.length)?bil(g.TP):null;var pp=(g.PP&&g.PP.length)?bil(g.PP):null;
 	var wti=(g.wvMap&&g.wvMap[ti]!=null)?g.wvMap[ti]:ti;
-	var wv=(g.WV&&g.WV.length)?bil(g.WV,wti):null;
+	/* Waves: tolerant bilinear — average only the non-null (water) corners, so a
+	   coastal point whose grid box also touches land still reads a value that
+	   matches the /weather/ board's exact-point marine query (strict bil would
+	   return null and show "—"). */
+	var wv=null;
+	if(g.WV&&g.WV.length){var ws=[at(g.WV,r0,c0,wti),at(g.WV,r0,c1,wti),at(g.WV,r1,c0,wti),at(g.WV,r1,c1,wti)].filter(function(x){return x!=null;});
+		if(ws.length)wv=ws.reduce(function(a,b){return a+b;},0)/ws.length;}
 	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp,waveFt:wv==null?null:wv*3.28084};
 }
 function sampleBest(lat,lon,ti){
@@ -428,7 +439,7 @@ function effectiveField(){
 	if(mode==='temp')return 'temp';
 	if(mode==='precip')return 'precip';
 	if(mode==='wave')return 'wave';
-	if(mode==='wind')return fieldMode;
+	if(mode==='wind')return fieldMode||'windspd';
 	return null;
 }
 function fieldDataURL(g,arr,ti,ramp){
@@ -444,13 +455,16 @@ function drawField(){
 	if(!ef){clearField();return;}
 	var g=activeGrid;
 	if(ef==='wave'&&!g.wvLoaded){clearField();loadWaves(g,function(){if(effectiveField()==='wave')showWind(curTi);});return;}
-	var arr=(ef==='temp')?g.TP:(ef==='precip')?(g===LOCAL?LOCAL.PP:null):g.WV;
-	var ramp=(ef==='temp')?tempColor:(ef==='precip')?precipColor:waveColor;
+	var arr,ramp,op;
+	if(ef==='temp'){arr=g.TP;ramp=tempColor;op=0.55;}
+	else if(ef==='precip'){arr=(g===LOCAL?LOCAL.PP:null);ramp=precipColor;op=0.6;}
+	else if(ef==='wave'){arr=g.WV;ramp=waveColor;op=0.62;}
+	else{arr=g.SP;ramp=windFillColor;op=0.72;}/* windspd — the Windy-style fill */
 	var fti=(ef==='wave'&&g.wvMap&&g.wvMap[curTi]!=null)?g.wvMap[curTi]:curTi;
 	if(!g.loaded||!arr||!arr.length){clearField();return;}
 	var url=fieldDataURL(g,arr,fti,ramp),bounds=[[g.LA2,g.LO1],[g.LA1,g.LO2]];
-	if(fieldOverlay){fieldOverlay.setBounds(bounds);fieldOverlay.setUrl(url);}
-	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:(ef==='temp'?0.55:0.62),interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
+	if(fieldOverlay){fieldOverlay.setBounds(bounds);fieldOverlay.setUrl(url);fieldOverlay.setOpacity(op);}
+	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:op,interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
 }
 function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.className='legend';
 	lg.innerHTML=l0+' <span class="sc">'+cols.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</span> '+l1;}
@@ -460,6 +474,7 @@ function updateLegend(){
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
 	if(ef==='wave')return setLegend('calm','12+ ft',WAVE_COLS);
+	if(ef==='windspd')return setLegend('0 kt','65+ kt',WINDFILL_COLS);
 	setLegend('0 kt','40+ kt',RAMP);}
 
 /* ---------- velocity layer ----------
@@ -472,7 +487,7 @@ function setParticlesVisible(on){var cvs=map.getContainer().getElementsByTagName
 function buildVL(g,ti){
 	if(vl){vl.setData(g.FRAMES[ti]);return;}
 	vl=L.velocityLayer({displayValues:false,data:g.FRAMES[ti],maxVelocity:26,velocityScale:0.0045,
-		lineWidth:2,particleAge:100,particleMultiplier:1/320,colorScale:RAMP,frameRate:20});
+		lineWidth:1.8,particleAge:100,particleMultiplier:1/320,colorScale:['#eaf3ff','#ffffff'],frameRate:20});
 	vl.addTo(map);
 	setParticlesVisible(mode==='wind'&&document.getElementById('tgParticles').checked);
 }
@@ -557,7 +572,7 @@ function loadLocal(tries){
 		var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
 		buildFrames(LOCAL);LOCAL.loaded=true;LOCAL.loading=false;
 		activeGrid=LOCAL;slider.max=TIMES.length-1;
-		buildVL(LOCAL,NOWI);showWind(NOWI);
+		buildVL(LOCAL,NOWI);showWind(NOWI);updateLegend();
 		document.getElementById('st').textContent='7-day forecast · '+TIMES.length+' frames · '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
 		loadBasin();
 		loadWaves(LOCAL,function(){updateER(curTi);});

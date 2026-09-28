@@ -129,7 +129,7 @@ if ( ! $oyc_weather_menu ) {
 	.card h2{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);font-weight:700;
 		display:flex;justify-content:space-between;align-items:center;gap:10px}
 	.card h2 .sta{color:var(--faint);font-size:10px;letter-spacing:.12em;font-weight:600}
-	/* Card-title links (-> /radar/): same treatment as the site's tile-heading
+	/* Card-title links (-> /wind/): same treatment as the site's tile-heading
 	   links — inherit color, gold underline, and the standard external ↗️ mark. */
 	.card h2 a.h2link{color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,168,81,.5);
 		transition:color .15s,border-color .15s}
@@ -346,7 +346,7 @@ if ( ! $oyc_weather_menu ) {
 		<!-- RIGHT COLUMN -->
 		<div class="col" id="colC">
 			<div class="card" data-card="wind">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/radar/' ) ); ?>">Wind</a> <span class="sta" id="windSta">STA. 8516945</span></h2>
+				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind</a> <span class="sta" id="windSta">STA. 8516945</span></h2>
 				<div class="wind-body">
 					<div class="dial" id="windDial"></div>
 					<div class="wind-read">
@@ -359,7 +359,7 @@ if ( ! $oyc_weather_menu ) {
 				</div>
 			</div>
 			<div class="card" data-card="waves">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/radar/' ) ); ?>">Wave Conditions</a> <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
+				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wave Conditions</a> <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
 				<div class="wave-body">
 					<div class="wave-main"><span class="wave-val miss" id="waveHt">&mdash;</span><span class="wave-unit">seas</span></div>
 					<div class="wave-lab">
@@ -371,7 +371,7 @@ if ( ! $oyc_weather_menu ) {
 			</div>
 
 			<div class="card" data-card="cond">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/radar/' ) ); ?>">Conditions</a></h2>
+				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Conditions</a></h2>
 				<div class="cond">
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
 					<div class="cell"><div class="v" id="hiLoTemp">&mdash;</div><div class="k">Today Hi / Lo</div></div>
