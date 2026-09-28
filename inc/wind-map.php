@@ -342,17 +342,40 @@ L.marker([40.9486,-73.7296],{icon:L.divIcon({className:'oyc-mk',html:'<div class
 /* Active Atlantic named storms from NOAA/NHC (server proxy oyc_storms) — a
    cyclone marker per storm, coloured by class; visible once you zoom out to
    the basin. Refreshed on load. */
-var stormLayer=L.layerGroup().addTo(map);
+var stormLayer=L.layerGroup().addTo(map),trackLayer=L.layerGroup().addTo(map),STORMS=[];
 function stormColor(cls){return cls==='HU'?'#c0392b':(cls==='TS'?'#e67e22':'#4a8fb5');}
+/* epoch (ms) of the frame the slider is currently on, in either mode */
+function curEpoch(){if(mode==='radar'){return (RV.frames.length&&RV.frames[RV.idx])?Date.now()+RV.frames[RV.idx].off*60000:Date.now();}
+	return (TIMES.length&&TIMES[curTi])?new Date(TIMES[curTi]).getTime():Date.now();}
+/* storm position at epoch tE, linearly interpolated along the forecast track;
+   dim=true outside the forecast window (before the current fix, or past +120h) */
+function stormAt(pts,tE){if(!pts||!pts.length)return null;
+	if(tE<=pts[0].t)return{lat:pts[0].lat,lon:pts[0].lon,dim:tE<pts[0].t-36e5};
+	var last=pts[pts.length-1];if(tE>=last.t)return{lat:last.lat,lon:last.lon,dim:true};
+	for(var i=1;i<pts.length;i++){if(tE<=pts[i].t){var a=pts[i-1],b=pts[i],f=(b.t>a.t)?(tE-a.t)/(b.t-a.t):0;
+		return{lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f,dim:false};}}
+	return{lat:last.lat,lon:last.lon,dim:true};}
+/* glide every storm marker to where it is forecast to be at time tE */
+function updateStormsAt(tE){if(!tE)return;STORMS.forEach(function(st){var p=stormAt(st.pts,tE);if(!p)return;
+	st.marker.setLatLng([p.lat,p.lon]);var el=st.marker.getElement();if(el)el.style.opacity=p.dim?'0.5':'1';});}
 function loadStorms(){
 	fetchT(AJAX+'?action=oyc_storms',9000).then(function(r){return r.json();}).then(function(list){
-		stormLayer.clearLayers();
+		stormLayer.clearLayers();trackLayer.clearLayers();STORMS=[];
 		(list||[]).forEach(function(s){
 			var col=stormColor(s.cls),lbl=s.name+' · '+s.cls+(s.kt!=null?' '+s.kt+' kt':'');
+			var pts=(s.track&&s.track.length)?s.track.map(function(p){return{t:+p.t,lat:+p.lat,lon:+p.lon};})
+				:[{t:Date.now(),lat:s.lat,lon:s.lon}];
+			if(pts.length>1){ /* dotted forecast track + a dot at each advisory position */
+				L.polyline(pts.map(function(p){return[p.lat,p.lon];}),{color:col,weight:2,opacity:.75,dashArray:'3 5',interactive:false}).addTo(trackLayer);
+				pts.forEach(function(p,i){if(i)L.circleMarker([p.lat,p.lon],{radius:2.5,color:'#fff',weight:1,fillColor:col,fillOpacity:.9,interactive:false}).addTo(trackLayer);});
+			}
 			var html='<div class="storm-ic"><span class="storm-sym">&#127744;</span><span class="storm-lbl" style="background:'+col+'">'+lbl+'</span></div>';
-			var m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'storm-mk',html:html,iconSize:[0,0]}),keyboard:false,zIndexOffset:1100}).addTo(stormLayer);
-			m.bindTooltip(s.name+' ('+s.cls+') · '+(s.kt!=null?s.kt+' kt':'')+(s.mb!=null?' · '+s.mb+' mb':'')+(s.dir?' · moving '+s.dir+' '+s.spd+' kt':''),{direction:'top',offset:[6,-6]});
+			var m=L.marker([pts[0].lat,pts[0].lon],{icon:L.divIcon({className:'storm-mk',html:html,iconSize:[0,0]}),keyboard:false,zIndexOffset:1100}).addTo(stormLayer);
+			/* tooltip drops BELOW the icon so it never covers the name label above it */
+			m.bindTooltip(s.name+' ('+s.cls+') · '+(s.kt!=null?s.kt+' kt':'')+(s.mb!=null?' · '+s.mb+' mb':'')+(s.dir?' · moving '+s.dir+' '+s.spd+' kt':''),{direction:'bottom',offset:[0,14]});
+			STORMS.push({marker:m,pts:pts});
 		});
+		updateStormsAt(curEpoch());
 	}).catch(function(){});
 }
 loadStorms();
@@ -571,7 +594,7 @@ function buildVL(g,ti){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -726,7 +749,7 @@ function showRadar(i){
 	if(fcOverlay){fcOverlay.setBounds(bounds);fcOverlay.setUrl(url);fcOverlay.setOpacity(0.82);}
 	else{fcOverlay=L.imageOverlay(url,bounds,{opacity:0.82,interactive:false});fcOverlay.addTo(map);if(fcOverlay.setZIndex)fcOverlay.setZIndex(345);}
 	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+tag+'</small>';
-	setER(erAtEpoch(t));
+	setER(erAtEpoch(t));updateStormsAt(t);
 }
 
 /* ---------- unified slider / play ---------- */

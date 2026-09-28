@@ -70,12 +70,56 @@ function oyc_grib_send( $bin, $run ) {
 
 /* ── Active Atlantic named storms, from NOAA/NHC (no CORS → server proxy) ──
    Returns the current tropical cyclones in the Atlantic basin (id starts AL)
-   with position, class, winds, pressure and movement, for the Wind page's
-   basin view. Cached 30 min. Endpoint: admin-ajax.php?action=oyc_storms ── */
+   with position, class, winds, pressure and movement, PLUS the official NHC
+   forecast track (points out to +120 h), for the Wind page's basin view. The
+   marker glides along the track as the time slider moves. Cached 30 min.
+   Endpoint: admin-ajax.php?action=oyc_storms ── */
 add_action( 'wp_ajax_oyc_storms',        'oyc_storms_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_storms', 'oyc_storms_proxy' );
+
+/* Parse the NHC forecast advisory (TCM text product) into track points.
+   Returns [ {t:<epoch ms UTC>, lat, lon}, … ] — the current center first,
+   then each FORECAST VALID position. Empty array on any failure (the client
+   falls back to the storm's current position). */
+function oyc_storm_track( $tcm_url, $issuance_iso ) {
+	$pts = array();
+	if ( ! $tcm_url ) { return $pts; }
+	$r = wp_remote_get( $tcm_url, array( 'timeout' => 5, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) { return $pts; }
+	$txt = wp_strip_all_tags( (string) wp_remote_retrieve_body( $r ) );
+
+	$base  = strtotime( (string) $issuance_iso );
+	if ( ! $base ) { $base = time(); }
+	$byear = (int) gmdate( 'Y', $base );
+	$bmon  = (int) gmdate( 'n', $base );
+	// DD/HHMM (UTC) → epoch ms. Advisories run up to +120 h, so a day-of-month
+	// that lands well before the issuance means it rolled into the next month.
+	$mk = function ( $dd, $hh, $mm ) use ( $base, $byear, $bmon ) {
+		$t = gmmktime( $hh, $mm, 0, $bmon, $dd, $byear );
+		if ( $t < $base - 2 * DAY_IN_SECONDS ) {
+			$mo = $bmon + 1; $y = $byear;
+			if ( $mo > 12 ) { $mo = 1; $y++; }
+			$t = gmmktime( $hh, $mm, 0, $mo, $dd, $y );
+		}
+		return $t * 1000;
+	};
+	$sgn = function ( $v, $hemi ) { $h = strtoupper( $hemi ); return ( 'S' === $h || 'W' === $h ) ? -abs( (float) $v ) : abs( (float) $v ); };
+
+	// Current center: "CENTER LOCATED NEAR 27.1N  44.6W AT 28/1500Z"
+	if ( preg_match( '/CENTER LOCATED NEAR\s+([0-9.]+)([NS])\s+([0-9.]+)([EW])\s+AT\s+(\d{2})\/(\d{2})(\d{2})Z/i', $txt, $m ) ) {
+		$pts[] = array( 't' => $mk( (int) $m[5], (int) $m[6], (int) $m[7] ), 'lat' => $sgn( $m[1], $m[2] ), 'lon' => $sgn( $m[3], $m[4] ) );
+	}
+	// Forecast points: "FORECAST VALID 29/0000Z 26.0N  45.5W"  (skip DISSIPATED lines w/o coords)
+	if ( preg_match_all( '/FORECAST VALID\s+(\d{2})\/(\d{2})(\d{2})Z\s+([0-9.]+)([NS])\s+([0-9.]+)([EW])/i', $txt, $ms, PREG_SET_ORDER ) ) {
+		foreach ( $ms as $m ) {
+			$pts[] = array( 't' => $mk( (int) $m[1], (int) $m[2], (int) $m[3] ), 'lat' => $sgn( $m[4], $m[5] ), 'lon' => $sgn( $m[6], $m[7] ) );
+		}
+	}
+	return $pts;
+}
+
 function oyc_storms_proxy() {
-	$cached = get_transient( 'oyc_storms_atl_v2' );
+	$cached = get_transient( 'oyc_storms_atl_v3' );
 	if ( false !== $cached ) { wp_send_json( $cached ); }
 
 	$out  = array();
@@ -94,20 +138,25 @@ function oyc_storms_proxy() {
 			// Force hemisphere sign from the labelled string fields (numeric sign varies).
 			if ( isset( $s['latitude'] )  && false !== stripos( (string) $s['latitude'],  'S' ) ) { $lat = -abs( $lat ); }
 			if ( isset( $s['longitude'] ) && false !== stripos( (string) $s['longitude'], 'W' ) ) { $lon = -abs( $lon ); }
+			$fa_url = isset( $s['forecastAdvisory']['url'] ) ? (string) $s['forecastAdvisory']['url'] : '';
+			$fa_iss = isset( $s['forecastAdvisory']['issuance'] ) ? (string) $s['forecastAdvisory']['issuance']
+				: ( isset( $s['lastUpdate'] ) ? (string) $s['lastUpdate'] : '' );
+			$track  = oyc_storm_track( $fa_url, $fa_iss );
 			$out[] = array(
-				'name' => isset( $s['name'] ) ? $s['name'] : '',
-				'cls'  => isset( $s['classification'] ) ? $s['classification'] : '',
-				'kt'   => isset( $s['intensity'] ) ? (int) $s['intensity'] : null,
-				'mb'   => isset( $s['pressure'] ) ? (int) $s['pressure'] : null,
-				'lat'  => $lat,
-				'lon'  => $lon,
-				'dir'  => isset( $s['movementDir'] ) ? $s['movementDir'] : null,
-				'spd'  => isset( $s['movementSpeed'] ) ? $s['movementSpeed'] : null,
+				'name'  => isset( $s['name'] ) ? $s['name'] : '',
+				'cls'   => isset( $s['classification'] ) ? $s['classification'] : '',
+				'kt'    => isset( $s['intensity'] ) ? (int) $s['intensity'] : null,
+				'mb'    => isset( $s['pressure'] ) ? (int) $s['pressure'] : null,
+				'lat'   => $lat,
+				'lon'   => $lon,
+				'dir'   => isset( $s['movementDir'] ) ? $s['movementDir'] : null,
+				'spd'   => isset( $s['movementSpeed'] ) ? $s['movementSpeed'] : null,
+				'track' => $track, // [{t:ms,lat,lon}] current → +120h, [] if unavailable
 			);
 		}
 	}
 	// Cache a good result for 30 min; cache a failed/empty fetch only briefly so a
 	// transient outage doesn't hide storms for half an hour.
-	set_transient( 'oyc_storms_atl_v2', $out, ( $hit ? 30 : 8 ) * MINUTE_IN_SECONDS );
+	set_transient( 'oyc_storms_atl_v3', $out, ( $hit ? 30 : 8 ) * MINUTE_IN_SECONDS );
 	wp_send_json( $out );
 }
