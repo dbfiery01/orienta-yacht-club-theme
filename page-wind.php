@@ -420,7 +420,7 @@ function barbSVG(kt,col){
 function drawBarbs(){arrowsLayer.clearLayers();
 	var g=activeGrid;if(!g||!g.loaded)return;
 	var ti=(mode==='radar')?Math.min(NOWI,Math.max(0,TIMES.length-1)):curTi;
-	var size=map.getSize(),step=54,s0=Math.round(step/2);
+	var size=map.getSize(),step=72,s0=Math.round(step/2);
 	for(var py=s0;py<size.y;py+=step)for(var px=s0;px<size.x;px+=step){
 		var ll=map.containerPointToLatLng([px,py]),lon=((ll.lng+540)%360)-180;
 		var s=sampleBest(ll.lat,lon,ti);if(!s)continue;
