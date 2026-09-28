@@ -75,6 +75,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
+#oycwm .gs-mk{background:none;border:none}
+#oycwm .gs-mk svg{filter:drop-shadow(0 0 1px rgba(255,255,255,.9))}
 #oycwm .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
 #oycwm .storm-mk{background:none;border:none}
 #oycwm .storm-ic{position:relative;transform:translate(-50%,-50%)}
@@ -177,7 +179,8 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgTemp"> Temp</label>
 			<label><input type="checkbox" id="tgPrecip"> Precip</label>
 			<label><input type="checkbox" id="tgWave"> Waves</label>
-			<span class="hint">Zoom out for the Atlantic pattern &middot; temp shades the whole basin, precip the Sound</span>
+			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
+			<span class="hint">Zoom out for the Atlantic pattern &middot; temp shades the whole basin, precip the Sound &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
@@ -238,6 +241,10 @@ function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECI
 var WAVE_COLS=['#bfe9ef','#7fd0c8','#5bb98f','#e6d24a','#e08b3a','#cf5638','#8f2d6b'];
 var WAVE_STOPS=[[0.3,[191,233,239]],[1,[127,208,200]],[2,[91,185,143]],[4,[230,210,74]],[7,[224,139,58]],[11,[143,45,107]]];
 function waveColor(v){if(v==null||v<0.15)return null;return rampColor(v,WAVE_STOPS);}/* v in feet */
+/* Gulf Stream ocean-current speed (kt) — the fast core (~3-5 kt) reads warm */
+var GS_COLS=['#bcdcf0','#66a8de','#57bd93','#ecd24a','#e78b39','#d23b2d','#93285e'];
+var GS_STOPS=[[0.5,[188,220,240]],[1,[102,168,222]],[2,[87,189,147]],[3,[236,210,74]],[4,[231,139,57]],[5,[210,59,45]],[6,[147,40,94]]];
+function gsColor(v){if(v==null||v<0.5)return null;return rampColor(v,GS_STOPS);}/* v in knots */
 /* Windy-style continuous wind-speed fill (spectral ramp, kt) — painted under
    the white particle streaks so the whole speed field & lows read at a glance. */
 var WINDFILL_COLS=['#3a6bb0','#54aeae','#79c58a','#c3de77','#f2e15a','#f4b04a','#ef7d43','#df4e3c','#b23150','#7d2b6b'];
@@ -265,6 +272,10 @@ var LOCAL=makeGrid({name:'local',LA1:42.2,LA2:40.4,LO1:-74.2,LO2:-69.8,DX:0.2,DY
    Gulf/Caribbean west to the West-African coast. 3 deg keeps this large box
    light enough to fetch client-side while still resolving synoptic patterns. */
 var BASIN=makeGrid({name:'basin',LA1:63,LA2:-27,LO1:-102,LO2:18,DX:3.0,DY:3.0,gust:false});
+/* Gulf Stream corridor — Straits of Florida up to the Grand Banks / Newfoundland,
+   1 deg. Carries ocean-current speed (kt) + direction, not wind. */
+var GS=makeGrid({name:'gs',LA1:46,LA2:24,LO1:-80,LO2:-48,DX:1.0,DY:1.0});
+GS.SPD=[];GS.DIR=[];GS.gsMap=null;
 
 var TIMES=[],NOWI=0;               /* master 3-hourly time axis (shared) */
 function frame(g,ti){
@@ -654,12 +665,67 @@ function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.class
 function updateLegend(){
 	if(mode==='radar')return setLegend('light','heavy',RADAR_COLS);
 	var ef=effectiveField();
-	if(!ef){document.getElementById('legend').style.display='none';return;}
+	if(!ef){ /* no color field — show the Gulf Stream current scale if it's the active overlay */
+		if(gsOn()&&GS.loaded)return setLegend('0.5 kt','5+ kt current',GS_COLS);
+		document.getElementById('legend').style.display='none';return;}
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
 	if(ef==='wave')return setLegend('calm','12+ ft',WAVE_COLS);
 	if(ef==='windspd')return setLegend('0 kt','65+ kt',WINDFILL_COLS);
 	setLegend('0 kt','40+ kt',RAMP);}
+
+/* ---------- Gulf Stream (ocean current) overlay ----------
+   Ocean-current speed + direction over the Florida→Newfoundland corridor, from
+   Open-Meteo Marine (cached proxy). A translucent speed band (the fast core reads
+   warm) plus flow arrows, both synced to the forecast slider. */
+var gsOverlay=null,gsArrows=L.layerGroup();
+function gsOn(){var el=document.getElementById('tgGulf');return !!(el&&el.checked);}
+function gsTiFor(ti){return (GS.gsMap&&GS.gsMap[ti]!=null)?GS.gsMap[ti]:ti;}
+function loadGulf(cb){
+	if(GS.loaded){cb&&cb();return;}if(GS.loading)return;GS.loading=true;
+	var N=GS.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
+	GS.SPD=new Array(N);GS.DIR=new Array(N);var gst=null,ci=0,CONC=2,KT=0.539957; /* km/h → kt */
+	function fc(idx,tries){var a=chunks[idx][0];
+		return fetchT(AJAX+'?action=oyc_gulfstream&chunk='+idx,15000)
+			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
+			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!gst&&h.time)gst=h.time;
+				GS.SPD[a+k]=(h.ocean_current_velocity||[]).map(function(v){return v==null?null:v*KT;});
+				GS.DIR[a+k]=h.ocean_current_direction||[];}}})
+			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);});});
+	}
+	function pump(){if(ci>=chunks.length)return Promise.resolve();var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fc(ci,0));
+		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});}
+	pump().then(function(){
+		if(gst)GS.gsMap=TIMES.map(function(t){var tt=new Date(t).getTime(),best=0,bd=1e15;for(var i=0;i<gst.length;i++){var d=Math.abs(new Date(gst[i]).getTime()-tt);if(d<bd){bd=d;best=i;}}return best;});
+		GS.loaded=true;GS.loading=false;cb&&cb();
+	});
+}
+function drawGulf(ti){
+	if(!gsOn()){if(gsOverlay){map.removeLayer(gsOverlay);gsOverlay=null;}gsArrows.clearLayers();return;}
+	if(!GS.loaded)return;
+	var gt=gsTiFor(ti),bounds=[[GS.LA2,GS.LO1],[GS.LA1,GS.LO2]];
+	var url=fieldDataURL(GS,GS.SPD,gt,gsColor);
+	if(gsOverlay){gsOverlay.setBounds(bounds);gsOverlay.setUrl(url);gsOverlay.setOpacity(0.6);}
+	else{gsOverlay=L.imageOverlay(url,bounds,{opacity:0.6,interactive:false});gsOverlay.addTo(map);if(gsOverlay.setZIndex)gsOverlay.setZIndex(348);}
+	/* flow arrows where the current is meaningful (the stream), on a 2° lattice so
+	   the corridor stays legible and the redraw stays light */
+	gsArrows.clearLayers();
+	for(var r=0;r<GS.NY;r+=2)for(var c=0;c<GS.NX;c+=2){
+		var idx=r*GS.NX+c,sp=(GS.SPD[idx]||[])[gt],dr=(GS.DIR[idx]||[])[gt];
+		if(sp==null||sp<1.2||dr==null)continue;
+		var col=gsColor(sp)||[80,120,180];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
+		var html='<svg width="20" height="20" viewBox="0 0 20 20" style="transform:rotate('+Math.round(dr)+'deg)"><line x1="10" y1="17" x2="10" y2="6" stroke="'+hex+'" stroke-width="2.2"/><path d="M10 2.5 L6 9 L14 9 Z" fill="'+hex+'"/></svg>';
+		L.marker([GS.lats[r],GS.lons[c]],{icon:L.divIcon({className:'gs-mk',html:html,iconSize:[20,20],iconAnchor:[10,10]}),interactive:false,keyboard:false}).addTo(gsArrows);
+	}
+}
+/* current speed/dir at a hovered point, for the readout tooltip */
+function gsAt(lat,lon){
+	if(!gsOn()||!GS.loaded||lat<GS.LA2||lat>GS.LA1||lon<GS.LO1||lon>GS.LO2)return null;
+	var r=Math.round((GS.LA1-lat)/GS.DY),c=Math.round((lon-GS.LO1)/GS.DX);
+	if(r<0||r>=GS.NY||c<0||c>=GS.NX)return null;
+	var gt=gsTiFor(curTi),sp=(GS.SPD[r*GS.NX+c]||[])[gt],dr=(GS.DIR[r*GS.NX+c]||[])[gt];
+	return sp==null?null:{kt:sp,dir:dr};
+}
 
 /* ---------- velocity layer ----------
    leaflet-velocity 1.7 throws (getSize/null map) if the layer is removed while
@@ -680,7 +746,7 @@ function buildVL(g,ti){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -703,8 +769,10 @@ map.on('mousemove',function(e){
 	if(!s){hoverTip.style.display='none';return;}
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
+	var gsh=gsAt(e.latlng.lat,lon);
 	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+'</span>'
-		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'');
+		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'')
+		+(gsh?' · <span style="color:#bcdcf0">GS '+gsh.kt.toFixed(1)+' kt '+card(gsh.dir)+'</span>':'');
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
 
@@ -897,6 +965,10 @@ function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWa
 document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
+document.getElementById('tgGulf').addEventListener('change',function(){
+	if(this.checked){gsArrows.addTo(map);loadGulf(function(){drawGulf(curTi);updateLegend();});}
+	else{if(gsOverlay){map.removeLayer(gsOverlay);gsOverlay=null;}map.removeLayer(gsArrows);gsArrows.clearLayers();updateLegend();}
+});
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
 map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});

@@ -276,3 +276,19 @@ function oyc_waves_proxy() {
 		. '&hourly=wave_height&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
 	oyc_om_cached( 'oyc_waves_' . $grid . '_' . $chunk, $url, 30 * MINUTE_IN_SECONDS );
 }
+
+/* Gulf Stream ocean current — velocity + direction over the Florida→Newfoundland
+   corridor (1° grid, 23×33=759 pts), one client chunk per request. CH=140 MUST
+   match the JS loadGulf chunk size. Ocean currents move slowly → cached 60 min.
+   Endpoint: admin-ajax.php?action=oyc_gulfstream&chunk=N */
+add_action( 'wp_ajax_oyc_gulfstream',        'oyc_gulfstream_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_gulfstream', 'oyc_gulfstream_proxy' );
+function oyc_gulfstream_proxy() {
+	$chunk = isset( $_GET['chunk'] ) ? max( 0, (int) $_GET['chunk'] ) : 0;
+	list( $lat, $lon ) = oyc_grid_points( 46, 24, -80, -48, 1.0, 1.0 ); // must match the JS GS makeGrid()
+	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 140 );
+	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
+	$url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $cs[0] . '&longitude=' . $cs[1]
+		. '&hourly=ocean_current_velocity,ocean_current_direction&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+	oyc_om_cached( 'oyc_gs_' . $chunk, $url, 60 * MINUTE_IN_SECONDS );
+}
