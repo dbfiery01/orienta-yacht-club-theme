@@ -165,6 +165,7 @@ a{color:var(--harbor)}
 
 		<div class="layers" id="windLayers">
 			<label><input type="checkbox" id="tgParticles" checked> Animated</label>
+			<label><input type="checkbox" id="tgWindColor" checked> Wind color</label>
 			<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
 			<label><input type="checkbox" id="tgIso"> Isobars</label>
 			<label><input type="checkbox" id="tgTemp"> Temp</label>
@@ -358,25 +359,26 @@ var pins=[];
 function pinContent(lat,lon,ti){
 	var s=sampleBest(lat,lon,ti);
 	var ll=lat.toFixed(2)+', '+lon.toFixed(2);
-	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">click pin to remove</div></div>';
+	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
 		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'')
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
-	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">click pin to remove</div></div>';
+	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
 function addPin(lat,lon){
 	var m=L.circleMarker([lat,lon],{radius:6,color:'#0b2a4a',weight:2,fillColor:'#1583cf',fillOpacity:1}).addTo(map);
-	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,className:'pin-pop'})
+	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'})
 		.setLatLng([lat,lon]).setContent(pinContent(lat,lon,curTi));
 	m.bindPopup(p);m.openPopup();
 	var pin={marker:m,popup:p,lat:lat,lon:lon};
 	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
+	m.on('popupclose',function(){removePin(pin);}); /* the corner × removes the point too */
 	pins.push(pin);
 }
-function removePin(pin){map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
+function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 
@@ -412,11 +414,18 @@ function barbSVG(kt,col){
 	for(i=0;i<half;i++){if(full===0&&pen===0&&i===0)pos+=step;out+='<line x1="0" y1="'+pos.toFixed(1)+'" x2="'+HB+'" y2="'+(pos-2.3).toFixed(1)+'" stroke="'+col+'" stroke-width="1.8"/>';pos+=step;}
 	return out;
 }
-function drawBarbs(g,ti,stride){arrowsLayer.clearLayers();
-	for(var r=0;r<g.NY;r+=stride)for(var c=0;c<g.NX;c+=stride){var k=r*g.NX+c;
-		var kt=(g.SP[k][ti]||0)*KT,dir=g.DR[k][ti]||0,col='#0b2a4a';
-		var html='<svg width="46" height="42" viewBox="-23 -34 46 42" style="overflow:visible"><g transform="rotate('+dir.toFixed(0)+')">'+barbSVG(kt,col)+'</g></svg>';
-		L.marker([g.lats[r],g.lons[c]],{icon:L.divIcon({className:'barb-mk',html:html,iconSize:[46,42],iconAnchor:[23,34]}),interactive:false}).addTo(arrowsLayer);
+/* Barbs on a fixed SCREEN lattice (not one-per-grid-cell), sampled by bilinear
+   interpolation — so the view stays filled with barbs at any zoom (more appear
+   as you zoom in) and redraws on pan/zoom. */
+function drawBarbs(){arrowsLayer.clearLayers();
+	var g=activeGrid;if(!g||!g.loaded)return;
+	var ti=(mode==='radar')?Math.min(NOWI,Math.max(0,TIMES.length-1)):curTi;
+	var size=map.getSize(),step=54,s0=Math.round(step/2);
+	for(var py=s0;py<size.y;py+=step)for(var px=s0;px<size.x;px+=step){
+		var ll=map.containerPointToLatLng([px,py]),lon=((ll.lng+540)%360)-180;
+		var s=sampleBest(ll.lat,lon,ti);if(!s)continue;
+		var html='<svg width="46" height="42" viewBox="-23 -34 46 42" style="overflow:visible"><g transform="rotate('+Math.round(s.dir)+')">'+barbSVG(s.kt,'#0b2a4a')+'</g></svg>';
+		L.marker([ll.lat,lon],{icon:L.divIcon({className:'barb-mk',html:html,iconSize:[46,42],iconAnchor:[23,34]}),interactive:false,keyboard:false}).addTo(arrowsLayer);
 	}}
 function drawIso(g,ti,step){isoLayer.clearLayers();
 	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
@@ -437,7 +446,7 @@ function drawIso(g,ti,step){isoLayer.clearLayers();
 		}
 	}}
 function refreshOverlays(){var g=activeGrid;
-	if(document.getElementById('tgArrows').checked)drawBarbs(g,curTi,g===BASIN?2:1);
+	if(document.getElementById('tgArrows').checked)drawBarbs();
 	if(document.getElementById('tgIso').checked)drawIso(g,curTi,g===BASIN?4:1);}
 
 /* Mark pressure centres (H / L) at local maxima / minima of the MSLP field.
@@ -465,7 +474,7 @@ function effectiveField(){
 	if(mode==='temp')return 'temp';
 	if(mode==='precip')return 'precip';
 	if(mode==='wave')return 'wave';
-	if(mode==='wind')return fieldMode||'windspd';
+	if(mode==='wind'){if(fieldMode)return fieldMode;return document.getElementById('tgWindColor').checked?'windspd':null;}
 	return null;
 }
 function fieldDataURL(g,arr,ti,ramp){
@@ -492,11 +501,12 @@ function drawField(){
 	if(fieldOverlay){fieldOverlay.setBounds(bounds);fieldOverlay.setUrl(url);fieldOverlay.setOpacity(op);}
 	else{fieldOverlay=L.imageOverlay(url,bounds,{opacity:op,interactive:false});fieldOverlay.addTo(map);if(fieldOverlay.setZIndex)fieldOverlay.setZIndex(350);}
 }
-function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.className='legend';
+function setLegend(l0,l1,cols){var lg=document.getElementById('legend');lg.className='legend';lg.style.display='';
 	lg.innerHTML=l0+' <span class="sc">'+cols.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</span> '+l1;}
 function updateLegend(){
 	if(mode==='radar')return setLegend('light','heavy',RADAR_COLS);
 	var ef=effectiveField();
+	if(!ef){document.getElementById('legend').style.display='none';return;}
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
 	if(ef==='wave')return setLegend('calm','12+ ft',WAVE_COLS);
@@ -709,13 +719,16 @@ document.getElementById('tabWave').addEventListener('click',function(){setMode('
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
 document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);});
 document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
+document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
 	if(cb.checked){fieldMode=which;for(var k in ids){if(k!==which)document.getElementById(ids[k]).checked=false;}}
 	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();}
 document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
-document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs(LOCAL,Math.min(NOWI,Math.max(0,TIMES.length-1)),1);}else map.removeLayer(arrowsLayer);});
+document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
+/* redraw the screen-lattice barbs after pan/zoom so density stays constant */
+map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
 
 loadLocal();
 })();
