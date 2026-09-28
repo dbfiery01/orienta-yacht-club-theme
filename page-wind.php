@@ -91,6 +91,8 @@ a{color:var(--harbor)}
 .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
+.map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
 /* pins & callouts */
 .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:3px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .pin-co .co-t .co-ll{font-weight:600;color:var(--faint);font-size:.66rem}
@@ -141,6 +143,8 @@ a{color:var(--harbor)}
 				<div class="st-item"><span class="v" id="erGust">&mdash;</span><span class="k">Gust</span></div>
 				<div class="st-item"><span class="v" id="erDir">&mdash;</span><span class="k">From</span></div>
 				<div class="st-item"><span class="v" id="erPres">&mdash;</span><span class="k">Pressure</span></div>
+				<div class="st-item"><span class="v" id="erTemp">&mdash;</span><span class="k">Temp</span></div>
+				<div class="st-item"><span class="v" id="erPrecip">&mdash;</span><span class="k">Precip</span></div>
 			</div>
 		</div>
 
@@ -152,7 +156,7 @@ a{color:var(--harbor)}
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind arrows</label>
-			<span class="hint">Precipitation radar &middot; last 2&nbsp;h + short nowcast</span>
+			<span class="hint">NWS NEXRAD base reflectivity &middot; last ~50&nbsp;min (US coverage)</span>
 		</div>
 
 		<div class="legend" id="legend">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
@@ -168,7 +172,7 @@ a{color:var(--harbor)}
 			<div class="hovertip" id="hoverTip"></div>
 			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
 		</div>
-		<div class="foot" id="foot">Wind &amp; pressure from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar from <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a>.</div>
+		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar: NWS NEXRAD via <a href="https://mesonet.agron.iastate.edu" target="_blank" rel="noopener">Iowa Environmental Mesonet</a>.</div>
 	</div>
 
 	<!-- GRIB DOWNLOAD -->
@@ -203,11 +207,14 @@ function makeGrid(o){
 	g.LAT=[];g.LON=[];
 	for(i=0;i<g.NY;i++)for(j=0;j<g.NX;j++){g.LAT.push(g.lats[i]);g.LON.push(g.lons[j]);}
 	g.HDR={parameterCategory:2,nx:g.NX,ny:g.NY,lo1:g.LO1,lo2:g.LO2,la1:g.LA1,la2:g.LA2,dx:g.DX,dy:g.DY};
-	g.SP=[];g.DR=[];g.PR=[];g.GU=[];g.FRAMES=[];
+	g.SP=[];g.DR=[];g.PR=[];g.GU=[];g.TP=[];g.PP=[];g.FRAMES=[];
 	return g;
 }
 var LOCAL=makeGrid({LA1:41.3,LA2:40.5,LO1:-74.1,LO2:-72.3,DX:0.15,DY:0.15,gust:true});
-var BASIN=makeGrid({LA1:62,LA2:20,LO1:-82,LO2:8,DX:2.0,DY:2.0,gust:false});
+/* Whole Atlantic basin: Greenland/Iceland south to Brazil & southern Africa,
+   Gulf/Caribbean west to the West-African coast. 3 deg keeps this large box
+   light enough to fetch client-side while still resolving synoptic patterns. */
+var BASIN=makeGrid({LA1:63,LA2:-27,LO1:-102,LO2:18,DX:3.0,DY:3.0,gust:false});
 
 var TIMES=[],NOWI=0;               /* master 3-hourly time axis (shared) */
 function frame(g,ti){
@@ -237,7 +244,8 @@ function sampleGrid(g,lat,lon,ti){
 	var sp=Math.sqrt(uu*uu+vv*vv);
 	var dir=(Math.atan2(-uu,-vv)*180/Math.PI+360)%360;
 	var mb=bil(g.PR);var gu=g.gust?bil(g.GU):null;
-	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT};
+	var tp=(g.TP&&g.TP.length)?bil(g.TP):null;var pp=(g.PP&&g.PP.length)?bil(g.PP):null;
+	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp};
 }
 function sampleBest(lat,lon,ti){
 	if(lat<=LOCAL.LA1&&lat>=LOCAL.LA2&&lon>=LOCAL.LO1&&lon<=LOCAL.LO2){var s=sampleGrid(LOCAL,lat,lon,ti);if(s)return s;}
@@ -259,11 +267,26 @@ var slider=document.getElementById('slider'),tlabel=document.getElementById('tla
 /* ---------- Execution Rock strip + marker ---------- */
 var erMarker=L.circleMarker([ER.lat,ER.lon],{radius:6,color:'#b08a3e',weight:2,fillColor:'#f7d774',fillOpacity:1}).addTo(map);
 erMarker.bindTooltip('Execution Rock',{direction:'top',offset:[0,-6]});
+
+/* Atlantic passage landmarks — visible once you zoom out to the basin. */
+var PLACES=[
+	{n:'Bermuda',lat:32.30,lon:-64.78},
+	{n:'Azores',lat:37.74,lon:-25.68},
+	{n:'Canary Is.',lat:28.30,lon:-15.80},
+	{n:'Cape Verde',lat:16.00,lon:-24.00}
+];
+var placeLayer=L.layerGroup();
+PLACES.forEach(function(p){
+	L.marker([p.lat,p.lon],{icon:L.divIcon({className:'map-label',html:'<span class="ml-dot"></span>'+p.n,iconSize:[0,0],iconAnchor:[0,0]}),interactive:false,keyboard:false}).addTo(placeLayer);
+});
+placeLayer.addTo(map);
 function setER(s){if(!s)return;
 	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
 	document.getElementById('erGust').textContent=s.gust!=null?Math.round(s.gust)+' kt':'—';
 	document.getElementById('erDir').textContent=card(s.dir)+' '+Math.round(s.dir)+'°';
-	document.getElementById('erPres').textContent=s.mb!=null?Math.round(s.mb)+' mb':'—';}
+	document.getElementById('erPres').textContent=s.mb!=null?Math.round(s.mb)+' mb':'—';
+	document.getElementById('erTemp').textContent=s.tempF!=null?Math.round(s.tempF)+'°F':'—';
+	document.getElementById('erPrecip').textContent=s.precip!=null?s.precip.toFixed(2)+' in':'—';}
 function updateER(ti){setER(sampleBest(ER.lat,ER.lon,ti));}
 function erAtEpoch(epoch){
 	if(!LOCAL.loaded||TIMES.length<2)return null;
@@ -272,7 +295,8 @@ function erAtEpoch(epoch){
 	var i0=Math.floor(f),i1=Math.min(i0+1,TIMES.length-1),fr=f-i0;
 	var a=sampleGrid(LOCAL,ER.lat,ER.lon,i0),b=sampleGrid(LOCAL,ER.lat,ER.lon,i1);
 	if(!a||!b)return a||b;
-	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:(a.mb+(b.mb-a.mb)*fr),gust:(a.gust!=null&&b.gust!=null)?a.gust+(b.gust-a.gust)*fr:a.gust};
+	function li(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;}
+	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip)};
 }
 
 /* ---------- pinned passage points ---------- */
@@ -284,7 +308,9 @@ function pinContent(lat,lon,ti){
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
 		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
-	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+'<div class="co-x">click pin to remove</div></div>';
+	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
+		+(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in precip</span></span>':'')+'</div>';
+	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">click pin to remove</div></div>';
 }
 function addPin(lat,lon){
 	var m=L.circleMarker([lat,lon],{radius:6,color:'#0b2a4a',weight:2,fillColor:'#1583cf',fillOpacity:1}).addTo(map);
@@ -356,7 +382,7 @@ function maybeSwitchGrid(){
 	var want=chooseGrid();
 	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
 	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();
-		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'North-Atlantic wind field ':'Western Long Island Sound ')+'&middot; Open-Meteo (GFS). Radar from RainViewer.';}
+		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Western Long Island Sound ')+'&middot; Open-Meteo (GFS). Radar: NWS NEXRAD.';}
 }
 map.on('zoomend',maybeSwitchGrid);
 
@@ -370,22 +396,22 @@ map.on('mousemove',function(e){
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
 	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(2)+', '+lon.toFixed(2)+'</span>'
-		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'');
+		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'');
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
 
 /* ---------- Open-Meteo loaders ---------- */
 function omURL(lat,lon,vars){return 'https://api.open-meteo.com/v1/forecast?latitude='+lat.join(',')+'&longitude='+lon.join(',')
-	+'&hourly='+vars+'&wind_speed_unit=ms&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
+	+'&hourly='+vars+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
 
 function loadLocal(){
 	LOCAL.loading=true;
-	fetch(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl'))
+	fetch(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'))
 	.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 	.then(function(arr){
 		if(!Array.isArray(arr))throw new Error('grid');
 		TIMES=arr[0].hourly.time;
-		for(var k=0;k<arr.length;k++){LOCAL.SP.push(arr[k].hourly.wind_speed_10m);LOCAL.DR.push(arr[k].hourly.wind_direction_10m);LOCAL.GU.push(arr[k].hourly.wind_gusts_10m);LOCAL.PR.push(arr[k].hourly.pressure_msl);}
+		for(var k=0;k<arr.length;k++){LOCAL.SP.push(arr[k].hourly.wind_speed_10m);LOCAL.DR.push(arr[k].hourly.wind_direction_10m);LOCAL.GU.push(arr[k].hourly.wind_gusts_10m);LOCAL.PR.push(arr[k].hourly.pressure_msl);LOCAL.TP.push(arr[k].hourly.temperature_2m);LOCAL.PP.push(arr[k].hourly.precipitation);}
 		var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
 		buildFrames(LOCAL);LOCAL.loaded=true;LOCAL.loading=false;
 		activeGrid=LOCAL;slider.max=TIMES.length-1;
@@ -400,15 +426,15 @@ function loadBasin(){
 	if(BASIN.loaded||BASIN.loading)return;BASIN.loading=true;
 	var N=BASIN.LAT.length,CH=150,chunks=[];
 	for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
-	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);
+	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);BASIN.TP=new Array(N);
 	var ci=0,CONC=2;
 	function fetchChunk(idx,tries){
 		var a=chunks[idx][0],b=chunks[idx][1];
 		var la=BASIN.LAT.slice(a,b),lo=BASIN.LON.slice(a,b);
-		return fetch(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl'))
+		return fetch(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'))
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];
-				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;}
+				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}
 			}).catch(function(){
 				if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
 			});
@@ -419,32 +445,36 @@ function loadBasin(){
 		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});
 	}
 	pump().then(function(){
-		for(var i=0;i<N;i++){if(!BASIN.SP[i]){BASIN.SP[i]=TIMES.map(function(){return 0;});BASIN.DR[i]=TIMES.map(function(){return 0;});BASIN.PR[i]=TIMES.map(function(){return 1013;});}}
+		for(var i=0;i<N;i++){if(!BASIN.SP[i]){BASIN.SP[i]=TIMES.map(function(){return 0;});BASIN.DR[i]=TIMES.map(function(){return 0;});BASIN.PR[i]=TIMES.map(function(){return 1013;});BASIN.TP[i]=TIMES.map(function(){return null;});}}
 		buildFrames(BASIN);BASIN.loaded=true;BASIN.loading=false;
 		maybeSwitchGrid();
 	});
 }
 
-/* ---------- RADAR (RainViewer) ---------- */
-var RV={host:'',frames:[],layer:null,idx:0,loaded:false};
-function rvURL(fr){return RV.host+fr.path+'/256/{z}/{x}/{y}/4/1_1.png';}
+/* ---------- RADAR (NWS NEXRAD via Iowa Environmental Mesonet) ----------
+   IEM serves the national NEXRAD base-reflectivity composite as map tiles at
+   full zoom (RainViewer capped radar at z7 — far too coarse for the harbor).
+   The "-mNNm" layers are the mosaic 5 minutes … 50 minutes ago, giving a
+   ~50-minute loop in 5-minute steps. US coverage only, which is exactly right
+   for a Sound club; the transatlantic view is the wind field, not radar. */
+var RV={frames:[],layer:null,idx:0,loaded:false};
+var IEM_OFFS=[50,45,40,35,30,25,20,15,10,5,0];
+function iemURL(off){return 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913'
+	+(off?'-m'+(off<10?'0'+off:off)+'m':'')+'/{z}/{x}/{y}.png';}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	fetch('https://api.rainviewer.com/public/weather-maps.json').then(function(r){return r.json();}).then(function(j){
-		RV.host=j.host;var past=(j.radar&&j.radar.past)||[],now=(j.radar&&j.radar.nowcast)||[];
-		RV.frames=past.concat(now);RV.idx=Math.max(0,past.length-1);RV.loaded=true;cb&&cb();
-	}).catch(function(){document.getElementById('st').textContent='Radar unavailable — try again shortly';});
+	RV.frames=IEM_OFFS.map(function(off){return {off:off};});
+	RV.idx=RV.frames.length-1;RV.loaded=true;cb&&cb();
 }
 function showRadar(i){
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
-	var fr=RV.frames[i];
-	if(RV.layer)RV.layer.setUrl(rvURL(fr));
-	else{RV.layer=L.tileLayer(rvURL(fr),{opacity:0.72,zIndex:400,maxZoom:19,tileSize:256});RV.layer.addTo(map);}
-	var d=new Date(fr.time*1000),dm=Math.round((fr.time*1000-Date.now())/60000);
-	var rel=dm===0?'now':(dm>0?'+'+dm+' min':dm+' min');
-	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+rel+'</small>';
-	setER(erAtEpoch(fr.time*1000));
+	var fr=RV.frames[i],url=iemURL(fr.off),t=Date.now()-fr.off*60000;
+	if(RV.layer)RV.layer.setUrl(url);
+	else{RV.layer=L.tileLayer(url,{opacity:0.75,zIndex:400,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
+	var d=new Date(t);
+	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+(fr.off===0?'now':'-'+fr.off+' min')+'</small>';
+	setER(erAtEpoch(t));
 }
 
 /* ---------- unified slider / play ---------- */
