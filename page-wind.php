@@ -94,6 +94,10 @@ a{color:var(--harbor)}
 .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
+.storm-mk{background:none;border:none}
+.storm-ic{position:relative;transform:translate(-50%,-50%)}
+.storm-sym{display:block;font-size:22px;line-height:0;filter:drop-shadow(0 0 2px #06121f) drop-shadow(0 0 2px #06121f)}
+.storm-lbl{position:absolute;left:14px;top:-9px;font-weight:800;font-size:10px;color:#fff;padding:2px 6px;border-radius:6px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.5);letter-spacing:.02em}
 .oyc-mk{background:none;border:none}
 .oyc-ic{position:relative;transform:translate(-50%,-50%)}
 .oyc-dot{display:block;width:13px;height:13px;border-radius:50%;background:#0b2a4a;border:2px solid #f7d774;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
@@ -343,6 +347,24 @@ placeLayer.addTo(map);
    Post Rd, between Derecktor and McMichael). Visible in every view. */
 L.marker([40.9486,-73.7296],{icon:L.divIcon({className:'oyc-mk',html:'<div class="oyc-ic"><i class="oyc-dot"></i><span class="oyc-lbl">OYC</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000})
 	.addTo(map).bindTooltip('Orienta Yacht Club · Mamaroneck Harbor',{direction:'top',offset:[6,-6]});
+
+/* Active Atlantic named storms from NOAA/NHC (server proxy oyc_storms) — a
+   cyclone marker per storm, coloured by class; visible once you zoom out to
+   the basin. Refreshed on load. */
+var stormLayer=L.layerGroup().addTo(map);
+function stormColor(cls){return cls==='HU'?'#c0392b':(cls==='TS'?'#e67e22':'#4a8fb5');}
+function loadStorms(){
+	fetchT(AJAX+'?action=oyc_storms',9000).then(function(r){return r.json();}).then(function(list){
+		stormLayer.clearLayers();
+		(list||[]).forEach(function(s){
+			var col=stormColor(s.cls),lbl=s.name+' · '+s.cls+(s.kt!=null?' '+s.kt+' kt':'');
+			var html='<div class="storm-ic"><span class="storm-sym">&#127744;</span><span class="storm-lbl" style="background:'+col+'">'+lbl+'</span></div>';
+			var m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'storm-mk',html:html,iconSize:[0,0]}),keyboard:false,zIndexOffset:1100}).addTo(stormLayer);
+			m.bindTooltip(s.name+' ('+s.cls+') · '+(s.kt!=null?s.kt+' kt':'')+(s.mb!=null?' · '+s.mb+' mb':'')+(s.dir?' · moving '+s.dir+' '+s.spd+' kt':''),{direction:'top',offset:[6,-6]});
+		});
+	}).catch(function(){});
+}
+loadStorms();
 function setER(s){if(!s)return;
 	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
 	document.getElementById('erGust').textContent=s.gust!=null?Math.round(s.gust)+' kt':'—';

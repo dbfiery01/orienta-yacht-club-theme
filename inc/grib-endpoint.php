@@ -67,3 +67,38 @@ function oyc_grib_send( $bin, $run ) {
 	echo $bin;
 	exit;
 }
+
+/* ── Active Atlantic named storms, from NOAA/NHC (no CORS → server proxy) ──
+   Returns the current tropical cyclones in the Atlantic basin (id starts AL)
+   with position, class, winds, pressure and movement, for the Wind page's
+   basin view. Cached 30 min. Endpoint: admin-ajax.php?action=oyc_storms ── */
+add_action( 'wp_ajax_oyc_storms',        'oyc_storms_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_storms', 'oyc_storms_proxy' );
+function oyc_storms_proxy() {
+	$cached = get_transient( 'oyc_storms_atl' );
+	if ( false !== $cached ) { wp_send_json( $cached ); }
+
+	$out  = array();
+	$resp = wp_remote_get( 'https://www.nhc.noaa.gov/CurrentStorms.json', array( 'timeout' => 8, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	if ( ! is_wp_error( $resp ) && 200 === (int) wp_remote_retrieve_response_code( $resp ) ) {
+		$j = json_decode( (string) wp_remote_retrieve_body( $resp ), true );
+		$storms = ( is_array( $j ) && isset( $j['activeStorms'] ) && is_array( $j['activeStorms'] ) ) ? $j['activeStorms'] : array();
+		foreach ( $storms as $s ) {
+			$id = isset( $s['id'] ) ? (string) $s['id'] : '';
+			if ( 0 !== strpos( $id, 'AL' ) ) { continue; }   // Atlantic basin only
+			if ( ! isset( $s['latitudeNumeric'], $s['longitudeNumeric'] ) ) { continue; }
+			$out[] = array(
+				'name' => isset( $s['name'] ) ? $s['name'] : '',
+				'cls'  => isset( $s['classification'] ) ? $s['classification'] : '',
+				'kt'   => isset( $s['intensity'] ) ? (int) $s['intensity'] : null,
+				'mb'   => isset( $s['pressure'] ) ? (int) $s['pressure'] : null,
+				'lat'  => (float) $s['latitudeNumeric'],
+				'lon'  => (float) $s['longitudeNumeric'],
+				'dir'  => isset( $s['movementDir'] ) ? $s['movementDir'] : null,
+				'spd'  => isset( $s['movementSpeed'] ) ? $s['movementSpeed'] : null,
+			);
+		}
+	}
+	set_transient( 'oyc_storms_atl', $out, 30 * MINUTE_IN_SECONDS );
+	wp_send_json( $out );
+}
