@@ -92,6 +92,7 @@ a{color:var(--harbor)}
 .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
+.barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
 .buoy-mk{background:none;border:none}
 .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
@@ -300,6 +301,8 @@ function fmt(iso){var d=new Date(iso);return {big:(d.getHours()%12||12)+' '+(d.g
 
 /* ---------- map ---------- */
 var map=L.map('map',{worldCopyJump:true}).setView([40.92,-73.4],9);
+/* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
+   tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
 map.fitBounds([[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]]);
 
@@ -404,9 +407,9 @@ function barbSVG(kt,col){
 }
 function drawBarbs(g,ti,stride){arrowsLayer.clearLayers();
 	for(var r=0;r<g.NY;r+=stride)for(var c=0;c<g.NX;c+=stride){var k=r*g.NX+c;
-		var kt=(g.SP[k][ti]||0)*KT,dir=g.DR[k][ti]||0,col=spdColor(kt);
+		var kt=(g.SP[k][ti]||0)*KT,dir=g.DR[k][ti]||0,col='#0b2a4a';
 		var html='<svg width="46" height="42" viewBox="-23 -34 46 42" style="overflow:visible"><g transform="rotate('+dir.toFixed(0)+')">'+barbSVG(kt,col)+'</g></svg>';
-		L.marker([g.lats[r],g.lons[c]],{icon:L.divIcon({className:'',html:html,iconSize:[46,42],iconAnchor:[23,34]}),interactive:false}).addTo(arrowsLayer);
+		L.marker([g.lats[r],g.lons[c]],{icon:L.divIcon({className:'barb-mk',html:html,iconSize:[46,42],iconAnchor:[23,34]}),interactive:false}).addTo(arrowsLayer);
 	}}
 function drawIso(g,ti,step){isoLayer.clearLayers();
 	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
@@ -459,7 +462,7 @@ function drawField(){
 	if(ef==='temp'){arr=g.TP;ramp=tempColor;op=0.55;}
 	else if(ef==='precip'){arr=(g===LOCAL?LOCAL.PP:null);ramp=precipColor;op=0.6;}
 	else if(ef==='wave'){arr=g.WV;ramp=waveColor;op=0.62;}
-	else{arr=g.SP;ramp=windFillColor;op=0.72;}/* windspd — the Windy-style fill */
+	else{arr=g.SP;ramp=windFillColor;op=0.42;}/* windspd — translucent wind-speed tint under dark barbs/streaks */
 	var fti=(ef==='wave'&&g.wvMap&&g.wvMap[curTi]!=null)?g.wvMap[curTi]:curTi;
 	if(!g.loaded||!arr||!arr.length){clearField();return;}
 	var url=fieldDataURL(g,arr,fti,ramp),bounds=[[g.LA2,g.LO1],[g.LA1,g.LO2]];
@@ -487,7 +490,7 @@ function setParticlesVisible(on){var cvs=map.getContainer().getElementsByTagName
 function buildVL(g,ti){
 	if(vl){vl.setData(g.FRAMES[ti]);return;}
 	vl=L.velocityLayer({displayValues:false,data:g.FRAMES[ti],maxVelocity:26,velocityScale:0.0045,
-		lineWidth:1.8,particleAge:100,particleMultiplier:1/320,colorScale:['#eaf3ff','#ffffff'],frameRate:20});
+		lineWidth:1.7,particleAge:100,particleMultiplier:1/320,colorScale:['#16324a','#0b2a4a'],frameRate:20});
 	vl.addTo(map);
 	setParticlesVisible(mode==='wind'&&document.getElementById('tgParticles').checked);
 }
