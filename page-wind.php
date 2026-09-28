@@ -27,6 +27,7 @@
 
 if ( ! headers_sent() ) { nocache_headers(); }
 $oyc_ajax = esc_url( admin_url( 'admin-ajax.php' ) );
+$oyc_embed = isset( $_GET['embed'] ); // embedded as a card on /weather/ — hide our own header/footer
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -128,9 +129,14 @@ a{color:var(--harbor)}
 .dl-btn:hover{background:#0f6fb0}
 .dl .apps{color:var(--faint);font-size:.78rem;margin-top:10px}
 .disclaimer{text-align:center;color:var(--mute);font-size:.82rem;font-style:italic}
+/* embedded as a card on /weather/ — drop our own chrome so it sits flush in the card */
+body.embed{padding:0;background:transparent}
+body.embed .topbar,body.embed .disclaimer{display:none}
+body.embed .wrap{gap:12px}
+body.embed #map{height:min(70vh,620px)}
 </style>
 </head>
-<body>
+<body class="<?php echo $oyc_embed ? 'embed' : ''; ?>">
 <div class="wrap">
 	<div class="topbar">
 		<div class="tb-left">
