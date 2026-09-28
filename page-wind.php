@@ -403,10 +403,15 @@ map.on('mouseout',function(){hoverTip.style.display='none';});
 /* ---------- Open-Meteo loaders ---------- */
 function omURL(lat,lon,vars){return 'https://api.open-meteo.com/v1/forecast?latitude='+lat.join(',')+'&longitude='+lon.join(',')
 	+'&hourly='+vars+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';}
+/* fetch with an abort timeout so a hung request becomes a retriable error
+   (plain fetch has no timeout — a stalled Open-Meteo call would hang forever). */
+function fetchT(url,ms){var ctl=new AbortController();var id=setTimeout(function(){ctl.abort();},ms||12000);
+	return fetch(url,{signal:ctl.signal}).then(function(r){clearTimeout(id);return r;},function(e){clearTimeout(id);throw e;});}
 
-function loadLocal(){
-	LOCAL.loading=true;
-	fetch(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'))
+function loadLocal(tries){
+	LOCAL.loading=true;tries=tries||0;
+	LOCAL.SP=[];LOCAL.DR=[];LOCAL.GU=[];LOCAL.PR=[];LOCAL.TP=[];LOCAL.PP=[];
+	fetchT(omURL(LOCAL.LAT,LOCAL.LON,'wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'),15000)
 	.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 	.then(function(arr){
 		if(!Array.isArray(arr))throw new Error('grid');
@@ -418,7 +423,10 @@ function loadLocal(){
 		buildVL(LOCAL,NOWI);showWind(NOWI);
 		document.getElementById('st').textContent='7-day forecast · '+TIMES.length+' frames · '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
 		loadBasin();
-	}).catch(function(e){document.getElementById('st').textContent='Wind field unavailable ('+e+')';});
+	}).catch(function(e){
+		if(tries<2){setTimeout(function(){loadLocal(tries+1);},1500);return;}
+		document.getElementById('st').textContent='Wind field unavailable ('+e+')';
+	});
 }
 
 /* chunked basin loader with limited concurrency + retry/backoff */
@@ -431,7 +439,7 @@ function loadBasin(){
 	function fetchChunk(idx,tries){
 		var a=chunks[idx][0],b=chunks[idx][1];
 		var la=BASIN.LAT.slice(a,b),lo=BASIN.LON.slice(a,b);
-		return fetch(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'))
+		return fetchT(omURL(la,lo,'wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'),12000)
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
 			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];
 				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}
