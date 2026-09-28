@@ -183,7 +183,7 @@ a{color:var(--harbor)}
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
-			<span class="hint">NOAA HRRR precipitation &middot; recent past &rarr; +8&nbsp;h &middot; 15-min steps</span>
+			<span class="hint">NOAA HRRR precipitation &middot; now &rarr; +8&nbsp;h forecast &middot; 15-min steps</span>
 		</div>
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
@@ -707,7 +707,7 @@ function precipRadarColor(mm){if(mm==null||mm<0.05)return null;return rampColor(
 function loadFC(cb){
 	if(FC.loaded){cb&&cb();return;}if(FC.loading)return;FC.loading=true;
 	var url='https://api.open-meteo.com/v1/forecast?latitude='+LOCAL.LAT.join(',')+'&longitude='+LOCAL.LON.join(',')
-		+'&minutely_15=precipitation&past_minutes=60&forecast_minutely_15=40&timezone=America%2FNew_York';
+		+'&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
 	fetchT(url,15000).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(arr){
 		var list=Array.isArray(arr)?arr:[arr];
 		FC.PP15=list.map(function(p){return (p.minutely_15&&p.minutely_15.precipitation)||[];});
@@ -720,8 +720,8 @@ function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd
 function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+h+'h'+(m?' '+m+'m':'');}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	var offs=[-45,-30,-15,0];for(var m=15;m<=480;m+=15)offs.push(m);
-	RV.frames=offs.map(function(o){return {off:o};});RV.idx=3;RV.loaded=true;
+	var offs=[0];for(var m=15;m<=480;m+=15)offs.push(m);
+	RV.frames=offs.map(function(o){return {off:o};});RV.idx=0;RV.loaded=true;
 	loadFC();cb&&cb();
 }
 function showRadar(i){
