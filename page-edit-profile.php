@@ -313,7 +313,14 @@ get_header();
 		<!-- Account info (read-only) -->
 		<div class="profile-meta">
 			<p><?php esc_html_e( 'Username', 'orienta-yacht-club' ); ?>: <strong><?php echo esc_html( $user->user_login ); ?></strong></p>
-			<p><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>: <strong><?php echo esc_html( date( 'F Y', strtotime( $user->user_registered ) ) ); ?></strong></p>
+			<?php
+			// Prefer the officer-set membership date (oyc_member_since); user_registered
+			// is only when the WP login was created (years off for migrated members).
+			$oyc_since    = get_user_meta( $user->ID, 'oyc_member_since', true );
+			$oyc_since_ts = $oyc_since ? strtotime( $oyc_since ) : false;
+			$oyc_since_txt = $oyc_since_ts ? date( 'F Y', $oyc_since_ts ) : ( $oyc_since ? $oyc_since : date( 'F Y', strtotime( $user->user_registered ) ) );
+			?>
+			<p><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>: <strong><?php echo esc_html( $oyc_since_txt ); ?></strong></p>
 		</div>
 
 	</div>
