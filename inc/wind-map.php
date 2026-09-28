@@ -245,11 +245,16 @@ function precipColor(v){if(v==null||v<0.005)return null;return rampColor(v,PRECI
 var WAVE_COLS=['#bfe9ef','#7fd0c8','#5bb98f','#e6d24a','#e08b3a','#cf5638','#8f2d6b'];
 var WAVE_STOPS=[[0.3,[191,233,239]],[1,[127,208,200]],[2,[91,185,143]],[4,[230,210,74]],[7,[224,139,58]],[11,[143,45,107]]];
 function waveColor(v){if(v==null||v<0.15)return null;return rampColor(v,WAVE_STOPS);}/* v in feet */
-/* Gulf Stream ocean-current speed (kt) — saturated so the band reads boldly over
-   the light ocean base; the fast core (~2.5-5 kt) runs yellow→red */
+/* Gulf Stream ocean-current speed (kt). The whole basin has a diffuse ~0.3-0.7 kt
+   surface drift; only the Gulf Stream runs fast (~1.5-4 kt). So the alpha ramps
+   with speed — slow drift fades to nothing, the fast stream glows boldly — which
+   isolates the stream instead of painting the whole ocean. */
 var GS_COLS=['#3a97dc','#2f6fc4','#22b06a','#ecc233','#f0861c','#e03526','#a01f6b'];
-var GS_STOPS=[[0.3,[58,151,220]],[0.8,[47,111,196]],[1.5,[34,176,106]],[2.5,[236,194,51]],[3.5,[240,134,28]],[4.5,[224,53,38]],[6,[160,31,107]]];
-function gsColor(v){if(v==null||v<0.3)return null;return rampColor(v,GS_STOPS);}/* v in knots */
+var GS_STOPS=[[0.6,[58,151,220]],[1.2,[47,111,196]],[1.8,[34,176,106]],[2.5,[236,194,51]],[3.2,[240,134,28]],[4,[224,53,38]],[5,[160,31,107]]];
+function gsColor(v){if(v==null||v<0.7)return null;
+	var c=rampColor(v,GS_STOPS);                       /* [r,g,b,255] */
+	var a=v>=1.8?1:(v-0.7)/1.1;                          /* 0 at 0.7 kt → full at 1.8 kt */
+	return [c[0],c[1],c[2],Math.round(255*a)];}/* v in knots */
 /* Windy-style continuous wind-speed fill (spectral ramp, kt) — painted under
    the white particle streaks so the whole speed field & lows read at a glance. */
 var WINDFILL_COLS=['#3a6bb0','#54aeae','#79c58a','#c3de77','#f2e15a','#f4b04a','#ef7d43','#df4e3c','#b23150','#7d2b6b'];
@@ -717,7 +722,7 @@ function drawGulf(ti){
 	gsArrows.clearLayers();
 	for(var r=0;r<GS.NY;r++)for(var c=0;c<GS.NX;c++){
 		var idx=r*GS.NX+c,sp=(GS.SPD[idx]||[])[gt],dr=(GS.DIR[idx]||[])[gt];
-		if(sp==null||sp<0.8||dr==null)continue;
+		if(sp==null||sp<1.2||dr==null)continue; /* arrows only on the fast stream core, not the diffuse background drift */
 		var col=gsColor(sp)||[47,111,196];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
 		var delay=(-((idx%17)*0.1)).toFixed(1);
 		var html='<div class="gs-arrow" style="transform:rotate('+Math.round(dr)+'deg)"><div class="gs-flow" style="animation-delay:'+delay+'s">'
