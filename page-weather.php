@@ -396,8 +396,11 @@ if ( ! $oyc_weather_menu ) {
 	<!-- WIND & RADAR MAP (embeds the /wind/ page as a card) -->
 	<div class="card windmap-card">
 		<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind &amp; Radar Map</a> <span class="sta">Interactive</span></h2>
-		<div class="windmap-embed"><iframe src="<?php echo esc_url( home_url( '/wind/?card=1' ) ); ?>" title="Wind &amp; Radar interactive map" loading="lazy"></iframe></div>
+		<div class="windmap-embed"><iframe id="oycWindMap" class="no-lazyload skip-lazy lazyload-disabled" data-oyc-map="<?php echo esc_url( home_url( '/wind/?card=1' ) ); ?>" title="Wind &amp; Radar interactive map"></iframe></div>
 	</div>
+	<script>/* set the src ourselves (no initial src) so the Smush/lazy-load plugin can't
+		swap it for a 1x1 placeholder and leave the card blank */
+		(function(){var f=document.getElementById('oycWindMap');if(f&&!f.src){f.src=f.getAttribute('data-oyc-map');}})();</script>
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
