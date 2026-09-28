@@ -117,7 +117,10 @@ function oyc_wind_map_html( $embed = false ) {
    the view tabs then lead the header row */
 #oycwm.embed .hd{padding:2px 18px 8px}
 #oycwm.embed .hd h2{display:none}
-#oycwm.embed #map{height:560px}
+#oycwm.embed #map{height:460px}
+/* trim the card on the board: the GRIB-download block lives on the full /wind/
+   page, so drop it here to lose the trailing white space */
+#oycwm.embed .card.dl{display:none}
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
 </style>
