@@ -367,7 +367,7 @@ function erAtEpoch(epoch){
 var pins=[];
 function pinContent(lat,lon,ti){
 	var s=sampleBest(lat,lon,ti);
-	var ll=lat.toFixed(2)+', '+lon.toFixed(2);
+	var ll=lat.toFixed(4)+', '+lon.toFixed(4);
 	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -564,7 +564,7 @@ map.on('mousemove',function(e){
 	if(!s){hoverTip.style.display='none';return;}
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
-	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(2)+', '+lon.toFixed(2)+'</span>'
+	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+'</span>'
 		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'');
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
