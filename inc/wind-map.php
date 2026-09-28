@@ -402,44 +402,46 @@ function setER(s){if(!s)return;
    BLEND (best_match) data the Marine Forecast table uses, so the map's ER
    readout agrees with the board instead of drifting from the coarse
    0.2°/3-hourly wind grid it visualises. */
+/* ---- point-forecast series (shared by the ER readout and passage pins) ----
+   Build {t,kt,gust,dir,mb,tempF,pop,waveFt} from a {wx,marine} response. Handles
+   both the best_match-suffixed keys from the multi-model board feed and the plain
+   keys from a single-point fetch. */
+function fcKey(h,base){var k=base+'_best_match';return h[k]!==undefined?k:base;}
+function fcSeriesFrom(res){
+	if(!res||!res.ok||!res.wx||!res.wx.hourly)return null;
+	var wx=res.wx,h=wx.hourly,off=(wx.utc_offset_seconds||0)*1000;
+	var t=h.time.map(function(s){return Date.parse(s+':00Z')-off;});
+	var wave={};
+	if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];});}
+	return {t:t, kt:h[fcKey(h,'wind_speed_10m')], gust:h[fcKey(h,'wind_gusts_10m')], dir:h[fcKey(h,'wind_direction_10m')],
+		mb:h[fcKey(h,'pressure_msl')], tempF:h[fcKey(h,'temperature_2m')], pop:h[fcKey(h,'precipitation_probability')],
+		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;})};
+}
+function fcAt(S,i){return {kt:S.kt[i],gust:S.gust[i],dir:S.dir[i],mb:S.mb[i],tempF:S.tempF[i],pop:S.pop?S.pop[i]:null,waveFt:S.waveFt[i]};}
+function fcInterp(S,ep){if(!S||!S.t.length)return null;var T=S.t,n=T.length;
+	if(ep<=T[0])return fcAt(S,0);
+	if(ep>=T[n-1])return fcAt(S,n-1);
+	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=fcAt(S,i-1),b=fcAt(S,i);
+		var li=function(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;};
+		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt)};}}
+	return fcAt(S,n-1);
+}
+function fcNearest(S,ep){if(!S||!S.t.length)return null;var T=S.t,best=0,bd=1e15;for(var i=0;i<T.length;i++){var dd=Math.abs(T[i]-ep);if(dd<bd){bd=dd;best=i;}}return fcAt(S,best);}
+/* sample a series at a slider frame: snap to the nearest actual hour at the live
+   "now" frame (matches the board exactly), interpolate otherwise */
+function fcForFrame(S,epoch,isNow){return isNow?fcNearest(S,Date.now()):fcInterp(S,epoch);}
+
 var ERFC=null;
-function erKey(h,base){var k=base+'_best_match';return h[k]!==undefined?k:base;}
 function loadERFC(){
 	fetchT(AJAX+'?action=oyc_marine_fc',12000).then(function(r){return r.json();}).then(function(res){
-		if(!res||!res.ok||!res.wx||!res.wx.hourly)return;
-		var wx=res.wx,h=wx.hourly,off=(wx.utc_offset_seconds||0)*1000;
-		var t=h.time.map(function(s){return Date.parse(s+':00Z')-off;});
-		var wave={};
-		if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];});}
-		ERFC={t:t,
-			kt:h[erKey(h,'wind_speed_10m')], gust:h[erKey(h,'wind_gusts_10m')], dir:h[erKey(h,'wind_direction_10m')],
-			mb:h[erKey(h,'pressure_msl')], tempF:h[erKey(h,'temperature_2m')], pop:h[erKey(h,'precipitation_probability')],
-			waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;})};
+		var S=fcSeriesFrom(res);if(!S)return;ERFC=S;
 		/* refresh the readout for the frame the slider is on right now */
 		if(mode==='radar'){var fr=RV.frames[RV.idx];setER(erForFrame(curEpoch(),!!(fr&&fr.off===0)));}
 		else setER(erForFrame(new Date(TIMES[curTi]).getTime(), curTi===NOWI));
 	}).catch(function(){});
 }
-function erfcAt(i){return {kt:ERFC.kt[i],gust:ERFC.gust[i],dir:ERFC.dir[i],mb:ERFC.mb[i],tempF:ERFC.tempF[i],pop:ERFC.pop?ERFC.pop[i]:null,waveFt:ERFC.waveFt[i]};}
-function erFromFC(ep){
-	if(!ERFC||!ERFC.t.length)return null;
-	var T=ERFC.t,n=T.length;
-	if(ep<=T[0])return erfcAt(0);
-	if(ep>=T[n-1])return erfcAt(n-1);
-	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=erfcAt(i-1),b=erfcAt(i);
-		var li=function(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;};
-		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt)};}}
-	return erfcAt(n-1);
-}
-/* the point forecast at the nearest actual hour (no interpolation) — so the
-   "now" slider position shows the same hour the Marine Forecast board does */
-function erFCnearest(ep){if(!ERFC||!ERFC.t.length)return null;var T=ERFC.t,best=0,bd=1e15;
-	for(var i=0;i<T.length;i++){var dd=Math.abs(T[i]-ep);if(dd<bd){bd=dd;best=i;}}return erfcAt(best);}
-/* prefer the point forecast; fall back to the grid until it loads / if it fails */
-function erAt(epoch){return erFromFC(epoch)||erAtEpoch(epoch);}
-/* at the live "now" frame, snap to the current wall-clock hour (matches the
-   board exactly); other frames interpolate to the frame's time */
-function erForFrame(epoch,isNow){if(isNow){var s=erFCnearest(Date.now());if(s)return s;return erAtEpoch(Date.now());}return erAt(epoch);}
+/* ER readout prefers the exact-point forecast; falls back to the grid until it loads */
+function erForFrame(epoch,isNow){var s=ERFC?fcForFrame(ERFC,epoch,isNow):null;return s||erAtEpoch(isNow?Date.now():epoch);}
 function updateER(ti){setER(erForFrame(new Date(TIMES[ti]).getTime(), ti===NOWI));}
 function erAtEpoch(epoch){
 	if(!LOCAL.loaded||TIMES.length<2)return null;
@@ -462,10 +464,18 @@ function readPoint(lat,lon,ti){
 	return sampleBest(lat,lon,ti);
 }
 
-/* ---------- pinned passage points ---------- */
+/* ---------- pinned passage points ----------
+   Each pin fetches its OWN exact-point forecast (same method as the Marine
+   Forecast board), so its readout is accurate at that spot and a pin dropped on
+   Execution Rock exactly matches the ER headline. Until that loads we show the
+   grid field as a placeholder. */
 var pins=[];
-function pinContent(lat,lon,ti){
-	var s=readPoint(lat,lon,ti);
+function pinReading(lat,lon,ti,fc){
+	if(fc&&TIMES[ti]!=null){var s=fcForFrame(fc,new Date(TIMES[ti]).getTime(),ti===NOWI);if(s)return s;}
+	return readPoint(lat,lon,ti);
+}
+function pinContent(lat,lon,ti,fc){
+	var s=pinReading(lat,lon,ti,fc);
 	var ll=lat.toFixed(4)+', '+lon.toFixed(4);
 	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
@@ -480,18 +490,27 @@ function pinContent(lat,lon,ti){
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
 	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
+/* fetch a pin's exact-point forecast (cached server proxy) and re-render it */
+function loadPinFC(pin){
+	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
+		.then(function(r){return r.json();}).then(function(res){
+			var S=fcSeriesFrom(res);if(!S||pin._gone)return;pin.fc=S;
+			pin.popup.setContent(pinContent(pin.lat,pin.lon,curTi,pin.fc));
+		}).catch(function(){});
+}
 function addPin(lat,lon){
 	var m=L.circleMarker([lat,lon],{radius:6,color:'#0b2a4a',weight:2,fillColor:'#1583cf',fillOpacity:1}).addTo(map);
-	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'})
-		.setLatLng([lat,lon]).setContent(pinContent(lat,lon,curTi));
+	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
+	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null};
+	p.setContent(pinContent(lat,lon,curTi,null)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);m.openPopup();
-	var pin={marker:m,popup:p,lat:lat,lon:lon};
 	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
 	m.on('popupclose',function(){removePin(pin);}); /* the corner × removes the point too */
 	pins.push(pin);
+	loadPinFC(pin);
 }
 function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
-function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti));}
+function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti,pins[i].fc));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 
 /* ---------- live NDBC buoy markers (shown in the Wave view) ---------- */

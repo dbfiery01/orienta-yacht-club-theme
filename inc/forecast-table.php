@@ -138,6 +138,49 @@ function oyc_marine_fc_proxy() {
 	wp_send_json( $out );
 }
 
+/* ── Point forecast at an arbitrary lat/lon (for the map's passage pins) ──
+   Same exact-point / hourly / BLEND method as the ER board, so a pin reads
+   accurate forecast values at that spot (a pin on Execution Rock equals the
+   headline). Cached per rounded point so repeat pins are free. Single-point
+   BLEND uses the plain (unsuffixed) hourly keys.
+   Endpoint: admin-ajax.php?action=oyc_point_fc&lat=..&lon=.. ── */
+add_action( 'wp_ajax_oyc_point_fc',        'oyc_point_fc_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_point_fc', 'oyc_point_fc_proxy' );
+function oyc_point_fc_proxy() {
+	$lat = isset( $_GET['lat'] ) ? (float) $_GET['lat'] : 999;
+	$lon = isset( $_GET['lon'] ) ? (float) $_GET['lon'] : 999;
+	// Only within the map's data extent (Atlantic basin box) — bounds the fetch & cache.
+	if ( $lat > 63 || $lat < -27 || $lon > 18 || $lon < -102 ) { oyc_send_raw_json( '{"ok":false}' ); }
+	$rlat = round( $lat, 2 ); $rlon = round( $lon, 2 ); // ~1 km cache granularity
+	$key  = 'oyc_ptfc_' . md5( $rlat . '_' . $rlon );
+	$cached = get_transient( $key );
+	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
+
+	$args   = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
+	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $rlat . '&longitude=' . $rlon
+		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
+		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
+	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $rlat . '&longitude=' . $rlon
+		. '&hourly=wave_height&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+
+	$wx = null;
+	$r  = wp_remote_get( $wx_url, $args );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+	}
+	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) { oyc_send_raw_json( '{"ok":false}' ); } // don't cache a miss
+
+	$mar = null;
+	$rm  = wp_remote_get( $mar_url, $args );
+	if ( ! is_wp_error( $rm ) && 200 === (int) wp_remote_retrieve_response_code( $rm ) ) {
+		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
+		if ( ! is_array( $mar ) ) { $mar = null; }
+	}
+	$out = wp_json_encode( array( 'ok' => true, 'wx' => $wx, 'marine' => $mar ) );
+	set_transient( $key, $out, 15 * MINUTE_IN_SECONDS );
+	oyc_send_raw_json( $out );
+}
+
 /* ── Markup + scoped styles + widget script ──────────────────────────────── */
 function oyc_forecast_table_html() {
 	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
