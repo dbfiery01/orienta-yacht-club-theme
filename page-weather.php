@@ -396,7 +396,7 @@ if ( ! $oyc_weather_menu ) {
 	<!-- WIND & RADAR MAP (embeds the /wind/ page as a card) -->
 	<div class="card windmap-card">
 		<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind &amp; Radar Map</a> <span class="sta">Interactive</span></h2>
-		<div class="windmap-embed"><iframe src="<?php echo esc_url( home_url( '/wind/?embed=1' ) ); ?>" title="Wind &amp; Radar interactive map" loading="lazy"></iframe></div>
+		<div class="windmap-embed"><iframe src="<?php echo esc_url( home_url( '/wind/?card=1' ) ); ?>" title="Wind &amp; Radar interactive map" loading="lazy"></iframe></div>
 	</div>
 
 	<!-- DISCLAIMER -->

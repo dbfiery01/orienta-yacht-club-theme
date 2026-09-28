@@ -27,7 +27,7 @@
 
 if ( ! headers_sent() ) { nocache_headers(); }
 $oyc_ajax = esc_url( admin_url( 'admin-ajax.php' ) );
-$oyc_embed = isset( $_GET['embed'] ); // embedded as a card on /weather/ — hide our own header/footer
+$oyc_embed = isset( $_GET['card'] ); // embedded as a card on /weather/ — hide our own header/footer. NB: don't use ?embed= (a WordPress-reserved oEmbed query var).
 ?><!doctype html>
 <html lang="en">
 <head>
