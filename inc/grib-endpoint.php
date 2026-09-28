@@ -292,3 +292,42 @@ function oyc_gulfstream_proxy() {
 		. '&hourly=ocean_current_velocity,ocean_current_direction&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
 	oyc_om_cached( 'oyc_gs_' . $chunk, $url, 60 * MINUTE_IN_SECONDS );
 }
+
+/* Gulf Stream frontal analysis (NOAA OPC) — the authoritative north/south wall
+   positions from IR-satellite SST fronts, updated ~daily. Parsed to lat/lon
+   arrays for the map's Gulf Stream band. Cached 12h.
+   Endpoint: admin-ajax.php?action=oyc_gs_wall */
+add_action( 'wp_ajax_oyc_gs_wall',        'oyc_gs_wall_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_gs_wall', 'oyc_gs_wall_proxy' );
+function oyc_gs_wall_coords( $s ) {
+	$out = array();
+	if ( preg_match_all( '/(\d{1,2}\.\d)N(\d{1,3}\.\d)W/', (string) $s, $m, PREG_SET_ORDER ) ) {
+		foreach ( $m as $c ) { $out[] = array( (float) $c[1], -1 * (float) $c[2] ); }
+	}
+	return $out;
+}
+function oyc_gs_wall_proxy() {
+	$cached = get_transient( 'oyc_gs_wall' );
+	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
+
+	$r = wp_remote_get( 'https://ocean.weather.gov/gulf_stream_text.php', array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	$body = ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) ? (string) wp_remote_retrieve_body( $r ) : '';
+	$pre  = preg_match( '/<pre[^>]*>(.*?)<\/pre>/is', $body, $pm ) ? $pm[1] : $body;
+
+	$date  = preg_match( '/NORTH WALL DATA FOR ([0-9A-Z ]+?):/i', $pre, $dm ) ? trim( $dm[1] ) : '';
+	$parts = preg_split( '/SOUTH WALL DATA FOR/i', $pre, 2 );
+	$north_seg = preg_replace( '/.*NORTH WALL DATA FOR[^:]*:/is', '', $parts[0] );
+	$south_seg = isset( $parts[1] ) ? preg_split( '/\n\s*2\.|FRONTAL DATA/i', $parts[1] )[0] : '';
+
+	$north = oyc_gs_wall_coords( $north_seg );
+	$south = oyc_gs_wall_coords( $south_seg );
+	if ( count( $north ) < 5 ) {
+		// parse failed / product down — cache a miss briefly so we retry, don't hide long
+		$miss = wp_json_encode( array( 'ok' => false ) );
+		set_transient( 'oyc_gs_wall', $miss, 30 * MINUTE_IN_SECONDS );
+		oyc_send_raw_json( $miss );
+	}
+	$out = wp_json_encode( array( 'ok' => true, 'date' => $date, 'north' => $north, 'south' => $south ) );
+	set_transient( 'oyc_gs_wall', $out, 12 * HOUR_IN_SECONDS );
+	oyc_send_raw_json( $out );
+}

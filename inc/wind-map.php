@@ -676,7 +676,7 @@ function updateLegend(){
 	if(mode==='radar')return setLegend('light','heavy',RADAR_COLS);
 	var ef=effectiveField();
 	if(!ef){ /* no color field — show the Gulf Stream current scale if it's the active overlay */
-		if(gsOn()&&GS.loaded)return setLegend('0.5 kt','5+ kt current',GS_COLS);
+		if(gsOn()&&(GSW||GS.loaded))return setLegend('slow','fast · Gulf Stream',GS_COLS);
 		document.getElementById('legend').style.display='none';return;}
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
@@ -688,9 +688,24 @@ function updateLegend(){
    Ocean-current speed + direction over the Florida→Newfoundland corridor, from
    Open-Meteo Marine (cached proxy). A translucent speed band (the fast core reads
    warm) plus flow arrows, both synced to the forecast slider. */
-var gsOverlay=null,gsArrows=L.layerGroup();
+var gsBandLayer=L.layerGroup(),gsArrows=L.layerGroup(),GSW=null,gsBandBuilt=false;
 function gsOn(){var el=document.getElementById('tgGulf');return !!(el&&el.checked);}
 function gsTiFor(ti){return (GS.gsMap&&GS.gsMap[ti]!=null)?GS.gsMap[ti]:ti;}
+/* NOAA Ocean Prediction Center Gulf Stream frontal analysis — the authoritative
+   north/south wall positions (daily, from IR-satellite SST fronts). Gives the
+   real stream shape; the Open-Meteo ocean current supplies speed + forecast. */
+function loadGSWall(cb){
+	if(GSW){cb&&cb();return;}
+	fetchT(AJAX+'?action=oyc_gs_wall',12000).then(function(r){return r.json();}).then(function(res){
+		if(res&&res.ok&&res.north&&res.north.length)GSW=res;cb&&cb();
+	}).catch(function(){cb&&cb();});
+}
+function gsBearing(a,b){var la1=a[0]*Math.PI/180,la2=b[0]*Math.PI/180,dl=(b[1]-a[1])*Math.PI/180;
+	var y=Math.sin(dl)*Math.cos(la2),x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dl);
+	return (Math.atan2(y,x)*180/Math.PI+360)%360;}
+function gsSpeedAt(lat,lon,gt){if(!GS.loaded||lat<GS.LA2||lat>GS.LA1||lon<GS.LO1||lon>GS.LO2)return null;
+	var r=Math.round((GS.LA1-lat)/GS.DY),c=Math.round((lon-GS.LO1)/GS.DX);
+	if(r<0||r>=GS.NY||c<0||c>=GS.NX)return null;return (GS.SPD[r*GS.NX+c]||[])[gt];}
 function loadGulf(cb){
 	if(GS.loaded){cb&&cb();return;}if(GS.loading)return;GS.loading=true;
 	var N=GS.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
@@ -711,23 +726,34 @@ function loadGulf(cb){
 	});
 }
 function drawGulf(ti){
-	if(!gsOn()){if(gsOverlay){map.removeLayer(gsOverlay);gsOverlay=null;}gsArrows.clearLayers();return;}
-	if(!GS.loaded)return;
-	var gt=gsTiFor(ti),bounds=[[GS.LA2,GS.LO1],[GS.LA1,GS.LO2]];
-	var url=fieldDataURL(GS,GS.SPD,gt,gsColor);
-	if(gsOverlay){gsOverlay.setBounds(bounds);gsOverlay.setUrl(url);gsOverlay.setOpacity(0.85);}
-	else{gsOverlay=L.imageOverlay(url,bounds,{opacity:0.85,interactive:false});gsOverlay.addTo(map);if(gsOverlay.setZIndex)gsOverlay.setZIndex(348);}
-	/* flowing arrows along the stream — full 1° lattice traces the current; each
-	   arrow drifts downstream (CSS), staggered so it reads as flow */
+	if(!gsOn()){gsBandLayer.clearLayers();gsArrows.clearLayers();gsBandBuilt=false;return;}
+	if(!GSW)return;
+	var gt=gsTiFor(ti);
+	/* the stream band from the NOAA walls — static (daily analysis), built once.
+	   Trim the north wall to the south wall's eastern extent so the enclosing ring
+	   closes cleanly; arrows still trace the full north wall past that. */
+	if(!gsBandBuilt){
+		gsBandLayer.clearLayers();
+		var southEast=Math.max.apply(null,GSW.south.map(function(p){return p[1];}));
+		var nb=GSW.north.filter(function(p){return p[1]<=southEast;});
+		if(nb.length>1){
+			L.polygon(nb.concat(GSW.south),{color:'#c96a1e',weight:1,opacity:.35,fillColor:'#f0902f',fillOpacity:.22,interactive:false}).addTo(gsBandLayer);
+		}
+		L.polyline(GSW.south,{color:'#2f6fc4',weight:1.6,opacity:.65,interactive:false}).addTo(gsBandLayer); /* cool south wall */
+		L.polyline(GSW.north,{color:'#c0392b',weight:3,opacity:.92,interactive:false}).addTo(gsBandLayer);   /* warm north wall */
+		gsBandBuilt=true;
+	}
+	/* animated flow arrows striding along the axis, coloured by the forecast current
+	   speed at that spot (Open-Meteo), each drifting downstream */
 	gsArrows.clearLayers();
-	for(var r=0;r<GS.NY;r++)for(var c=0;c<GS.NX;c++){
-		var idx=r*GS.NX+c,sp=(GS.SPD[idx]||[])[gt],dr=(GS.DIR[idx]||[])[gt];
-		if(sp==null||sp<1.2||dr==null)continue; /* arrows only on the fast stream core, not the diffuse background drift */
-		var col=gsColor(sp)||[47,111,196];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
-		var delay=(-((idx%17)*0.1)).toFixed(1);
-		var html='<div class="gs-arrow" style="transform:rotate('+Math.round(dr)+'deg)"><div class="gs-flow" style="animation-delay:'+delay+'s">'
+	var nw=GSW.north,step=4;
+	for(var i=step;i<nw.length-step;i+=step){
+		var p=nw[i],dir=gsBearing(nw[i-step],nw[i+step]),sp=gsSpeedAt(p[0],p[1],gt);
+		var col=(sp!=null&&gsColor(Math.max(sp,0.8)))||[47,111,196];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
+		var delay=(-(((i/step)%17)*0.1)).toFixed(1);
+		var html='<div class="gs-arrow" style="transform:rotate('+Math.round(dir)+'deg)"><div class="gs-flow" style="animation-delay:'+delay+'s">'
 			+'<svg width="24" height="24" viewBox="0 0 24 24"><line x1="12" y1="21" x2="12" y2="7" stroke="'+hex+'" stroke-width="2.6"/><path d="M12 2 L7 10 L17 10 Z" fill="'+hex+'"/></svg></div></div>';
-		L.marker([GS.lats[r],GS.lons[c]],{icon:L.divIcon({className:'gs-mk',html:html,iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false}).addTo(gsArrows);
+		L.marker(p,{icon:L.divIcon({className:'gs-mk',html:html,iconSize:[24,24],iconAnchor:[12,12]}),interactive:false,keyboard:false}).addTo(gsArrows);
 	}
 }
 /* current speed/dir at a hovered point, for the readout tooltip */
@@ -978,8 +1004,10 @@ document.getElementById('tgTemp').addEventListener('change',function(){pickField
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
 document.getElementById('tgGulf').addEventListener('change',function(){
-	if(this.checked){gsArrows.addTo(map);loadGulf(function(){drawGulf(curTi);updateLegend();});}
-	else{if(gsOverlay){map.removeLayer(gsOverlay);gsOverlay=null;}map.removeLayer(gsArrows);gsArrows.clearLayers();updateLegend();}
+	if(this.checked){gsBandLayer.addTo(map);gsArrows.addTo(map);
+		loadGSWall(function(){drawGulf(curTi);updateLegend();}); /* NOAA position (draws the band asap) */
+		loadGulf(function(){drawGulf(curTi);});                  /* Open-Meteo speed colours the arrows once in */
+	}else{map.removeLayer(gsBandLayer);gsBandLayer.clearLayers();map.removeLayer(gsArrows);gsArrows.clearLayers();gsBandBuilt=false;updateLegend();}
 });
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
