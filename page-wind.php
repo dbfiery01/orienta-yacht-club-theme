@@ -317,6 +317,9 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
 /* default view: Mamaroneck harbor / western Sound (set at map init above) */
+/* radar in its own pane with a CSS blur so NEXRAD's ~1 km pixels read smooth
+   (blurring the pane, not each tile, avoids tile-seam artifacts) */
+map.createPane('radarpane');map.getPane('radarpane').style.zIndex=350;map.getPane('radarpane').style.filter='blur(1.2px)';map.getPane('radarpane').style.pointerEvents='none';
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
 var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
@@ -432,7 +435,7 @@ function drawBarbs(){arrowsLayer.clearLayers();
 	var size=map.getSize(),step=72,s0=Math.round(step/2);
 	for(var py=s0;py<size.y;py+=step)for(var px=s0;px<size.x;px+=step){
 		var ll=map.containerPointToLatLng([px,py]),lon=((ll.lng+540)%360)-180;
-		var s=sampleBest(ll.lat,lon,ti);if(!s)continue;
+		var s=sampleBest(ll.lat,lon,ti);if(!s||s.kt<3)continue;/* skip calm — no grid of circles */
 		var html='<svg width="46" height="42" viewBox="-23 -34 46 42" style="overflow:visible"><g transform="rotate('+Math.round(s.dir)+')">'+barbSVG(s.kt,'#0b2a4a')+'</g></svg>';
 		L.marker([ll.lat,lon],{icon:L.divIcon({className:'barb-mk',html:html,iconSize:[46,42],iconAnchor:[23,34]}),interactive:false,keyboard:false}).addTo(arrowsLayer);
 	}}
@@ -487,10 +490,27 @@ function effectiveField(){
 	return null;
 }
 function fieldDataURL(g,arr,ti,ramp){
-	var cv=document.createElement('canvas');cv.width=g.NX;cv.height=g.NY;var ctx=cv.getContext('2d');
-	var img=ctx.createImageData(g.NX,g.NY),d=img.data;
-	for(var r=0;r<g.NY;r++)for(var c=0;c<g.NX;c++){var col=ramp((arr[r*g.NX+c]||[])[ti]),i=(r*g.NX+c)*4;
-		if(col){d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=col[3];}else d[i+3]=0;}
+	/* Supersample the grid with bilinear interpolation into a larger canvas so the
+	   fill is smooth (not a blocky mosaic), and feather the outer ~1.5 cells to
+	   transparent so the grid-box edge never shows as a hard rectangle. Nulls
+	   (land / no data) are dropped from the interpolation weights. */
+	var NX=g.NX,NY=g.NY,K=6,W=(NX-1)*K+1,H=(NY-1)*K+1;
+	var cv=document.createElement('canvas');cv.width=W;cv.height=H;var ctx=cv.getContext('2d');
+	var img=ctx.createImageData(W,H),d=img.data;
+	function val(r,c){return (arr[r*NX+c]||[])[ti];}
+	for(var y=0;y<H;y++){var fr=y/K,r0=Math.floor(fr),r1=Math.min(r0+1,NY-1),dry=fr-r0;
+		for(var x=0;x<W;x++){var fc=x/K,c0=Math.floor(fc),c1=Math.min(c0+1,NX-1),dcx=fc-c0;
+			var a=val(r0,c0),b=val(r0,c1),cc=val(r1,c0),dd=val(r1,c1);
+			var s=0,w=0,wt;
+			if(a!=null){wt=(1-dry)*(1-dcx);s+=a*wt;w+=wt;}
+			if(b!=null){wt=(1-dry)*dcx;s+=b*wt;w+=wt;}
+			if(cc!=null){wt=dry*(1-dcx);s+=cc*wt;w+=wt;}
+			if(dd!=null){wt=dry*dcx;s+=dd*wt;w+=wt;}
+			var i=(y*W+x)*4;
+			var col=w>0?ramp(s/w):null;
+			if(col){var ed=Math.min(fr,fc,(NY-1)-fr,(NX-1)-fc),fade=ed>=1.5?1:(0.15+0.85*ed/1.5);
+				d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=Math.round(col[3]*fade*(w<0.999?w:1));}else d[i+3]=0;
+		}}
 	ctx.putImageData(img,0,0);return cv.toDataURL();
 }
 function clearField(){if(fieldOverlay){map.removeLayer(fieldOverlay);fieldOverlay=null;}}
@@ -677,7 +697,7 @@ function showRadar(i){
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
 	var fr=RV.frames[i],url=iemURL(fr.off),t=Date.now()-fr.off*60000;
 	if(RV.layer)RV.layer.setUrl(url);
-	else{RV.layer=L.tileLayer(url,{opacity:0.75,zIndex:400,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
+	else{RV.layer=L.tileLayer(url,{opacity:0.78,pane:'radarpane',maxNativeZoom:9,maxZoom:19,tileSize:256,attribution:'NWS NEXRAD / Iowa Environmental Mesonet'});RV.layer.addTo(map);}
 	var d=new Date(t);
 	tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+(fr.off===0?'now':'-'+fr.off+' min')+'</small>';
 	setER(erAtEpoch(t));
