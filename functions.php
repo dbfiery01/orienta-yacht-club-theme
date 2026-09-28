@@ -157,6 +157,12 @@ require_once get_template_directory() . '/inc/forecast-table.php';
  */
 require_once get_template_directory() . '/inc/grib-endpoint.php';
 
+/*
+ * Reusable Wind & Radar map component (oyc_wind_map_html) — powers page-wind.php
+ * and the embedded card on page-weather.php.
+ */
+require_once get_template_directory() . '/inc/wind-map.php';
+
 /**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
  */

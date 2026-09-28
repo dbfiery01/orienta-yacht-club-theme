@@ -256,9 +256,8 @@ if ( ! $oyc_weather_menu ) {
 	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
 	/* embedded Wind & Radar map card */
 	.windmap-card{margin-top:14px}
-	.windmap-embed{width:100%;height:640px;border-radius:12px;overflow:hidden;border:1px solid var(--edge);margin-top:12px;background:var(--panel)}
-	.windmap-embed iframe{width:100%;height:100%;border:0;display:block}
-	@media (max-width:700px){.windmap-embed{height:70vh}}
+	.windmap-embed{width:100%;margin-top:12px}
+	.windmap-embed #oycwm.embed{width:100%}
 	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
 		border:1px solid rgba(192,57,43,.45);background:rgba(192,57,43,.10)}
 	.alertbar.hidden{display:none}
@@ -393,14 +392,11 @@ if ( ! $oyc_weather_menu ) {
 
 	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
 
-	<!-- WIND & RADAR MAP (embeds the /wind/ page as a card) -->
+	<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
 	<div class="card windmap-card">
 		<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind &amp; Radar Map</a> <span class="sta">Interactive</span></h2>
-		<div class="windmap-embed"><iframe id="oycWindMap" class="no-lazyload skip-lazy lazyload-disabled" data-oyc-map="<?php echo esc_url( home_url( '/wind/?card=1' ) ); ?>" title="Wind &amp; Radar interactive map"></iframe></div>
+		<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
 	</div>
-	<script>/* set the src ourselves (no initial src) so the Smush/lazy-load plugin can't
-		swap it for a 1x1 placeholder and leave the card blank */
-		(function(){var f=document.getElementById('oycWindMap');if(f&&!f.src){f.src=f.getAttribute('data-oyc-map');}})();</script>
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
