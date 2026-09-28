@@ -94,6 +94,10 @@ a{color:var(--harbor)}
 .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .map-label .ml-dot{width:7px;height:7px;border-radius:50%;background:#b08a3e;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.45);flex:none}
+.oyc-mk{background:none;border:none}
+.oyc-ic{position:relative;transform:translate(-50%,-50%)}
+.oyc-dot{display:block;width:13px;height:13px;border-radius:50%;background:#0b2a4a;border:2px solid #f7d774;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
+.oyc-lbl{position:absolute;left:13px;top:-3px;font-weight:800;font-size:11px;color:#0b2a4a;letter-spacing:.05em;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
 .buoy-mk{background:none;border:none}
 .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
 .buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
@@ -334,6 +338,10 @@ PLACES.forEach(function(p){
 	L.marker([p.lat,p.lon],{icon:L.divIcon({className:'map-label',html:'<span class="ml-dot"></span>'+p.n,iconSize:[0,0],iconAnchor:[0,0]}),interactive:false,keyboard:false}).addTo(placeLayer);
 });
 placeLayer.addTo(map);
+
+/* Home port — Orienta Yacht Club, Mamaroneck Harbor. Visible in every view. */
+L.marker([40.9426,-73.7343],{icon:L.divIcon({className:'oyc-mk',html:'<div class="oyc-ic"><i class="oyc-dot"></i><span class="oyc-lbl">OYC</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000})
+	.addTo(map).bindTooltip('Orienta Yacht Club · Mamaroneck Harbor',{direction:'top',offset:[6,-6]});
 function setER(s){if(!s)return;
 	document.getElementById('erWind').textContent=Math.round(s.kt)+' kt';
 	document.getElementById('erGust').textContent=s.gust!=null?Math.round(s.gust)+' kt':'—';
