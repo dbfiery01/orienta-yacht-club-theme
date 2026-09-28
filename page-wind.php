@@ -312,11 +312,11 @@ function card(d){return CARD[Math.round(d/22.5)%16];}
 function fmt(iso){var d=new Date(iso);return {big:(d.getHours()%12||12)+' '+(d.getHours()>=12?'PM':'AM'),small:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})};}
 
 /* ---------- map ---------- */
-var map=L.map('map',{worldCopyJump:true}).setView([40.92,-73.4],9);
+var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
-map.fitBounds([[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]]);
+/* default view: Mamaroneck harbor / western Sound (set at map init above) */
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
 var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
