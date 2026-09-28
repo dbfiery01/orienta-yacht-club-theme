@@ -152,8 +152,8 @@ require_once get_template_directory() . '/inc/phone-links.php';
 require_once get_template_directory() . '/inc/forecast-table.php';
 
 /**
- * Marine Weather page: GRIB download endpoint (latest GFS regional GRIB2 for
- * members' nav software). The animated wind map itself is page-marine-weather.php.
+ * Wind page: GRIB download endpoint (latest GFS regional GRIB2 for members'
+ * nav software). The animated wind map itself is page-wind.php.
  */
 require_once get_template_directory() . '/inc/grib-endpoint.php';
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Name: Marine Weather — Wind Map & GRIB
+ * Template Name: Wind
  *
  * Self-hosted animated wind map over the western Long Island Sound (Leaflet +
  * leaflet-velocity, fed by Open-Meteo's GFS-based grid) with a 7-day time
@@ -8,7 +8,7 @@
  * "Download GRIB" button that serves the latest GFS regional GRIB2 (see
  * inc/grib-endpoint.php) for members' nav software.
  *
- * Auto-renders for a Page with slug "marine-weather" (page-{slug} hierarchy),
+ * Auto-renders for a Page with slug "wind" (page-{slug} hierarchy),
  * or assign this template to any Page.
  *
  * @package Orienta_Yacht_Club
@@ -22,7 +22,7 @@ $oyc_ajax = esc_url( admin_url( 'admin-ajax.php' ) );
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Marine Weather — Wind Map &amp; GRIB · Orienta Yacht Club</title>
+<title>Wind — Mamaroneck Harbor · Orienta Yacht Club</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.css">
 <style>
@@ -81,7 +81,7 @@ a{color:var(--harbor)}
 	<div class="topbar">
 		<div class="tb-left">
 			<a class="tb-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'tb-logo' ); ?></a>
-			<div class="tb-title">Mamaroneck Harbor &middot; Marine Weather</div>
+			<div class="tb-title">Mamaroneck Harbor &middot; Wind</div>
 		</div>
 		<nav class="tb-nav" aria-label="Weather pages">
 			<a href="<?php echo esc_url( home_url( '/weather/' ) ); ?>">Live Conditions</a>
