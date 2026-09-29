@@ -67,6 +67,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .ctrl .tlabel small{display:block;font-weight:600;color:var(--mute);font-size:.72rem}
 #oycwm .mapwrap{position:relative}
 #oycwm #map{height:min(64vh,600px);width:100%;background:#dbe7f0}
+#oycwm .satpanel{width:100%;min-height:280px;background:#0b1622;display:flex;align-items:center;justify-content:center;padding:6px}
+#oycwm .satpanel img{max-width:100%;max-height:min(66vh,640px);height:auto;width:auto;display:block}
+#oycwm .satpanel.loading::after{content:'Loading satellite\2026';color:#9fb4c6;font-size:.85rem}
+#oycwm #satLayers .sat-t{border:1px solid var(--line);background:var(--panel);color:var(--mute);font-weight:700;font-size:.78rem;letter-spacing:.02em;padding:5px 13px;border-radius:999px;cursor:pointer}
+#oycwm #satLayers .sat-t:hover{border-color:var(--harbor)}
+#oycwm #satLayers .sat-t.on{background:var(--harbor);color:#fff;border-color:var(--harbor)}
 #oycwm .hovertip{position:absolute;z-index:600;pointer-events:none;background:rgba(11,42,74,.92);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block}
 #oycwm .tiphelp{position:absolute;z-index:590;left:12px;bottom:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
@@ -158,11 +164,12 @@ function oyc_wind_map_html( $embed = false ) {
 				<button id="tabTemp" role="tab" aria-selected="false">Temp</button>
 				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
 				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
+				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 		</div>
 
-		<div class="erbar">
+		<div class="erbar" id="erBar">
 			<div class="er-name">&#9678; <span>Execution Rock</span></div>
 			<div class="er-stats" id="erStats">
 				<div class="st-item"><span class="v" id="erWind">&mdash;</span><span class="k">Wind</span></div>
@@ -190,10 +197,18 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
 			<span class="hint">NOAA HRRR precipitation &middot; now &rarr; +8&nbsp;h forecast &middot; 15-min steps</span>
 		</div>
+		<div class="layers" id="satLayers" style="display:none">
+			<button class="sat-t on" data-sat="latest">Latest</button>
+			<button class="sat-t" data-sat="18">18Z</button>
+			<button class="sat-t" data-sat="12">12Z</button>
+			<button class="sat-t" data-sat="06">06Z</button>
+			<button class="sat-t" data-sat="00">00Z</button>
+			<span class="hint">NOAA GOES-East Ch.13 infrared &middot; North Atlantic (NWS/OPC radiofax)</span>
+		</div>
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
 
-		<div class="ctrl">
+		<div class="ctrl" id="ctrlBar">
 			<button id="play" title="Play/pause">&#9654;</button>
 			<input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Time">
 			<div class="tlabel" id="tlabel">&mdash;<small>&nbsp;</small></div>
@@ -201,6 +216,7 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="mapwrap">
 			<div id="map"></div>
+			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
 			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
 		</div>
@@ -959,13 +975,42 @@ function play(){var max=(mode==='radar'?RV.frames.length:TIMES.length);if(!max)r
 function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterval(timer);timer=null;}}
 
 /* ---------- view tabs (Wind | Radar | Temp | Precip) ---------- */
+/* ---------- Satellite (NOAA GOES-East IR, NWS/OPC radiofax) ----------
+   These are standalone equirectangular chart JPEGs (own grid + coastlines), so
+   the Satellite tab shows the image full-panel rather than overlaying the map.
+   Files decoded from the NWS radiofax schedule (rfaxatl.txt). */
+var SAT_BASE='https://tgftp.nws.noaa.gov/fax/',
+    SAT_FILES={latest:'evnt99.jpg','18':'evnt18.jpg','12':'evnt12.jpg','06':'evnt06.jpg','00':'evnt00.jpg'},
+    satWhich='latest';
+function loadSat(which){
+	satWhich=which||satWhich;
+	var img=document.getElementById('satImg'),panel=document.getElementById('satPanel'),st=document.getElementById('st');
+	panel.classList.add('loading');img.style.visibility='hidden';
+	var bucket=Math.floor(Date.now()/(30*60*1000)); /* refresh every ~30 min, cache within */
+	img.onload=function(){panel.classList.remove('loading');img.style.visibility='visible';
+		st.textContent='GOES-East Ch.13 IR · '+(satWhich==='latest'?'latest':satWhich+'Z')+' · NWS/OPC';};
+	img.onerror=function(){panel.classList.remove('loading');st.textContent='Satellite image unavailable';};
+	img.src=SAT_BASE+SAT_FILES[satWhich]+'?t='+bucket;
+	[].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.classList.toggle('on',b.getAttribute('data-sat')===satWhich);});
+}
+
 function setMode(m){
 	stop();mode=m;
-	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave']].forEach(function(x){var b=document.getElementById(x[1]);
+	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave'],['sat','tabSat']].forEach(function(x){var b=document.getElementById(x[1]);
 		if(b){b.classList.toggle('on',m===x[0]);b.setAttribute('aria-selected',m===x[0]);}});
 	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
 	document.getElementById('radarLayers').style.display=m==='radar'?'flex':'none';
+	document.getElementById('satLayers').style.display=m==='sat'?'flex':'none';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
+	/* satellite = a standalone NOAA image; swap the interactive map for the image panel */
+	var isSat=(m==='sat');
+	document.getElementById('map').style.display=isSat?'none':'';
+	document.getElementById('satPanel').style.display=isSat?'flex':'none';
+	document.getElementById('ctrlBar').style.display=isSat?'none':'flex';
+	document.getElementById('erBar').style.display=isSat?'none':'';
+	if(isSat){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);
+		document.getElementById('legend').style.display='none';loadSat(satWhich);return;}
+	setTimeout(function(){map.invalidateSize();},0); /* map container may have been hidden by satellite mode */
 	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);
@@ -991,6 +1036,8 @@ document.getElementById('tabRadar').addEventListener('click',function(){setMode(
 document.getElementById('tabTemp').addEventListener('click',function(){setMode('temp');});
 document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
 document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
+document.getElementById('tabSat').addEventListener('click',function(){setMode('sat');});
+[].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.addEventListener('click',function(){loadSat(b.getAttribute('data-sat'));});});
 
 /* ---------- layer toggles ---------- */
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
