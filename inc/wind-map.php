@@ -210,9 +210,15 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
-				<optgroup label="Surface">
+				<optgroup label="Surface Analysis">
 					<option value="PYAD10.gif">Surface Analysis &mdash; latest</option>
+					<option value="PYAA10.gif">Surface Analysis &mdash; 00Z</option>
+					<option value="PYAB01.gif">Surface Analysis &mdash; 06Z</option>
+					<option value="PYAC01.gif">Surface Analysis &mdash; 12Z</option>
+					<option value="PYAD01.gif">Surface Analysis &mdash; 18Z</option>
 					<option value="PYAA12.gif">Surface Analysis, W Atlantic (Pt.2)</option>
+				</optgroup>
+				<optgroup label="Surface Forecast">
 					<option value="PPAE10.gif">Surface Forecast &mdash; 24&nbsp;hr</option>
 					<option value="QDTM10.gif">Surface Forecast &mdash; 48&nbsp;hr</option>
 					<option value="PPAK98.gif">Surface Forecast &mdash; 72&nbsp;hr</option>
@@ -220,21 +226,31 @@ function oyc_wind_map_html( $embed = false ) {
 				</optgroup>
 				<optgroup label="Wind &amp; Waves">
 					<option value="PWAA90.gif">Wind/Wave Analysis &mdash; latest</option>
-					<option value="PWAE10.gif">Wind/Wave &mdash; 24&nbsp;hr</option>
-					<option value="PJAI10.gif">Wind/Wave &mdash; 48&nbsp;hr</option>
-					<option value="PJAK88.gif">Wind/Wave &mdash; 72&nbsp;hr</option>
-					<option value="PJAM98.gif">Wind/Wave &mdash; 96&nbsp;hr</option>
+					<option value="PWAA88.gif">Wind/Wave Analysis &mdash; 00Z</option>
+					<option value="PWAB88.gif">Wind/Wave Analysis &mdash; 06Z</option>
+					<option value="PWAA89.gif">Wind/Wave Analysis &mdash; 12Z</option>
+					<option value="PWAD89.gif">Wind/Wave Analysis &mdash; 18Z</option>
+					<option value="PWAE10.gif">Wind/Wave Forecast &mdash; 24&nbsp;hr</option>
+					<option value="PJAI10.gif">Wind/Wave Forecast &mdash; 48&nbsp;hr</option>
+					<option value="PJAK88.gif">Wind/Wave Forecast &mdash; 72&nbsp;hr</option>
+					<option value="PJAM98.gif">Wind/Wave Forecast &mdash; 96&nbsp;hr</option>
 					<option value="PJAI20.gif">Wave Period &mdash; 48&nbsp;hr</option>
-					<option value="PJAA99.gif">Sea State Analysis</option>
+					<option value="PJAA99.gif">Sea State Analysis &mdash; 12Z</option>
 				</optgroup>
 				<optgroup label="500&nbsp;mb (upper air)">
 					<option value="PPAA10.gif">500mb Analysis &mdash; latest</option>
-					<option value="PPAE11.gif">500mb &mdash; 24&nbsp;hr</option>
-					<option value="PPAI10.gif">500mb &mdash; 48&nbsp;hr</option>
-					<option value="PPAM50.gif">500mb &mdash; 96&nbsp;hr</option>
+					<option value="PPAA50.gif">500mb Analysis &mdash; 00Z</option>
+					<option value="PPAA51.gif">500mb Analysis &mdash; 12Z</option>
+					<option value="PPAE11.gif">500mb Forecast &mdash; 24&nbsp;hr</option>
+					<option value="PPAI10.gif">500mb Forecast &mdash; 48&nbsp;hr</option>
+					<option value="PPAM50.gif">500mb Forecast &mdash; 96&nbsp;hr</option>
 				</optgroup>
-				<optgroup label="Tropical">
-					<option value="PWEK11.gif">Tropical Cyclone Danger Area &mdash; latest</option>
+				<optgroup label="Tropical Cyclone Danger Area">
+					<option value="PWEK11.gif">Tropical Danger Area &mdash; latest</option>
+					<option value="PWEK89.gif">Tropical Danger Area &mdash; VT03Z</option>
+					<option value="PWEK90.gif">Tropical Danger Area &mdash; VT09Z</option>
+					<option value="PWEK91.gif">Tropical Danger Area &mdash; VT15Z</option>
+					<option value="PWEK88.gif">Tropical Danger Area &mdash; VT21Z</option>
 				</optgroup>
 			</select>
 			<span class="hint">NWS/OPC marine surface, wind/wave &amp; 500&nbsp;mb charts (radiofax)</span>
