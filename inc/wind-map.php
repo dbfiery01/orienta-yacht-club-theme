@@ -35,7 +35,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 18px 8px}
 #oycwm .hd h2{margin:0;font-size:1.12rem;color:var(--navy);font-weight:700}
 #oycwm .hd .st{margin-left:auto;font-size:.75rem;color:var(--mute)}
-#oycwm .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+#oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
 #oycwm .tabs button.on{background:var(--harbor);color:#fff}
 #oycwm .erbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:2px 18px 6px;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#fbfdff,#f3f8fd)}
@@ -73,6 +73,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm #satLayers .sat-t{border:1px solid var(--line);background:var(--panel);color:var(--mute);font-weight:700;font-size:.78rem;letter-spacing:.02em;padding:5px 13px;border-radius:999px;cursor:pointer}
 #oycwm #satLayers .sat-t:hover{border-color:var(--harbor)}
 #oycwm #satLayers .sat-t.on{background:var(--harbor);color:#fff;border-color:var(--harbor)}
+#oycwm .chart-sel{border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:.82rem;padding:6px 12px;border-radius:10px;cursor:pointer;min-width:220px}
+#oycwm .chart-sel:hover{border-color:var(--harbor)}
 #oycwm .hovertip{position:absolute;z-index:600;pointer-events:none;background:rgba(11,42,74,.92);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block}
 #oycwm .tiphelp{position:absolute;z-index:590;left:12px;bottom:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
@@ -165,6 +167,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
 				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
+				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 		</div>
@@ -204,6 +207,37 @@ function oyc_wind_map_html( $embed = false ) {
 			<button class="sat-t" data-sat="06">06Z</button>
 			<button class="sat-t" data-sat="00">00Z</button>
 			<span class="hint">NOAA GOES-East Ch.13 infrared &middot; North Atlantic (NWS/OPC radiofax)</span>
+		</div>
+		<div class="layers" id="chartLayers" style="display:none">
+			<select id="chartSel" class="chart-sel" aria-label="Chart">
+				<optgroup label="Surface">
+					<option value="PYAD10.gif">Surface Analysis &mdash; latest</option>
+					<option value="PYAA12.gif">Surface Analysis, W Atlantic (Pt.2)</option>
+					<option value="PPAE10.gif">Surface Forecast &mdash; 24&nbsp;hr</option>
+					<option value="QDTM10.gif">Surface Forecast &mdash; 48&nbsp;hr</option>
+					<option value="PPAK98.gif">Surface Forecast &mdash; 72&nbsp;hr</option>
+					<option value="PWAM99.gif">Surface Forecast &mdash; 96&nbsp;hr</option>
+				</optgroup>
+				<optgroup label="Wind &amp; Waves">
+					<option value="PWAA90.gif">Wind/Wave Analysis &mdash; latest</option>
+					<option value="PWAE10.gif">Wind/Wave &mdash; 24&nbsp;hr</option>
+					<option value="PJAI10.gif">Wind/Wave &mdash; 48&nbsp;hr</option>
+					<option value="PJAK88.gif">Wind/Wave &mdash; 72&nbsp;hr</option>
+					<option value="PJAM98.gif">Wind/Wave &mdash; 96&nbsp;hr</option>
+					<option value="PJAI20.gif">Wave Period &mdash; 48&nbsp;hr</option>
+					<option value="PJAA99.gif">Sea State Analysis</option>
+				</optgroup>
+				<optgroup label="500&nbsp;mb (upper air)">
+					<option value="PPAA10.gif">500mb Analysis &mdash; latest</option>
+					<option value="PPAE11.gif">500mb &mdash; 24&nbsp;hr</option>
+					<option value="PPAI10.gif">500mb &mdash; 48&nbsp;hr</option>
+					<option value="PPAM50.gif">500mb &mdash; 96&nbsp;hr</option>
+				</optgroup>
+				<optgroup label="Tropical">
+					<option value="PWEK11.gif">Tropical Cyclone Danger Area &mdash; latest</option>
+				</optgroup>
+			</select>
+			<span class="hint">NWS/OPC marine surface, wind/wave &amp; 500&nbsp;mb charts (radiofax)</span>
 		</div>
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
@@ -979,37 +1013,43 @@ function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterva
    These are standalone equirectangular chart JPEGs (own grid + coastlines), so
    the Satellite tab shows the image full-panel rather than overlaying the map.
    Files decoded from the NWS radiofax schedule (rfaxatl.txt). */
-var SAT_BASE='https://tgftp.nws.noaa.gov/fax/',
+var FAX_BASE='https://tgftp.nws.noaa.gov/fax/',
     SAT_FILES={latest:'evnt99.jpg','18':'evnt18.jpg','12':'evnt12.jpg','06':'evnt06.jpg','00':'evnt00.jpg'},
     satWhich='latest';
-function loadSat(which){
-	satWhich=which||satWhich;
+/* shared image-panel loader for any NWS/OPC radiofax product (sat .jpg or chart .gif) */
+function showFax(file,label,failMsg){
 	var img=document.getElementById('satImg'),panel=document.getElementById('satPanel'),st=document.getElementById('st');
 	panel.classList.add('loading');img.style.visibility='hidden';
 	var bucket=Math.floor(Date.now()/(30*60*1000)); /* refresh every ~30 min, cache within */
-	img.onload=function(){panel.classList.remove('loading');img.style.visibility='visible';
-		st.textContent='GOES-East Ch.13 IR · '+(satWhich==='latest'?'latest':satWhich+'Z')+' · NWS/OPC';};
-	img.onerror=function(){panel.classList.remove('loading');st.textContent='Satellite image unavailable';};
-	img.src=SAT_BASE+SAT_FILES[satWhich]+'?t='+bucket;
+	img.onload=function(){panel.classList.remove('loading');img.style.visibility='visible';st.textContent=label;};
+	img.onerror=function(){panel.classList.remove('loading');st.textContent=failMsg||'Chart unavailable';};
+	img.src=FAX_BASE+file+'?t='+bucket;
+}
+function loadSat(which){
+	satWhich=which||satWhich;
+	showFax(SAT_FILES[satWhich], 'GOES-East Ch.13 IR · '+(satWhich==='latest'?'latest':satWhich+'Z')+' · NWS/OPC', 'Satellite image unavailable');
 	[].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.classList.toggle('on',b.getAttribute('data-sat')===satWhich);});
 }
+function loadChart(){var sel=document.getElementById('chartSel'),opt=sel.options[sel.selectedIndex];
+	showFax(sel.value, (opt.text||'Chart').replace(/\s+/g,' ').trim()+' · NWS/OPC');}
 
 function setMode(m){
 	stop();mode=m;
-	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave'],['sat','tabSat']].forEach(function(x){var b=document.getElementById(x[1]);
+	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave'],['sat','tabSat'],['charts','tabCharts']].forEach(function(x){var b=document.getElementById(x[1]);
 		if(b){b.classList.toggle('on',m===x[0]);b.setAttribute('aria-selected',m===x[0]);}});
 	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
 	document.getElementById('radarLayers').style.display=m==='radar'?'flex':'none';
 	document.getElementById('satLayers').style.display=m==='sat'?'flex':'none';
+	document.getElementById('chartLayers').style.display=m==='charts'?'flex':'none';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
-	/* satellite = a standalone NOAA image; swap the interactive map for the image panel */
-	var isSat=(m==='sat');
-	document.getElementById('map').style.display=isSat?'none':'';
-	document.getElementById('satPanel').style.display=isSat?'flex':'none';
-	document.getElementById('ctrlBar').style.display=isSat?'none':'flex';
-	document.getElementById('erBar').style.display=isSat?'none':'';
-	if(isSat){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);
-		document.getElementById('legend').style.display='none';loadSat(satWhich);return;}
+	/* satellite & charts = standalone NOAA images; swap the interactive map for the image panel */
+	var isImg=(m==='sat'||m==='charts');
+	document.getElementById('map').style.display=isImg?'none':'';
+	document.getElementById('satPanel').style.display=isImg?'flex':'none';
+	document.getElementById('ctrlBar').style.display=isImg?'none':'flex';
+	document.getElementById('erBar').style.display=isImg?'none':'';
+	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);
+		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
 	setTimeout(function(){map.invalidateSize();},0); /* map container may have been hidden by satellite mode */
 	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
@@ -1037,7 +1077,9 @@ document.getElementById('tabTemp').addEventListener('click',function(){setMode('
 document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
 document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
 document.getElementById('tabSat').addEventListener('click',function(){setMode('sat');});
+document.getElementById('tabCharts').addEventListener('click',function(){setMode('charts');});
 [].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.addEventListener('click',function(){loadSat(b.getAttribute('data-sat'));});});
+document.getElementById('chartSel').addEventListener('change',loadChart);
 
 /* ---------- layer toggles ---------- */
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
