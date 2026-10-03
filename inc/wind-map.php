@@ -98,6 +98,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .oyc-ic{position:relative;transform:translate(-50%,-50%)}
 #oycwm .oyc-dot{display:block;width:13px;height:13px;border-radius:50%;background:#0b2a4a;border:2px solid #f7d774;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
 #oycwm .oyc-lbl{position:absolute;left:13px;top:-3px;font-weight:800;font-size:11px;color:#0b2a4a;letter-spacing:.05em;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .b42-mk{background:none;border:none}
+#oycwm .b42-ic{position:relative;transform:translate(-50%,-50%)}
+#oycwm .b42-dot{display:block;width:13px;height:13px;border-radius:50%;background:#f7d774;border:2px solid #b08a3e;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
+#oycwm .b42-lbl{position:absolute;left:13px;top:-3px;font-weight:800;font-size:11px;color:#8a6a1e;letter-spacing:.05em;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
 #oycwm .buoy-mk{background:none;border:none}
 #oycwm .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
 #oycwm .buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
@@ -173,7 +177,7 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 
 		<div class="erbar" id="erBar">
-			<div class="er-name">&#9678; <span>Execution Rock</span></div>
+			<div class="er-name">&#9678; <span>Buoy 42</span></div>
 			<div class="er-stats" id="erStats">
 				<div class="st-item"><span class="v" id="erWind">&mdash;</span><span class="k">Wind</span></div>
 				<div class="st-item"><span class="v" id="erGust">&mdash;</span><span class="k">Gust</span></div>
@@ -294,7 +298,7 @@ var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638',
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
 var KT=1.94384;
-var ER={lat:40.8833,lon:-73.7283}; /* NDBC 44022 / Execution Rocks — same point the /weather/ board uses */
+var ER={lat:40.93717,lon:-73.70217}; /* Buoy 42 — the weather-readout point, same as the /weather/ board */
 
 /* ---- overlay color ramps (temp °F, precip in/3h) ---- */
 var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
@@ -411,9 +415,8 @@ var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
 var vl=null,activeGrid=LOCAL,mode='wind',curTi=0,playing=false,timer=null;
 var slider=document.getElementById('slider'),tlabel=document.getElementById('tlabel'),playBtn=document.getElementById('play');
 
-/* ---------- Execution Rock strip + marker ---------- */
-var erMarker=L.circleMarker([ER.lat,ER.lon],{radius:6,color:'#b08a3e',weight:2,fillColor:'#f7d774',fillOpacity:1}).addTo(map);
-erMarker.bindTooltip('Execution Rock',{direction:'top',offset:[0,-6]});
+/* ---------- Buoy 42 strip + labelled marker (the weather-readout point) ---------- */
+L.marker([ER.lat,ER.lon],{icon:L.divIcon({className:'b42-mk',html:'<div class="b42-ic"><i class="b42-dot"></i><span class="b42-lbl">Buoy 42</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000}).addTo(map);
 
 /* Atlantic passage landmarks — visible once you zoom out to the basin. */
 var PLACES=[

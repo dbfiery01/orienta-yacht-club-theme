@@ -101,10 +101,10 @@ function oyc_buoys_proxy() {
 add_action( 'wp_ajax_oyc_marine_fc',        'oyc_marine_fc_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_marine_fc', 'oyc_marine_fc_proxy' );
 function oyc_marine_fc_proxy() {
-	$cached = get_transient( 'oyc_marine_fc' );
+	$cached = get_transient( 'oyc_marine_fc_b42' );
 	if ( false !== $cached ) { wp_send_json( $cached ); }
 
-	$lat = '40.8833'; $lon = '-73.7283'; // Execution Rock (matches the client constants)
+	$lat = '40.93717'; $lon = '-73.70217'; // Buoy 42 (matches the client constants)
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
 		. '&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
@@ -122,7 +122,7 @@ function oyc_marine_fc_proxy() {
 	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) {
 		// Cache a miss only briefly so the next visitor retries (don't hammer, don't hide for long).
 		$out = array( 'ok' => false, 'err' => 'wx unavailable' );
-		set_transient( 'oyc_marine_fc', $out, 2 * MINUTE_IN_SECONDS );
+		set_transient( 'oyc_marine_fc_b42', $out, 2 * MINUTE_IN_SECONDS );
 		wp_send_json( $out );
 	}
 
@@ -133,8 +133,10 @@ function oyc_marine_fc_proxy() {
 		if ( ! is_array( $mar ) ) { $mar = null; }
 	}
 
+	// Cache the full reading 15 min; but if the marine/wave fetch failed, keep it
+	// short (3 min) so waves recover quickly instead of showing "—" for 15 min.
 	$out = array( 'ok' => true, 'wx' => $wx, 'marine' => $mar );
-	set_transient( 'oyc_marine_fc', $out, 15 * MINUTE_IN_SECONDS );
+	set_transient( 'oyc_marine_fc_b42', $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
 	wp_send_json( $out );
 }
 
@@ -186,7 +188,7 @@ function oyc_forecast_table_html() {
 	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
 	$inner = <<<'HTML'
 <div class="oyc-ft-card">
-  <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Execution Rock &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span></div>
+  <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Buoy 42 &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span></div>
   <div class="models" id="oycft-models"></div>
   <div class="obs" id="oycft-obs" hidden></div>
   <div class="scroll" id="oycft-scroll"><div id="oycft-tbl" class="msg">Loading forecast&hellip;</div></div>
@@ -246,7 +248,7 @@ function oyc_forecast_table_html() {
   var ROOT=document.currentScript&&document.currentScript.closest?document.currentScript.closest('.oyc-ft'):document.querySelector('.oyc-ft');
   if(!ROOT)ROOT=document.querySelector('.oyc-ft');
   var AJAX=ROOT.getAttribute('data-ajax');
-  var LAT=40.8833, LON=-73.7283;
+  var LAT=40.93717, LON=-73.70217;
   var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   var card=function(d){return DIRS[Math.round((d%360)/22.5)%16];};
