@@ -56,6 +56,131 @@ function oyc_buoy_proxy() {
 	wp_send_json( $out );
 }
 
+/* ── All live LIS buoys as an array (for the Wind page's Wave tab markers) ──
+   Same NDBC source as oyc_buoy, but returns every station currently reporting
+   waves, each with coordinates, instead of just the first live one. ── */
+add_action( 'wp_ajax_oyc_buoys',        'oyc_buoys_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_buoys', 'oyc_buoys_proxy' );
+function oyc_buoys_proxy() {
+	$cached = get_transient( 'oyc_buoys_obs' );
+	if ( false !== $cached ) { wp_send_json( $cached ); }
+
+	$stations = array(
+		array( '44022', 'Execution Rocks',  40.883, -73.728 ),
+		array( '44040', 'Western LI Sound', 40.956, -73.580 ),
+	);
+	$out = array();
+	foreach ( $stations as $st ) {
+		$resp = wp_remote_get( 'https://www.ndbc.noaa.gov/data/realtime2/' . $st[0] . '.txt', array( 'timeout' => 6 ) );
+		if ( is_wp_error( $resp ) || 200 !== (int) wp_remote_retrieve_response_code( $resp ) ) { continue; }
+		$rows = preg_split( '/\r?\n/', trim( (string) wp_remote_retrieve_body( $resp ) ) );
+		$p = null;
+		foreach ( $rows as $ln ) { $ln = trim( $ln ); if ( '' === $ln || '#' === $ln[0] ) { continue; } $p = preg_split( '/\s+/', $ln ); break; }
+		if ( ! $p || count( $p ) < 12 || 'MM' === $p[8] ) { continue; }
+		$obs = gmmktime( (int) $p[3], (int) $p[4], 0, (int) $p[1], (int) $p[2], (int) $p[0] );
+		$age = ( time() - $obs ) / 60;
+		if ( $age > 180 ) { continue; }
+		$out[] = array(
+			'id' => $st[0], 'station' => $st[1], 'lat' => $st[2], 'lon' => $st[3],
+			'ft' => round( (float) $p[8] * 3.28084, 1 ),
+			'dir' => ( 'MM' === $p[11] ) ? null : (float) $p[11],
+			'dpd' => ( 'MM' === $p[9] ) ? null : (float) $p[9],
+			'ageMin' => (int) round( $age ),
+		);
+	}
+	set_transient( 'oyc_buoys_obs', $out, 20 * MINUTE_IN_SECONDS );
+	wp_send_json( $out );
+}
+
+/* ── Marine Forecast data proxy (Open-Meteo multi-model wx + marine waves) ──
+   Fetched server-side and cached in a transient so a public page load never
+   calls Open-Meteo per-visitor — that tripped Open-Meteo's per-IP 429 rate
+   limit once the /weather/ board also embedded the wind map (which hits
+   Open-Meteo too). One shared fetch per ~15 min for the whole site.
+   Endpoint: admin-ajax.php?action=oyc_marine_fc ── */
+add_action( 'wp_ajax_oyc_marine_fc',        'oyc_marine_fc_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_marine_fc', 'oyc_marine_fc_proxy' );
+function oyc_marine_fc_proxy() {
+	$cached = get_transient( 'oyc_marine_fc' );
+	if ( false !== $cached ) { wp_send_json( $cached ); }
+
+	$lat = '40.8833'; $lon = '-73.7283'; // Execution Rock (matches the client constants)
+	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
+		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
+		. '&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
+		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
+	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $lat . '&longitude=' . $lon
+		. '&hourly=wave_height,wave_period,wave_direction&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+
+	$args = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
+
+	$wx = null;
+	$r  = wp_remote_get( $wx_url, $args );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+	}
+	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) {
+		// Cache a miss only briefly so the next visitor retries (don't hammer, don't hide for long).
+		$out = array( 'ok' => false, 'err' => 'wx unavailable' );
+		set_transient( 'oyc_marine_fc', $out, 2 * MINUTE_IN_SECONDS );
+		wp_send_json( $out );
+	}
+
+	$mar = null; // waves are optional — the table still renders without them
+	$rm  = wp_remote_get( $mar_url, $args );
+	if ( ! is_wp_error( $rm ) && 200 === (int) wp_remote_retrieve_response_code( $rm ) ) {
+		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
+		if ( ! is_array( $mar ) ) { $mar = null; }
+	}
+
+	$out = array( 'ok' => true, 'wx' => $wx, 'marine' => $mar );
+	set_transient( 'oyc_marine_fc', $out, 15 * MINUTE_IN_SECONDS );
+	wp_send_json( $out );
+}
+
+/* ── Point forecast at an arbitrary lat/lon (for the map's passage pins) ──
+   Same exact-point / hourly / BLEND method as the ER board, so a pin reads
+   accurate forecast values at that spot (a pin on Execution Rock equals the
+   headline). Cached per rounded point so repeat pins are free. Single-point
+   BLEND uses the plain (unsuffixed) hourly keys.
+   Endpoint: admin-ajax.php?action=oyc_point_fc&lat=..&lon=.. ── */
+add_action( 'wp_ajax_oyc_point_fc',        'oyc_point_fc_proxy' );
+add_action( 'wp_ajax_nopriv_oyc_point_fc', 'oyc_point_fc_proxy' );
+function oyc_point_fc_proxy() {
+	$lat = isset( $_GET['lat'] ) ? (float) $_GET['lat'] : 999;
+	$lon = isset( $_GET['lon'] ) ? (float) $_GET['lon'] : 999;
+	// Only within the map's data extent (Atlantic basin box) — bounds the fetch & cache.
+	if ( $lat > 63 || $lat < -27 || $lon > 18 || $lon < -102 ) { oyc_send_raw_json( '{"ok":false}' ); }
+	$rlat = round( $lat, 2 ); $rlon = round( $lon, 2 ); // ~1 km cache granularity
+	$key  = 'oyc_ptfc_' . md5( $rlat . '_' . $rlon );
+	$cached = get_transient( $key );
+	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
+
+	$args   = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
+	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $rlat . '&longitude=' . $rlon
+		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
+		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
+	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $rlat . '&longitude=' . $rlon
+		. '&hourly=wave_height&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+
+	$wx = null;
+	$r  = wp_remote_get( $wx_url, $args );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+	}
+	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) { oyc_send_raw_json( '{"ok":false}' ); } // don't cache a miss
+
+	$mar = null;
+	$rm  = wp_remote_get( $mar_url, $args );
+	if ( ! is_wp_error( $rm ) && 200 === (int) wp_remote_retrieve_response_code( $rm ) ) {
+		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
+		if ( ! is_array( $mar ) ) { $mar = null; }
+	}
+	$out = wp_json_encode( array( 'ok' => true, 'wx' => $wx, 'marine' => $mar ) );
+	set_transient( $key, $out, 15 * MINUTE_IN_SECONDS );
+	oyc_send_raw_json( $out );
+}
+
 /* ── Markup + scoped styles + widget script ──────────────────────────────── */
 function oyc_forecast_table_html() {
 	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
@@ -154,13 +279,6 @@ function oyc_forecast_table_html() {
     if(t==='wave')return w+'<path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>';
     if(t==='pres')return w+'<circle cx="12" cy="12" r="8"/><path d="M12 12l4-2"/></svg>';return '';}
 
-  var wxURL='https://api.open-meteo.com/v1/forecast?latitude='+LAT+'&longitude='+LON
-   +'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
-   +'&models='+MODELS.map(function(m){return m.id;}).join(',')
-   +'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
-  var marURL='https://marine-api.open-meteo.com/v1/marine?latitude='+LAT+'&longitude='+LON
-   +'&hourly=wave_height,wave_period,wave_direction&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
-
   function k(base,m){var kk=base+'_'+m;return DATA.hourly[kk]!==undefined?kk:base;}
   function cols(){var h=DATA.hourly,m=MODEL;return{
     time:h.time, ws:h[k('wind_speed_10m',m)], wg:h[k('wind_gusts_10m',m)], wd:h[k('wind_direction_10m',m)],
@@ -174,8 +292,11 @@ function oyc_forecast_table_html() {
     }).catch(function(){return null;});
   }
 
-  Promise.all([fetch(wxURL).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}), fetch(marURL).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})]).then(function(res){
-    var d=res[0], mar=res[1];
+  // Fetch through the cached server proxy (admin-ajax) so visitors never hit
+  // Open-Meteo directly — avoids the per-IP 429 rate limit on the public board.
+  fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
+    if(!res||!res.ok||!res.wx||!res.wx.hourly)throw new Error(res&&res.err?res.err:'no data');
+    var d=res.wx, mar=res.marine;
     DATA=d;
     if(mar&&mar.hourly&&mar.hourly.wave_height){var mh=mar.hourly;mh.time.forEach(function(t,i){WAVE[t]={h:mh.wave_height[i],p:(mh.wave_period||[])[i],dir:(mh.wave_direction||[])[i]};});}
     var off=(d.utc_offset_seconds||0)*1000,now=Date.now(),bi=0,bd=1e15;

@@ -152,6 +152,26 @@ require_once get_template_directory() . '/inc/phone-links.php';
 require_once get_template_directory() . '/inc/forecast-table.php';
 
 /**
+ * Wind page: GRIB download endpoint (latest GFS regional GRIB2 for members'
+ * nav software). The animated wind map itself is page-wind.php.
+ */
+require_once get_template_directory() . '/inc/grib-endpoint.php';
+
+/*
+ * Reusable Wind & Radar map component (oyc_wind_map_html) — powers page-wind.php
+ * and the embedded card on page-weather.php.
+ */
+require_once get_template_directory() . '/inc/wind-map.php';
+
+/*
+ * Nav weather glyph + its cached conditions proxy. Loaded here (not just from
+ * header.php) so the wp_ajax_oyc_header_wx handler is registered on admin-ajax
+ * requests too — header.php doesn't run for those, so registering it only there
+ * left the proxy returning "0" and the glyph permanently hidden.
+ */
+require_once get_template_directory() . '/inc/header-weather.php';
+
+/**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
  */
 require_once get_template_directory() . '/inc/pwa.php';
