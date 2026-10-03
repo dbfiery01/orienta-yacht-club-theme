@@ -353,7 +353,7 @@ if ( ! $oyc_weather_menu ) {
 		<!-- RIGHT COLUMN -->
 		<div class="col" id="colC">
 			<div class="card" data-card="wind">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wind</a> <span class="sta" id="windSta">STA. 8516945</span></h2>
+				<h2>Wind <span class="sta" id="windSta">STA. 8516945</span></h2>
 				<div class="wind-body">
 					<div class="dial" id="windDial"></div>
 					<div class="wind-read">
@@ -366,7 +366,7 @@ if ( ! $oyc_weather_menu ) {
 				</div>
 			</div>
 			<div class="card" data-card="waves">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Wave Conditions</a> <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
+				<h2>Wave Conditions <span class="sta" id="waveSta">NWS Seas &middot; Current</span></h2>
 				<div class="wave-body">
 					<div class="wave-main"><span class="wave-val miss" id="waveHt">&mdash;</span><span class="wave-unit">seas</span></div>
 					<div class="wave-lab">
@@ -378,7 +378,7 @@ if ( ! $oyc_weather_menu ) {
 			</div>
 
 			<div class="card" data-card="cond">
-				<h2><a class="h2link" href="<?php echo esc_url( home_url( '/wind/' ) ); ?>">Conditions</a></h2>
+				<h2>Conditions</h2>
 				<div class="cond">
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
 					<div class="cell"><div class="v" id="hiLoTemp">&mdash;</div><div class="k">Today Hi / Lo</div></div>
