@@ -102,6 +102,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .b42-ic{position:relative;transform:translate(-50%,-50%)}
 #oycwm .b42-dot{display:block;width:13px;height:13px;border-radius:50%;background:#f7d774;border:2px solid #b08a3e;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
 #oycwm .b42-lbl{position:absolute;left:13px;top:-3px;font-weight:800;font-size:11px;color:#8a6a1e;letter-spacing:.05em;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .erref-mk{background:none;border:none}
+#oycwm .erref-ic{position:relative;transform:translate(-50%,-50%)}
+#oycwm .erref-dot{display:block;width:9px;height:9px;border-radius:50%;background:#64748b;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+#oycwm .erref-lbl{position:absolute;left:11px;top:-2px;font-weight:700;font-size:10px;color:#475569;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
 #oycwm .buoy-mk{background:none;border:none}
 #oycwm .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
 #oycwm .buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
@@ -417,6 +421,8 @@ var slider=document.getElementById('slider'),tlabel=document.getElementById('tla
 
 /* ---------- Buoy 42 strip + labelled marker (the weather-readout point) ---------- */
 L.marker([ER.lat,ER.lon],{icon:L.divIcon({className:'b42-mk',html:'<div class="b42-ic"><i class="b42-dot"></i><span class="b42-lbl">Buoy 42</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000}).addTo(map);
+/* Execution Rock — kept as a reference point on the map (not the readout) */
+L.marker([40.8833,-73.7283],{icon:L.divIcon({className:'erref-mk',html:'<div class="erref-ic"><i class="erref-dot"></i><span class="erref-lbl">Execution Rock</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:900}).addTo(map);
 
 /* Atlantic passage landmarks — visible once you zoom out to the basin. */
 var PLACES=[
