@@ -102,6 +102,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .b42-ic{position:relative;transform:translate(-50%,-50%)}
 #oycwm .b42-dot{display:block;width:13px;height:13px;border-radius:50%;background:#f7d774;border:2px solid #b08a3e;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45)}
 #oycwm .b42-lbl{position:absolute;left:13px;top:-3px;font-weight:800;font-size:11px;color:#8a6a1e;letter-spacing:.05em;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .erref-mk{background:none;border:none}
+#oycwm .erref-ic{position:relative;transform:translate(-50%,-50%)}
+#oycwm .erref-dot{display:block;width:9px;height:9px;border-radius:50%;background:#64748b;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+#oycwm .erref-lbl{position:absolute;left:11px;top:-2px;font-weight:700;font-size:10px;color:#475569;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
 #oycwm .buoy-mk{background:none;border:none}
 #oycwm .buoy-ic{position:relative;color:#0b2a4a;font-size:13px;font-weight:900;line-height:0;text-shadow:0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)}
 #oycwm .buoy-lbl{position:absolute;left:11px;top:-8px;font-size:10px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:5px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 2px 6px rgba(11,42,74,.15)}
@@ -417,6 +421,8 @@ var slider=document.getElementById('slider'),tlabel=document.getElementById('tla
 
 /* ---------- Buoy 42 strip + labelled marker (the weather-readout point) ---------- */
 L.marker([ER.lat,ER.lon],{icon:L.divIcon({className:'b42-mk',html:'<div class="b42-ic"><i class="b42-dot"></i><span class="b42-lbl">Buoy 42</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:1000}).addTo(map);
+/* Execution Rock — kept as a reference point on the map (not the readout) */
+L.marker([40.8833,-73.7283],{icon:L.divIcon({className:'erref-mk',html:'<div class="erref-ic"><i class="erref-dot"></i><span class="erref-lbl">Execution Rock</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:900}).addTo(map);
 
 /* Atlantic passage landmarks — visible once you zoom out to the basin. */
 var PLACES=[
@@ -745,8 +751,7 @@ function updateLegend(){
 	if(mode==='radar')return setLegend('light','heavy',RADAR_COLS);
 	var ef=effectiveField();
 	if(!ef){ /* no color field — show the Gulf Stream current scale if it's the active overlay */
-		if(gsOn()&&(GSW||GS.loaded))return setLegend('slow','fast · Gulf Stream',GS_COLS);
-		document.getElementById('legend').style.display='none';return;}
+		document.getElementById('legend').style.display='none';return; /* Gulf Stream band is self-explanatory via the hint + wall lines */}
 	if(ef==='temp')return setLegend('0°F','90°F',TEMP_COLS);
 	if(ef==='precip')return setLegend('0 in','0.6+ in',PRECIP_COLS);
 	if(ef==='wave')return setLegend('calm','12+ ft',WAVE_COLS);
@@ -817,8 +822,8 @@ function drawGulf(ti){
 	gsArrows.clearLayers();
 	var nw=GSW.north,step=4;
 	for(var i=step;i<nw.length-step;i+=step){
-		var p=nw[i],dir=gsBearing(nw[i-step],nw[i+step]),sp=gsSpeedAt(p[0],p[1],gt);
-		var col=(sp!=null&&gsColor(Math.max(sp,0.8)))||[47,111,196];var hex='rgb('+col[0]+','+col[1]+','+col[2]+')';
+		var p=nw[i],dir=gsBearing(nw[i-step],nw[i+step]);
+		var hex='#0b3550'; /* uniform dark flow arrows (no per-point current fetch) */
 		var delay=(-(((i/step)%17)*0.1)).toFixed(1);
 		var html='<div class="gs-arrow" style="transform:rotate('+Math.round(dir)+'deg)"><div class="gs-flow" style="animation-delay:'+delay+'s">'
 			+'<svg width="24" height="24" viewBox="0 0 24 24"><line x1="12" y1="21" x2="12" y2="7" stroke="'+hex+'" stroke-width="2.6"/><path d="M12 2 L7 10 L17 10 Z" fill="'+hex+'"/></svg></div></div>';
@@ -1113,8 +1118,9 @@ document.getElementById('tgPrecip').addEventListener('change',function(){pickFie
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
 document.getElementById('tgGulf').addEventListener('change',function(){
 	if(this.checked){gsBandLayer.addTo(map);gsArrows.addTo(map);
-		loadGSWall(function(){drawGulf(curTi);updateLegend();}); /* NOAA position (draws the band asap) */
-		loadGulf(function(){drawGulf(curTi);});                  /* Open-Meteo speed colours the arrows once in */
+		/* NOAA frontal analysis = position only; no Open-Meteo marine fetch (keeps
+		   the heavy per-point current off marine-api, which the prod host throttles) */
+		loadGSWall(function(){drawGulf(curTi);updateLegend();});
 	}else{map.removeLayer(gsBandLayer);gsBandLayer.clearLayers();map.removeLayer(gsArrows);gsArrows.clearLayers();gsBandBuilt=false;updateLegend();}
 });
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
