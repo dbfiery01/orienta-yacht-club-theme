@@ -115,20 +115,29 @@ add_action( 'wp_footer', function () {
 		}
 		var LABEL={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Drizzle',56:'Freezing drizzle',57:'Freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
 		var AJAX=<?php echo wp_json_encode( esc_url_raw( admin_url( 'admin-ajax.php' ) ) ); ?>;
+		function render(code,temp,cloud){
+			if(temp==null) return;
+			var label=LABEL[code]||'Weather';
+			icoEl.innerHTML=glyph(code, cloud);
+			tempEl.textContent=temp+'°';
+			link.setAttribute('title', label+' · '+temp+'° — harbor weather');
+			link.setAttribute('aria-label', label+', '+temp+' degrees. Open the weather page.');
+			link.hidden=false;
+		}
+		/* If the cached server proxy can't reach Open-Meteo (host IP throttled/blocked),
+		   fetch current conditions straight from the visitor's browser — CORS-ok, uses
+		   the visitor's own connection, so the glyph survives any host-side outage. */
+		function clientFetch(){
+			fetch('https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734&current=weather_code,cloud_cover,temperature_2m&temperature_unit=fahrenheit&timezone=America%2FNew_York')
+				.then(function(r){ return r.json(); })
+				.then(function(j){ var c=j&&j.current; if(c&&c.temperature_2m!=null) render(c.weather_code, Math.round(c.temperature_2m), c.cloud_cover); })
+				.catch(function(){});
+		}
 		function load(){
-			/* cached server proxy (admin-ajax) — reliable, and no per-visitor Open-Meteo 429 */
 			fetch(AJAX+'?action=oyc_header_wx',{cache:'no-store'})
 				.then(function(r){ return r.json(); })
-				.then(function(d){
-					if(!d||!d.ok||d.temp==null) return;
-					var code=d.code, temp=d.temp, label=LABEL[code]||'Weather';
-					icoEl.innerHTML=glyph(code, d.cloud);
-					tempEl.textContent=temp+'°';
-					link.setAttribute('title', label+' · '+temp+'° — harbor weather');
-					link.setAttribute('aria-label', label+', '+temp+' degrees. Open the weather page.');
-					link.hidden=false;
-				})
-				.catch(function(){});
+				.then(function(d){ if(d&&d.ok&&d.temp!=null) render(d.code, d.temp, d.cloud); else clientFetch(); })
+				.catch(function(){ clientFetch(); });
 		}
 		load();
 		setInterval(load, 15*60*1000); // refresh with Open-Meteo's ~15-min cadence
