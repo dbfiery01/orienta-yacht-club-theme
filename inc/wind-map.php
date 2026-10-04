@@ -35,6 +35,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 18px 8px}
 #oycwm .hd h2{margin:0;font-size:1.12rem;color:var(--navy);font-weight:700}
 #oycwm .hd .st{margin-left:auto;font-size:.75rem;color:var(--mute)}
+#oycwm .fsbtn{flex:none;margin-left:8px;width:32px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:8px;cursor:pointer}
+#oycwm .fsbtn:hover{border-color:var(--harbor);color:var(--harbor)}
+#oycwm .fsbtn svg{display:block}
+/* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
+#oycwm .card.isfull{position:fixed;inset:0;z-index:99999;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
+#oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
+#oycwm .card.isfull #map{height:100%}
+#oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
 #oycwm .tabs button.on{background:var(--harbor);color:#fff}
@@ -178,6 +186,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
+			<button type="button" class="fsbtn" id="oycwmFs" title="Full screen" aria-label="Full screen"></button>
 		</div>
 
 		<div class="erbar" id="erBar">
@@ -1177,6 +1186,29 @@ map.on('zoomend',function(){
 		show(nearestFrameIdx(radarOffsets(w),curOff));
 	}
 });
+
+/* ---------- full-screen toggle ---------- */
+(function(){
+	var fsEl=document.querySelector('#oycwm .card'),btn=document.getElementById('oycwmFs');
+	if(!fsEl||!btn)return;
+	var EXP='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+	    COL='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+	btn.innerHTML=EXP;
+	var fsOK=!!(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen);
+	function fsNow(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+	function apply(on){
+		fsEl.classList.toggle('isfull',on);
+		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
+		setTimeout(function(){map.invalidateSize();try{refreshOverlays();}catch(e){}},90);
+	}
+	btn.addEventListener('click',function(){
+		if(fsOK){ fsNow()===fsEl ? (document.exitFullscreen||document.webkitExitFullscreen).call(document) : (fsEl.requestFullscreen||fsEl.webkitRequestFullscreen).call(fsEl); }
+		else{ var on=!fsEl.classList.contains('isfull'); document.body.style.overflow=on?'hidden':''; apply(on); }
+	});
+	document.addEventListener('fullscreenchange',function(){apply(fsNow()===fsEl);});
+	document.addEventListener('webkitfullscreenchange',function(){apply(fsNow()===fsEl);});
+	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!fsOK&&fsEl.classList.contains('isfull')){document.body.style.overflow='';apply(false);}});
+})();
 
 loadLocal();
 })();
