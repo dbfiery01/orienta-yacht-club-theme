@@ -207,8 +207,8 @@ function oyc_forecast_table_html() {
 .oyc-ft .hd .ttl{font-size:1.1rem;color:#0b2a4a;font-weight:700}
 .oyc-ft .hd .loc{font-size:.83rem;color:#6b7280}
 .oyc-ft .hd .upd{margin-left:auto;font-size:.72rem;color:#6b7280}
-.oyc-ft .fsbtn{flex:none;align-self:center;margin-left:10px;width:30px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dfe7f0;background:#fff;color:#0b2a4a;border-radius:8px;cursor:pointer}
-.oyc-ft .fsbtn:hover{border-color:#1583cf;color:#1583cf}
+.oyc-ft .fsbtn{flex:none;align-self:center;margin-left:10px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid #0b2a4a;background:#0b2a4a;color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;line-height:1}
+.oyc-ft .fsbtn:hover{background:#1583cf;border-color:#1583cf}
 .oyc-ft .fsbtn svg{display:block}
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:99999;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
@@ -384,8 +384,8 @@ function oyc_forecast_table_html() {
   (function(){
     var fsEl=document.querySelector('.oyc-ft .oyc-ft-card'),btn=$('oycftFs');
     if(!fsEl||!btn)return;
-    var EXP='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
-        COL='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+    var EXP='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Expand</span>',
+        COL='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Exit</span>';
     btn.innerHTML=EXP;
     function apply(on){
       fsEl.classList.toggle('isfull',on);
