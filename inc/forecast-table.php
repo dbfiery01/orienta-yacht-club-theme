@@ -294,8 +294,26 @@ function oyc_forecast_table_html() {
     }).catch(function(){return null;});
   }
 
-  // Fetch through the cached server proxy (admin-ajax) so visitors never hit
-  // Open-Meteo directly — avoids the per-IP 429 rate limit on the public board.
+  // Waves: fetch Open-Meteo Marine straight from the browser (client-side), the
+  // same way the NWS cards already bypass the host. Our WP host firewalls
+  // outbound to marine-api.open-meteo.com (a different server from the wind API
+  // it CAN reach), so the server proxy's wave fetch comes back empty — but the
+  // visitor's browser reaches marine-api fine (CORS-ok). This is the authoritative
+  // hourly wave source; the server-side marine (if any) is just a secondary fill.
+  var MAR_URL='https://marine-api.open-meteo.com/v1/marine?latitude=40.93717&longitude=-73.70217'
+    +'&hourly=wave_height,wave_period,wave_direction&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+  function mergeWaves(mh){
+    if(!mh||!mh.time||!mh.wave_height)return 0;var n=0;
+    mh.time.forEach(function(t,i){var h=mh.wave_height[i];if(h!=null){WAVE[t]={h:h,p:(mh.wave_period||[])[i],dir:(mh.wave_direction||[])[i]};n++;}});
+    return n;
+  }
+  function loadWavesClient(){
+    return fetch(MAR_URL).then(function(r){if(!r.ok)throw new Error('mar '+r.status);return r.json();})
+      .then(function(j){return mergeWaves(j&&j.hourly);}).catch(function(){return 0;});
+  }
+
+  // Fetch wind/sky through the cached server proxy (admin-ajax) so visitors never
+  // hit Open-Meteo directly — avoids the per-IP 429 rate limit on the public board.
   fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
     if(!res||!res.ok||!res.wx||!res.wx.hourly)throw new Error(res&&res.err?res.err:'no data');
     var d=res.wx, mar=res.marine;
@@ -305,6 +323,7 @@ function oyc_forecast_table_html() {
     d.hourly.time.forEach(function(t,i){var u=Date.parse(t+':00Z')-off;if(Math.abs(u-now)<bd){bd=Math.abs(u-now);bi=i;}});NOW=bi;
     $('oycft-upd').textContent='Updated '+new Date(now).toLocaleString('en-US',{hour:'numeric',minute:'2-digit',month:'short',day:'numeric'});
     buildModels();buildLegend();render();
+    loadWavesClient().then(function(n){if(n)render();}); // client-side waves (host can't reach marine-api)
     loadBuoy().then(function(b){BUOY=b;render();});
     $('oycft-scroll').addEventListener('scroll',syncNav);
     window.addEventListener('resize',function(){clearTimeout(window._oycft);window._oycft=setTimeout(function(){renderRibbon();syncNav();},150);});
