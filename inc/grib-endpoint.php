@@ -235,13 +235,13 @@ function oyc_wind_local_proxy() {
 	oyc_om_cached( 'oyc_wind_local', $url, 15 * MINUTE_IN_SECONDS );
 }
 
-/* HRRR precip nowcast for Radar mode — 15-min steps. Cached 10 min (near-real-time). */
+/* HRRR precip for Radar mode — 15-min steps, recent past (−1 h) → +18 h. Cached 10 min (near-real-time). */
 add_action( 'wp_ajax_oyc_wind_radar',        'oyc_wind_radar_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_radar', 'oyc_wind_radar_proxy' );
 function oyc_wind_radar_proxy() {
 	list( $lat, $lon ) = oyc_local_grid_csv();
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
-		. '&minutely_15=precipitation&forecast_minutely_15=40&timezone=America%2FNew_York';
+		. '&minutely_15=precipitation&forecast_minutely_15=80&past_minutes=60&timezone=America%2FNew_York';
 	oyc_om_cached( 'oyc_wind_radar', $url, 10 * MINUTE_IN_SECONDS );
 }
 

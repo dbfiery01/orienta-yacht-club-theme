@@ -1006,15 +1006,17 @@ function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd
 function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+h+'h'+(m?' '+m+'m':'');}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	var offs=[0];for(var m=15;m<=480;m+=15)offs.push(m);
-	RV.frames=offs.map(function(o){return {off:o};});RV.idx=0;RV.loaded=true;
+	/* recent past (−1 h) → +18 h in 15-min steps (HRRR is full-res to ~+18 h; the
+	   proxy fetches past_minutes=60 + forecast_minutely_15=72 to cover this) */
+	var offs=[];for(var m=-60;m<=1080;m+=15)offs.push(m);
+	RV.frames=offs.map(function(o){return {off:o};});RV.idx=Math.max(0,offs.indexOf(0));RV.loaded=true;
 	loadFC();cb&&cb();
 }
 /* ---- wide-area observed radar: NOAA NEXRAD national mosaic (Iowa State IEM) ----
    Shown when the view is zoomed out past the local grid, for MyRadar-style
    continental coverage; the smooth local HRRR forecast field still serves the
    zoomed-in view. Past hour, 5-min steps (IEM -mNNm layers; keyless, CORS-ok). */
-var NX={layer:null,idx:0},NXF=[-50,-45,-40,-35,-30,-25,-20,-15,-10,-5,0],radarWasWide=null;
+var NX={layer:null,idx:0},NXF=[-55,-50,-45,-40,-35,-30,-25,-20,-15,-10,-5,0],radarWasWide=null;
 var NEXRAD_BASE='https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913';
 function nexradUrl(off){return NEXRAD_BASE+(off<0?'-m'+('0'+(-off)).slice(-2)+'m':'')+'/{z}/{x}/{y}.png';}
 /* wide whenever the viewport spills past the local box (same test the wind grid
@@ -1038,7 +1040,7 @@ function showHRRR(i){
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
 	var off=RV.frames[i].off,t=Date.now()+off*60000,d=new Date(t);
-	var tag=off>0?' · forecast':(off<0?' · recent':' · now');
+	var tag=off>0?' · forecast':(off<0?' · recent':'');
 	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
 		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erForFrame(t,off===0));return;}
 	var step=fcStep(t),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
