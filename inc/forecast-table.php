@@ -357,7 +357,7 @@ function oyc_forecast_table_html() {
     });wave+='</tr>';
     var cl='<tr class="cl">'+rl('','Cloud');idx.forEach(function(i){var v=c.cc[i]||0,cc=cloudCell(v);cl+='<td style="background:'+cc.bg+';color:'+cc.fg+'"'+dv(i)+'>'+v+'</td>';});cl+='</tr>';
     var ps='<tr class="ps">'+rl(ic('pres'),'Pres');idx.forEach(function(i){var v=Math.round(c.ps[i]||0),cc=presCell(v);ps+='<td style="background:'+cc.bg+';color:'+cc.fg+';font-size:.66rem"'+dv(i)+'>'+v+'</td>';});ps+='</tr>';
-    $('oycft-tbl').innerHTML='<table>'+day+hr+wind+gust+skyR+temp+pre+wave+cl+ps+'</table>';
+    $('oycft-tbl').innerHTML='<table>'+day+hr+temp+wind+gust+skyR+pre+wave+cl+ps+'</table>';
     updateObs();renderRibbon();syncNav();
   }
   function updateObs(){var el=$('oycft-obs');if(!BUOY){el.hidden=true;return;}el.hidden=false;
