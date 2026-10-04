@@ -188,7 +188,7 @@ function oyc_forecast_table_html() {
 	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
 	$inner = <<<'HTML'
 <div class="oyc-ft-card">
-  <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Buoy 42 &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span></div>
+  <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Buoy 42 &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span><button type="button" class="fsbtn" id="oycftFs" title="Full screen" aria-label="Full screen"></button></div>
   <div class="models" id="oycft-models"></div>
   <div class="obs" id="oycft-obs" hidden></div>
   <div class="scroll" id="oycft-scroll"><div id="oycft-tbl" class="msg">Loading forecast&hellip;</div></div>
@@ -207,6 +207,12 @@ function oyc_forecast_table_html() {
 .oyc-ft .hd .ttl{font-size:1.1rem;color:#0b2a4a;font-weight:700}
 .oyc-ft .hd .loc{font-size:.83rem;color:#6b7280}
 .oyc-ft .hd .upd{margin-left:auto;font-size:.72rem;color:#6b7280}
+.oyc-ft .fsbtn{flex:none;align-self:center;margin-left:10px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid #0b2a4a;background:#0b2a4a;color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;line-height:1}
+.oyc-ft .fsbtn:hover{background:#1583cf;border-color:#1583cf}
+.oyc-ft .fsbtn svg{display:block}
+/* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
+.oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
+.oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
 .oyc-ft .models{display:flex;flex-wrap:wrap;gap:6px;padding:6px 18px 10px}
 .oyc-ft .models button{border:1px solid #dfe7f0;background:#fff;font:inherit;font-size:.74rem;font-weight:600;color:#6b7280;padding:5px 11px;border-radius:999px;cursor:pointer;transition:.15s;letter-spacing:0}
 .oyc-ft .models button:hover{border-color:#1583cf}
@@ -371,6 +377,33 @@ function oyc_forecast_table_html() {
     var nw=$('oycft-navwrap');nw.onclick=function(ev){var r=nw.getBoundingClientRect(),f=(ev.clientX-r.left)/r.width,sc=$('oycft-scroll');sc.scrollLeft=f*sc.scrollWidth-sc.clientWidth/2;};
   }
   function syncNav(){var sc=$('oycft-scroll'),win=$('oycft-navwin'),wrap=$('oycft-navwrap'),tot=sc.scrollWidth||1;win.style.left=(sc.scrollLeft/tot*wrap.clientWidth)+'px';win.style.width=(sc.clientWidth/tot*wrap.clientWidth)+'px';}
+
+  /* ---------- expand / collapse (CSS maximise that fills the window) ----------
+     Not the native Fullscreen API — see the note in the map component; the .isfull
+     overlay keeps the themed card readable. */
+  (function(){
+    var fsEl=document.querySelector('.oyc-ft .oyc-ft-card'),btn=$('oycftFs');
+    if(!fsEl||!btn)return;
+    var EXP='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Expand</span>',
+        COL='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Exit</span>';
+    btn.innerHTML=EXP;
+    /* opaque full-viewport backdrop (direct child of <body>) so nothing bleeds
+       through behind the expanded card */
+    var bd=null;
+    function backdrop(on){
+      if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
+      else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
+    }
+    function apply(on){
+      fsEl.classList.toggle('isfull',on);
+      document.body.style.overflow=on?'hidden':'';
+      backdrop(on);
+      btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
+      setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
+    }
+    btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+  })();
 })();
 </script>
 HTML;

@@ -35,6 +35,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 18px 8px}
 #oycwm .hd h2{margin:0;font-size:1.12rem;color:var(--navy);font-weight:700}
 #oycwm .hd .st{margin-left:auto;font-size:.75rem;color:var(--mute)}
+#oycwm .fsbtn{flex:none;margin-left:8px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.76rem;font-weight:700;letter-spacing:.02em;line-height:1}
+#oycwm .fsbtn:hover{background:var(--harbor);border-color:var(--harbor)}
+#oycwm .fsbtn svg{display:block}
+/* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
+#oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
+#oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
+#oycwm .card.isfull #map{height:100%}
+#oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
 #oycwm .tabs button.on{background:var(--harbor);color:#fff}
@@ -178,6 +186,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
+			<button type="button" class="fsbtn" id="oycwmFs" title="Full screen" aria-label="Full screen"></button>
 		</div>
 
 		<div class="erbar" id="erBar">
@@ -1062,7 +1071,10 @@ function show(i){mode==='radar'?showRadar(i):showWind(i);}
 slider.addEventListener('input',function(){stop();show(+slider.value);});
 playBtn.addEventListener('click',function(){playing?stop():play();});
 function play(){var max=(mode==='radar'?radarFrameCount():TIMES.length);if(!max)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';
-	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},mode==='radar'?450:700);}
+	/* pace each frame: the zoomed-out radar fetches fresh tiles per step so it needs
+	   the most time to render; the local smooth field is quicker; wind is data-only */
+	var step=(mode==='radar')?(radarWide()?1200:850):700;
+	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},step);}
 function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterval(timer);timer=null;}}
 
 /* ---------- view tabs (Wind | Radar | Temp | Precip) ---------- */
@@ -1177,6 +1189,36 @@ map.on('zoomend',function(){
 		show(nearestFrameIdx(radarOffsets(w),curOff));
 	}
 });
+
+/* ---------- expand / collapse (CSS maximise that fills the window) ----------
+   Deliberately NOT the native Fullscreen API: fullscreening the inner card moves
+   it to the browser top layer, where the dark ::backdrop + ancestor-scoped CSS
+   vars render the header chrome unreadable. The .isfull overlay keeps the whole
+   themed component intact and reads correctly. */
+(function(){
+	var fsEl=document.querySelector('#oycwm .card'),btn=document.getElementById('oycwmFs');
+	if(!fsEl||!btn)return;
+	var EXP='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Expand</span>',
+	    COL='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Exit</span>';
+	btn.innerHTML=EXP;
+	/* opaque full-viewport backdrop as a direct child of <body> — guarantees no
+	   other card bleeds through behind the expanded card, even if some ancestor
+	   ever constrains the fixed card's positioning */
+	var bd=null;
+	function backdrop(on){
+		if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
+		else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
+	}
+	function apply(on){
+		fsEl.classList.toggle('isfull',on);
+		document.body.style.overflow=on?'hidden':'';
+		backdrop(on);
+		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
+		setTimeout(function(){map.invalidateSize();try{refreshOverlays();}catch(e){}},90);
+	}
+	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
+	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+})();
 
 loadLocal();
 })();
