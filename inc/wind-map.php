@@ -39,7 +39,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .fsbtn:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .fsbtn svg{display:block}
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
-#oycwm .card.isfull{position:fixed;inset:0;z-index:99999;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
+#oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
@@ -1198,9 +1198,18 @@ map.on('zoomend',function(){
 	var EXP='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Expand</span>',
 	    COL='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Exit</span>';
 	btn.innerHTML=EXP;
+	/* opaque full-viewport backdrop as a direct child of <body> — guarantees no
+	   other card bleeds through behind the expanded card, even if some ancestor
+	   ever constrains the fixed card's positioning */
+	var bd=null;
+	function backdrop(on){
+		if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
+		else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
+	}
 	function apply(on){
 		fsEl.classList.toggle('isfull',on);
 		document.body.style.overflow=on?'hidden':'';
+		backdrop(on);
 		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
 		setTimeout(function(){map.invalidateSize();try{refreshOverlays();}catch(e){}},90);
 	}

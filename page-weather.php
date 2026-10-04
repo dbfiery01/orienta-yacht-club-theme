@@ -69,7 +69,7 @@ if ( ! $oyc_weather_menu ) {
 		-webkit-font-smoothing:antialiased;
 	}
 	.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
-	.wrap{width:100%;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:calc(100vh - 36px)}
+	.wrap{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:calc(100vh - 36px)}
 
 	/* ---- site menu bar ---- */
 	.sitebar{display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;

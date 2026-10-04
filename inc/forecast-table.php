@@ -211,7 +211,7 @@ function oyc_forecast_table_html() {
 .oyc-ft .fsbtn:hover{background:#1583cf;border-color:#1583cf}
 .oyc-ft .fsbtn svg{display:block}
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
-.oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:99999;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
+.oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
 .oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
 .oyc-ft .models{display:flex;flex-wrap:wrap;gap:6px;padding:6px 18px 10px}
 .oyc-ft .models button{border:1px solid #dfe7f0;background:#fff;font:inherit;font-size:.74rem;font-weight:600;color:#6b7280;padding:5px 11px;border-radius:999px;cursor:pointer;transition:.15s;letter-spacing:0}
@@ -387,9 +387,17 @@ function oyc_forecast_table_html() {
     var EXP='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>Expand</span>',
         COL='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg><span>Exit</span>';
     btn.innerHTML=EXP;
+    /* opaque full-viewport backdrop (direct child of <body>) so nothing bleeds
+       through behind the expanded card */
+    var bd=null;
+    function backdrop(on){
+      if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
+      else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
+    }
     function apply(on){
       fsEl.classList.toggle('isfull',on);
       document.body.style.overflow=on?'hidden':'';
+      backdrop(on);
       btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
       setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
     }
