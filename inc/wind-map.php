@@ -206,7 +206,7 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
-			<span class="hint">NOAA HRRR precipitation &middot; now &rarr; +8&nbsp;h forecast &middot; 15-min steps</span>
+			<span class="hint">Past hour &rarr; +18&nbsp;h forecast (NOAA HRRR) &middot; zoom out for the national radar</span>
 		</div>
 		<div class="layers" id="satLayers" style="display:none">
 			<button class="sat-t on" data-sat="latest">Latest</button>
@@ -278,7 +278,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="hovertip" id="hoverTip"></div>
 			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
 		</div>
-		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar = HRRR precipitation via Open-Meteo.</div>
+		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar close-up = HRRR precipitation (Open-Meteo); national view = NEXRAD mosaic + HRRR reflectivity (Iowa State IEM).</div>
 	</div>
 
 	<!-- GRIB DOWNLOAD -->
@@ -978,7 +978,7 @@ function loadBasin(){
 }
 
 /* ---------- RADAR — precipitation (NOAA HRRR via Open-Meteo) ----------
-   The whole timeline (recent past → +8 h) is ONE smooth, supersampled precip
+   The whole timeline (recent past → +18 h) is ONE smooth, supersampled precip
    field, so the "radar" reads consistently defined & smooth. (NEXRAD tiles were
    dropped — they looked blocky next to the smooth forecast field.) 15-min steps. */
 var FC={PP15:[],tEpoch:[],loaded:false,loading:false},fcOverlay=null,RV={frames:[],idx:0,loaded:false};
@@ -1003,18 +1003,51 @@ function loadFC(cb){
 	});
 }
 function fcStep(t){var best=0,bd=1e15;for(var i=0;i<FC.tEpoch.length;i++){var dd=Math.abs(FC.tEpoch[i]-t);if(dd<bd){bd=dd;best=i;}}return best;}
-function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+h+'h'+(m?' '+m+'m':'');}
+function fmtOff(off){if(off===0)return 'now';if(off<0)return off+' min';var h=Math.floor(off/60),m=off%60;return '+'+(h?h+'h'+(m?' '+m+'m':''):m+'m');}
 function loadRadar(cb){
 	if(RV.loaded){cb&&cb();return;}
-	var offs=[0];for(var m=15;m<=480;m+=15)offs.push(m);
-	RV.frames=offs.map(function(o){return {off:o};});RV.idx=0;RV.loaded=true;
+	/* recent past (−1 h) → +18 h in 15-min steps (HRRR is full-res to ~+18 h; the
+	   proxy fetches past_minutes=60 + forecast_minutely_15=72 to cover this) */
+	var offs=[];for(var m=-60;m<=1080;m+=15)offs.push(m);
+	RV.frames=offs.map(function(o){return {off:o};});RV.idx=Math.max(0,offs.indexOf(0));RV.loaded=true;
 	loadFC();cb&&cb();
 }
-function showRadar(i){
+/* ---- wide-area radar: NEXRAD mosaic (observed) + HRRR REFD (forecast) --------
+   Shown when the view is zoomed out past the local grid, for MyRadar-style
+   continental coverage; the smooth local HRRR field still serves the zoomed-in
+   view. One unified timeline from the IEM tile cache (keyless, CORS-ok):
+   past hour → NEXRAD national mosaic (5-min -mNNm layers), now → +18 h →
+   HRRR simulated reflectivity forecast (REFD, 15-min F#### layers, latest run).
+   HRRR frames use the latest run (INIT 0), so lead time is approximate to ~1 h. */
+var NX={layer:null,idx:0},radarWasWide=null;
+var WF=(function(){var a=[],m;for(m=-55;m<=0;m+=5)a.push(m);for(m=15;m<=1080;m+=15)a.push(m);return a;})();
+var IEM_TMS='https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/';
+function nexradUrl(off){return IEM_TMS+'nexrad-n0q-900913'+(off<0?'-m'+('0'+(-off)).slice(-2)+'m':'')+'/{z}/{x}/{y}.png';}
+function wideRadarUrl(off){return off>0?IEM_TMS+'hrrr::REFD-F'+('000'+off).slice(-4)+'-0/{z}/{x}/{y}.png':nexradUrl(off);}
+/* wide whenever the viewport spills past the local box (same test the wind grid
+   uses to switch LOCAL→BASIN), so "zoom out" reveals the national view */
+function radarWide(){var b=map.getBounds();
+	return !(b.getSouth()>=LOCAL.LA2-0.6&&b.getNorth()<=LOCAL.LA1+0.6&&b.getWest()>=LOCAL.LO1-0.6&&b.getEast()<=LOCAL.LO2+0.6);}
+function removeNexrad(){if(NX.layer){map.removeLayer(NX.layer);NX.layer=null;}}
+function radarOffsets(wide){return wide?WF:RV.frames.map(function(f){return f.off;});}
+function nearestFrameIdx(offs,off){var bi=0,bd=1e15;for(var i=0;i<offs.length;i++){var d=Math.abs(offs[i]-off);if(d<bd){bd=d;bi=i;}}return bi;}
+function radarFrameCount(){return radarWide()?WF.length:RV.frames.length;}
+function showWideFrame(i){
+	if(fcOverlay)fcOverlay.setOpacity(0); /* drop the tiny local patch beneath the national view */
+	i=Math.max(0,Math.min(WF.length-1,i));NX.idx=i;slider.value=i;curTi=i;
+	var off=WF[i],t=Date.now()+off*60000,fcst=off>0;
+	if(NX.layer)NX.layer.setUrl(wideRadarUrl(off));
+	else{NX.layer=L.tileLayer(wideRadarUrl(off),{opacity:0.72,zIndex:344,interactive:false,attribution:'NEXRAD &amp; HRRR &middot; Iowa State IEM',updateWhenZooming:false});NX.layer.addTo(map);}
+	tlabel.innerHTML=new Date(t).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' &middot; '+(fcst?'HRRR fcst':'NEXRAD')+'</small>';
+	setER(erForFrame(t,off===0));
+}
+function showRadar(i){return radarWide()?showWideFrame(i):showHRRR(i);}
+function showHRRR(i){
+	removeNexrad();
 	if(!RV.frames.length)return;
 	i=Math.max(0,Math.min(RV.frames.length-1,i));RV.idx=i;slider.value=i;curTi=i;
 	var off=RV.frames[i].off,t=Date.now()+off*60000,d=new Date(t);
-	var tag=off>0?' · forecast':(off<0?' · recent':' · now');
+	var tag=off>0?' · forecast':(off<0?' · recent':'');
 	if(!FC.loaded){if(fcOverlay)fcOverlay.setOpacity(0);loadFC(function(){if(mode==='radar')showRadar(i);});
 		tlabel.innerHTML=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'<small>'+fmtOff(off)+' · loading…</small>';setER(erForFrame(t,off===0));return;}
 	var step=fcStep(t),url=fieldDataURL(LOCAL,FC.PP15,step,precipRadarColor),bounds=[[LOCAL.LA2,LOCAL.LO1],[LOCAL.LA1,LOCAL.LO2]];
@@ -1028,7 +1061,7 @@ function showRadar(i){
 function show(i){mode==='radar'?showRadar(i):showWind(i);}
 slider.addEventListener('input',function(){stop();show(+slider.value);});
 playBtn.addEventListener('click',function(){playing?stop():play();});
-function play(){var max=(mode==='radar'?RV.frames.length:TIMES.length);if(!max)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';
+function play(){var max=(mode==='radar'?radarFrameCount():TIMES.length);if(!max)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';
 	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},mode==='radar'?450:700);}
 function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterval(timer);timer=null;}}
 
@@ -1079,11 +1112,17 @@ function setMode(m){
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);
 		updateLegend();drawField();
-		loadRadar(function(){slider.max=Math.max(0,RV.frames.length-1);showRadar(RV.idx);});
+		radarWasWide=radarWide();
+		loadRadar(function(){
+			var wide=radarWide();
+			slider.max=Math.max(0,(wide?WF.length:RV.frames.length)-1);
+			showRadar(nearestFrameIdx(radarOffsets(wide),0)); /* start on 'now' */
+		});
 		return;
 	}
 	if(RV.layer){map.removeLayer(RV.layer);RV.layer=null;}
 	if(fcOverlay){map.removeLayer(fcOverlay);fcOverlay=null;}
+	removeNexrad();
 	slider.max=Math.max(0,TIMES.length-1);
 	if(m==='wind'){
 		setParticlesVisible(document.getElementById('tgParticles').checked);
@@ -1126,6 +1165,18 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
 map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
+/* radar: switch between the local HRRR field and the national NEXRAD mosaic as
+   the view zooms across the local-grid boundary (resets the slider to 'now') */
+map.on('zoomend',function(){
+	if(mode!=='radar')return;
+	var w=radarWide();
+	if(w!==radarWasWide){
+		var curOff=radarWasWide?WF[NX.idx]:((RV.frames[RV.idx]||{}).off||0); /* keep the time across the switch */
+		radarWasWide=w;stop();
+		slider.max=Math.max(0,(w?WF.length:RV.frames.length)-1);
+		show(nearestFrameIdx(radarOffsets(w),curOff));
+	}
+});
 
 loadLocal();
 })();
