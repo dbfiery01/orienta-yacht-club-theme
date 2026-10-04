@@ -114,14 +114,20 @@ function oyc_marine_fc_proxy() {
 
 	$args = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
 
-	$wx = null;
+	$wx = null; $wxdiag = '';
 	$r  = wp_remote_get( $wx_url, $args );
-	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
-		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+	if ( is_wp_error( $r ) ) {
+		$wxdiag = 'wp:' . $r->get_error_code(); // e.g. http_request_failed (timeout/DNS/TLS)
+	} else {
+		$wxdiag = 'http ' . (int) wp_remote_retrieve_response_code( $r ); // e.g. http 429 (rate limit), http 403 (block)
+		if ( 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+			$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+		}
 	}
 	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) {
-		// Cache a miss only briefly so the next visitor retries (don't hammer, don't hide for long).
-		$out = array( 'ok' => false, 'err' => 'wx unavailable' );
+		// Report the real reason so the cause is visible; the client falls back to a
+		// direct browser fetch, so visitors still get the forecast.
+		$out = array( 'ok' => false, 'err' => $wxdiag ? ( 'wx ' . $wxdiag ) : 'wx unavailable' );
 		set_transient( 'oyc_marine_fc_b42', $out, 2 * MINUTE_IN_SECONDS );
 		wp_send_json( $out );
 	}
@@ -318,11 +324,7 @@ function oyc_forecast_table_html() {
       .then(function(j){return mergeWaves(j&&j.hourly);}).catch(function(){return 0;});
   }
 
-  // Fetch wind/sky through the cached server proxy (admin-ajax) so visitors never
-  // hit Open-Meteo directly — avoids the per-IP 429 rate limit on the public board.
-  fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
-    if(!res||!res.ok||!res.wx||!res.wx.hourly)throw new Error(res&&res.err?res.err:'no data');
-    var d=res.wx, mar=res.marine;
+  function boot(d,mar){
     DATA=d;
     if(mar&&mar.hourly&&mar.hourly.wave_height){var mh=mar.hourly;mh.time.forEach(function(t,i){WAVE[t]={h:mh.wave_height[i],p:(mh.wave_period||[])[i],dir:(mh.wave_direction||[])[i]};});}
     var off=(d.utc_offset_seconds||0)*1000,now=Date.now(),bi=0,bd=1e15;
@@ -333,7 +335,25 @@ function oyc_forecast_table_html() {
     loadBuoy().then(function(b){BUOY=b;render();});
     $('oycft-scroll').addEventListener('scroll',syncNav);
     window.addEventListener('resize',function(){clearTimeout(window._oycft);window._oycft=setTimeout(function(){renderRibbon();syncNav();},150);});
-  }).catch(function(e){$('oycft-tbl').textContent='Could not load forecast ('+e+').';});
+  }
+  // The visitor's browser fetches Open-Meteo directly (CORS-ok) — same multi-model
+  // wind/sky the proxy returns. Used when the cached server proxy can't reach
+  // Open-Meteo (host IP throttled/blocked), so the table loads from the visitor's
+  // own connection instead of showing "unavailable".
+  function clientWx(){
+    var u='https://api.open-meteo.com/v1/forecast?latitude=40.93717&longitude=-73.70217'
+      +'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
+      +'&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
+      +'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
+    return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}).then(function(j){if(!j||!j.hourly)throw new Error('wx empty');return j;});
+  }
+  function fail(e){$('oycft-tbl').textContent='Could not load forecast ('+e+').';}
+  // Try the cached server proxy first (efficient, no per-visitor load); fall back
+  // to a direct browser fetch whenever the host can't reach Open-Meteo.
+  fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
+    if(res&&res.ok&&res.wx&&res.wx.hourly){ boot(res.wx,res.marine); }
+    else { clientWx().then(function(wx){boot(wx,null);}).catch(fail); }
+  }).catch(function(){ clientWx().then(function(wx){boot(wx,null);}).catch(fail); });
 
   function buildModels(){var box=$('oycft-models');MODELS.forEach(function(m){var b=document.createElement('button');b.textContent=m.label;b.setAttribute('data-id',m.id);if(m.blend)b.className='blend';if(m.id===MODEL)b.className+=' on';b.onclick=function(){MODEL=m.id;[].forEach.call(box.children,function(c){c.classList.toggle('on',c.getAttribute('data-id')===MODEL);});render();};box.appendChild(b);});}
   function buildLegend(){var bins=[['<8','#c2ddec'],['8-11','#8fc0dd'],['11-14','#5aa6d0'],['14-17','#d9c07a'],['17-20','#e0a13f'],['20-24','#dd7f3a'],['24-28','#cf5638'],['28+','#b23a2a']];
