@@ -33,13 +33,13 @@ function oyc_header_wx_proxy() {
 
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734'
 		. '&current=weather_code,cloud_cover,temperature_2m&temperature_unit=fahrenheit&timezone=America%2FNew_York';
-	$r   = wp_remote_get( $url, array( 'timeout' => 8, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
-	$out = array( 'ok' => false );
+	$r    = wp_remote_get( $url, array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	$good = null;
 	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
 		$j = json_decode( (string) wp_remote_retrieve_body( $r ), true );
 		if ( is_array( $j ) && isset( $j['current']['temperature_2m'] ) ) {
-			$c   = $j['current'];
-			$out = array(
+			$c    = $j['current'];
+			$good = array(
 				'ok'    => true,
 				'code'  => (int) $c['weather_code'],
 				'cloud' => isset( $c['cloud_cover'] ) ? (int) $c['cloud_cover'] : null,
@@ -47,8 +47,22 @@ function oyc_header_wx_proxy() {
 			);
 		}
 	}
-	// Cache a good reading 15 min; cache a miss only briefly so the glyph recovers fast.
-	set_transient( 'oyc_header_wx', $out, ( $out['ok'] ? 15 : 2 ) * MINUTE_IN_SECONDS );
+	if ( $good ) {
+		// Fresh reading: cache 15 min, and keep a long-lived copy as the fallback.
+		set_transient( 'oyc_header_wx',      $good, 15 * MINUTE_IN_SECONDS );
+		set_transient( 'oyc_header_wx_last', $good,  7 * DAY_IN_SECONDS );
+		wp_send_json( $good );
+	}
+	// Fetch failed (Open-Meteo blip / rate-limit). Serve the last good reading so the
+	// glyph never disappears; cache it briefly so we retry for fresh data soon.
+	$last = get_transient( 'oyc_header_wx_last' );
+	if ( is_array( $last ) && ! empty( $last['ok'] ) ) {
+		set_transient( 'oyc_header_wx', $last, 3 * MINUTE_IN_SECONDS );
+		wp_send_json( $last );
+	}
+	// No prior good reading to fall back on — brief miss, retry soon.
+	$out = array( 'ok' => false );
+	set_transient( 'oyc_header_wx', $out, 2 * MINUTE_IN_SECONDS );
 	wp_send_json( $out );
 }
 

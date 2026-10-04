@@ -1071,7 +1071,10 @@ function show(i){mode==='radar'?showRadar(i):showWind(i);}
 slider.addEventListener('input',function(){stop();show(+slider.value);});
 playBtn.addEventListener('click',function(){playing?stop():play();});
 function play(){var max=(mode==='radar'?radarFrameCount():TIMES.length);if(!max)return;playing=true;playBtn.innerHTML='&#10073;&#10073;';
-	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},mode==='radar'?450:700);}
+	/* pace each frame: the zoomed-out radar fetches fresh tiles per step so it needs
+	   the most time to render; the local smooth field is quicker; wind is data-only */
+	var step=(mode==='radar')?(radarWide()?1200:850):700;
+	timer=setInterval(function(){var n=+slider.value+1;if(n>=max)n=0;show(n);},step);}
 function stop(){playing=false;playBtn.innerHTML='&#9654;';if(timer){clearInterval(timer);timer=null;}}
 
 /* ---------- view tabs (Wind | Radar | Temp | Precip) ---------- */
