@@ -397,7 +397,7 @@ if ( ! $oyc_weather_menu ) {
 
 	<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
 	<div class="card windmap-card">
-		<h2>Wind &amp; Radar Map <span class="sta">Interactive</span></h2>
+		<h2>Wind &amp; Radar Map <span class="sta">allow a few secs for the data to populate</span></h2>
 		<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
 	</div>
 
