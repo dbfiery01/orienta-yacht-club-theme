@@ -378,24 +378,23 @@ function oyc_forecast_table_html() {
   }
   function syncNav(){var sc=$('oycft-scroll'),win=$('oycft-navwin'),wrap=$('oycft-navwrap'),tot=sc.scrollWidth||1;win.style.left=(sc.scrollLeft/tot*wrap.clientWidth)+'px';win.style.width=(sc.clientWidth/tot*wrap.clientWidth)+'px';}
 
-  /* ---------- full-screen toggle ---------- */
+  /* ---------- expand / collapse (CSS maximise that fills the window) ----------
+     Not the native Fullscreen API — see the note in the map component; the .isfull
+     overlay keeps the themed card readable. */
   (function(){
     var fsEl=document.querySelector('.oyc-ft .oyc-ft-card'),btn=$('oycftFs');
     if(!fsEl||!btn)return;
     var EXP='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
         COL='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
     btn.innerHTML=EXP;
-    var fsOK=!!(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen);
-    function fsNow(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
-    function apply(on){fsEl.classList.toggle('isfull',on);btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
-      setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);}
-    btn.addEventListener('click',function(){
-      if(fsOK){ fsNow()===fsEl ? (document.exitFullscreen||document.webkitExitFullscreen).call(document) : (fsEl.requestFullscreen||fsEl.webkitRequestFullscreen).call(fsEl); }
-      else{ var on=!fsEl.classList.contains('isfull'); document.body.style.overflow=on?'hidden':''; apply(on); }
-    });
-    document.addEventListener('fullscreenchange',function(){apply(fsNow()===fsEl);});
-    document.addEventListener('webkitfullscreenchange',function(){apply(fsNow()===fsEl);});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!fsOK&&fsEl.classList.contains('isfull')){document.body.style.overflow='';apply(false);}});
+    function apply(on){
+      fsEl.classList.toggle('isfull',on);
+      document.body.style.overflow=on?'hidden':'';
+      btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
+      setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
+    }
+    btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
   })();
 })();
 </script>

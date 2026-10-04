@@ -1187,27 +1187,25 @@ map.on('zoomend',function(){
 	}
 });
 
-/* ---------- full-screen toggle ---------- */
+/* ---------- expand / collapse (CSS maximise that fills the window) ----------
+   Deliberately NOT the native Fullscreen API: fullscreening the inner card moves
+   it to the browser top layer, where the dark ::backdrop + ancestor-scoped CSS
+   vars render the header chrome unreadable. The .isfull overlay keeps the whole
+   themed component intact and reads correctly. */
 (function(){
 	var fsEl=document.querySelector('#oycwm .card'),btn=document.getElementById('oycwmFs');
 	if(!fsEl||!btn)return;
 	var EXP='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
 	    COL='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3a2 2 0 0 0 2-2V3M16 3v3a2 2 0 0 0 2 2h3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
 	btn.innerHTML=EXP;
-	var fsOK=!!(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen);
-	function fsNow(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
 	function apply(on){
 		fsEl.classList.toggle('isfull',on);
+		document.body.style.overflow=on?'hidden':'';
 		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
 		setTimeout(function(){map.invalidateSize();try{refreshOverlays();}catch(e){}},90);
 	}
-	btn.addEventListener('click',function(){
-		if(fsOK){ fsNow()===fsEl ? (document.exitFullscreen||document.webkitExitFullscreen).call(document) : (fsEl.requestFullscreen||fsEl.webkitRequestFullscreen).call(fsEl); }
-		else{ var on=!fsEl.classList.contains('isfull'); document.body.style.overflow=on?'hidden':''; apply(on); }
-	});
-	document.addEventListener('fullscreenchange',function(){apply(fsNow()===fsEl);});
-	document.addEventListener('webkitfullscreenchange',function(){apply(fsNow()===fsEl);});
-	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!fsOK&&fsEl.classList.contains('isfull')){document.body.style.overflow='';apply(false);}});
+	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
+	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
 })();
 
 loadLocal();
