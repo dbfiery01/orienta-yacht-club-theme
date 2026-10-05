@@ -360,7 +360,7 @@ function makeGrid(o){
 	g.LAT=[];g.LON=[];
 	for(i=0;i<g.NY;i++)for(j=0;j<g.NX;j++){g.LAT.push(g.lats[i]);g.LON.push(g.lons[j]);}
 	g.HDR={parameterCategory:2,nx:g.NX,ny:g.NY,lo1:g.LO1,lo2:g.LO2,la1:g.LA1,la2:g.LA2,dx:g.DX,dy:g.DY};
-	g.SP=[];g.DR=[];g.PR=[];g.GU=[];g.TP=[];g.PP=[];g.WV=[];g.FRAMES=[];
+	g.SP=[];g.DR=[];g.PR=[];g.GU=[];g.TP=[];g.PP=[];g.WV=[];g.WP=[];g.FRAMES=[];
 	g.wvMap=null;g.wvLoaded=false;g.wvLoading=false;
 	return g;
 }
@@ -410,10 +410,12 @@ function sampleGrid(g,lat,lon,ti){
 	   coastal point whose grid box also touches land still reads a value that
 	   matches the /weather/ board's exact-point marine query (strict bil would
 	   return null and show "—"). */
-	var wv=null;
+	var wv=null,wp=null;
 	if(g.WV&&g.WV.length){var ws=[at(g.WV,r0,c0,wti),at(g.WV,r0,c1,wti),at(g.WV,r1,c0,wti),at(g.WV,r1,c1,wti)].filter(function(x){return x!=null;});
 		if(ws.length)wv=ws.reduce(function(a,b){return a+b;},0)/ws.length;}
-	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp,waveFt:wv==null?null:wv*3.28084};
+	if(g.WP&&g.WP.length){var ps=[at(g.WP,r0,c0,wti),at(g.WP,r0,c1,wti),at(g.WP,r1,c0,wti),at(g.WP,r1,c1,wti)].filter(function(x){return x!=null;});
+		if(ps.length)wp=ps.reduce(function(a,b){return a+b;},0)/ps.length;}
+	return {kt:sp*KT,dir:dir,mb:mb==null?null:mb,gust:gu==null?null:gu*KT,tempF:tp,precip:pp,waveFt:wv==null?null:wv*3.28084,wavePer:wp};
 }
 function sampleBest(lat,lon,ti){
 	if(lat<=LOCAL.LA1&&lat>=LOCAL.LA2&&lon>=LOCAL.LO1&&lon<=LOCAL.LO2){var s=sampleGrid(LOCAL,lat,lon,ti);if(s)return s;}
@@ -522,19 +524,20 @@ function fcSeriesFrom(res){
 	if(!res||!res.ok||!res.wx||!res.wx.hourly)return null;
 	var wx=res.wx,h=wx.hourly,off=(wx.utc_offset_seconds||0)*1000;
 	var t=h.time.map(function(s){return Date.parse(s+':00Z')-off;});
-	var wave={};
-	if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];});}
+	var wave={},wper={};
+	if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];if(mh.wave_period)wper[tt]=mh.wave_period[i];});}
 	return {t:t, kt:h[fcKey(h,'wind_speed_10m')], gust:h[fcKey(h,'wind_gusts_10m')], dir:h[fcKey(h,'wind_direction_10m')],
 		mb:h[fcKey(h,'pressure_msl')], tempF:h[fcKey(h,'temperature_2m')], pop:h[fcKey(h,'precipitation_probability')],
-		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;})};
+		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;}),
+		wavePer:h.time.map(function(s){return wper[s]!=null?wper[s]:null;})};
 }
-function fcAt(S,i){return {kt:S.kt[i],gust:S.gust[i],dir:S.dir[i],mb:S.mb[i],tempF:S.tempF[i],pop:S.pop?S.pop[i]:null,waveFt:S.waveFt[i]};}
+function fcAt(S,i){return {kt:S.kt[i],gust:S.gust[i],dir:S.dir[i],mb:S.mb[i],tempF:S.tempF[i],pop:S.pop?S.pop[i]:null,waveFt:S.waveFt[i],wavePer:S.wavePer?S.wavePer[i]:null};}
 function fcInterp(S,ep){if(!S||!S.t.length)return null;var T=S.t,n=T.length;
 	if(ep<=T[0])return fcAt(S,0);
 	if(ep>=T[n-1])return fcAt(S,n-1);
 	for(var i=1;i<n;i++){if(ep<=T[i]){var fr=(ep-T[i-1])/(T[i]-T[i-1]),a=fcAt(S,i-1),b=fcAt(S,i);
 		var li=function(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;};
-		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt)};}}
+		return {kt:li(a.kt,b.kt),gust:li(a.gust,b.gust),dir:a.dir,mb:li(a.mb,b.mb),tempF:li(a.tempF,b.tempF),pop:li(a.pop,b.pop),waveFt:li(a.waveFt,b.waveFt),wavePer:a.wavePer};}}
 	return fcAt(S,n-1);
 }
 function fcNearest(S,ep){if(!S||!S.t.length)return null;var T=S.t,best=0,bd=1e15;for(var i=0;i<T.length;i++){var dd=Math.abs(T[i]-ep);if(dd<bd){bd=dd;best=i;}}return fcAt(S,best);}
@@ -562,7 +565,7 @@ function erAtEpoch(epoch){
 	var a=sampleGrid(LOCAL,ER.lat,ER.lon,i0),b=sampleGrid(LOCAL,ER.lat,ER.lon,i1);
 	if(!a||!b)return a||b;
 	function li(x,y){return (x!=null&&y!=null)?x+(y-x)*fr:x;}
-	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip),waveFt:li(a.waveFt,b.waveFt)};
+	return {kt:a.kt+(b.kt-a.kt)*fr,dir:a.dir,mb:li(a.mb,b.mb),gust:li(a.gust,b.gust),tempF:li(a.tempF,b.tempF),precip:li(a.precip,b.precip),waveFt:li(a.waveFt,b.waveFt),wavePer:a.wavePer};
 }
 
 /* Reading for a clicked/hovered point: AT Execution Rock use the exact point
@@ -599,7 +602,7 @@ function pinContent(lat,lon,ti,fc){
 		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
-		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
+		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
 	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+dist+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
 /* fetch a pin's exact-point forecast (cached server proxy) and re-render it */
@@ -899,7 +902,7 @@ map.on('mousemove',function(e){
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
 	var gsh=gsAt(e.latlng.lat,lon);
 	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+' &middot; '+nmFromBuoy42(e.latlng.lat,lon).toFixed(1)+' nm from Buoy 42</span>'
-		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'')
+		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':''):'')
 		+(gsh?' · <span style="color:#bcdcf0">GS '+gsh.kt.toFixed(1)+' kt '+card(gsh.dir)+'</span>':'');
 });
 map.on('mouseout',function(){hoverTip.style.display='none';});
@@ -921,12 +924,12 @@ function loadWaves(g,cb){
 	if(g.wvLoading)return;
 	g.wvLoading=true;
 	var N=g.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
-	g.WV=new Array(N);var wvt=null,ci=0,CONC=2;
+	g.WV=new Array(N);g.WP=new Array(N);var wvt=null,ci=0,CONC=2;
 	function fc(idx,tries){var a=chunks[idx][0];
 		/* cached per-chunk server proxy (CH=140 matches oyc_waves) */
 		return fetchT(AJAX+'?action=oyc_waves&grid='+(g.name||'local')+'&chunk='+idx,15000)
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
-			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;}}})
+			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;g.WP[a+k]=h.wave_period||null;}}})
 			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);});});
 	}
 	function pump(){if(ci>=chunks.length)return Promise.resolve();var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fc(ci,0));

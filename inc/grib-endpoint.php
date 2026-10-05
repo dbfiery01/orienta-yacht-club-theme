@@ -273,7 +273,7 @@ function oyc_waves_proxy() {
 	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 140 );
 	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
 	$url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $cs[0] . '&longitude=' . $cs[1]
-		. '&hourly=wave_height&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+		. '&hourly=wave_height,wave_period&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
 	oyc_om_cached( 'oyc_waves_' . $grid . '_' . $chunk, $url, 30 * MINUTE_IN_SECONDS );
 }
 

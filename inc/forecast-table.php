@@ -169,7 +169,7 @@ function oyc_point_fc_proxy() {
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
 		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $rlat . '&longitude=' . $rlon
-		. '&hourly=wave_height&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+		. '&hourly=wave_height,wave_period&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
 
 	$wx = null;
 	$r  = wp_remote_get( $wx_url, $args );
