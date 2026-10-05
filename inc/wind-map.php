@@ -976,13 +976,24 @@ function loadBasin(){
 	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);BASIN.TP=new Array(N);
 	var ci=0,CONC=2;
 	function fetchChunk(idx,tries){
-		var a=chunks[idx][0];
-		/* cached per-chunk server proxy (CH=150 matches oyc_wind_basin) */
+		var a=chunks[idx][0],b=chunks[idx][1];
+		function valid(arr){return Array.isArray(arr)&&arr.length&&arr[0]&&arr[0].hourly;}
+		function store(arr){var list=Array.isArray(arr)?arr:[arr];
+			for(var k=0;k<list.length;k++){var gi=a+k;if(list[k]&&list[k].hourly){BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}}}
+		/* browser direct fetch of this chunk's points — same grid slice/params as the
+		   proxy — for when the host can't reach Open-Meteo (keeps the national view alive) */
+		function clientChunk(){
+			var u='https://api.open-meteo.com/v1/forecast?latitude='+BASIN.LAT.slice(a,b).join(',')+'&longitude='+BASIN.LON.slice(a,b).join(',')
+				+'&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
+				+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+			return fetch(u).then(function(r){if(!r.ok)throw new Error('b '+r.status);return r.json();});
+		}
+		/* cached per-chunk server proxy (CH=150 matches oyc_wind_basin), browser fallback */
 		return fetchT(AJAX+'?action=oyc_wind_basin&chunk='+idx,12000)
-			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
-			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];
-				for(var k=0;k<list.length;k++){var gi=a+k;BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}
-			}).catch(function(){
+			.then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+			.then(function(arr){return valid(arr)?arr:clientChunk();})
+			.then(function(arr){if(!valid(arr))throw new Error('chunk');store(arr);})
+			.catch(function(){
 				if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
 			});
 	}
