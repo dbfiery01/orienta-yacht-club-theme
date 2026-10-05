@@ -50,6 +50,15 @@ add_action( 'template_redirect', function () {
 			),
 			'shortcuts' => array(
 				array(
+					'name'        => 'Harbor Conditions',
+					'short_name'  => 'Weather',
+					'description' => 'Live Mamaroneck Harbor wind, tides & radar',
+					'url'         => home_url( '/weather/' ),
+					'icons'       => array(
+						array( 'src' => $theme . '/assets/icons/icon-192.png', 'sizes' => '192x192' ),
+					),
+				),
+				array(
 					'name'        => 'Events Calendar',
 					'short_name'  => 'Events',
 					'description' => 'View upcoming OYC events',
