@@ -128,6 +128,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-co .co-row{display:flex;gap:12px;font-size:.78rem}
 #oycwm .pin-co .co-row .v{font-weight:800;color:var(--ink)}
 #oycwm .pin-co .co-row .k{color:var(--mute);font-size:.7rem}
+#oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 5px}
 #oycwm .pin-co .co-x{margin-top:5px;font-size:.66rem;color:var(--faint)}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
@@ -312,6 +313,11 @@ document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
 var KT=1.94384;
 var ER={lat:40.93717,lon:-73.70217}; /* Buoy 42 — the weather-readout point, same as the /weather/ board */
+/* great-circle distance in nautical miles (haversine, R=3440.065 nm) */
+function distNM(lat1,lon1,lat2,lon2){var R=3440.065,d=Math.PI/180,
+	a=Math.sin((lat2-lat1)*d/2)*Math.sin((lat2-lat1)*d/2)+Math.cos(lat1*d)*Math.cos(lat2*d)*Math.sin((lon2-lon1)*d/2)*Math.sin((lon2-lon1)*d/2);
+	return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));}
+function nmFromBuoy42(lat,lon){return distNM(ER.lat,ER.lon,lat,lon);}
 
 /* ---- overlay color ramps (temp °F, precip in/3h) ---- */
 var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
@@ -582,7 +588,8 @@ function pinReading(lat,lon,ti,fc){
 function pinContent(lat,lon,ti,fc){
 	var s=pinReading(lat,lon,ti,fc);
 	var ll=lat.toFixed(4)+', '+lon.toFixed(4);
-	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div><div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
+	var dist='<div class="co-dist">'+nmFromBuoy42(lat,lon).toFixed(1)+' nm from Buoy 42</div>';
+	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+dist+'<div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -593,7 +600,7 @@ function pinContent(lat,lon,ti,fc){
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft sea</span></span>':'')+'</div>';
-	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+row+row2+'<div class="co-x">tap × to remove</div></div>';
+	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+dist+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
 /* fetch a pin's exact-point forecast (cached server proxy) and re-render it */
 function loadPinFC(pin){
@@ -891,7 +898,7 @@ map.on('mousemove',function(e){
 	hoverTip.style.display='block';
 	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
 	var gsh=gsAt(e.latlng.lat,lon);
-	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+'</span>'
+	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+' &middot; '+nmFromBuoy42(e.latlng.lat,lon).toFixed(1)+' nm from Buoy 42</span>'
 		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft':'')
 		+(gsh?' · <span style="color:#bcdcf0">GS '+gsh.kt.toFixed(1)+' kt '+card(gsh.dir)+'</span>':'');
 });
