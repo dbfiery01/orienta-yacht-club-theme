@@ -160,7 +160,7 @@ function oyc_point_fc_proxy() {
 	// Only within the map's data extent (Atlantic basin box) — bounds the fetch & cache.
 	if ( $lat > 63 || $lat < -27 || $lon > 18 || $lon < -102 ) { oyc_send_raw_json( '{"ok":false}' ); }
 	$rlat = round( $lat, 2 ); $rlon = round( $lon, 2 ); // ~1 km cache granularity
-	$key  = 'oyc_ptfc_' . md5( $rlat . '_' . $rlon );
+	$key  = 'oyc_ptfcp_' . md5( $rlat . '_' . $rlon ); // …p = includes wave_period (bump key on schema change)
 	$cached = get_transient( $key );
 	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
 
@@ -169,7 +169,7 @@ function oyc_point_fc_proxy() {
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
 		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $rlat . '&longitude=' . $rlon
-		. '&hourly=wave_height&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+		. '&hourly=wave_height,wave_period&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
 
 	$wx = null;
 	$r  = wp_remote_get( $wx_url, $args );
