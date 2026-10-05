@@ -160,7 +160,7 @@ function oyc_point_fc_proxy() {
 	// Only within the map's data extent (Atlantic basin box) — bounds the fetch & cache.
 	if ( $lat > 63 || $lat < -27 || $lon > 18 || $lon < -102 ) { oyc_send_raw_json( '{"ok":false}' ); }
 	$rlat = round( $lat, 2 ); $rlon = round( $lon, 2 ); // ~1 km cache granularity
-	$key  = 'oyc_ptfc_' . md5( $rlat . '_' . $rlon );
+	$key  = 'oyc_ptfcp_' . md5( $rlat . '_' . $rlon ); // …p = includes wave_period (bump key on schema change)
 	$cached = get_transient( $key );
 	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
 
