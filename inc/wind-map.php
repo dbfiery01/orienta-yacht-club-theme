@@ -933,12 +933,17 @@ function loadWaves(g,cb){
 function loadLocal(tries){
 	LOCAL.loading=true;tries=tries||0;
 	LOCAL.SP=[];LOCAL.DR=[];LOCAL.GU=[];LOCAL.PR=[];LOCAL.TP=[];LOCAL.PP=[];
-	/* cached server proxy (admin-ajax) so visitors never hit Open-Meteo directly
-	   — avoids the per-IP 429 that left the field "unavailable" on the board */
-	fetchT(AJAX+'?action=oyc_wind_local',15000)
-	.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
-	.then(function(arr){
-		if(!Array.isArray(arr)||!arr.length||!arr[0].hourly)throw new Error('grid');
+	function valid(arr){return Array.isArray(arr)&&arr.length&&arr[0]&&arr[0].hourly;}
+	/* Direct browser fetch of the same grid/params — used when the cached server
+	   proxy can't reach Open-Meteo (host IP throttled/blocked). Uses the visitor's
+	   own connection so the wind field loads instead of showing "unavailable". */
+	function clientLocal(){
+		var u='https://api.open-meteo.com/v1/forecast?latitude='+LOCAL.LAT.join(',')+'&longitude='+LOCAL.LON.join(',')
+			+'&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'
+			+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+		return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();});
+	}
+	function render(arr){
 		TIMES=arr[0].hourly.time;
 		for(var k=0;k<arr.length;k++){LOCAL.SP.push(arr[k].hourly.wind_speed_10m);LOCAL.DR.push(arr[k].hourly.wind_direction_10m);LOCAL.GU.push(arr[k].hourly.wind_gusts_10m);LOCAL.PR.push(arr[k].hourly.pressure_msl);LOCAL.TP.push(arr[k].hourly.temperature_2m);LOCAL.PP.push(arr[k].hourly.precipitation);}
 		var now=Date.now(),bd=1e15;for(var t=0;t<TIMES.length;t++){var dd=Math.abs(new Date(TIMES[t]).getTime()-now);if(dd<bd){bd=dd;NOWI=t;}}
@@ -950,10 +955,17 @@ function loadLocal(tries){
 		   time you zoom out to the Atlantic, so the harbor view doesn't fire its 9
 		   proxy calls (cuts the initial admin-ajax burst that could trip host 429s) */
 		loadWaves(LOCAL,function(){updateER(curTi);});
-	}).catch(function(e){
-		if(tries<2){setTimeout(function(){loadLocal(tries+1);},1500);return;}
-		document.getElementById('st').textContent='Wind field unavailable ('+e+')';
-	});
+	}
+	/* cached server proxy first; browser direct if the host can't reach Open-Meteo */
+	fetchT(AJAX+'?action=oyc_wind_local',15000)
+		.then(function(r){return r.ok?r.json():null;})
+		.catch(function(){return null;})
+		.then(function(arr){return valid(arr)?arr:clientLocal();})
+		.then(function(arr){if(!valid(arr))throw new Error('grid');render(arr);})
+		.catch(function(e){
+			if(tries<2){setTimeout(function(){loadLocal(tries+1);},1500);return;}
+			document.getElementById('st').textContent='Wind field unavailable ('+e+')';
+		});
 }
 
 /* chunked basin loader with limited concurrency + retry/backoff */
@@ -1214,7 +1226,15 @@ map.on('zoomend',function(){
 		document.body.style.overflow=on?'hidden':'';
 		backdrop(on);
 		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
-		setTimeout(function(){map.invalidateSize();try{refreshOverlays();}catch(e){}},90);
+		setTimeout(function(){
+			map.invalidateSize();
+			/* Leaflet repositions geo-anchored layers, but the velocity particle canvas
+			   and the screen-lattice barbs/isobars don't re-fit on their own. Re-run the
+			   full frame render so EVERY overlay matches the new size — wind particles
+			   (show→vl.setData restarts the sim), wind barbs, isobars, temp/precip/waves
+			   field, H/L, storms and the Gulf Stream. */
+			setTimeout(function(){try{show(curTi);}catch(e){}},40);
+		},90);
 	}
 	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
 	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
