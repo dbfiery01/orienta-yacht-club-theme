@@ -86,6 +86,15 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hovertip{position:absolute;z-index:600;pointer-events:none;background:rgba(11,42,74,.92);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 #oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block}
 #oycwm .tiphelp{position:absolute;z-index:590;left:12px;bottom:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
+/* route export bar — appears top-right once waypoints are dropped */
+#oycwm .routebar{position:absolute;z-index:596;right:10px;top:10px;display:none;flex-direction:column;gap:6px;align-items:flex-end;max-width:70%}
+#oycwm .routebar.on{display:flex}
+#oycwm .route-info{background:rgba(11,42,74,.92);color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap}
+#oycwm .route-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#oycwm .route-btns button{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#oycwm .route-btns button:hover{background:var(--harbor);border-color:var(--harbor)}
+#oycwm .route-btns .rb-clear{background:#fff;color:var(--navy)}
+#oycwm .route-btns .rb-clear:hover{background:#eef4fa;color:var(--navy)}
 #oycwm .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 #oycwm .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 #oycwm .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
@@ -294,7 +303,14 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Click a waypoint to remove it; the route re-numbers automatically.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Drag a waypoint to move it; click it to remove it. The route re-numbers automatically.</div>
+			<div class="routebar" id="routeBar">
+				<div class="route-info" id="routeInfo"></div>
+				<div class="route-btns">
+					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
+					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
+				</div>
+			</div>
 		</div>
 		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar close-up = HRRR precipitation (Open-Meteo); national view = NEXRAD mosaic + HRRR reflectivity (Iowa State IEM).</div>
 	</div>
@@ -629,14 +645,19 @@ function pinContent(pin,ti){
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
 	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
-/* redraw the route line + re-number markers + refresh every callout (indices moved) */
-function refreshRoute(){
+/* just the dashed route line Buoy 42 → WP1 → … (cheap; redrawn live while dragging) */
+function drawRouteLine(){
 	routeLayer.clearLayers();
 	if(pins.length){
 		var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
 		L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);
 	}
+}
+/* redraw the route line + re-number markers + refresh every callout (indices moved) */
+function refreshRoute(){
+	drawRouteLine();
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(i+1));pins[i].popup.setContent(pinContent(pins[i],curTi));}
+	updateRouteBar();
 }
 /* fetch a waypoint's exact-point forecast (cached server proxy) and re-render it */
 function loadPinFC(pin){
@@ -647,14 +668,22 @@ function loadPinFC(pin){
 		}).catch(function(){});
 }
 function addPin(lat,lon){
-	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800}).addTo(map);
+	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
 	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
 	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null};
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);m.openPopup();
-	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
-	m.on('popupclose',function(){removePin(pin);}); /* the corner x removes the waypoint too */
+	/* click the marker to remove it — but never right after a drag (Leaflet
+	   suppresses that click natively; the _justDragged window is belt-and-braces
+	   so a stray post-drag click can't delete the waypoint the user just moved). */
+	m.on('click',function(e){L.DomEvent.stop(e);if(pin._justDragged)return;removePin(pin);});
+	m.on('popupclose',function(){if(!pin._dragging)removePin(pin);}); /* the corner x removes the waypoint (ignore any transient close while dragging) */
+	/* drag to re-place: rubber-band the route line live, then recompute legs +
+	   pull a fresh point forecast for the new spot on drop. */
+	m.on('dragstart',function(){pin._dragging=true;pin._justDragged=true;hoverTip.style.display='none';});
+	m.on('drag',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin.popup.setLatLng(ll);drawRouteLine();});
+	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;pin.fc=null;refreshRoute();loadPinFC(pin);setTimeout(function(){pin._justDragged=false;},450);});
 	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
@@ -662,6 +691,94 @@ function addPin(lat,lon){
 function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+
+/* ---------- route export: GPX (any chartplotter) + CSV forecast sheet ----------
+   One-click save of the finalized route. GPX carries the waypoints both as
+   standalone <wpt>s and as an ordered <rte>, with the forecast for each point
+   embedded in <desc> so it rides into the plotter as a waypoint note. The CSV
+   is the same forecast as a spreadsheet for planning. Forecast is taken at the
+   frame the time slider is on (labelled in the files); on the Radar tab it
+   falls back to the nearest-to-now forecast frame. */
+function exportTi(){var t=(mode==='radar')?NOWI:curTi;return Math.max(0,Math.min((TIMES.length||1)-1,t||0));}
+function xmlEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fcText(s){
+	if(!s)return 'No forecast data at this point.';
+	var p=[Math.round(s.kt)+' kt '+card(s.dir)+' ('+Math.round(s.dir)+'°)'+(s.gust!=null?' g'+Math.round(s.gust):'')];
+	if(s.mb!=null)p.push(Math.round(s.mb)+' mb');
+	if(s.tempF!=null)p.push(Math.round(s.tempF)+'°F');
+	if(s.waveFt!=null)p.push(s.waveFt.toFixed(1)+' ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':''));
+	if(s.pop!=null)p.push(Math.round(s.pop)+'% precip');else if(s.precip!=null)p.push(s.precip.toFixed(2)+' in precip');
+	return p.join(' · ');
+}
+function routePoints(){
+	/* Buoy 42 origin first (matches the drawn route line), then WP1…WPn. */
+	var ti=exportTi(),list=[{name:'Buoy 42',lat:ER.lat,lon:ER.lon,leg:0,cum:0,origin:true,s:pinReading(ER.lat,ER.lon,ti,null)}],cum=0;
+	for(var i=0;i<pins.length;i++){
+		var lg=legInfo(pins[i]);
+		if(i>0)cum+=distNM(pins[i-1].lat,pins[i-1].lon,pins[i].lat,pins[i].lon);
+		list.push({name:'WP'+(i+1),lat:pins[i].lat,lon:pins[i].lon,leg:lg.dist,legFrom:lg.from,cum:cum,s:pinReading(pins[i].lat,pins[i].lon,ti,pins[i].fc)});
+	}
+	return list;
+}
+function stamp(){var d=new Date();function z(n){return (n<10?'0':'')+n;}return ''+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes());}
+function validLabel(){var ti=exportTi(),v=(TIMES[ti]!=null)?new Date(TIMES[ti]):new Date();return v.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function buildGPX(){
+	var vlbl=validLabel(),pts=routePoints(),nm='OYC Passage '+stamp(),wpt='',rtept='';
+	for(var i=0;i<pts.length;i++){
+		var pt=pts[i],
+			desc=xmlEsc(fcText(pt.s)+' — valid '+vlbl+((pt.leg!=null&&!pt.origin)?(' — '+pt.leg.toFixed(1)+' nm from '+pt.legFrom):'')),
+			lat=pt.lat.toFixed(6),lon=pt.lon.toFixed(6),name=xmlEsc(pt.name);
+		wpt+='  <wpt lat="'+lat+'" lon="'+lon+'">\n    <name>'+name+'</name>\n    <desc>'+desc+'</desc>\n    <sym>'+(pt.origin?'Anchor':'Waypoint')+'</sym>\n  </wpt>\n';
+		rtept+='    <rtept lat="'+lat+'" lon="'+lon+'">\n      <name>'+name+'</name>\n      <desc>'+desc+'</desc>\n    </rtept>\n';
+	}
+	return '<?xml version="1.0" encoding="UTF-8"?>\n'
+		+'<gpx version="1.1" creator="Orienta Yacht Club — Harbor Conditions" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n'
+		+'  <metadata>\n    <name>'+xmlEsc(nm)+'</name>\n    <desc>'+xmlEsc('Passage route from OYC Harbor Conditions. Forecast valid '+vlbl+'. Wind/seas are a planning forecast, not observed — verify before departure.')+'</desc>\n    <time>'+new Date().toISOString()+'</time>\n  </metadata>\n'
+		+wpt+'  <rte>\n    <name>'+xmlEsc(nm)+'</name>\n'+rtept+'  </rte>\n</gpx>\n';
+}
+function csvCell(v){v=(v==null?'':String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function buildCSV(){
+	var pts=routePoints(),rows=['OYC Passage Route — forecast valid '+validLabel(),
+		['Point','Latitude','Longitude','Leg (nm)','Cumulative from WP1 (nm)','Wind (kt)','Gust (kt)','Dir','Bearing (deg)','Pressure (mb)','Air temp (F)','Seas (ft)','Wave period (s)'].map(csvCell).join(',')];
+	for(var i=0;i<pts.length;i++){
+		var pt=pts[i],s=pt.s||{};
+		rows.push([pt.name,pt.lat.toFixed(6),pt.lon.toFixed(6),
+			pt.origin?'':pt.leg.toFixed(1),pt.origin?'':pt.cum.toFixed(1),
+			s.kt!=null?Math.round(s.kt):'',s.gust!=null?Math.round(s.gust):'',
+			s.dir!=null?card(s.dir):'',s.dir!=null?Math.round(s.dir):'',
+			s.mb!=null?Math.round(s.mb):'',s.tempF!=null?Math.round(s.tempF):'',
+			s.waveFt!=null?s.waveFt.toFixed(1):'',s.wavePer!=null?Math.round(s.wavePer):''
+		].map(csvCell).join(','));
+	}
+	return rows.join('\r\n')+'\r\n';
+}
+function dlFile(name,mime,text){
+	try{var url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');
+		a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();
+		setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},2000);
+	}catch(e){}
+}
+function exportRoute(){
+	if(!pins.length)return;
+	var base='OYC-passage-'+stamp();
+	dlFile(base+'.gpx','application/gpx+xml',buildGPX());
+	setTimeout(function(){dlFile(base+'.csv','text/csv',buildCSV());},500);
+}
+function updateRouteBar(){
+	var rb=document.getElementById('routeBar');if(!rb)return;
+	if(!pins.length){rb.classList.remove('on');return;}
+	rb.classList.add('on');
+	var info=(pins.length===1)
+		?('1 waypoint · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
+		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm (WP1→end)');
+	document.getElementById('routeInfo').textContent=info;
+}
+(function(){
+	var rb=document.getElementById('routeBar');
+	if(rb&&L.DomEvent){L.DomEvent.disableClickPropagation(rb);L.DomEvent.disableScrollPropagation(rb);}
+	var ex=document.getElementById('rbExport');if(ex)ex.addEventListener('click',exportRoute);
+	var cl=document.getElementById('rbClear');if(cl)cl.addEventListener('click',function(){while(pins.length)removePin(pins[0]);});
+})();
 
 /* ---------- live NDBC buoy markers (shown in the Wave view) ---------- */
 var buoyLayer=L.layerGroup(),buoysLoaded=false;
