@@ -134,7 +134,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-co .co-row{display:flex;gap:12px;font-size:.78rem}
 #oycwm .pin-co .co-row .v{font-weight:800;color:var(--ink)}
 #oycwm .pin-co .co-row .k{color:var(--mute);font-size:.7rem}
-#oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 5px}
+#oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 2px}
+#oycwm .pin-co .co-total{font-size:.72rem;font-weight:800;color:var(--navy);margin:0 0 5px}
 #oycwm .pin-co .co-x{margin-top:5px;font-size:.66rem;color:var(--faint)}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
@@ -606,11 +607,15 @@ function legInfo(pin){
 	if(i<=0)return {num:1,dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
 	return {num:i+1,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:'WP'+i};
 }
+/* cumulative route length from WP1 through the waypoints (sum of the inter-WP legs) */
+function routeTotalFromWP1(){var t=0;for(var j=1;j<pins.length;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
 function pinContent(pin,ti){
 	var lat=pin.lat,lon=pin.lon,s=pinReading(lat,lon,ti,pin.fc);
 	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin);
+	/* the last waypoint also shows the total distance from WP1 along the route */
+	var total=(pins.indexOf(pin)===pins.length-1&&pins.length>=2)?('<div class="co-total">'+routeTotalFromWP1().toFixed(1)+' nm total from WP1</div>'):'';
 	var hd='<div class="co-t">Waypoint '+lg.num+'<span class="co-ll">'+ll+'</span></div>'
-		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>';
+		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'+total;
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
