@@ -89,6 +89,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 #oycwm .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 #oycwm .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
+/* lat/lon graticule labels on the chart edges — same look as the pressure labels */
+#oycwm .grat{position:absolute;inset:0;z-index:500;pointer-events:none;overflow:hidden}
+#oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
+/* numbered passage waypoint marker */
+#oycwm .wp-mk{background:none;border:none}
+#oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:20px;height:20px;padding:0 4px;border-radius:11px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box;cursor:pointer}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .gs-mk{background:none;border:none}
@@ -284,9 +290,10 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="mapwrap">
 			<div id="map"></div>
+			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to pin a spot along your passage &mdash; its callout tracks the slider. Click a pin again to remove it.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Click a waypoint to remove it; the route re-numbers automatically.</div>
 		</div>
 		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar close-up = HRRR precipitation (Open-Meteo); national view = NEXRAD mosaic + HRRR reflectivity (Iowa State IEM).</div>
 	</div>
@@ -588,11 +595,23 @@ function pinReading(lat,lon,ti,fc){
 	if(fc&&TIMES[ti]!=null){var s=fcForFrame(fc,new Date(TIMES[ti]).getTime(),ti===NOWI);if(s)return s;}
 	return readPoint(lat,lon,ti);
 }
-function pinContent(lat,lon,ti,fc){
-	var s=pinReading(lat,lon,ti,fc);
-	var ll=lat.toFixed(4)+', '+lon.toFixed(4);
-	var dist='<div class="co-dist">'+nmFromBuoy42(lat,lon).toFixed(1)+' nm from Buoy 42</div>';
-	if(!s)return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+dist+'<div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
+/* ── Passage route: ordered, numbered waypoints ──────────────────────────
+   WP1's leg is measured from Buoy 42; every later waypoint's leg is measured
+   from the previous waypoint. Deleting a waypoint re-numbers the rest and
+   recomputes the legs + route line. */
+var routeLayer=L.layerGroup().addTo(map);
+function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12]});}
+function legInfo(pin){
+	var i=pins.indexOf(pin);
+	if(i<=0)return {num:1,dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
+	return {num:i+1,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:'WP'+i};
+}
+function pinContent(pin,ti){
+	var lat=pin.lat,lon=pin.lon,s=pinReading(lat,lon,ti,pin.fc);
+	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin);
+	var hd='<div class="co-t">Waypoint '+lg.num+'<span class="co-ll">'+ll+'</span></div>'
+		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>';
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -602,30 +621,40 @@ function pinContent(lat,lon,ti,fc){
 		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
-		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co"><div class="co-t">Passage point<span class="co-ll">'+ll+'</span></div>'+dist+row+row2+'<div class="co-x">tap × to remove</div></div>';
+		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
+	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x">tap × to remove</div></div>';
 }
-/* fetch a pin's exact-point forecast (cached server proxy) and re-render it */
+/* redraw the route line + re-number markers + refresh every callout (indices moved) */
+function refreshRoute(){
+	routeLayer.clearLayers();
+	if(pins.length){
+		var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
+		L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);
+	}
+	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(i+1));pins[i].popup.setContent(pinContent(pins[i],curTi));}
+}
+/* fetch a waypoint's exact-point forecast (cached server proxy) and re-render it */
 function loadPinFC(pin){
 	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
 		.then(function(r){return r.json();}).then(function(res){
 			var S=fcSeriesFrom(res);if(!S||pin._gone)return;pin.fc=S;
-			pin.popup.setContent(pinContent(pin.lat,pin.lon,curTi,pin.fc));
+			pin.popup.setContent(pinContent(pin,curTi));
 		}).catch(function(){});
 }
 function addPin(lat,lon){
-	var m=L.circleMarker([lat,lon],{radius:6,color:'#0b2a4a',weight:2,fillColor:'#1583cf',fillOpacity:1}).addTo(map);
+	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800}).addTo(map);
 	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
 	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null};
-	p.setContent(pinContent(lat,lon,curTi,null)); /* grid placeholder until the point forecast arrives */
+	pins.push(pin);
+	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);m.openPopup();
 	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
-	m.on('popupclose',function(){removePin(pin);}); /* the corner × removes the point too */
-	pins.push(pin);
+	m.on('popupclose',function(){removePin(pin);}); /* the corner x removes the waypoint too */
+	refreshRoute();
 	loadPinFC(pin);
 }
-function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});}
-function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i].lat,pins[i].lon,ti,pins[i].fc));}
+function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
+function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 
 /* ---------- live NDBC buoy markers (shown in the Wave view) ---------- */
@@ -1152,7 +1181,7 @@ function setMode(m){
 	document.getElementById('erBar').style.display=isImg?'none':'';
 	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);
 		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
-	setTimeout(function(){map.invalidateSize();},0); /* map container may have been hidden by satellite mode */
+	setTimeout(function(){map.invalidateSize();drawGraticule();},0); /* map container may have been hidden by satellite mode */
 	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);
@@ -1209,7 +1238,35 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 });
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
-map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();});
+/* ── lat/lon labels on the chart edges (graticule) — same look as pressure labels ── */
+function gratStep(span){var s=[30,20,10,5,2,1,0.5,0.25,0.1,0.05,0.02,0.01,0.005,0.002,0.001];for(var i=0;i<s.length;i++){if(span/s[i]>=3)return s[i];}return 0.001;}
+function gratDec(step){return step>=1?0:(step>=0.1?1:(step>=0.01?2:3));}
+function gratLat(v,d){return Math.abs(v).toFixed(d)+'°'+(v>=0?'N':'S');}
+function gratLon(v,d){v=((v+540)%360)-180;return Math.abs(v).toFixed(d)+'°'+(v>=0?'E':'W');}
+function drawGraticule(){
+	var host=document.getElementById('gratic');if(!host)return;
+	if(mode==='sat'||mode==='charts'){host.innerHTML='';return;}
+	var cont=map.getContainer(),size=map.getSize();
+	/* Leaflet can cache a stale size (e.g. 0 width) if the map was laid out after
+	   init; re-sync from the live container so the edge math is correct */
+	if(cont&&cont.clientWidth&&cont.clientHeight&&(size.x!==cont.clientWidth||size.y!==cont.clientHeight)){map.invalidateSize({pan:false,animate:false});size=map.getSize();}
+	var W=size.x,H=size.y;if(!W||!H){host.innerHTML='';return;}
+	var b=map.getBounds(),S=b.getSouth(),N=b.getNorth(),Wd=b.getWest(),Ed=b.getEast(),out='';
+	var ls=gratStep(N-S),ld=gratDec(ls),lat=Math.ceil(S/ls)*ls,g;
+	for(g=0;lat<=N&&g<80;lat+=ls,g++){
+		var y=Math.round(map.latLngToContainerPoint([lat,Wd]).y);if(y<10||y>H-10)continue;
+		var t=gratLat(lat,ld);
+		out+='<span style="left:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>'
+			+'<span style="right:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>';
+	}
+	var os=gratStep(Ed-Wd),od=gratDec(os),lon=Math.ceil(Wd/os)*os,h;
+	for(h=0;lon<=Ed&&h<80;lon+=os,h++){
+		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<16||x>W-16)continue;
+		out+='<span style="left:'+x+'px;bottom:3px;transform:translateX(-50%)">'+gratLon(lon,od)+'</span>';
+	}
+	host.innerHTML=out;
+}
+map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();drawGraticule();});
 /* radar: switch between the local HRRR field and the national NEXRAD mosaic as
    the view zooms across the local-grid boundary (resets the slider to 'now') */
 map.on('zoomend',function(){
@@ -1254,7 +1311,7 @@ map.on('zoomend',function(){
 			   full frame render so EVERY overlay matches the new size — wind particles
 			   (show→vl.setData restarts the sim), wind barbs, isobars, temp/precip/waves
 			   field, H/L, storms and the Gulf Stream. */
-			setTimeout(function(){try{show(curTi);}catch(e){}},40);
+			setTimeout(function(){try{show(curTi);}catch(e){}drawGraticule();},40);
 		},90);
 	}
 	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
@@ -1262,6 +1319,7 @@ map.on('zoomend',function(){
 })();
 
 loadLocal();
+map.whenReady(function(){setTimeout(drawGraticule,400);});
 })();
 </script>
 </div>
