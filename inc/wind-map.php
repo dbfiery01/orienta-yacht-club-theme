@@ -731,7 +731,11 @@ function buildGPX(){
 		wpt+='  <wpt lat="'+lat+'" lon="'+lon+'">\n    <name>'+name+'</name>\n    <desc>'+desc+'</desc>\n    <sym>'+(pt.origin?'Anchor':'Waypoint')+'</sym>\n  </wpt>\n';
 		rtept+='    <rtept lat="'+lat+'" lon="'+lon+'">\n      <name>'+name+'</name>\n      <desc>'+desc+'</desc>\n    </rtept>\n';
 	}
-	return '<?xml version="1.0" encoding="UTF-8"?>\n'
+	/* NB: build the XML prolog token by concatenation so the literal open-tag
+	   sequence never appears in this PHP template source. On a host with
+	   short_open_tag=On it would be parsed as a PHP open tag and fatal the whole
+	   site at include time (functions.php require_once's this file globally). */
+	return '<'+'?xml version="1.0" encoding="UTF-8"?'+'>\n'
 		+'<gpx version="1.1" creator="Orienta Yacht Club — Harbor Conditions" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n'
 		+'  <metadata>\n    <name>'+xmlEsc(nm)+'</name>\n    <desc>'+xmlEsc('Passage route from OYC Harbor Conditions. Forecast valid '+vlbl+'. Wind/seas are a planning forecast, not observed — verify before departure.')+'</desc>\n    <time>'+new Date().toISOString()+'</time>\n  </metadata>\n'
 		+wpt+'  <rte>\n    <name>'+xmlEsc(nm)+'</name>\n'+rtept+'  </rte>\n</gpx>\n';
