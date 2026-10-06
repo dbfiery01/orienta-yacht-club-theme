@@ -655,6 +655,7 @@ function addPin(lat,lon){
 	m.bindPopup(p);m.openPopup();
 	m.on('click',function(e){L.DomEvent.stop(e);removePin(pin);});
 	m.on('popupclose',function(){removePin(pin);}); /* the corner x removes the waypoint too */
+	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
 }
@@ -928,6 +929,9 @@ map.on('zoomend',maybeSwitchGrid);
 /* ---------- hover pointer ---------- */
 var hoverTip=document.getElementById('hoverTip');
 map.on('mousemove',function(e){
+	/* While passage waypoints are on the map, suppress the cursor readout — it
+	   overlaps the waypoint callouts and gets in the way (desktop + mobile tap). */
+	if(pins.length){hoverTip.style.display='none';return;}
 	if(!activeGrid.loaded){hoverTip.style.display='none';return;}
 	var lon=((e.latlng.lng+540)%360)-180;
 	var s=readPoint(e.latlng.lat,lon,curTi);
