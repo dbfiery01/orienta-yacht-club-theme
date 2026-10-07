@@ -107,6 +107,23 @@ if ( ! $oyc_weather_menu ) {
 	.tb-logo{height:40px;width:auto;display:block}
 	.tb-brand:hover .tb-logo{opacity:.85}
 	.tb-title{color:var(--teal);font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:13px}
+	/* ---- mobile nav hamburger (board keeps its clean no-nav look on desktop) ---- */
+	.tb-toggle{display:none;background:none;border:0;cursor:pointer;padding:8px;margin-left:auto;align-self:center}
+	.tb-bars{position:relative;display:block;width:22px;height:2px;background:var(--ink);border-radius:2px}
+	.tb-bars::before,.tb-bars::after{content:"";position:absolute;left:0;width:22px;height:2px;background:var(--ink);border-radius:2px;transition:transform .2s}
+	.tb-bars::before{top:-6px} .tb-bars::after{top:6px}
+	.tb-toggle[aria-expanded="true"] .tb-bars{background:transparent}
+	.tb-toggle[aria-expanded="true"] .tb-bars::before{transform:translateY(6px) rotate(45deg)}
+	.tb-toggle[aria-expanded="true"] .tb-bars::after{transform:translateY(-6px) rotate(-45deg)}
+	.tb-nav{display:none}
+	.tb-nav .sitebar-menu{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+	.tb-nav .sitebar-menu a{display:block;color:var(--ink);text-decoration:none;font-size:15px;
+		letter-spacing:.04em;padding:11px 6px;border-top:1px solid var(--edge)}
+	.tb-nav .sitebar-menu a:hover{color:var(--teal)}
+	@media (max-width:700px){
+		.tb-toggle{display:inline-flex}
+		.tb-nav.open{display:block;width:100%;order:9;margin-top:4px}
+	}
 	.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 	.brand h1{font-weight:800;letter-spacing:.06em;font-size:clamp(16px,1.8vw,24px);text-transform:uppercase;
 		background:linear-gradient(180deg,#16324a,#1583cf);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -290,11 +307,13 @@ if ( ! $oyc_weather_menu ) {
 			<a class="tb-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'tb-logo' ); ?></a>
 			<div class="tb-title">Mamaroneck Harbor &middot; Live Conditions</div>
 		</div>
+		<button class="tb-toggle" id="navToggle" aria-expanded="false" aria-controls="boardNav" aria-label="Menu"><span class="tb-bars" aria-hidden="true"></span></button>
 		<div class="clockwrap">
 			<div class="updated"><span class="dot" id="statusDot"></span><span id="updated">Connecting&hellip;</span></div>
 			<div class="clock mono"><span id="clock">--:--:--</span><span class="ap" id="ampm">--</span></div>
 			<div class="datestr" id="datestr">&mdash;</div>
 		</div>
+		<nav class="tb-nav" id="boardNav" aria-label="Site menu"><?php echo $oyc_weather_menu; ?></nav>
 	</div>
 	<script>
 	/* Standalone board: promote the lazy-load placeholder logo to its real src. */
@@ -410,8 +429,8 @@ if ( ! $oyc_weather_menu ) {
 	"use strict";
 
 	// ---------- SITE MENU (mobile hamburger) ----------
-	var sbNav = document.querySelector('.sitebar');
-	var sbBtn = document.querySelector('.sitebar-toggle');
+	var sbNav = document.querySelector('.tb-nav');
+	var sbBtn = document.querySelector('.tb-toggle');
 	if(sbNav && sbBtn){
 		sbBtn.addEventListener('click', function(){
 			var open = sbNav.classList.toggle('open');
