@@ -145,7 +145,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-co .co-row .k{color:var(--mute);font-size:.7rem}
 #oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 2px}
 #oycwm .pin-co .co-total{font-size:.72rem;font-weight:800;color:var(--navy);margin:0 0 5px}
-#oycwm .pin-co .co-x{margin-top:5px;font-size:.66rem;color:var(--faint)}
+#oycwm .pin-co .co-x{margin-top:7px;display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;color:#c0392b;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;user-select:none;-webkit-user-select:none}
+#oycwm .pin-co .co-x:hover{background:#fdecea;border-color:#c0392b}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
 #oycwm .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
@@ -303,7 +304,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Drag a waypoint to move it; click it to remove it. The route re-numbers automatically.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Drag a waypoint to move it; use &#10005; Remove in its callout to delete it. The route re-numbers automatically.</div>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
@@ -607,7 +608,7 @@ function readPoint(lat,lon,ti){
    Forecast board), so its readout is accurate at that spot and a pin dropped on
    Execution Rock exactly matches the ER headline. Until that loads we show the
    grid field as a placeholder. */
-var pins=[];
+var pins=[],pinSeq=0;
 function pinReading(lat,lon,ti,fc){
 	if(fc&&TIMES[ti]!=null){var s=fcForFrame(fc,new Date(TIMES[ti]).getTime(),ti===NOWI);if(s)return s;}
 	return readPoint(lat,lon,ti);
@@ -632,7 +633,7 @@ function pinContent(pin,ti){
 	var total=(pins.indexOf(pin)===pins.length-1&&pins.length>=2)?('<div class="co-total">'+routeTotalFromWP1().toFixed(1)+' nm total from WP1</div>'):'';
 	var hd='<div class="co-t">Waypoint '+lg.num+'<span class="co-ll">'+ll+'</span></div>'
 		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'+total;
-	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x">tap × to remove</div></div>';
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -643,15 +644,16 @@ function pinContent(pin,ti){
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x">tap × to remove</div></div>';
+	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
 }
-/* just the dashed route line Buoy 42 → WP1 → … (cheap; redrawn live while dragging) */
+/* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
+   (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
+var routeLine=null;
 function drawRouteLine(){
-	routeLayer.clearLayers();
-	if(pins.length){
-		var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
-		L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);
-	}
+	if(!pins.length){routeLayer.clearLayers();routeLine=null;return;}
+	var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
+	if(routeLine&&routeLayer.hasLayer(routeLine)){routeLine.setLatLngs(pts);}
+	else{routeLayer.clearLayers();routeLine=L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);}
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
@@ -659,6 +661,8 @@ function refreshRoute(){
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(i+1));pins[i].popup.setContent(pinContent(pins[i],curTi));}
 	updateRouteBar();
 }
+/* re-render only the callout text for every pin (numbers don't change on a move) */
+function rerenderCallouts(){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));}
 /* fetch a waypoint's exact-point forecast (cached server proxy) and re-render it */
 function loadPinFC(pin){
 	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
@@ -669,28 +673,38 @@ function loadPinFC(pin){
 }
 function addPin(lat,lon){
 	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
-	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:true,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
-	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null};
+	/* closeButton:false — removal is the explicit "✕ Remove" control in the callout,
+	   NOT closing the popup. Removal is deliberately decoupled from the marker click
+	   and popup-close so grabbing a marker to DRAG it can never delete it. */
+	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
+	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null,id:++pinSeq};
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);m.openPopup();
-	/* click the marker to remove it — but never right after a drag (Leaflet
-	   suppresses that click natively; the _justDragged window is belt-and-braces
-	   so a stray post-drag click can't delete the waypoint the user just moved). */
-	m.on('click',function(e){L.DomEvent.stop(e);if(pin._justDragged)return;removePin(pin);});
-	m.on('popupclose',function(){if(!pin._dragging)removePin(pin);}); /* the corner x removes the waypoint (ignore any transient close while dragging) */
+	/* keep the callout visible — if a marker click toggles it closed, re-open it
+	   (unless the waypoint is being removed or is mid-drag) */
+	m.on('popupclose',function(){if(!pin._gone&&!pin._dragging)setTimeout(function(){if(!pin._gone)m.openPopup();},0);});
 	/* drag to re-place: rubber-band the route line live, then recompute legs +
-	   pull a fresh point forecast for the new spot on drop. */
-	m.on('dragstart',function(){pin._dragging=true;pin._justDragged=true;hoverTip.style.display='none';});
-	m.on('drag',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin.popup.setLatLng(ll);drawRouteLine();});
-	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;pin.fc=null;refreshRoute();loadPinFC(pin);setTimeout(function(){pin._justDragged=false;},450);});
+	   pull a fresh point forecast for the new spot on drop. Numbers don't change on
+	   a move, so re-render callouts only (no setIcon, which would churn the icon). */
+	m.on('dragstart',function(){pin._dragging=true;pin.fc=null;hoverTip.style.display='none';}); /* drop the old-spot forecast so callouts fall back to grid at the new spot */
+	m.on('drag',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin.popup.setLatLng(ll);drawRouteLine();rerenderCallouts();updateRouteBar();}); /* live: line + distances update as you drag */
+	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;drawRouteLine();rerenderCallouts();updateRouteBar();loadPinFC(pin);}); /* pull the exact-point forecast for the new spot */
 	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
 }
-function removePin(pin){if(pin._gone)return;pin._gone=true;map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
+function removePin(pin){if(pin._gone)return;pin._gone=true;pin._dragging=false;try{if(pin.marker.dragging&&pin.marker.dragging.disable)pin.marker.dragging.disable();}catch(e){}map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));}
 map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+/* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
+map.getContainer().addEventListener('click',function(e){
+	var btn=e.target.closest?e.target.closest('.co-x[data-wp]'):null;
+	if(!btn)return;
+	e.preventDefault();e.stopPropagation();
+	var id=+btn.getAttribute('data-wp');
+	for(var i=0;i<pins.length;i++){if(pins[i].id===id){removePin(pins[i]);break;}}
+},true);
 
 /* ---------- route export: GPX (any chartplotter) + CSV forecast sheet ----------
    One-click save of the finalized route. GPX carries the waypoints both as
