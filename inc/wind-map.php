@@ -58,6 +58,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .layers input{accent-color:var(--harbor)}
 #oycwm .layers .hint{color:var(--faint);font-size:.74rem;align-self:center}
 #oycwm .legend{display:flex;align-items:center;gap:2px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);flex-wrap:wrap}
+#oycwm .barbhint{display:flex;align-items:center;gap:9px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);line-height:1.35}
+#oycwm .barbhint svg{flex:none}
+#oycwm .barbhint b{color:var(--ink);font-weight:800}
 #oycwm .legend .sc{display:flex;height:12px;border-radius:3px;overflow:hidden;width:190px;margin:0 8px}
 #oycwm .legend .sc i{flex:1}
 #oycwm .legend.radar .sc i:nth-child(1){background:#8ec7ff}
@@ -103,7 +106,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
 /* numbered passage waypoint marker */
 #oycwm .wp-mk{background:none;border:none}
-#oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:20px;height:20px;padding:0 4px;border-radius:11px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box;cursor:pointer}
+#oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 4px;border-radius:12px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;box-sizing:border-box;cursor:grab}
+#oycwm .wp-ic:active{cursor:grabbing}
+/* waypoint callout = the draggable blue number, NOT the data box: hide Leaflet's
+   popup tip (the little white diamond that sat on the marker and blocked grabbing
+   it) and let popupAnchor lift the box clear of the number. */
+#oycwm .pin-pop .leaflet-popup-tip-container,#oycwm .pin-pop .leaflet-popup-tip{display:none}
+#oycwm .pin-pop .leaflet-popup-content-wrapper{box-shadow:0 4px 16px rgba(11,42,74,.26)}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .gs-mk{background:none;border:none}
@@ -293,6 +302,11 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
 
+		<div class="barbhint" id="barbHint" style="display:none">
+			<svg width="30" height="26" viewBox="-15 -20 30 26" aria-hidden="true"><circle r="2.1" fill="#0b2a4a"/><g transform="rotate(225)"><line x1="0" y1="0" x2="0" y2="-15" stroke="#0b2a4a" stroke-width="1.7"/><line x1="0" y1="-15" x2="8" y2="-18" stroke="#0b2a4a" stroke-width="1.7"/><line x1="0" y1="-10.5" x2="4.5" y2="-12" stroke="#0b2a4a" stroke-width="1.7"/></g></svg>
+			<span>Wind barbs: the staff points the direction the <b>wind comes from</b>; feathers give the speed (half&nbsp;=&nbsp;5, full&nbsp;=&nbsp;10, pennant&nbsp;=&nbsp;50&nbsp;kt).</span>
+		</div>
+
 		<div class="ctrl" id="ctrlBar">
 			<button id="play" title="Play/pause">&#9654;</button>
 			<input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Time">
@@ -304,7 +318,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Drag a waypoint to move it; use &#10005; Remove in its callout to delete it. The route re-numbers automatically.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to plot a route &mdash; the first point is the Start, then drop waypoints. Each waypoint shows its distance from the Start. Drag a point to move it; use &#10005; Remove in its callout to delete it.</div>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
@@ -618,22 +632,32 @@ function pinReading(lat,lon,ti,fc){
    from the previous waypoint. Deleting a waypoint re-numbers the rest and
    recomputes the legs + route line. */
 var routeLayer=L.layerGroup().addTo(map);
-function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12]});}
+function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
+/* First point is the Start (leg measured from Buoy 42); later points are
+   Waypoint 1..n, each leg measured from the previous point. */
+function wpBadge(i){return i===0?'S':''+i;}
 function legInfo(pin){
 	var i=pins.indexOf(pin);
-	if(i<=0)return {num:1,dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
-	return {num:i+1,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:'WP'+i};
+	if(i<=0)return {label:'Start',dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
+	return {label:'Waypoint '+i,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:(i===1?'Start':'Waypoint '+(i-1))};
 }
-/* cumulative route length from WP1 through the waypoints (sum of the inter-WP legs) */
-function routeTotalFromWP1(){var t=0;for(var j=1;j<pins.length;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
+/* cumulative route length from the Start up to a given point (sum of its legs) */
+function cumFromStart(pin){var i=pins.indexOf(pin),t=0;for(var j=1;j<=i;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
+/* full route length Start → last waypoint */
+function routeTotalFromWP1(){return pins.length?cumFromStart(pins[pins.length-1]):0;}
 function pinContent(pin,ti){
 	var lat=pin.lat,lon=pin.lon,s=pinReading(lat,lon,ti,pin.fc);
-	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin);
-	/* the last waypoint also shows the total distance from WP1 along the route */
-	var total=(pins.indexOf(pin)===pins.length-1&&pins.length>=2)?('<div class="co-total">'+routeTotalFromWP1().toFixed(1)+' nm total from WP1</div>'):'';
-	var hd='<div class="co-t">Waypoint '+lg.num+'<span class="co-ll">'+ll+'</span></div>'
-		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'+total;
-	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
+	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin),i=pins.indexOf(pin);
+	/* Start → distance from Buoy 42. Every waypoint shows its cumulative distance
+	   "from start"; waypoints past the first also show their own leg from the
+	   previous point (for WP1 the leg IS the distance from start, so show it once). */
+	var dist;
+	if(i===0){dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from Buoy 42</div>';}
+	else if(i===1){dist='<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
+	else{dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'
+		+'<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
+	var hd='<div class="co-t">'+lg.label+'<span class="co-ll">'+ll+'</span></div>'+dist;
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -644,7 +668,7 @@ function pinContent(pin,ti){
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
+	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
    (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
@@ -658,7 +682,7 @@ function drawRouteLine(){
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
 	drawRouteLine();
-	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(i+1));pins[i].popup.setContent(pinContent(pins[i],curTi));}
+	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
 	updateRouteBar();
 }
 /* re-render only the callout text for every pin (numbers don't change on a move) */
@@ -672,7 +696,7 @@ function loadPinFC(pin){
 		}).catch(function(){});
 }
 function addPin(lat,lon){
-	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
+	var m=L.marker([lat,lon],{icon:wpIcon(wpBadge(pins.length)),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
 	/* closeButton:false — removal is the explicit "✕ Remove" control in the callout,
 	   NOT closing the popup. Removal is deliberately decoupled from the marker click
 	   and popup-close so grabbing a marker to DRAG it can never delete it. */
@@ -730,7 +754,7 @@ function routePoints(){
 	for(var i=0;i<pins.length;i++){
 		var lg=legInfo(pins[i]);
 		if(i>0)cum+=distNM(pins[i-1].lat,pins[i-1].lon,pins[i].lat,pins[i].lon);
-		list.push({name:'WP'+(i+1),lat:pins[i].lat,lon:pins[i].lon,leg:lg.dist,legFrom:lg.from,cum:cum,s:pinReading(pins[i].lat,pins[i].lon,ti,pins[i].fc)});
+		list.push({name:lg.label,lat:pins[i].lat,lon:pins[i].lon,leg:lg.dist,legFrom:lg.from,cum:cum,s:pinReading(pins[i].lat,pins[i].lon,ti,pins[i].fc)});
 	}
 	return list;
 }
@@ -787,8 +811,8 @@ function updateRouteBar(){
 	if(!pins.length){rb.classList.remove('on');return;}
 	rb.classList.add('on');
 	var info=(pins.length===1)
-		?('1 waypoint · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
-		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm (WP1→end)');
+		?('Start set · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
+		:((pins.length-1)+' waypoint'+((pins.length-1)===1?'':'s')+' · '+routeTotalFromWP1().toFixed(1)+' nm from start');
 	document.getElementById('routeInfo').textContent=info;
 }
 (function(){
@@ -1323,12 +1347,12 @@ function setMode(m){
 	document.getElementById('satPanel').style.display=isImg?'flex':'none';
 	document.getElementById('ctrlBar').style.display=isImg?'none':'flex';
 	document.getElementById('erBar').style.display=isImg?'none':'';
-	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);
+	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);updateBarbHint();
 		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
 	setTimeout(function(){map.invalidateSize();drawGraticule();},0); /* map container may have been hidden by satellite mode */
 	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
 	if(m==='radar'){
-		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);
+		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);updateBarbHint();
 		updateLegend();drawField();
 		radarWasWide=radarWide();
 		loadRadar(function(){
@@ -1349,7 +1373,7 @@ function setMode(m){
 	}else{ /* Temp / Precip: dedicated field views — base map + color field only */
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);
 	}
-	updateLegend();
+	updateLegend();updateBarbHint();
 	showWind(Math.min(curTi,Math.max(0,TIMES.length-1)));
 }
 document.getElementById('tabWind').addEventListener('click',function(){setMode('wind');});
@@ -1364,7 +1388,9 @@ document.getElementById('chartSel').addEventListener('change',loadChart);
 
 /* ---------- layer toggles ---------- */
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
-document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);});
+/* the "wind from" hint rides with the barbs — visible only while they're shown */
+function updateBarbHint(){var h=document.getElementById('barbHint');if(h)h.style.display=map.hasLayer(arrowsLayer)?'flex':'none';}
+document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);updateBarbHint();});
 document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
 document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
@@ -1380,7 +1406,7 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 		loadGSWall(function(){drawGulf(curTi);updateLegend();});
 	}else{map.removeLayer(gsBandLayer);gsBandLayer.clearLayers();map.removeLayer(gsArrows);gsArrows.clearLayers();gsBandBuilt=false;updateLegend();}
 });
-document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);});
+document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);updateBarbHint();});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
 /* ── lat/lon labels on the chart edges (graticule) — same look as pressure labels ── */
 function gratStep(span){var s=[30,20,10,5,2,1,0.5,0.25,0.1,0.05,0.02,0.01,0.005,0.002,0.001];for(var i=0;i<s.length;i++){if(span/s[i]>=3)return s[i];}return 0.001;}
