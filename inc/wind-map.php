@@ -310,7 +310,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to drop passage waypoints &mdash; each shows the leg distance (WP1 from Buoy 42). Drag a waypoint to move it; use &#10005; Remove in its callout to delete it. The route re-numbers automatically.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to plot a route &mdash; the first point is the Start, then drop waypoints. Each waypoint shows its distance from the Start. Drag a point to move it; use &#10005; Remove in its callout to delete it.</div>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
@@ -625,21 +625,31 @@ function pinReading(lat,lon,ti,fc){
    recomputes the legs + route line. */
 var routeLayer=L.layerGroup().addTo(map);
 function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
+/* First point is the Start (leg measured from Buoy 42); later points are
+   Waypoint 1..n, each leg measured from the previous point. */
+function wpBadge(i){return i===0?'S':''+i;}
 function legInfo(pin){
 	var i=pins.indexOf(pin);
-	if(i<=0)return {num:1,dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
-	return {num:i+1,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:'WP'+i};
+	if(i<=0)return {label:'Start',dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
+	return {label:'Waypoint '+i,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:(i===1?'Start':'Waypoint '+(i-1))};
 }
-/* cumulative route length from WP1 through the waypoints (sum of the inter-WP legs) */
-function routeTotalFromWP1(){var t=0;for(var j=1;j<pins.length;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
+/* cumulative route length from the Start up to a given point (sum of its legs) */
+function cumFromStart(pin){var i=pins.indexOf(pin),t=0;for(var j=1;j<=i;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
+/* full route length Start → last waypoint */
+function routeTotalFromWP1(){return pins.length?cumFromStart(pins[pins.length-1]):0;}
 function pinContent(pin,ti){
 	var lat=pin.lat,lon=pin.lon,s=pinReading(lat,lon,ti,pin.fc);
-	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin);
-	/* the last waypoint also shows the total distance from WP1 along the route */
-	var total=(pins.indexOf(pin)===pins.length-1&&pins.length>=2)?('<div class="co-total">'+routeTotalFromWP1().toFixed(1)+' nm total from WP1</div>'):'';
-	var hd='<div class="co-t">Waypoint '+lg.num+'<span class="co-ll">'+ll+'</span></div>'
-		+'<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'+total;
-	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
+	var ll=lat.toFixed(4)+', '+lon.toFixed(4),lg=legInfo(pin),i=pins.indexOf(pin);
+	/* Start → distance from Buoy 42. Every waypoint shows its cumulative distance
+	   "from start"; waypoints past the first also show their own leg from the
+	   previous point (for WP1 the leg IS the distance from start, so show it once). */
+	var dist;
+	if(i===0){dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from Buoy 42</div>';}
+	else if(i===1){dist='<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
+	else{dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'
+		+'<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
+	var hd='<div class="co-t">'+lg.label+'<span class="co-ll">'+ll+'</span></div>'+dist;
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -650,7 +660,7 @@ function pinContent(pin,ti){
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove waypoint</div></div>';
+	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
    (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
@@ -664,7 +674,7 @@ function drawRouteLine(){
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
 	drawRouteLine();
-	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(i+1));pins[i].popup.setContent(pinContent(pins[i],curTi));}
+	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
 	updateRouteBar();
 }
 /* re-render only the callout text for every pin (numbers don't change on a move) */
@@ -678,7 +688,7 @@ function loadPinFC(pin){
 		}).catch(function(){});
 }
 function addPin(lat,lon){
-	var m=L.marker([lat,lon],{icon:wpIcon(pins.length+1),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
+	var m=L.marker([lat,lon],{icon:wpIcon(wpBadge(pins.length)),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
 	/* closeButton:false — removal is the explicit "✕ Remove" control in the callout,
 	   NOT closing the popup. Removal is deliberately decoupled from the marker click
 	   and popup-close so grabbing a marker to DRAG it can never delete it. */
@@ -736,7 +746,7 @@ function routePoints(){
 	for(var i=0;i<pins.length;i++){
 		var lg=legInfo(pins[i]);
 		if(i>0)cum+=distNM(pins[i-1].lat,pins[i-1].lon,pins[i].lat,pins[i].lon);
-		list.push({name:'WP'+(i+1),lat:pins[i].lat,lon:pins[i].lon,leg:lg.dist,legFrom:lg.from,cum:cum,s:pinReading(pins[i].lat,pins[i].lon,ti,pins[i].fc)});
+		list.push({name:lg.label,lat:pins[i].lat,lon:pins[i].lon,leg:lg.dist,legFrom:lg.from,cum:cum,s:pinReading(pins[i].lat,pins[i].lon,ti,pins[i].fc)});
 	}
 	return list;
 }
@@ -793,8 +803,8 @@ function updateRouteBar(){
 	if(!pins.length){rb.classList.remove('on');return;}
 	rb.classList.add('on');
 	var info=(pins.length===1)
-		?('1 waypoint · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
-		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm (WP1→end)');
+		?('Start set · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
+		:((pins.length-1)+' waypoint'+((pins.length-1)===1?'':'s')+' · '+routeTotalFromWP1().toFixed(1)+' nm from start');
 	document.getElementById('routeInfo').textContent=info;
 }
 (function(){
