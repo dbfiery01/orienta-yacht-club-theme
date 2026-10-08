@@ -103,7 +103,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
 /* numbered passage waypoint marker */
 #oycwm .wp-mk{background:none;border:none}
-#oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:20px;height:20px;padding:0 4px;border-radius:11px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-sizing:border-box;cursor:pointer}
+#oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 4px;border-radius:12px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;box-sizing:border-box;cursor:grab}
+#oycwm .wp-ic:active{cursor:grabbing}
+/* waypoint callout = the draggable blue number, NOT the data box: hide Leaflet's
+   popup tip (the little white diamond that sat on the marker and blocked grabbing
+   it) and let popupAnchor lift the box clear of the number. */
+#oycwm .pin-pop .leaflet-popup-tip-container,#oycwm .pin-pop .leaflet-popup-tip{display:none}
+#oycwm .pin-pop .leaflet-popup-content-wrapper{box-shadow:0 4px 16px rgba(11,42,74,.26)}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .gs-mk{background:none;border:none}
@@ -618,7 +624,7 @@ function pinReading(lat,lon,ti,fc){
    from the previous waypoint. Deleting a waypoint re-numbers the rest and
    recomputes the legs + route line. */
 var routeLayer=L.layerGroup().addTo(map);
-function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12]});}
+function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
 function legInfo(pin){
 	var i=pins.indexOf(pin);
 	if(i<=0)return {num:1,dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
