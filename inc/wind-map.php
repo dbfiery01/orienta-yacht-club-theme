@@ -1432,7 +1432,9 @@ function drawGraticule(){
 	var os=gratStep(Ed-Wd),od=gratDec(os),lon=Math.ceil(Wd/os)*os,h;
 	for(h=0;lon<=Ed&&h<80;lon+=os,h++){
 		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<16||x>W-16)continue;
-		out+='<span style="left:'+x+'px;bottom:3px;transform:translateX(-50%)">'+gratLon(lon,od)+'</span>';
+		var lt=gratLon(lon,od);
+		out+='<span style="left:'+x+'px;top:3px;transform:translateX(-50%)">'+lt+'</span>'
+			+'<span style="left:'+x+'px;bottom:3px;transform:translateX(-50%)">'+lt+'</span>';
 	}
 	host.innerHTML=out;
 }
