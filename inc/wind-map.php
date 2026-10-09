@@ -122,6 +122,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .poi-dine svg{display:block}
 #oycwm .poi-fuel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#a67c24;border:1.5px solid #fff;box-shadow:0 0 0 1px #6e5318,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 #oycwm .poi-fuel svg{display:block}
+#oycwm .poi-anc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#fff;border:1.5px solid #0b2a4a;box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+#oycwm .poi-anc svg{display:block}
 #oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
 #oycwm .poi-pop .pp-sub{font-size:11.5px;color:#5a6b7d;margin-top:1px;font-weight:600}
 #oycwm .poi-pop .pp-desc{font-size:12px;color:#334455;margin-top:6px;line-height:1.45}
@@ -271,7 +273,8 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgClubs" checked> Reciprocal clubs</label>
 			<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
 			<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
-			<span class="hint">Tap a pin for distance from OYC, dockage notes &amp; links &middot; fuel availability changes, call ahead</span>
+			<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
+			<span class="hint">Tap a pin for distance from OYC &amp; links &middot; fuel &amp; anchorage notes are local knowledge — verify on the chart and call ahead</span>
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
@@ -1410,12 +1413,12 @@ document.getElementById('chartSel').addEventListener('change',loadChart);
 /* ---------- layer toggles ---------- */
 /* ---- POI layers: reciprocal clubs + dock & dine (assets/map-pois.json) ----
    Always-on chips (not tied to a view tab); choice persists per visitor. */
-var poiClubs=L.layerGroup(),poiDine=L.layerGroup(),poiFuel=L.layerGroup();
+var poiClubs=L.layerGroup(),poiDine=L.layerGroup(),poiFuel=L.layerGroup(),poiAnch=L.layerGroup();
 var POI_HOME={lat:40.9486,lon:-73.7296};
 function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180,a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(POI_HOME.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
 var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
-var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock'};
+var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage'};
 function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
 	var sub=(POI_KIND[kind]||'')+' &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.town?' &middot; '+p.town:'');
@@ -1435,6 +1438,10 @@ fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.js
 	(j.fuel||[]).forEach(function(p){
 		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),{className:'poi-pop',maxWidth:260}).addTo(poiFuel);
 	});
+	var POI_ANCHOR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M12 21c-4 0-7.2-3-7.6-6.8M12 21c4 0 7.2-3 7.6-6.8M3 12.8l1.4 1.4 1.4-1.4M18.2 14.2l1.4-1.4 1.4 1.4M8.6 10h6.8"/></svg>';
+	(j.anc||[]).forEach(function(p){
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),{className:'poi-pop',maxWidth:260}).addTo(poiAnch);
+	});
 }).catch(function(){});
 function poiWire(id,layer,key){
 	var cb=document.getElementById(id),st=null;
@@ -1449,6 +1456,7 @@ function poiWire(id,layer,key){
 poiWire('tgClubs',poiClubs,'oyc_wm_clubs');
 poiWire('tgDine',poiDine,'oyc_wm_dine');
 poiWire('tgFuel',poiFuel,'oyc_wm_fuel');
+poiWire('tgAnch',poiAnch,'oyc_wm_anch');
 /* "Add to route" inside a POI popup drops a REGULAR passage waypoint at the
    destination via addPin() — same pin as a map click, so it's draggable,
    numbered, forecast-fetching and GPX/CSV-exportable, and the route line runs

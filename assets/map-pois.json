@@ -1,5 +1,5 @@
 {
-  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). Clubs are the OYC reciprocity list (added 2026-10-08; Sag Harbor + Watch Hill coords supplied manually — the source list had a wrong-harbor longitude and a missing position). Fuel entries are curated from local knowledge + OpenStreetMap (positions spot-checked; availability changes — popups say call ahead). Dine entries mirror the Dock & Dine page. Fields: name, town, lat, lng, desc, q (Google query), url (optional).",
+  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). Clubs are the OYC reciprocity list (added 2026-10-08; Sag Harbor + Watch Hill coords supplied manually — the source list had a wrong-harbor longitude and a missing position). Anchorage and fuel entries are curated from local knowledge + OpenStreetMap (positions spot-checked; availability changes — popups say call ahead). Dine entries mirror the Dock & Dine page. Fields: name, town, lat, lng, desc, q (Google query), url (optional).",
   "clubs": [
     {
       "name": "Allen Harbor YC",
@@ -780,6 +780,160 @@
       "lng": -72.2931,
       "desc": "Gas & diesel · high-speed pumps — call ahead to confirm hours.",
       "q": "Sag Harbor Yacht Club fuel dock"
+    }
+  ],
+  "anc": [
+    {
+      "name": "Manhasset Bay",
+      "town": "Port Washington, NY",
+      "lat": 40.815,
+      "lng": -73.715,
+      "desc": "Big, easy, good-holding mud; open only to the NE. Anchor south of the mooring fields.",
+      "q": "Manhasset Bay anchorage"
+    },
+    {
+      "name": "Little Neck Bay",
+      "town": "Great Neck, NY",
+      "lat": 40.79,
+      "lng": -73.765,
+      "desc": "Convenient staging for an East River / Hell Gate tide; open to the N; good mud.",
+      "q": "Little Neck Bay anchorage"
+    },
+    {
+      "name": "Huckleberry Island",
+      "town": "New Rochelle, NY",
+      "lat": 40.8865,
+      "lng": -73.7565,
+      "desc": "Popular day stop in a SW breeze; exposed overnight.",
+      "q": "Huckleberry Island New Rochelle anchorage"
+    },
+    {
+      "name": "Hempstead Harbor",
+      "town": "Glen Cove, NY",
+      "lat": 40.845,
+      "lng": -73.655,
+      "desc": "Deep into the harbor off Glen Cove; mud, good holding; open N.",
+      "q": "Hempstead Harbor anchorage"
+    },
+    {
+      "name": "The Cove, Oyster Bay",
+      "town": "Oyster Bay, NY",
+      "lat": 40.878,
+      "lng": -73.506,
+      "desc": "Superb protection behind Cove Neck; good holding; busy summer weekends.",
+      "q": "Oyster Bay Cove Neck anchorage"
+    },
+    {
+      "name": "Lloyd Harbor",
+      "town": "Huntington, NY",
+      "lat": 40.906,
+      "lng": -73.463,
+      "desc": "The classic: landlocked inner harbor, soft mud, room for a fleet; crowded on weekends.",
+      "q": "Lloyd Harbor Huntington anchorage"
+    },
+    {
+      "name": "Duck Island Harbor",
+      "town": "Asharoken / Northport Bay, NY",
+      "lat": 40.9205,
+      "lng": -73.322,
+      "desc": "Quiet pocket behind the sandspit in the NE corner of Northport Bay.",
+      "q": "Duck Island Harbor Northport anchorage"
+    },
+    {
+      "name": "Pirate's Cove",
+      "town": "Port Jefferson, NY",
+      "lat": 40.9585,
+      "lng": -73.0715,
+      "desc": "Just inside the entrance under Mount Misery; sand and mud; watch the ferry wake.",
+      "q": "Pirates Cove Port Jefferson anchorage"
+    },
+    {
+      "name": "Mattituck Creek",
+      "town": "Mattituck, NY",
+      "lat": 40.9945,
+      "lng": -72.547,
+      "desc": "Head-of-creek anchorage; the only all-weather stop mid-Sound on the North Fork.",
+      "q": "Mattituck Creek anchorage"
+    },
+    {
+      "name": "Captain Harbor",
+      "town": "Greenwich, CT",
+      "lat": 40.9995,
+      "lng": -73.6235,
+      "desc": "Behind the Captain Islands; fair-weather and day use.",
+      "q": "Captain Harbor Greenwich anchorage"
+    },
+    {
+      "name": "Ziegler's Cove",
+      "town": "Darien, CT",
+      "lat": 41.043,
+      "lng": -73.454,
+      "desc": "Tiny, pretty, tucked behind Long Neck Point; arrive early — swing room is tight.",
+      "q": "Zieglers Cove Darien anchorage"
+    },
+    {
+      "name": "Norwalk Islands",
+      "town": "Norwalk, CT",
+      "lat": 41.066,
+      "lng": -73.421,
+      "desc": "Behind the islands off Sheffield; good in the prevailing SW; mind the shoals.",
+      "q": "Norwalk Islands Sheffield anchorage"
+    },
+    {
+      "name": "Duck Island Roads",
+      "town": "Westbrook, CT",
+      "lat": 41.2645,
+      "lng": -72.4725,
+      "desc": "Breakwater-protected roadstead; good holding; rolly in a strong southerly.",
+      "q": "Duck Island Roads Westbrook anchorage"
+    },
+    {
+      "name": "Hamburg Cove",
+      "town": "Lyme, CT",
+      "lat": 41.384,
+      "lng": -72.351,
+      "desc": "Landlocked and lovely, 8 miles up the Connecticut River; mostly moorings — anchor in the outer cove.",
+      "q": "Hamburg Cove anchorage"
+    },
+    {
+      "name": "Selden Creek",
+      "town": "Lyme, CT",
+      "lat": 41.4015,
+      "lng": -72.432,
+      "desc": "Hidden Connecticut River gem; total protection, about 7 ft; feels like wilderness.",
+      "q": "Selden Creek anchorage"
+    },
+    {
+      "name": "Coecles Harbor",
+      "town": "Shelter Island, NY",
+      "lat": 41.077,
+      "lng": -72.312,
+      "desc": "Well-protected Peconic favorite; good holding.",
+      "q": "Coecles Harbor Shelter Island anchorage"
+    },
+    {
+      "name": "West Harbor",
+      "town": "Fishers Island, NY",
+      "lat": 41.2727,
+      "lng": -71.99,
+      "desc": "Excellent eastern-Sound stop; moorings and anchoring room.",
+      "q": "West Harbor Fishers Island anchorage"
+    },
+    {
+      "name": "Stonington Harbor",
+      "town": "Stonington, CT",
+      "lat": 41.331,
+      "lng": -71.907,
+      "desc": "Anchor NW of the breakwater, clear of the moorings; good holding.",
+      "q": "Stonington Harbor anchorage"
+    },
+    {
+      "name": "Napatree Point",
+      "town": "Watch Hill, RI",
+      "lat": 41.306,
+      "lng": -71.872,
+      "desc": "Classic summer anchorage behind the point; open W; beach ashore.",
+      "q": "Napatree Point anchorage"
     }
   ]
 }
