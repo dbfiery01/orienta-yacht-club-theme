@@ -114,6 +114,22 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-pop .leaflet-popup-tip-container,#oycwm .pin-pop .leaflet-popup-tip{display:none}
 #oycwm .pin-pop .leaflet-popup-content-wrapper{box-shadow:0 4px 16px rgba(11,42,74,.26)}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
+/* POI markers — reciprocal clubs (burgee pennant) + dock & dine (navy fork circle) */
+#oycwm .poi-mk{background:none;border:none}
+#oycwm .poi-club{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:17px;background:#fff;border:1.5px solid #0b2a4a;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer;box-sizing:border-box}
+#oycwm .poi-club::after{content:"";position:absolute;left:2px;top:2px;border-left:14px solid #a67c24;border-top:4.5px solid transparent;border-bottom:4.5px solid transparent}
+#oycwm .poi-dine{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#0b2a4a;border:1.5px solid #fff;box-shadow:0 0 0 1px #0b2a4a,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+#oycwm .poi-dine svg{display:block}
+#oycwm .poi-fuel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#a67c24;border:1.5px solid #fff;box-shadow:0 0 0 1px #6e5318,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+#oycwm .poi-fuel svg{display:block}
+#oycwm .poi-anc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#fff;border:1.5px solid #0b2a4a;box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+#oycwm .poi-anc svg{display:block}
+#oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
+#oycwm .poi-pop .pp-sub{font-size:11.5px;color:#5a6b7d;margin-top:1px;font-weight:600}
+#oycwm .poi-pop .pp-desc{font-size:12px;color:#334455;margin-top:6px;line-height:1.45}
+#oycwm .poi-pop .pp-links{margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
+#oycwm .poi-pop .pp-links a{font-size:12px;font-weight:700;color:#1583cf;text-decoration:none}
+#oycwm .poi-pop .pp-links a:hover{text-decoration:underline}
 #oycwm .barb-mk svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .gs-mk{background:none;border:none}
 #oycwm .gs-arrow{will-change:transform}
@@ -251,6 +267,14 @@ function oyc_wind_map_html( $embed = false ) {
 			<button class="sat-t" data-sat="06">06Z</button>
 			<button class="sat-t" data-sat="00">00Z</button>
 			<span class="hint">NOAA GOES-East Ch.13 infrared &middot; North Atlantic (NWS/OPC radiofax)</span>
+		</div>
+		<!-- POI layers: always visible, independent of the view tabs -->
+		<div class="layers" id="poiLayers">
+			<label><input type="checkbox" id="tgClubs" checked> Reciprocal clubs</label>
+			<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
+			<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
+			<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
+			<span class="hint">Tap a pin for distance from OYC &amp; links &middot; fuel &amp; anchorage notes are local knowledge — verify on the chart and call ahead</span>
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
@@ -1387,6 +1411,65 @@ document.getElementById('tabCharts').addEventListener('click',function(){setMode
 document.getElementById('chartSel').addEventListener('change',loadChart);
 
 /* ---------- layer toggles ---------- */
+/* ---- POI layers: reciprocal clubs + dock & dine (assets/map-pois.json) ----
+   Always-on chips (not tied to a view tab); choice persists per visitor. */
+var poiClubs=L.layerGroup(),poiDine=L.layerGroup(),poiFuel=L.layerGroup(),poiAnch=L.layerGroup();
+var POI_HOME={lat:40.9486,lon:-73.7296};
+function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180,a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(POI_HOME.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
+var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
+var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage'};
+function poiPopup(p,kind){
+	var d=poiNm(p.lat,p.lng);
+	var sub=(POI_KIND[kind]||'')+' &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.town?' &middot; '+p.town:'');
+	var links='<a href="#" class="pp-route" data-lat="'+p.lat+'" data-lng="'+p.lng+'">&#x2693; Add to route</a>';
+	if(p.url)links+='<a href="'+p.url+'" target="_blank" rel="noopener">Club site</a>';
+	links+='<a href="https://www.google.com/search?q='+encodeURIComponent(p.q||p.name)+'" target="_blank" rel="noopener">'+(kind==='dine'?'Reviews on Google':'Search on Google')+'</a>';
+	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'+(p.desc?'<div class="pp-desc">'+p.desc+'</div>':'')+'<div class="pp-links">'+links+'</div>';
+}
+fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
+	(j.clubs||[]).forEach(function(p){
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),{className:'poi-pop',maxWidth:260}).addTo(poiClubs);
+	});
+	(j.dine||[]).forEach(function(p){
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),{className:'poi-pop',maxWidth:260}).addTo(poiDine);
+	});
+	var POI_PUMP='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16M3.5 21h12M14 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5M6.8 7h5.4v4H6.8z"/></svg>';
+	(j.fuel||[]).forEach(function(p){
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),{className:'poi-pop',maxWidth:260}).addTo(poiFuel);
+	});
+	var POI_ANCHOR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M12 21c-4 0-7.2-3-7.6-6.8M12 21c4 0 7.2-3 7.6-6.8M3 12.8l1.4 1.4 1.4-1.4M18.2 14.2l1.4-1.4 1.4 1.4M8.6 10h6.8"/></svg>';
+	(j.anc||[]).forEach(function(p){
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),{className:'poi-pop',maxWidth:260}).addTo(poiAnch);
+	});
+}).catch(function(){});
+function poiWire(id,layer,key){
+	var cb=document.getElementById(id),st=null;
+	try{st=localStorage.getItem(key);}catch(e){}
+	cb.checked=(st===null)?true:(st==='1');
+	if(cb.checked)layer.addTo(map);
+	cb.addEventListener('change',function(){
+		if(cb.checked)layer.addTo(map);else map.removeLayer(layer);
+		try{localStorage.setItem(key,cb.checked?'1':'0');}catch(e){}
+	});
+}
+poiWire('tgClubs',poiClubs,'oyc_wm_clubs');
+poiWire('tgDine',poiDine,'oyc_wm_dine');
+poiWire('tgFuel',poiFuel,'oyc_wm_fuel');
+poiWire('tgAnch',poiAnch,'oyc_wm_anch');
+/* "Add to route" inside a POI popup drops a REGULAR passage waypoint at the
+   destination via addPin() — same pin as a map click, so it's draggable,
+   numbered, forecast-fetching and GPX/CSV-exportable, and the route line runs
+   from Buoy 42 like always. Capture phase: Leaflet popups stop click
+   propagation, so a bubble listener would never hear it. */
+document.addEventListener('click',function(ev){
+	var a=ev.target.closest?ev.target.closest('.pp-route'):null;
+	if(!a)return;
+	ev.preventDefault();ev.stopPropagation();
+	addPin(parseFloat(a.getAttribute('data-lat')),parseFloat(a.getAttribute('data-lng')));
+	map.closePopup();
+},true);
+
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
 /* the "wind from" hint rides with the barbs — visible only while they're shown */
 function updateBarbHint(){var h=document.getElementById('barbHint');if(h)h.style.display=map.hasLayer(arrowsLayer)?'flex':'none';}

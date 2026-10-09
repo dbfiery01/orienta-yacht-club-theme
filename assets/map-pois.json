@@ -1,0 +1,939 @@
+{
+  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). Clubs are the OYC reciprocity list (added 2026-10-08; Sag Harbor + Watch Hill coords supplied manually — the source list had a wrong-harbor longitude and a missing position). Anchorage and fuel entries are curated from local knowledge + OpenStreetMap (positions spot-checked; availability changes — popups say call ahead). Dine entries mirror the Dock & Dine page. Fields: name, town, lat, lng, desc, q (Google query), url (optional).",
+  "clubs": [
+    {
+      "name": "Allen Harbor YC",
+      "town": "Harwich Port, MA",
+      "lat": 41.67035,
+      "lng": -70.09327,
+      "desc": "508-432-9774",
+      "q": "Allen Harbor Yacht Club Harwich Port, MA"
+    },
+    {
+      "name": "Belle Haven YC",
+      "town": "Greenwich, CT",
+      "lat": 41.00267,
+      "lng": -73.63417,
+      "desc": "203-861-5353",
+      "q": "Belle Haven Yacht Club Greenwich, CT"
+    },
+    {
+      "name": "Black Rock YC",
+      "town": "Bridgeport, CT",
+      "lat": 41.14632,
+      "lng": -73.22408,
+      "desc": "VHF Ch 14 · 203-335-0587",
+      "q": "Black Rock Yacht Club Bridgeport, CT"
+    },
+    {
+      "name": "Boston YC",
+      "town": "Marblehead, MA",
+      "lat": 42.50183,
+      "lng": -70.85005,
+      "desc": "VHF Ch 68 · 781-631-3100",
+      "q": "Boston Yacht Club Marblehead, MA"
+    },
+    {
+      "name": "Bristol YC",
+      "town": "Bristol, RI",
+      "lat": 41.67583,
+      "lng": -71.28767,
+      "desc": "VHF Ch 68 · 401-941-0220",
+      "q": "Bristol Yacht Club Bristol, RI"
+    },
+    {
+      "name": "Centerport YC",
+      "town": "Centerport, NY",
+      "lat": 40.9015,
+      "lng": -73.35917,
+      "desc": "VHF Ch 68 · 631-697-8691",
+      "q": "Centerport Yacht Club Centerport, NY"
+    },
+    {
+      "name": "City Island YC",
+      "town": "City Island, NY",
+      "lat": 40.83852,
+      "lng": -73.7925,
+      "desc": "VHF Ch 72 · 347-899-8858",
+      "q": "City Island Yacht Club City Island, NY"
+    },
+    {
+      "name": "Cohasset YC",
+      "town": "Cohasset, MA",
+      "lat": 42.239,
+      "lng": -70.78683,
+      "desc": "781-383-9633",
+      "q": "Cohasset Yacht Club Cohasset, MA"
+    },
+    {
+      "name": "Conanicut YC",
+      "town": "Jamestown, RI",
+      "lat": 41.50232,
+      "lng": -71.36208,
+      "desc": "VHF Ch 72 · 401-4231424",
+      "q": "Conanicut Yacht Club Jamestown, RI"
+    },
+    {
+      "name": "Duxbury YC",
+      "town": "Duxbury, MA",
+      "lat": 42.03808,
+      "lng": -70.66874,
+      "desc": "781-934-5815",
+      "q": "Duxbury Yacht Club Duxbury, MA"
+    },
+    {
+      "name": "Duck Island YC",
+      "town": "Westbrook, CT",
+      "lat": 41.2771,
+      "lng": -72.46633,
+      "desc": "203-427-2045",
+      "q": "Duck Island Yacht Club Westbrook, CT"
+    },
+    {
+      "name": "East Chop YC",
+      "town": "Oak Bluffs, MA",
+      "lat": 41.46189,
+      "lng": -70.56754,
+      "desc": "508-696-7716",
+      "q": "East Chop Yacht Club Oak Bluffs, MA"
+    },
+    {
+      "name": "East Greenwich YC",
+      "town": "East Greenwich, RI",
+      "lat": 41.658,
+      "lng": -71.44067,
+      "desc": "401-884-7700",
+      "q": "East Greenwich Yacht Club East Greenwich, RI"
+    },
+    {
+      "name": "Echo Bay YC",
+      "town": "New Rochelle, NY",
+      "lat": 40.9073,
+      "lng": -73.76297,
+      "desc": "914-378-5085",
+      "q": "Echo Bay Yacht Club New Rochelle, NY"
+    },
+    {
+      "name": "Edgartown YC",
+      "town": "Edgartown, MA",
+      "lat": 41.38836,
+      "lng": -70.51104,
+      "desc": "508-627-4361",
+      "q": "Edgartown Yacht Club Edgartown, MA"
+    },
+    {
+      "name": "Essex Corinthian YC",
+      "town": "Essex, CT",
+      "lat": 41.34965,
+      "lng": -72.3847,
+      "desc": "VHF Ch 68 · 860-767-3239",
+      "q": "Essex Corinthian Yacht Club Essex, CT"
+    },
+    {
+      "name": "Essex YC",
+      "town": "Essex, CT",
+      "lat": 41.34917,
+      "lng": -72.38445,
+      "desc": "VHF Ch 68 · 860-767-8121",
+      "q": "Essex Yacht Club Essex, CT"
+    },
+    {
+      "name": "Fayerweather YC",
+      "town": "Bridgeport, CT",
+      "lat": 41.1525,
+      "lng": -73.21717,
+      "desc": "203-576-6796",
+      "q": "Fayerweather Yacht Club Bridgeport, CT"
+    },
+    {
+      "name": "Garrison YC",
+      "town": "Garrison, NY",
+      "lat": 41.38195,
+      "lng": -73.94808,
+      "desc": "845-891-3338",
+      "q": "Garrison Yacht Club Garrison, NY"
+    },
+    {
+      "name": "Glen Cove YC",
+      "town": "Glen Cove, NY",
+      "lat": 40.86283,
+      "lng": -73.65467,
+      "desc": "VHF Ch 69 · 516-676-9450",
+      "q": "Glen Cove Yacht Club Glen Cove, NY"
+    },
+    {
+      "name": "Gull Pond YC",
+      "town": "Greenport, NY",
+      "lat": 41.10875,
+      "lng": -72.34774,
+      "desc": "516-477-1392",
+      "q": "Gull Pond Yacht Club Greenport, NY"
+    },
+    {
+      "name": "Hamburg Cove YC",
+      "town": "Old Lyme, CT",
+      "lat": 41.38386,
+      "lng": -72.35114,
+      "desc": "860-434-0215",
+      "q": "Hamburg Cove Yacht Club Old Lyme, CT"
+    },
+    {
+      "name": "Harlem YC",
+      "town": "City Island, NY",
+      "lat": 40.85,
+      "lng": -73.79,
+      "desc": "VHF Ch 72 · 718-885-3235",
+      "q": "Harlem Yacht Club City Island, NY"
+    },
+    {
+      "name": "Housatonic Boat YC",
+      "town": "Stratford, CT",
+      "lat": 41.18417,
+      "lng": -73.1235,
+      "desc": "VHF Ch 68 · 203-377-9195",
+      "q": "Housatonic Boat Yacht Club Stratford, CT"
+    },
+    {
+      "name": "Huntington YC",
+      "town": "Huntington, NY",
+      "lat": 40.9015,
+      "lng": -73.35733,
+      "desc": "631-427-4949",
+      "q": "Huntington Yacht Club Huntington, NY"
+    },
+    {
+      "name": "Hyannis YC",
+      "town": "Hyannis, MA",
+      "lat": 41.63985,
+      "lng": -70.27683,
+      "desc": "508-778-6100",
+      "q": "Hyannis Yacht Club Hyannis, MA"
+    },
+    {
+      "name": "Ida Lewis YC",
+      "town": "Newport, RI",
+      "lat": 41.47648,
+      "lng": -71.32497,
+      "desc": "VHF Ch 78 · 401-846-1969",
+      "q": "Ida Lewis Yacht Club Newport, RI"
+    },
+    {
+      "name": "Indian Harbor YC",
+      "town": "Greenwich, CT",
+      "lat": 41.01111,
+      "lng": -73.62306,
+      "desc": "VHF Ch 68 · 203-869-2484",
+      "q": "Indian Harbor Yacht Club Greenwich, CT"
+    },
+    {
+      "name": "Ischoda YC",
+      "town": "South Norwalk, CT",
+      "lat": 41.0842,
+      "lng": -73.4039,
+      "desc": "203-853-8886",
+      "q": "Ischoda Yacht Club South Norwalk, CT"
+    },
+    {
+      "name": "Jamestown YC",
+      "town": "Jamestown, RI",
+      "lat": 41.49655,
+      "lng": -71.3668,
+      "desc": "781-325-6809",
+      "q": "Jamestown Yacht Club Jamestown, RI"
+    },
+    {
+      "name": "Manhasset Bay YC",
+      "town": "Port Washington, NY",
+      "lat": 40.82775,
+      "lng": -73.7044,
+      "desc": "VHF Ch 73 · 516-767-2150",
+      "q": "Manhasset Bay Yacht Club Port Washington, NY"
+    },
+    {
+      "name": "Milford YC",
+      "town": "Milford, CT",
+      "lat": 41.21143,
+      "lng": -73.0504,
+      "desc": "VHF Ch 68 · 203-783-0065",
+      "q": "Milford Yacht Club Milford, CT"
+    },
+    {
+      "name": "Mt. Sinai YC",
+      "town": "Mt. Sinai, NY",
+      "lat": 40.96302,
+      "lng": -73.03889,
+      "desc": "631-473-2993",
+      "q": "Mt. Sinai Yacht Club Mt. Sinai, NY"
+    },
+    {
+      "name": "Nantucket YC",
+      "town": "Nantucket, MA",
+      "lat": 41.23646,
+      "lng": -70.09701,
+      "desc": "508-228-1400",
+      "q": "Nantucket Yacht Club Nantucket, MA"
+    },
+    {
+      "name": "New Haven YC",
+      "town": "New Haven, CT",
+      "lat": 41.2562,
+      "lng": -72.89544,
+      "desc": "VHF Ch 68 · 203-469-9608",
+      "q": "New Haven Yacht Club New Haven, CT"
+    },
+    {
+      "name": "Newport YC",
+      "town": "Newport, RI",
+      "lat": 41.48868,
+      "lng": -71.3184,
+      "desc": "VHF Ch 78 · 401-846-9410",
+      "q": "Newport Yacht Club Newport, RI"
+    },
+    {
+      "name": "Noroton YC",
+      "town": "Darien, CT",
+      "lat": 41.04468,
+      "lng": -73.48682,
+      "desc": "203-655-7686",
+      "q": "Noroton Yacht Club Darien, CT"
+    },
+    {
+      "name": "North Cove YC",
+      "town": "Old Saybrook, CT",
+      "lat": 41.28444,
+      "lng": -72.36667,
+      "desc": "VHF Ch 78 · 860-388-9132",
+      "q": "North Cove Yacht Club Old Saybrook, CT"
+    },
+    {
+      "name": "North Shore YC",
+      "town": "Port Washington, NY",
+      "lat": 40.83733,
+      "lng": -73.72017,
+      "desc": "VHF Ch 78 · 516-883-9823",
+      "q": "North Shore Yacht Club Port Washington, NY"
+    },
+    {
+      "name": "Northport YC",
+      "town": "Northport, NY",
+      "lat": 40.90795,
+      "lng": -73.35825,
+      "desc": "VHF Ch 71 · 631-261-7633",
+      "q": "Northport Yacht Club Northport, NY"
+    },
+    {
+      "name": "Norwalk YC",
+      "town": "Norwalk, CT",
+      "lat": 41.06448,
+      "lng": -73.43005,
+      "desc": "VHF Ch 78 · 203-866-0941",
+      "q": "Norwalk Yacht Club Norwalk, CT"
+    },
+    {
+      "name": "Nyack Boat Club",
+      "town": "Nyack, NY",
+      "lat": 41.09241,
+      "lng": -73.91354,
+      "desc": "VHF Ch 9 · 845-353-0395",
+      "q": "Nyack Boat Club Nyack, NY"
+    },
+    {
+      "name": "Old Greenwich YC",
+      "town": "Old Greenwich, CT",
+      "lat": 41.00735,
+      "lng": -73.58149,
+      "desc": "203-637-3074",
+      "q": "Old Greenwich Yacht Club Old Greenwich, CT"
+    },
+    {
+      "name": "Orient YC",
+      "town": "Orient, NY",
+      "lat": 41.13654,
+      "lng": -72.30589,
+      "desc": "631-323-2486",
+      "q": "Orient Yacht Club Orient, NY"
+    },
+    {
+      "name": "Point Judith YC",
+      "town": "Wakefield, RI",
+      "lat": 41.42755,
+      "lng": -71.49588,
+      "desc": "401-783-5603",
+      "q": "Point Judith Yacht Club Wakefield, RI"
+    },
+    {
+      "name": "Ponus YC",
+      "town": "Stamford, CT",
+      "lat": 41.03632,
+      "lng": -73.54265,
+      "desc": "203-223-8158",
+      "q": "Ponus Yacht Club Stamford, CT"
+    },
+    {
+      "name": "Port Jefferson YC",
+      "town": "Port Jefferson, NY",
+      "lat": 40.95043,
+      "lng": -73.06767,
+      "desc": "VHF Ch 68 · 631-473-9890",
+      "q": "Port Jefferson Yacht Club Port Jefferson, NY"
+    },
+    {
+      "name": "Port Washington YC",
+      "town": "Port Washington, NY",
+      "lat": 40.82278,
+      "lng": -73.70556,
+      "desc": "516-767-1614",
+      "q": "Port Washington Yacht Club Port Washington, NY"
+    },
+    {
+      "name": "Rhode Island YC",
+      "town": "Cranston, RI",
+      "lat": 41.76753,
+      "lng": -71.38652,
+      "desc": "401-941-0220",
+      "q": "Rhode Island Yacht Club Cranston, RI"
+    },
+    {
+      "name": "Riverside YC",
+      "town": "Riverside, CT",
+      "lat": 41.02361,
+      "lng": -73.59167,
+      "desc": "VHF Ch 74 · 203-637-1706",
+      "q": "Riverside Yacht Club Riverside, CT"
+    },
+    {
+      "name": "Sachem's Head YC",
+      "town": "Guilford, CT",
+      "lat": 41.24595,
+      "lng": -72.7081,
+      "desc": "203-453-9207",
+      "q": "Sachem's Head Yacht Club Guilford, CT"
+    },
+    {
+      "name": "Sag Harbor YC",
+      "town": "Sag Harbor, NY",
+      "lat": 40.9986,
+      "lng": -72.2931,
+      "desc": "631-725-0567",
+      "q": "Sag Harbor Yacht Club Sag Harbor, NY"
+    },
+    {
+      "name": "Sagamore YC",
+      "town": "Oyster Bay, NY",
+      "lat": 40.87833,
+      "lng": -73.53,
+      "desc": "VHF Ch 78A · 516-922-0555",
+      "q": "Sagamore Yacht Club Oyster Bay, NY"
+    },
+    {
+      "name": "Saugatuck Harbor YC",
+      "town": "Westport, CT",
+      "lat": 41.10468,
+      "lng": -73.38255,
+      "desc": "VHF Ch 71 · 203-454-3004",
+      "q": "Saugatuck Harbor Yacht Club Westport, CT"
+    },
+    {
+      "name": "Sea Cliff YC",
+      "town": "Sea Cliff, NY",
+      "lat": 40.85286,
+      "lng": -73.6496,
+      "desc": "VHF Ch 9 · 516-671-7374",
+      "q": "Sea Cliff Yacht Club Sea Cliff, NY"
+    },
+    {
+      "name": "Seawanhaka YC",
+      "town": "Oyster Bay, NY",
+      "lat": 40.90127,
+      "lng": -73.51497,
+      "desc": "516-922-6200",
+      "q": "Seawanhaka Yacht Club Oyster Bay, NY"
+    },
+    {
+      "name": "Shattemuc YC",
+      "town": "Ossining, NY",
+      "lat": 41.1625,
+      "lng": -73.87083,
+      "desc": "914-941-8777",
+      "q": "Shattemuc Yacht Club Ossining, NY"
+    },
+    {
+      "name": "Shelter Island YC",
+      "town": "Shelter Island, NY",
+      "lat": 41.08667,
+      "lng": -72.35247,
+      "desc": "VHF Ch 74 · 631-749-0888",
+      "q": "Shelter Island Yacht Club Shelter Island, NY"
+    },
+    {
+      "name": "Stamford YC",
+      "town": "Stamford, CT",
+      "lat": 41.02944,
+      "lng": -73.52972,
+      "desc": "203-328-1444",
+      "q": "Stamford Yacht Club Stamford, CT"
+    },
+    {
+      "name": "Stonington YC",
+      "town": "Stonington, CT",
+      "lat": 41.33115,
+      "lng": -71.90823,
+      "desc": "VHF Ch 78 · 860-535-0112",
+      "q": "Stonington Yacht Club Stonington, CT"
+    },
+    {
+      "name": "Stony Brook YC",
+      "town": "Stony Brook, NY",
+      "lat": 40.92006,
+      "lng": -73.15016,
+      "desc": "VHF Ch 9/10 · 631-751-9873",
+      "q": "Stony Brook Yacht Club Stony Brook, NY"
+    },
+    {
+      "name": "Thames YC",
+      "town": "New London, CT",
+      "lat": 41.33026,
+      "lng": -72.09394,
+      "desc": "VHF Ch 71 · 860-383-0017",
+      "q": "Thames Yacht Club New London, CT"
+    },
+    {
+      "name": "Watch Hill YC",
+      "town": "Westerly, RI",
+      "lat": 41.3103,
+      "lng": -71.8575,
+      "desc": "VHF Ch 10 · 401-596-4986 · No advance reservations",
+      "q": "Watch Hill Yacht Club Westerly, RI"
+    },
+    {
+      "name": "Westerly YC",
+      "town": "Westerly, RI",
+      "lat": 41.34818,
+      "lng": -71.82799,
+      "desc": "401-596-7556",
+      "q": "Westerly Yacht Club Westerly, RI"
+    },
+    {
+      "name": "Westport YC",
+      "town": "Westport, MA",
+      "lat": 41.51382,
+      "lng": -71.0761,
+      "desc": "VHF Ch 9 · 508-636-8885",
+      "q": "Westport Yacht Club Westport, MA"
+    },
+    {
+      "name": "Wilson Cove YC",
+      "town": "Norwalk, CT",
+      "lat": 41.06968,
+      "lng": -73.43114,
+      "desc": "203-853-8463",
+      "q": "Wilson Cove Yacht Club Norwalk, CT"
+    }
+  ],
+  "dine": [
+    {
+      "name": "L'Escale at Delamar",
+      "town": "Greenwich, CT",
+      "lat": 41.0193,
+      "lng": -73.625,
+      "desc": "Upscale Mediterranean on Greenwich Harbor. Slips at Delamar, $2/ft/hr — call the Dock Master ahead: 203-733-5320.",
+      "q": "L'Escale Restaurant Delamar Greenwich CT"
+    },
+    {
+      "name": "City Island Lobster House",
+      "town": "City Island, Bronx",
+      "lat": 40.8462,
+      "lng": -73.7856,
+      "desc": "Classic seafood just past the bridge. Free dock & dine for customers in season.",
+      "q": "City Island Lobster House Bronx NY"
+    },
+    {
+      "name": "Sea Shore Restaurant & Marina",
+      "town": "City Island, Bronx",
+      "lat": 40.8415,
+      "lng": -73.784,
+      "desc": "A City Island seafood landmark since 1929, with its own marina. Guest slips for diners.",
+      "q": "Sea Shore Restaurant City Island Bronx"
+    },
+    {
+      "name": "Louie's Prime Steak & Seafood",
+      "town": "Port Washington, NY",
+      "lat": 40.8352,
+      "lng": -73.7092,
+      "desc": "Manhasset Bay institution since 1905 — prime steaks & raw bar. Free docking up to 50′; hail VHF 68.",
+      "q": "Louie's Prime Steak Seafood Port Washington NY"
+    },
+    {
+      "name": "Harbor House",
+      "town": "Stamford, CT",
+      "lat": 41.0288,
+      "lng": -73.5468,
+      "desc": "At the center of busy Stamford Harbor with a full-service marina. Transient dockage — Harbor Point VHF 9 / 203-355-6045.",
+      "q": "Harbor House Restaurant Stamford CT"
+    },
+    {
+      "name": "Prime: An American Kitchen & Bar",
+      "town": "Stamford (Harbor Point), CT",
+      "lat": 41.0258,
+      "lng": -73.5492,
+      "desc": "Elevated waterfront dining with direct marina access. VHF 9 / 203-355-6045.",
+      "q": "Prime An American Kitchen Bar Stamford CT"
+    },
+    {
+      "name": "SoNo Seaport",
+      "town": "South Norwalk, CT",
+      "lat": 41.0928,
+      "lng": -73.4185,
+      "desc": "Steamers and lobster rolls on the Norwalk River, in past the Norwalk Islands. Hail VHF 9.",
+      "q": "SoNo Seaport Seafood Norwalk CT"
+    },
+    {
+      "name": "Sunset Grille",
+      "town": "Norwalk (Norwalk Cove), CT",
+      "lat": 41.093,
+      "lng": -73.3922,
+      "desc": "Harborside sunset dining at Norwalk Cove. Transient dockage via Norwalk Cove Marina — VHF 72 / 203-838-5899.",
+      "q": "Sunset Grille Norwalk Cove Marina CT"
+    },
+    {
+      "name": "The Cove Restaurant & Oyster Bar",
+      "town": "Glen Cove, NY",
+      "lat": 40.865,
+      "lng": -73.656,
+      "desc": "Refined seafood and a raw bar with panoramic Hempstead Harbor views, beside Safe Harbor Marina. Dockside — call ahead: 516-676-1211.",
+      "q": "The Cove Restaurant Oyster Bar Glen Cove NY"
+    },
+    {
+      "name": "Ritz Cafe",
+      "town": "Northport, NY",
+      "lat": 40.9009,
+      "lng": -73.3438,
+      "desc": "A Main Street favorite in Northport Village. Tie up free at the Northport Village Dock (8am–5pm, first-come) and walk in.",
+      "q": "Ritz Cafe Northport NY"
+    },
+    {
+      "name": "Bistro 44",
+      "town": "Northport, NY",
+      "lat": 40.9003,
+      "lng": -73.3446,
+      "desc": "Elegant New American steps from Northport Harbor and the Engeman Theater. Northport Village Dock (free 8am–5pm), then a short walk.",
+      "q": "Bistro 44 Northport NY"
+    },
+    {
+      "name": "Maroni",
+      "town": "Northport, NY",
+      "lat": 40.9014,
+      "lng": -73.3456,
+      "desc": "Northport's tiny, legendary Italian tasting-menu spot — reservations essential. Northport Village Dock, then a short walk up Woodbine Ave.",
+      "q": "Maroni Cuisine Northport NY"
+    }
+  ],
+  "fuel": [
+    {
+      "name": "Safe Harbor Capri",
+      "town": "Manorhaven, Port Washington, NY",
+      "lat": 40.8395,
+      "lng": -73.7095,
+      "desc": "Gas & diesel · VHF 9 — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Capri Marina Port Washington NY fuel dock"
+    },
+    {
+      "name": "Imperial Yacht Club Marina",
+      "town": "New Rochelle, NY",
+      "lat": 40.895,
+      "lng": -73.776,
+      "desc": "Fuel dock on Davenport Neck — call ahead to confirm fuel & hours.",
+      "q": "Imperial Yacht Club New Rochelle fuel dock"
+    },
+    {
+      "name": "Safe Harbor Glen Cove",
+      "town": "Glen Cove, NY",
+      "lat": 40.863,
+      "lng": -73.658,
+      "desc": "Gas & diesel on Glen Cove Creek — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Glen Cove marina fuel"
+    },
+    {
+      "name": "Oyster Bay Marine Center",
+      "town": "Oyster Bay, NY",
+      "lat": 40.8783,
+      "lng": -73.5283,
+      "desc": "Gas & diesel · VHF 9 · 516-922-6331 — call ahead to confirm hours.",
+      "q": "Oyster Bay Marine Center fuel dock"
+    },
+    {
+      "name": "Coneys Marine",
+      "town": "Halesite, Huntington, NY",
+      "lat": 40.888,
+      "lng": -73.415,
+      "desc": "Fuel dock in Huntington Harbor — call ahead to confirm fuel & hours.",
+      "q": "Coneys Marine Huntington NY fuel"
+    },
+    {
+      "name": "Safe Harbor Stamford (Yacht Haven)",
+      "town": "Stamford, CT",
+      "lat": 41.034,
+      "lng": -73.543,
+      "desc": "Gas & diesel · VHF 9 — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Stamford Yacht Haven fuel dock"
+    },
+    {
+      "name": "Norwalk Cove Marina",
+      "town": "East Norwalk, CT",
+      "lat": 41.0859,
+      "lng": -73.3986,
+      "desc": "Gas & diesel · VHF 72 · 203-838-2326 — call ahead to confirm hours.",
+      "q": "Norwalk Cove Marina fuel dock"
+    },
+    {
+      "name": "Captain's Cove Seaport",
+      "town": "Black Rock Harbor, Bridgeport, CT",
+      "lat": 41.1441,
+      "lng": -73.2359,
+      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
+      "q": "Captain's Cove Seaport Bridgeport fuel dock"
+    },
+    {
+      "name": "Safe Harbor Branford",
+      "town": "Branford, CT",
+      "lat": 41.264,
+      "lng": -72.8155,
+      "desc": "Fuel dock on the Branford River — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Bruce and Johnsons Branford fuel"
+    },
+    {
+      "name": "Cedar Island Marina",
+      "town": "Clinton, CT",
+      "lat": 41.2686,
+      "lng": -72.5308,
+      "desc": "Gas & diesel · 860-669-8681 — call ahead to confirm hours.",
+      "q": "Cedar Island Marina Clinton CT fuel dock"
+    },
+    {
+      "name": "Safe Harbor Pilots Point",
+      "town": "Westbrook, CT",
+      "lat": 41.2805,
+      "lng": -72.4465,
+      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Pilots Point Westbrook fuel dock"
+    },
+    {
+      "name": "Saybrook Point Resort & Marina",
+      "town": "Old Saybrook, CT",
+      "lat": 41.2843,
+      "lng": -72.343,
+      "desc": "Gas & diesel · 860-395-3080 — call ahead to confirm hours.",
+      "q": "Saybrook Point Marina fuel dock"
+    },
+    {
+      "name": "Safe Harbor Between the Bridges",
+      "town": "Old Saybrook, CT",
+      "lat": 41.3148,
+      "lng": -72.3501,
+      "desc": "Fuel dock on the Connecticut River — call ahead to confirm fuel & hours.",
+      "q": "Between the Bridges marina Old Saybrook fuel"
+    },
+    {
+      "name": "Safe Harbor Essex Island",
+      "town": "Essex, CT",
+      "lat": 41.354,
+      "lng": -72.385,
+      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Essex Island marina fuel"
+    },
+    {
+      "name": "Noank Shipyard",
+      "town": "Noank, CT",
+      "lat": 41.3194,
+      "lng": -71.9883,
+      "desc": "Gas & diesel · VHF 9 · 860-536-9651 — call ahead to confirm hours.",
+      "q": "Noank Shipyard fuel dock"
+    },
+    {
+      "name": "Safe Harbor Stirling",
+      "town": "Greenport, NY",
+      "lat": 41.0782,
+      "lng": -72.3196,
+      "desc": "Fuel dock in Stirling Basin — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Stirling Greenport fuel dock"
+    },
+    {
+      "name": "The Island Boatyard",
+      "town": "West Neck, Shelter Island, NY",
+      "lat": 41.0522,
+      "lng": -72.3444,
+      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
+      "q": "Island Boatyard Shelter Island fuel dock"
+    },
+    {
+      "name": "Piccozzi's (Jack's Marine)",
+      "town": "Dering Harbor, Shelter Island, NY",
+      "lat": 41.0885,
+      "lng": -72.345,
+      "desc": "Gas & diesel on Dering Harbor — call ahead to confirm hours.",
+      "q": "Piccozzi's fuel dock Shelter Island"
+    },
+    {
+      "name": "Sag Harbor Yacht Club Fuel Dock",
+      "town": "Sag Harbor, NY",
+      "lat": 40.9986,
+      "lng": -72.2931,
+      "desc": "Gas & diesel · high-speed pumps — call ahead to confirm hours.",
+      "q": "Sag Harbor Yacht Club fuel dock"
+    }
+  ],
+  "anc": [
+    {
+      "name": "Manhasset Bay",
+      "town": "Port Washington, NY",
+      "lat": 40.815,
+      "lng": -73.715,
+      "desc": "Big, easy, good-holding mud; open only to the NE. Anchor south of the mooring fields.",
+      "q": "Manhasset Bay anchorage"
+    },
+    {
+      "name": "Little Neck Bay",
+      "town": "Great Neck, NY",
+      "lat": 40.79,
+      "lng": -73.765,
+      "desc": "Convenient staging for an East River / Hell Gate tide; open to the N; good mud.",
+      "q": "Little Neck Bay anchorage"
+    },
+    {
+      "name": "Huckleberry Island",
+      "town": "New Rochelle, NY",
+      "lat": 40.8865,
+      "lng": -73.7565,
+      "desc": "Popular day stop in a SW breeze; exposed overnight.",
+      "q": "Huckleberry Island New Rochelle anchorage"
+    },
+    {
+      "name": "Hempstead Harbor",
+      "town": "Glen Cove, NY",
+      "lat": 40.845,
+      "lng": -73.655,
+      "desc": "Deep into the harbor off Glen Cove; mud, good holding; open N.",
+      "q": "Hempstead Harbor anchorage"
+    },
+    {
+      "name": "The Cove, Oyster Bay",
+      "town": "Oyster Bay, NY",
+      "lat": 40.878,
+      "lng": -73.506,
+      "desc": "Superb protection behind Cove Neck; good holding; busy summer weekends.",
+      "q": "Oyster Bay Cove Neck anchorage"
+    },
+    {
+      "name": "Lloyd Harbor",
+      "town": "Huntington, NY",
+      "lat": 40.906,
+      "lng": -73.463,
+      "desc": "The classic: landlocked inner harbor, soft mud, room for a fleet; crowded on weekends.",
+      "q": "Lloyd Harbor Huntington anchorage"
+    },
+    {
+      "name": "Duck Island Harbor",
+      "town": "Asharoken / Northport Bay, NY",
+      "lat": 40.9205,
+      "lng": -73.322,
+      "desc": "Quiet pocket behind the sandspit in the NE corner of Northport Bay.",
+      "q": "Duck Island Harbor Northport anchorage"
+    },
+    {
+      "name": "Pirate's Cove",
+      "town": "Port Jefferson, NY",
+      "lat": 40.9585,
+      "lng": -73.0715,
+      "desc": "Just inside the entrance under Mount Misery; sand and mud; watch the ferry wake.",
+      "q": "Pirates Cove Port Jefferson anchorage"
+    },
+    {
+      "name": "Mattituck Creek",
+      "town": "Mattituck, NY",
+      "lat": 40.9945,
+      "lng": -72.547,
+      "desc": "Head-of-creek anchorage; the only all-weather stop mid-Sound on the North Fork.",
+      "q": "Mattituck Creek anchorage"
+    },
+    {
+      "name": "Captain Harbor",
+      "town": "Greenwich, CT",
+      "lat": 40.9995,
+      "lng": -73.6235,
+      "desc": "Behind the Captain Islands; fair-weather and day use.",
+      "q": "Captain Harbor Greenwich anchorage"
+    },
+    {
+      "name": "Ziegler's Cove",
+      "town": "Darien, CT",
+      "lat": 41.043,
+      "lng": -73.454,
+      "desc": "Tiny, pretty, tucked behind Long Neck Point; arrive early — swing room is tight.",
+      "q": "Zieglers Cove Darien anchorage"
+    },
+    {
+      "name": "Norwalk Islands",
+      "town": "Norwalk, CT",
+      "lat": 41.066,
+      "lng": -73.421,
+      "desc": "Behind the islands off Sheffield; good in the prevailing SW; mind the shoals.",
+      "q": "Norwalk Islands Sheffield anchorage"
+    },
+    {
+      "name": "Duck Island Roads",
+      "town": "Westbrook, CT",
+      "lat": 41.2645,
+      "lng": -72.4725,
+      "desc": "Breakwater-protected roadstead; good holding; rolly in a strong southerly.",
+      "q": "Duck Island Roads Westbrook anchorage"
+    },
+    {
+      "name": "Hamburg Cove",
+      "town": "Lyme, CT",
+      "lat": 41.384,
+      "lng": -72.351,
+      "desc": "Landlocked and lovely, 8 miles up the Connecticut River; mostly moorings — anchor in the outer cove.",
+      "q": "Hamburg Cove anchorage"
+    },
+    {
+      "name": "Selden Creek",
+      "town": "Lyme, CT",
+      "lat": 41.4015,
+      "lng": -72.432,
+      "desc": "Hidden Connecticut River gem; total protection, about 7 ft; feels like wilderness.",
+      "q": "Selden Creek anchorage"
+    },
+    {
+      "name": "Coecles Harbor",
+      "town": "Shelter Island, NY",
+      "lat": 41.077,
+      "lng": -72.312,
+      "desc": "Well-protected Peconic favorite; good holding.",
+      "q": "Coecles Harbor Shelter Island anchorage"
+    },
+    {
+      "name": "West Harbor",
+      "town": "Fishers Island, NY",
+      "lat": 41.2727,
+      "lng": -71.99,
+      "desc": "Excellent eastern-Sound stop; moorings and anchoring room.",
+      "q": "West Harbor Fishers Island anchorage"
+    },
+    {
+      "name": "Stonington Harbor",
+      "town": "Stonington, CT",
+      "lat": 41.331,
+      "lng": -71.907,
+      "desc": "Anchor NW of the breakwater, clear of the moorings; good holding.",
+      "q": "Stonington Harbor anchorage"
+    },
+    {
+      "name": "Napatree Point",
+      "town": "Watch Hill, RI",
+      "lat": 41.306,
+      "lng": -71.872,
+      "desc": "Classic summer anchorage behind the point; open W; beach ashore.",
+      "q": "Napatree Point anchorage"
+    }
+  ]
+}
