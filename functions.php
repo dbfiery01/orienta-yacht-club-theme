@@ -152,6 +152,12 @@ require_once get_template_directory() . '/inc/phone-links.php';
 require_once get_template_directory() . '/inc/forecast-table.php';
 
 /**
+ * Live Yelp ratings for the wind map's Dock & Dine pins — public admin-ajax
+ * endpoint with a server-side cache; inert until OYC_YELP_API_KEY is defined.
+ */
+require_once get_template_directory() . '/inc/poi-ratings.php';
+
+/**
  * Wind page: GRIB download endpoint (latest GFS regional GRIB2 for members'
  * nav software). The animated wind map itself is page-wind.php.
  */
