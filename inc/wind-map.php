@@ -1415,10 +1415,9 @@ var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke
 function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
 	var sub=(kind==='club'?'Reciprocal club':'Dock &amp; dine')+' &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.town?' &middot; '+p.town:'');
-	var links='';
+	var links='<a href="#" class="pp-route" data-lat="'+p.lat+'" data-lng="'+p.lng+'">&#x2693; Add to route</a>';
 	if(p.url)links+='<a href="'+p.url+'" target="_blank" rel="noopener">Club site</a>';
 	links+='<a href="https://www.google.com/search?q='+encodeURIComponent(p.q||p.name)+'" target="_blank" rel="noopener">'+(kind==='club'?'Search on Google':'Reviews on Google')+'</a>';
-	links+='<a href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'" target="_blank" rel="noopener">Directions</a>';
 	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'+(p.desc?'<div class="pp-desc">'+p.desc+'</div>':'')+'<div class="pp-links">'+links+'</div>';
 }
 fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
@@ -1441,6 +1440,18 @@ function poiWire(id,layer,key){
 }
 poiWire('tgClubs',poiClubs,'oyc_wm_clubs');
 poiWire('tgDine',poiDine,'oyc_wm_dine');
+/* "Add to route" inside a POI popup drops a REGULAR passage waypoint at the
+   destination via addPin() — same pin as a map click, so it's draggable,
+   numbered, forecast-fetching and GPX/CSV-exportable, and the route line runs
+   from Buoy 42 like always. Capture phase: Leaflet popups stop click
+   propagation, so a bubble listener would never hear it. */
+document.addEventListener('click',function(ev){
+	var a=ev.target.closest?ev.target.closest('.pp-route'):null;
+	if(!a)return;
+	ev.preventDefault();ev.stopPropagation();
+	addPin(parseFloat(a.getAttribute('data-lat')),parseFloat(a.getAttribute('data-lng')));
+	map.closePopup();
+},true);
 
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
 /* the "wind from" hint rides with the barbs — visible only while they're shown */
