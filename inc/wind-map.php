@@ -124,8 +124,6 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .poi-fuel svg{display:block}
 #oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
 #oycwm .poi-pop .pp-sub{font-size:11.5px;color:#5a6b7d;margin-top:1px;font-weight:600}
-#oycwm .poi-pop .pp-rate{font-size:12px;color:#a67c24;font-weight:700;margin-top:4px}
-#oycwm .poi-pop .pp-rate a{color:#a67c24;text-decoration:underline}
 #oycwm .poi-pop .pp-desc{font-size:12px;color:#334455;margin-top:6px;line-height:1.45}
 #oycwm .poi-pop .pp-links{margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
 #oycwm .poi-pop .pp-links a{font-size:12px;font-weight:700;color:#1583cf;text-decoration:none}
@@ -1418,34 +1416,21 @@ function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(l
 function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
 var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
 var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock'};
-function poiPopup(p,kind,rate){
+function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
 	var sub=(POI_KIND[kind]||'')+' &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.town?' &middot; '+p.town:'');
 	var links='<a href="#" class="pp-route" data-lat="'+p.lat+'" data-lng="'+p.lng+'">&#x2693; Add to route</a>';
 	if(p.url)links+='<a href="'+p.url+'" target="_blank" rel="noopener">Club site</a>';
 	links+='<a href="https://www.google.com/search?q='+encodeURIComponent(p.q||p.name)+'" target="_blank" rel="noopener">'+(kind==='dine'?'Reviews on Google':'Search on Google')+'</a>';
-	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'+(rate?'<div class="pp-rate">'+rate+'</div>':'')+(p.desc?'<div class="pp-desc">'+p.desc+'</div>':'')+'<div class="pp-links">'+links+'</div>';
+	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'+(p.desc?'<div class="pp-desc">'+p.desc+'</div>':'')+'<div class="pp-links">'+links+'</div>';
 }
 fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
 	(j.clubs||[]).forEach(function(p){
 		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),{className:'poi-pop',maxWidth:260}).addTo(poiClubs);
 	});
-	var dineIdx={};
 	(j.dine||[]).forEach(function(p){
-		var m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),{className:'poi-pop',maxWidth:260}).addTo(poiDine);
-		dineIdx[p.name]={marker:m,p:p};
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),{className:'poi-pop',maxWidth:260}).addTo(poiDine);
 	});
-	/* Decorate dine popups with live Yelp stars when the ratings endpoint has a
-	   key configured (inc/poi-ratings.php). Silently absent otherwise. */
-	fetch('<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>?action=oyc_poi_ratings').then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(R){
-		for(var n in R){
-			var e=dineIdx[n];if(!e||!R[n]||!R[n].rating)continue;
-			var x=R[n];
-			var rate='&#9733; '+x.rating.toFixed(1)+(x.count?' ('+x.count+' reviews)':'')+(x.price?' &middot; '+x.price:'')
-				+(x.url?' &middot; <a href="'+x.url+'" target="_blank" rel="noopener">on Yelp</a>':'');
-			e.marker.setPopupContent(poiPopup(e.p,'dine',rate));
-		}
-	}).catch(function(){});
 	var POI_PUMP='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16M3.5 21h12M14 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5M6.8 7h5.4v4H6.8z"/></svg>';
 	(j.fuel||[]).forEach(function(p){
 		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),{className:'poi-pop',maxWidth:260}).addTo(poiFuel);
