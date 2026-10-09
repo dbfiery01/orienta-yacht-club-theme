@@ -1,0 +1,24 @@
+{
+  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). IMPORTANT: the club entries below are EXAMPLES — replace with the real OYC reciprocity list before promoting to main. Fields: name, town, lat, lng, desc, q (Google search query), url (optional club website). The dine entries mirror the Dock & Dine page (assets/dock-and-dine-map.html).",
+  "clubs": [
+    { "name": "Larchmont Yacht Club", "town": "Larchmont, NY", "lat": 40.9262, "lng": -73.7430, "desc": "Example entry — replace with details from the OYC reciprocity list.", "q": "Larchmont Yacht Club NY" },
+    { "name": "American Yacht Club", "town": "Rye, NY", "lat": 40.9566, "lng": -73.6852, "desc": "Example entry — replace with details from the OYC reciprocity list.", "q": "American Yacht Club Rye NY" },
+    { "name": "Indian Harbor Yacht Club", "town": "Greenwich, CT", "lat": 41.0076, "lng": -73.6228, "desc": "Example entry — replace with details from the OYC reciprocity list.", "q": "Indian Harbor Yacht Club Greenwich CT" },
+    { "name": "Manhasset Bay Yacht Club", "town": "Port Washington, NY", "lat": 40.8316, "lng": -73.7006, "desc": "Example entry — replace with details from the OYC reciprocity list.", "q": "Manhasset Bay Yacht Club Port Washington NY" },
+    { "name": "City Island Yacht Club", "town": "City Island, NY", "lat": 40.8497, "lng": -73.7868, "desc": "Example entry — replace with details from the OYC reciprocity list.", "q": "City Island Yacht Club NY" }
+  ],
+  "dine": [
+    { "name": "L'Escale at Delamar", "town": "Greenwich, CT", "lat": 41.0193, "lng": -73.6250, "desc": "Upscale Mediterranean on Greenwich Harbor. Slips at Delamar, $2/ft/hr — call the Dock Master ahead: 203-733-5320.", "q": "L'Escale Restaurant Delamar Greenwich CT" },
+    { "name": "City Island Lobster House", "town": "City Island, Bronx", "lat": 40.8462, "lng": -73.7856, "desc": "Classic seafood just past the bridge. Free dock & dine for customers in season.", "q": "City Island Lobster House Bronx NY" },
+    { "name": "Sea Shore Restaurant & Marina", "town": "City Island, Bronx", "lat": 40.8415, "lng": -73.7840, "desc": "A City Island seafood landmark since 1929, with its own marina. Guest slips for diners.", "q": "Sea Shore Restaurant City Island Bronx" },
+    { "name": "Louie's Prime Steak & Seafood", "town": "Port Washington, NY", "lat": 40.8352, "lng": -73.7092, "desc": "Manhasset Bay institution since 1905 — prime steaks & raw bar. Free docking up to 50′; hail VHF 68.", "q": "Louie's Prime Steak Seafood Port Washington NY" },
+    { "name": "Harbor House", "town": "Stamford, CT", "lat": 41.0288, "lng": -73.5468, "desc": "At the center of busy Stamford Harbor with a full-service marina. Transient dockage — Harbor Point VHF 9 / 203-355-6045.", "q": "Harbor House Restaurant Stamford CT" },
+    { "name": "Prime: An American Kitchen & Bar", "town": "Stamford (Harbor Point), CT", "lat": 41.0258, "lng": -73.5492, "desc": "Elevated waterfront dining with direct marina access. VHF 9 / 203-355-6045.", "q": "Prime An American Kitchen Bar Stamford CT" },
+    { "name": "SoNo Seaport", "town": "South Norwalk, CT", "lat": 41.0928, "lng": -73.4185, "desc": "Steamers and lobster rolls on the Norwalk River, in past the Norwalk Islands. Hail VHF 9.", "q": "SoNo Seaport Seafood Norwalk CT" },
+    { "name": "Sunset Grille", "town": "Norwalk (Norwalk Cove), CT", "lat": 41.0930, "lng": -73.3922, "desc": "Harborside sunset dining at Norwalk Cove. Transient dockage via Norwalk Cove Marina — VHF 72 / 203-838-5899.", "q": "Sunset Grille Norwalk Cove Marina CT" },
+    { "name": "The Cove Restaurant & Oyster Bar", "town": "Glen Cove, NY", "lat": 40.8650, "lng": -73.6560, "desc": "Refined seafood and a raw bar with panoramic Hempstead Harbor views, beside Safe Harbor Marina. Dockside — call ahead: 516-676-1211.", "q": "The Cove Restaurant Oyster Bar Glen Cove NY" },
+    { "name": "Ritz Cafe", "town": "Northport, NY", "lat": 40.9009, "lng": -73.3438, "desc": "A Main Street favorite in Northport Village. Tie up free at the Northport Village Dock (8am–5pm, first-come) and walk in.", "q": "Ritz Cafe Northport NY" },
+    { "name": "Bistro 44", "town": "Northport, NY", "lat": 40.9003, "lng": -73.3446, "desc": "Elegant New American steps from Northport Harbor and the Engeman Theater. Northport Village Dock (free 8am–5pm), then a short walk.", "q": "Bistro 44 Northport NY" },
+    { "name": "Maroni", "town": "Northport, NY", "lat": 40.9014, "lng": -73.3456, "desc": "Northport's tiny, legendary Italian tasting-menu spot — reservations essential. Northport Village Dock, then a short walk up Woodbine Ave.", "q": "Maroni Cuisine Northport NY" }
+  ]
+}
