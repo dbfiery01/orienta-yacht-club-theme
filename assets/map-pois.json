@@ -638,14 +638,6 @@
       "q": "Safe Harbor Capri Marina Port Washington NY fuel dock"
     },
     {
-      "name": "Imperial Yacht Club Marina",
-      "town": "New Rochelle, NY",
-      "lat": 40.895,
-      "lng": -73.776,
-      "desc": "Fuel dock on Davenport Neck — call ahead to confirm fuel & hours.",
-      "q": "Imperial Yacht Club New Rochelle fuel dock"
-    },
-    {
       "name": "Safe Harbor Glen Cove",
       "town": "Glen Cove, NY",
       "lat": 40.863,
@@ -670,12 +662,68 @@
       "q": "Coneys Marine Huntington NY fuel"
     },
     {
-      "name": "Safe Harbor Stamford (Yacht Haven)",
+      "name": "Imperial Yacht Club Marina",
+      "town": "New Rochelle, NY",
+      "lat": 40.895,
+      "lng": -73.776,
+      "desc": "Fuel dock on Davenport Neck — call ahead to confirm fuel & hours.",
+      "q": "Imperial Yacht Club New Rochelle fuel dock"
+    },
+    {
+      "name": "Safe Harbor Post Road",
+      "town": "Mamaroneck, NY — home harbor",
+      "lat": 40.95,
+      "lng": -73.727,
+      "desc": "Fuel dock at the head of the East Basin — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Post Road Mamaroneck fuel dock"
+    },
+    {
+      "name": "Tide Mill Yacht Basin",
+      "town": "Rye, NY (Milton Harbor)",
+      "lat": 40.9598,
+      "lng": -73.6878,
+      "desc": "Gas up Milton Harbor creek — tidal; call ahead to confirm fuel, depth & hours.",
+      "q": "Tide Mill Yacht Basin Rye fuel"
+    },
+    {
+      "name": "Sag Harbor Yacht Club Fuel Dock",
+      "town": "Sag Harbor, NY",
+      "lat": 40.9986,
+      "lng": -72.2931,
+      "desc": "Gas & diesel · high-speed pumps — call ahead to confirm hours.",
+      "q": "Sag Harbor Yacht Club fuel dock"
+    },
+    {
+      "name": "Beacon Point Marine",
+      "town": "Cos Cob, Greenwich, CT",
+      "lat": 41.0305,
+      "lng": -73.6,
+      "desc": "Fuel on the Mianus River — call ahead to confirm fuel & hours.",
+      "q": "Beacon Point Marine Cos Cob fuel dock"
+    },
+    {
+      "name": "Hinckley Yacht Services (Yacht Haven West)",
       "town": "Stamford, CT",
       "lat": 41.034,
       "lng": -73.543,
       "desc": "Gas & diesel · VHF 9 — call ahead to confirm fuel & hours.",
-      "q": "Safe Harbor Stamford Yacht Haven fuel dock"
+      "q": "Hinckley Yacht Services Stamford fuel dock"
+    },
+    {
+      "name": "The Island Boatyard",
+      "town": "West Neck, Shelter Island, NY",
+      "lat": 41.0522,
+      "lng": -72.3444,
+      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
+      "q": "Island Boatyard Shelter Island fuel dock"
+    },
+    {
+      "name": "Safe Harbor Stirling",
+      "town": "Greenport, NY",
+      "lat": 41.0782,
+      "lng": -72.3196,
+      "desc": "Fuel dock in Stirling Basin — call ahead to confirm fuel & hours.",
+      "q": "Safe Harbor Stirling Greenport fuel dock"
     },
     {
       "name": "Norwalk Cove Marina",
@@ -686,12 +734,36 @@
       "q": "Norwalk Cove Marina fuel dock"
     },
     {
+      "name": "Piccozzi's (Jack's Marine)",
+      "town": "Dering Harbor, Shelter Island, NY",
+      "lat": 41.0885,
+      "lng": -72.345,
+      "desc": "Gas & diesel on Dering Harbor — call ahead to confirm hours.",
+      "q": "Piccozzi's fuel dock Shelter Island"
+    },
+    {
+      "name": "South Benson Marina",
+      "town": "Fairfield, CT",
+      "lat": 41.133,
+      "lng": -73.237,
+      "desc": "Town marina with gas — call ahead to confirm fuel & hours.",
+      "q": "South Benson Marina Fairfield CT fuel"
+    },
+    {
       "name": "Captain's Cove Seaport",
       "town": "Black Rock Harbor, Bridgeport, CT",
       "lat": 41.1441,
       "lng": -73.2359,
       "desc": "Fuel dock — call ahead to confirm fuel & hours.",
       "q": "Captain's Cove Seaport Bridgeport fuel dock"
+    },
+    {
+      "name": "Bridgeport Harbor Marina",
+      "town": "Bridgeport, CT",
+      "lat": 41.166,
+      "lng": -73.182,
+      "desc": "Gas & diesel in the main harbor — call ahead to confirm hours.",
+      "q": "Bridgeport Harbor Marina fuel dock"
     },
     {
       "name": "Safe Harbor Branford",
@@ -726,20 +798,20 @@
       "q": "Saybrook Point Marina fuel dock"
     },
     {
+      "name": "Pequonnock Yacht Club",
+      "town": "New Haven, CT",
+      "lat": 41.29,
+      "lng": -72.934,
+      "desc": "Gas & diesel at City Point — call ahead to confirm fuel & hours.",
+      "q": "Pequonnock Yacht Club New Haven fuel dock"
+    },
+    {
       "name": "Safe Harbor Between the Bridges",
       "town": "Old Saybrook, CT",
       "lat": 41.3148,
       "lng": -72.3501,
       "desc": "Fuel dock on the Connecticut River — call ahead to confirm fuel & hours.",
       "q": "Between the Bridges marina Old Saybrook fuel"
-    },
-    {
-      "name": "Safe Harbor Essex Island",
-      "town": "Essex, CT",
-      "lat": 41.354,
-      "lng": -72.385,
-      "desc": "Fuel dock — call ahead to confirm fuel & hours.",
-      "q": "Safe Harbor Essex Island marina fuel"
     },
     {
       "name": "Noank Shipyard",
@@ -750,36 +822,12 @@
       "q": "Noank Shipyard fuel dock"
     },
     {
-      "name": "Safe Harbor Stirling",
-      "town": "Greenport, NY",
-      "lat": 41.0782,
-      "lng": -72.3196,
-      "desc": "Fuel dock in Stirling Basin — call ahead to confirm fuel & hours.",
-      "q": "Safe Harbor Stirling Greenport fuel dock"
-    },
-    {
-      "name": "The Island Boatyard",
-      "town": "West Neck, Shelter Island, NY",
-      "lat": 41.0522,
-      "lng": -72.3444,
+      "name": "Safe Harbor Essex Island",
+      "town": "Essex, CT",
+      "lat": 41.354,
+      "lng": -72.385,
       "desc": "Fuel dock — call ahead to confirm fuel & hours.",
-      "q": "Island Boatyard Shelter Island fuel dock"
-    },
-    {
-      "name": "Piccozzi's (Jack's Marine)",
-      "town": "Dering Harbor, Shelter Island, NY",
-      "lat": 41.0885,
-      "lng": -72.345,
-      "desc": "Gas & diesel on Dering Harbor — call ahead to confirm hours.",
-      "q": "Piccozzi's fuel dock Shelter Island"
-    },
-    {
-      "name": "Sag Harbor Yacht Club Fuel Dock",
-      "town": "Sag Harbor, NY",
-      "lat": 40.9986,
-      "lng": -72.2931,
-      "desc": "Gas & diesel · high-speed pumps — call ahead to confirm hours.",
-      "q": "Sag Harbor Yacht Club fuel dock"
+      "q": "Safe Harbor Essex Island marina fuel"
     }
   ],
   "anc": [
