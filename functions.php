@@ -336,9 +336,12 @@ function oyc_burgee( $class = 'brand-mark' ) {
 		// white box on the dark one). When a cream-on-transparent dark variant
 		// exists, output both and let CSS swap them by theme (.logo-light/.logo-dark).
 		if ( file_exists( get_template_directory() . '/assets/oyc-logo-dark.png' ) ) {
+			// loading=eager + no-lazyload/skip-lazy so the image plugin doesn't swap
+			// the (display:none-in-light) dark logo for a lazy placeholder — otherwise
+			// it would be a blank 1x1 when the viewer switches to dark mode.
 			printf(
-				'<img src="%1$soyc-logo.png" alt="%2$s" class="%3$s logo-light" />'
-				. '<img src="%1$soyc-logo-dark.png" alt="" aria-hidden="true" class="%3$s logo-dark" />',
+				'<img src="%1$soyc-logo.png" alt="%2$s" class="%3$s logo-light no-lazyload skip-lazy" loading="eager" decoding="async" />'
+				. '<img src="%1$soyc-logo-dark.png" alt="" aria-hidden="true" class="%3$s logo-dark no-lazyload skip-lazy" loading="eager" decoding="async" />',
 				$base, $alt, $cls
 			);
 		} else {
