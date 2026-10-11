@@ -208,6 +208,9 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .erbar .er-name{color:#f0eadd}
 [data-theme="dark"] #oycwm .ctrl button{background:rgba(255,255,255,.06);color:#e7edf4;border-color:rgba(245,239,226,.18)}
 [data-theme="dark"] #oycwm .chart-sel{background:rgba(255,255,255,.06);color:#e7edf4}
+/* Slider time label: the big time uses var(--navy) (#0b2a4a, not remapped), which
+   was invisible on the dark control bar — only the --mute date below showed. */
+[data-theme="dark"] #oycwm .ctrl .tlabel{color:#f0eadd}
 [data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
 [data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
@@ -224,6 +227,12 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .tiphelp{background:rgba(9,27,46,.93);color:#eef3f8;border-color:rgba(245,239,226,.22)}
 [data-theme="dark"] #oycwm .barbhint{background:#0e2a47;color:#e7edf4}
 [data-theme="dark"] #oycwm .barbhint b{color:#ffffff}
+/* Map popups/tooltips (waypoint callouts, POI + buoy popups) sit on the LIGHT
+   base map as WHITE cards, so re-assert the dark-ink tokens inside them — the
+   #oycwm dark remap above lightens --ink/--mute/--faint for the dark CHROME
+   (control bar, readout), which otherwise washed the white callout text out. */
+[data-theme="dark"] #oycwm .leaflet-popup-content,
+[data-theme="dark"] #oycwm .leaflet-tooltip{--ink:#16324a;--mute:#5a6b7d;--faint:#8a99a8}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">
