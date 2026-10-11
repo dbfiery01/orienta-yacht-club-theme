@@ -46,20 +46,58 @@ add_action( 'switch_theme', function () {
 	if ( $ts ) { wp_unschedule_event( $ts, 'oyc_warm_weather' ); }
 } );
 
-/* The warm run: force-refresh each always-loaded reading. Every build is guarded
-   by its own in-flight lock, so a concurrent live request is never double-fetched
-   — if a visitor is mid-fetch the warmer simply skips that key this tick. */
+/* ── Static JSON mirror ──────────────────────────────────────────────────────
+   The cron also writes each warmed reading to a flat file under
+   /wp-content/uploads/oyc-weather/, which the client fetches DIRECTLY. Apache
+   serves a static file in ~50ms, vs ~1.3s for an admin-ajax call (which boots
+   all of WordPress even on a cache hit — the real data-layer floor on this host).
+   The client keeps the admin-ajax proxy as a fallback (and uses it when the file
+   is stale, e.g. if cron ever stops). */
+function oyc_weather_static_dir() {
+	$u = wp_upload_dir();
+	return array( trailingslashit( $u['basedir'] ) . 'oyc-weather', trailingslashit( $u['baseurl'] ) . 'oyc-weather' );
+}
+/* Public base URL the client reads from (also injected into the board scripts). */
+function oyc_weather_static_url() {
+	list( , $url ) = oyc_weather_static_dir();
+	return trailingslashit( $url );
+}
+/* Atomically write $json to <uploads>/oyc-weather/$name.json. */
+function oyc_weather_static_write( $name, $json ) {
+	if ( ! is_string( $json ) || '' === $json || ! preg_match( '/^[a-z0-9_]+$/', $name ) ) { return; }
+	list( $dir ) = oyc_weather_static_dir();
+	if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) { return; }
+	$tmp = $dir . '/.' . $name . '.' . wp_generate_password( 6, false ) . '.tmp';
+	if ( false !== file_put_contents( $tmp, $json ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( ! @rename( $tmp, $dir . '/' . $name . '.json' ) ) { @unlink( $tmp ); } // phpcs:ignore
+	}
+}
+
+/* The warm run: force-refresh each always-loaded reading, then mirror it to a
+   static file. Every build is guarded by its own in-flight lock, so a concurrent
+   live request is never double-fetched — if a visitor is mid-fetch the warmer
+   skips that key this tick (and keeps last tick's static file). */
 add_action( 'oyc_warm_weather', 'oyc_warm_weather_run' );
 function oyc_warm_weather_run() {
 	// Local wind field (Open-Meteo) — the default map layer, loaded on every view.
 	if ( function_exists( 'oyc_wind_local_spec' ) && function_exists( 'oyc_om_fetch_store' ) ) {
 		list( $k, $u, $t ) = oyc_wind_local_spec();
-		oyc_om_fetch_store( $k, $u, $t );
+		$body = oyc_om_fetch_store( $k, $u, $t );
+		if ( ! is_string( $body ) || '' === $body ) { $body = get_transient( $k . '_st' ); } // coalesced/failed → last-known
+		if ( is_string( $body ) && '' !== $body ) { oyc_weather_static_write( 'wind_local', $body ); }
 	}
 	// Buoy-42 marine reading — the Execution Rock readout + the Marine Forecast table.
-	if ( function_exists( 'oyc_marine_fc_build' ) ) { oyc_marine_fc_build( true ); }
+	if ( function_exists( 'oyc_marine_fc_build' ) ) {
+		$m = oyc_marine_fc_build( true );
+		if ( is_array( $m ) && ! empty( $m['ok'] ) ) { oyc_weather_static_write( 'marine_fc', wp_json_encode( $m ) ); }
+	}
 	// Live buoy observation (NDBC).
-	if ( function_exists( 'oyc_buoy_build' ) ) { oyc_buoy_build( true ); }
+	if ( function_exists( 'oyc_buoy_build' ) ) {
+		oyc_weather_static_write( 'buoy', wp_json_encode( oyc_buoy_build( true ) ) );
+	}
 	// Sitewide header weather glyph.
-	if ( function_exists( 'oyc_header_wx_build' ) ) { oyc_header_wx_build( true ); }
+	if ( function_exists( 'oyc_header_wx_build' ) ) {
+		$h = oyc_header_wx_build( true );
+		if ( is_array( $h ) && ! empty( $h['ok'] ) ) { oyc_weather_static_write( 'header_wx', wp_json_encode( $h ) ); }
+	}
 }

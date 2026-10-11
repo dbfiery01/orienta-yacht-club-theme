@@ -119,6 +119,7 @@ add_action( 'wp_footer', function () {
 		}
 		var LABEL={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Drizzle',56:'Freezing drizzle',57:'Freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
 		var AJAX=<?php echo wp_json_encode( esc_url_raw( admin_url( 'admin-ajax.php' ) ) ); ?>;
+		var STAT=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' ) ); ?>; // cron-warmed static JSON (served by Apache, no WP boot)
 		function render(code,temp,cloud){
 			if(temp==null) return;
 			var label=LABEL[code]||'Weather';
@@ -137,11 +138,22 @@ add_action( 'wp_footer', function () {
 				.then(function(j){ var c=j&&j.current; if(c&&c.temperature_2m!=null) render(c.weather_code, Math.round(c.temperature_2m), c.cloud_cover); })
 				.catch(function(){});
 		}
-		function load(){
+		function ok(d){ if(d&&d.ok&&d.temp!=null){ render(d.code, d.temp, d.cloud); return true; } return false; }
+		function viaAjax(){
 			fetch(AJAX+'?action=oyc_header_wx',{cache:'no-store'})
 				.then(function(r){ return r.json(); })
-				.then(function(d){ if(d&&d.ok&&d.temp!=null) render(d.code, d.temp, d.cloud); else clientFetch(); })
+				.then(function(d){ if(!ok(d)) clientFetch(); })
 				.catch(function(){ clientFetch(); });
+		}
+		/* Prefer the cron-warmed static file (served by Apache, no WordPress boot ≈
+		   1.3s faster); fall back to the admin-ajax proxy if it's missing or stale
+		   (>25 min, i.e. the warmer stopped), then to a browser-direct fetch. */
+		function load(){
+			if(!STAT){ viaAjax(); return; }
+			fetch(STAT+'header_wx.json',{cache:'no-store'})
+				.then(function(r){ if(!r.ok) throw 0; var lm=r.headers.get('last-modified'); if(lm&&(Date.now()-Date.parse(lm))>25*60*1000) throw 0; return r.json(); })
+				.then(function(d){ if(!ok(d)) throw 0; })
+				.catch(function(){ viaAjax(); });
 		}
 		load();
 		setInterval(load, 15*60*1000); // refresh with Open-Meteo's ~15-min cadence

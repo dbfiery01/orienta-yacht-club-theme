@@ -395,6 +395,19 @@ function oyc_wind_map_html( $embed = false ) {
 (function(){
 "use strict";
 var AJAX=<?php echo wp_json_encode( $oyc_ajax ); ?>;
+var STAT=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' ) ); ?>; // cron-warmed static JSON (Apache-served, no WP boot)
+/* Fetch the cron-warmed static file first (served by Apache in ~50ms, vs ~1.3s
+   for admin-ajax which boots all of WordPress), falling back to the proxy if the
+   file is missing or stale. Resolves to a Response so callers keep using .json(). */
+function statFetch(file, ajaxAction, maxAgeMin, timeout){
+	if(!STAT) return fetchT(AJAX+'?action='+ajaxAction, timeout);
+	return fetch(STAT+file+'.json',{cache:'no-store'}).then(function(r){
+		if(!r.ok) throw 0;
+		var lm=r.headers.get('last-modified');
+		if(lm && (Date.now()-Date.parse(lm)) > maxAgeMin*60000) throw 0; // stale → proxy
+		return r;
+	}).catch(function(){ return fetchT(AJAX+'?action='+ajaxAction, timeout); });
+}
 var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638','#b23a2a','#8f2d20'];
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
@@ -652,7 +665,7 @@ function fcForFrame(S,epoch,isNow){return isNow?fcNearest(S,Date.now()):fcInterp
 
 var ERFC=null;
 function loadERFC(){
-	fetchT(AJAX+'?action=oyc_marine_fc',12000).then(function(r){return r.json();}).then(function(res){
+	statFetch('marine_fc','oyc_marine_fc',25,12000).then(function(r){return r.json();}).then(function(res){
 		return withMarine(res,ER.lat,ER.lon); /* fill waves from the browser if the server was 429'd */
 	}).then(function(res){
 		var S=fcSeriesFrom(res);if(!S)return;ERFC=S;
@@ -1233,8 +1246,8 @@ function loadLocal(tries){
 		   proxy calls (cuts the initial admin-ajax burst that could trip host 429s) */
 		loadWaves(LOCAL,function(){updateER(curTi);});
 	}
-	/* cached server proxy first; browser direct if the host can't reach Open-Meteo */
-	fetchT(AJAX+'?action=oyc_wind_local',15000)
+	/* cron-warmed static file first, then the proxy; browser direct if the host can't reach Open-Meteo */
+	statFetch('wind_local','oyc_wind_local',25,15000)
 		.then(function(r){return r.ok?r.json():null;})
 		.catch(function(){return null;})
 		.then(function(arr){return valid(arr)?arr:clientLocal();})

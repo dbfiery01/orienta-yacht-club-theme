@@ -220,7 +220,8 @@ function oyc_point_fc_proxy() {
 
 /* ── Markup + scoped styles + widget script ──────────────────────────────── */
 function oyc_forecast_table_html() {
-	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
+	$ajax   = esc_url( admin_url( 'admin-ajax.php' ) );
+	$static = esc_url( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' );
 	$inner = <<<'HTML'
 <div class="oyc-ft-card">
   <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Buoy 42 &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span><button type="button" class="fsbtn" id="oycftFs" title="Full screen" aria-label="Full screen"></button></div>
@@ -311,6 +312,18 @@ function oyc_forecast_table_html() {
   var ROOT=document.currentScript&&document.currentScript.closest?document.currentScript.closest('.oyc-ft'):document.querySelector('.oyc-ft');
   if(!ROOT)ROOT=document.querySelector('.oyc-ft');
   var AJAX=ROOT.getAttribute('data-ajax');
+  var STAT=ROOT.getAttribute('data-static')||''; // cron-warmed static JSON (Apache-served, no WP boot)
+  /* Try the cron-warmed static file first (~50ms), fall back to the admin-ajax
+     proxy if it's missing or stale (>25 min). Resolves to a Response. */
+  function statFetch(file, ajaxAction, maxAgeMin){
+    if(!STAT) return fetch(AJAX+'?action='+ajaxAction);
+    return fetch(STAT+file+'.json',{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw 0;
+      var lm=r.headers.get('last-modified');
+      if(lm && (Date.now()-Date.parse(lm)) > maxAgeMin*60000) throw 0;
+      return r;
+    }).catch(function(){ return fetch(AJAX+'?action='+ajaxAction); });
+  }
   var LAT=40.93717, LON=-73.70217;
   var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
@@ -352,7 +365,7 @@ function oyc_forecast_table_html() {
 
   function loadBuoy(){
     if(!AJAX)return Promise.resolve(null);
-    return fetch(AJAX+'?action=oyc_buoy').then(function(r){return r.json();}).then(function(o){
+    return statFetch('buoy','oyc_buoy',25).then(function(r){return r.json();}).then(function(o){
       return (o&&o.ok&&o.ft!=null)?{ft:o.ft,dir:o.dir,dpd:o.dpd,ageMin:o.ageMin,station:o.station,id:o.id}:null;
     }).catch(function(){return null;});
   }
@@ -401,7 +414,7 @@ function oyc_forecast_table_html() {
   function fail(e){$('oycft-tbl').textContent='Could not load forecast ('+e+').';}
   // Try the cached server proxy first (efficient, no per-visitor load); fall back
   // to a direct browser fetch whenever the host can't reach Open-Meteo.
-  fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
+  statFetch('marine_fc','oyc_marine_fc',25).then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
     if(res&&res.ok&&res.wx&&res.wx.hourly){ boot(res.wx,res.marine); }
     else { clientWx().then(function(wx){boot(wx,null);}).catch(fail); }
   }).catch(function(){ clientWx().then(function(wx){boot(wx,null);}).catch(fail); });
@@ -478,5 +491,5 @@ function oyc_forecast_table_html() {
 })();
 </script>
 HTML;
-	return '<section class="oyc-ft" data-ajax="' . $ajax . '">' . $inner . '</section>';
+	return '<section class="oyc-ft" data-ajax="' . $ajax . '" data-static="' . $static . '">' . $inner . '</section>';
 }
