@@ -39,6 +39,14 @@ function oyc_home_event_banner() {
 	.oyc-ann__cta .arw{transition:transform .2s ease}
 	.oyc-ann:hover .oyc-ann__cta .arw{transform:translateX(3px)}
 	@media(max-width:640px){.oyc-ann .oyc-ann__kicker,.oyc-ann__meta,.oyc-ann__sep{display:none}.oyc-ann__inner{gap:10px;padding:10px 14px}.oyc-ann__title{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.oyc-ann__cta{flex:0 0 auto;font-size:.9rem}}
+	/* Dark mode: the banner's background uses var(--navy), which the site dark
+	   layer remaps to a light cream (for text use) — flipping this strip light.
+	   Pin it to literal dark values so it stays a navy panel on the dark page. */
+	html[data-theme="dark"] .oyc-ann{background:#0e2a47 !important;color:#f5efe2 !important;border-color:rgba(212,168,81,.32) !important;box-shadow:0 6px 20px rgba(0,0,0,.35) !important}
+	html[data-theme="dark"] .oyc-ann:hover{background:#163655 !important;box-shadow:0 8px 26px rgba(0,0,0,.45) !important}
+	html[data-theme="dark"] .oyc-ann__title{color:#f5efe2 !important}
+	html[data-theme="dark"] .oyc-ann__meta{color:rgba(245,239,226,.85) !important}
+	html[data-theme="dark"] .oyc-ann__kicker,html[data-theme="dark"] .oyc-ann__cta{color:#d4a851 !important}
 	</style>
 	<a class="oyc-ann" id="oycAnn" href="<?php echo $cal_url; ?>" hidden>
 		<span class="oyc-ann__inner">
