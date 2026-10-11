@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.88
+Version: 1.5.89
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -867,3 +867,14 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-name,
 html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-dock,
 html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-dock strong { color: #f4eddd !important; }
 html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-desc { color: #c3cedb !important; }
+
+/* bold labels + contact blocks — the light layer colors these dark navy
+   (#16324a) for a white page (Phone:/Email:/Harbor Patrol labels, the contact
+   address block). Those aren't headings, so the heading overrides above miss
+   them; re-color light for dark mode. */
+html[data-theme="dark"] .entry-content strong { color: #f4eddd !important; }
+html[data-theme="dark"] body.oyc-page-contact .contact-split__info,
+html[data-theme="dark"] body.oyc-page-contact .contact-split__info p { color: #d6dfe9 !important; }
+html[data-theme="dark"] body.oyc-page-contact .contact-split__info strong,
+html[data-theme="dark"] body.oyc-page-contact .entry-content strong,
+html[data-theme="dark"] body.oyc-page-contact strong { color: #f4eddd !important; }

@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.230
+Version: 1.7.231
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3489,6 +3489,18 @@ html[data-theme="dark"] .contact-form,html[data-theme="dark"] .cal-export-select
 html[data-theme="dark"] .cal-date-picker,html[data-theme="dark"] .cal-addcal-btn{
   background:#0c2338 !important; color:#e9e1d2; border-color:rgba(245,239,226,0.22);
 }
+/* Contact Form 7 typed inputs set a literal cream bg (#F9F6F0 !important) at
+   specificity (0,2,1), which out-ranks the generic rule above (so the textarea
+   went dark but the text/email/tel inputs stayed cream — cream-on-cream, i.e.
+   invisible typing). Match their specificity here. */
+html[data-theme="dark"] .wpcf7-form input[type="text"],
+html[data-theme="dark"] .wpcf7-form input[type="email"],
+html[data-theme="dark"] .wpcf7-form input[type="tel"],
+html[data-theme="dark"] .wpcf7-form input[type="url"],
+html[data-theme="dark"] .wpcf7-form input[type="number"],
+html[data-theme="dark"] .wpcf7-form textarea{ background:#0c2338 !important; color:#e9e1d2 !important; border-color:rgba(245,239,226,0.22) !important; }
+html[data-theme="dark"] .wpcf7-form input::placeholder,
+html[data-theme="dark"] .wpcf7-form textarea::placeholder{ color:#9fb0c2 !important; opacity:1; }
 html[data-theme="dark"] .cal-view-btn.active{ background:#102b47 !important; color:#f4eddd; }
 html[data-theme="dark"] .cal-addcal-btn:hover{ background:#173c5e !important; }
 html[data-theme="dark"] body.oyc-page-calendar .cal-section .container{ background:transparent !important; }
