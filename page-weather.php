@@ -236,7 +236,8 @@ if ( ! $oyc_weather_menu ) {
 	.fc{display:flex;flex-direction:column;gap:12px;margin-top:12px}
 	.fc-row{display:grid;grid-template-columns:76px 1fr;gap:14px;align-items:start}
 	.fc-when{color:var(--teal);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:13px;padding-top:2px}
-	.fc-txt{color:#35566b;font-size:13.5px;line-height:1.5}
+	.fc-txt{color:#c3cedb;font-size:13.5px;line-height:1.5}   /* dark-mode base: readable on navy */
+	:root[data-theme="light"] .fc-txt{color:#35566b}          /* light mode: original slate on white */
 
 	/* 48-hour outlook — labelled rows: Sky (icons) / Rain (chance %) / Temp / time */
 	.precip-card{display:flex;flex-direction:column}
