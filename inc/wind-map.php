@@ -224,6 +224,12 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .tiphelp{background:rgba(9,27,46,.93);color:#eef3f8;border-color:rgba(245,239,226,.22)}
 [data-theme="dark"] #oycwm .barbhint{background:#0e2a47;color:#e7edf4}
 [data-theme="dark"] #oycwm .barbhint b{color:#ffffff}
+/* Map popups/tooltips (waypoint callouts, POI + buoy popups) sit on the LIGHT
+   base map as WHITE cards, so re-assert the dark-ink tokens inside them — the
+   #oycwm dark remap above lightens --ink/--mute/--faint for the dark CHROME
+   (control bar, readout), which otherwise washed the white callout text out. */
+[data-theme="dark"] #oycwm .leaflet-popup-content,
+[data-theme="dark"] #oycwm .leaflet-tooltip{--ink:#16324a;--mute:#5a6b7d;--faint:#8a99a8}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">
