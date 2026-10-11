@@ -208,6 +208,9 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .erbar .er-name{color:#f0eadd}
 [data-theme="dark"] #oycwm .ctrl button{background:rgba(255,255,255,.06);color:#e7edf4;border-color:rgba(245,239,226,.18)}
 [data-theme="dark"] #oycwm .chart-sel{background:rgba(255,255,255,.06);color:#e7edf4}
+/* Slider time label: the big time uses var(--navy) (#0b2a4a, not remapped), which
+   was invisible on the dark control bar — only the --mute date below showed. */
+[data-theme="dark"] #oycwm .ctrl .tlabel{color:#f0eadd}
 [data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
 [data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
