@@ -190,12 +190,14 @@ if ( ! $oyc_weather_menu ) {
 	.tide-unit{color:var(--muted);font-size:15px;letter-spacing:.14em;padding-bottom:10px;font-weight:700}
 	.trend{margin-top:12px;display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;
 		text-transform:uppercase;font-size:14px}
-	.trend.falling{color:var(--amber)} .trend.rising{color:var(--teal)}
-	/* pressure-tendency arrow in the Conditions card (mirrors the tide trend colours) */
+	/* pressure-tendency arrow in the Conditions card (mirrors the tide trend) */
 	.ptrend{margin-left:5px;font-size:.5em;vertical-align:middle;font-weight:800;line-height:1}
-	/* rising = green, falling = red (base values tuned for the dark navy card) */
-	.ptrend.rising{color:#39d353} .ptrend.falling{color:#f0564a} .ptrend.steady{color:var(--faint)}
-	:root[data-theme="light"] .ptrend.rising{color:#1e8e4a} :root[data-theme="light"] .ptrend.falling{color:#c0392b}
+	.ptrend.steady{color:var(--faint)}
+	/* rising = green, falling = red — shared by the tide trend + the pressure arrow
+	   (base values tuned for the dark navy card; lighter overrides for the white card) */
+	.trend.rising,.ptrend.rising{color:#39d353} .trend.falling,.ptrend.falling{color:#f0564a}
+	:root[data-theme="light"] .trend.rising,:root[data-theme="light"] .ptrend.rising{color:#1e8e4a}
+	:root[data-theme="light"] .trend.falling,:root[data-theme="light"] .ptrend.falling{color:#c0392b}
 	.tide-cap{color:var(--faint);font-size:11px;margin-top:10px;letter-spacing:.03em}
 
 	/* next tides */
