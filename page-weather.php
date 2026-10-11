@@ -17,7 +17,11 @@
  * @package Orienta_Yacht_Club
  */
 
-nocache_headers();
+// NOTE: no nocache_headers() here. This template renders a STATIC HTML shell —
+// every "live" value (tides, wind, waves, marine forecast, alerts) is fetched
+// client-side after load, so the document itself is safe to page-cache. Caching
+// it cuts TTFB from ~3s (full PHP render each hit) to ~0.2s. Logged-in users
+// still bypass the cache via WP-Optimize, and a cache purge refreshes the menu.
 
 // Site menu for the slim nav bar — real primary menu when assigned, else the
 // same core links header.php falls back to.
