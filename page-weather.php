@@ -206,7 +206,9 @@ if ( ! $oyc_weather_menu ) {
 		padding:9px 0;border-top:1px solid var(--edge)}
 	.nt-row:first-child{border-top:0}
 	.nt-ar{font-size:15px;font-weight:800}
-	.nt-lo .nt-ar{color:var(--amber)} .nt-hi .nt-ar{color:var(--teal)}
+	/* HIGH ▲ green, LOW ▼ red — consistent with the tide trend + pressure arrows */
+	.nt-hi .nt-ar{color:#39d353} .nt-lo .nt-ar{color:#f0564a}
+	:root[data-theme="light"] .nt-hi .nt-ar{color:#1e8e4a} :root[data-theme="light"] .nt-lo .nt-ar{color:#c0392b}
 	.nt-kind{font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;font-weight:700}
 	.nt-time{font-weight:700;font-size:16px}
 	.nt-ft{color:var(--muted);font-size:14px;text-align:right}
