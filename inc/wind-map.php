@@ -218,6 +218,12 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .layers label{border-color:rgba(245,239,226,.30)}
 [data-theme="dark"] #oycwm .layers label:has(input:checked){background:rgba(87,166,214,.20);border-color:rgba(87,166,214,.6)}
 [data-theme="dark"] #oycwm .layers .hint{color:#c3cedb}
+/* Route-help tip (over the light map) + wind-barb legend were light text on a
+   white/transparent background → nearly invisible in dark mode. Make them dark
+   panels with light text. */
+[data-theme="dark"] #oycwm .tiphelp{background:rgba(9,27,46,.93);color:#eef3f8;border-color:rgba(245,239,226,.22)}
+[data-theme="dark"] #oycwm .barbhint{background:#0e2a47;color:#e7edf4}
+[data-theme="dark"] #oycwm .barbhint b{color:#ffffff}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">
