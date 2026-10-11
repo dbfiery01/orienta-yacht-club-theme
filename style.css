@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.231
+Version: 1.7.232
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3503,6 +3503,13 @@ html[data-theme="dark"] .wpcf7-form input::placeholder,
 html[data-theme="dark"] .wpcf7-form textarea::placeholder{ color:#9fb0c2 !important; opacity:1; }
 html[data-theme="dark"] .cal-view-btn.active{ background:#102b47 !important; color:#f4eddd; }
 html[data-theme="dark"] .cal-addcal-btn:hover{ background:#173c5e !important; }
+/* Event-category pills: the light layer uses a dark shade of each category
+   colour on a translucent tint — unreadable on the dark page. Lighten the text
+   and firm up the tint so each category stays recognisable but legible. */
+html[data-theme="dark"] .cal-pill--race{ background:rgba(140,193,230,0.18) !important; color:#cfe0f2 !important; }
+html[data-theme="dark"] .cal-pill--social{ background:rgba(212,168,81,0.26) !important; color:#e7c77e !important; }
+html[data-theme="dark"] .cal-pill--fishing{ background:rgba(44,110,155,0.30) !important; color:#9cc8e8 !important; }
+html[data-theme="dark"] .cal-pill--meeting{ background:rgba(138,155,176,0.28) !important; color:#c7d2de !important; }
 html[data-theme="dark"] body.oyc-page-calendar .cal-section .container{ background:transparent !important; }
 
 /* profile notices */

@@ -210,6 +210,14 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .chart-sel{background:rgba(255,255,255,.06);color:#e7edf4}
 [data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
 [data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
+/* The layer-toggle bar is transparent, so in full screen (where the card sits
+   over a white backdrop at 55% opacity) the light label/hint text washed out and
+   was hard to read. Give the bar a solid dark background; strengthen the toggle
+   pills (visible border, blue fill when checked) and brighten the hint text. */
+[data-theme="dark"] #oycwm .layers{background:#0e2a47}
+[data-theme="dark"] #oycwm .layers label{border-color:rgba(245,239,226,.30)}
+[data-theme="dark"] #oycwm .layers label:has(input:checked){background:rgba(87,166,214,.20);border-color:rgba(87,166,214,.6)}
+[data-theme="dark"] #oycwm .layers .hint{color:#c3cedb}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">

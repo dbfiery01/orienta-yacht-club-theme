@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.91
+Version: 1.5.92
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -894,3 +894,31 @@ html[data-theme="dark"] body.oyc-page-contact .contact-split__info p { color: #d
 html[data-theme="dark"] body.oyc-page-contact .contact-split__info strong,
 html[data-theme="dark"] body.oyc-page-contact .entry-content strong,
 html[data-theme="dark"] body.oyc-page-contact strong { color: #f4eddd !important; }
+
+/* Content links — the light layer colors a long list of link classes dark navy
+   (#0a3f73) for a white page, which my earlier immersive-scoped override didn't
+   fully cover (fee/roster/sail-docs links, dock & dine phone links, etc. — dim
+   blue on the dark page). Re-color them light blue in dark mode. */
+html[data-theme="dark"] .entry-content a:not(.btn),
+html[data-theme="dark"] .section:not(.section-photo-hero) a:not(.btn),
+html[data-theme="dark"] .harbor-card a,
+html[data-theme="dark"] .roster-card__contact a,
+html[data-theme="dark"] .fees-more a,
+html[data-theme="dark"] .tile--on-photo .fees-more a,
+html[data-theme="dark"] .roster-pdf a,
+html[data-theme="dark"] .approach-launch a,
+html[data-theme="dark"] .approach-launch__label,
+html[data-theme="dark"] .dash-card__icon,
+html[data-theme="dark"] .sail-docs-link a,
+html[data-theme="dark"] #membership .btn-link,
+html[data-theme="dark"] .entry-content .btn-link,
+html[data-theme="dark"] .section-photo-hero .sail-docs-link a,
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-card a,
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-desc a { color: #6cb6ea !important; }
+html[data-theme="dark"] .entry-content a:not(.btn):hover,
+html[data-theme="dark"] .fees-more a:hover,
+html[data-theme="dark"] .sail-docs-link a:hover { color: #9fd0f0 !important; }
+
+/* Dock & Dine location eyebrow — light layer uses a medium teal (#2c6e9b) that's
+   too dim on the dark card. */
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9 !important; }
