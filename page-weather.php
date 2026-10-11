@@ -48,7 +48,7 @@ if ( ! $oyc_weather_menu ) {
 <head>
 <meta charset="utf-8">
 <script>/* apply the visitor's saved color theme before paint (no flash); default = dark */
-(function(){try{var t=localStorage.getItem('oyc_wx_theme');document.documentElement.setAttribute('data-theme',(t==='light'||t==='dark')?t:'dark');}catch(e){}})();</script>
+(function(){try{var t=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(t==='light'||t==='dark')?t:'dark');}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
@@ -459,7 +459,7 @@ if ( ! $oyc_weather_menu ) {
 
 	// ---------- COLOR THEME (dark / light, persisted per visitor; default dark) ----------
 	(function(){
-		var KEY = 'oyc_wx_theme', tt = document.getElementById('themeToggle');
+		var KEY = 'oyc_theme', tt = document.getElementById('themeToggle');
 		function apply(t){
 			t = (t === 'light') ? 'light' : 'dark';
 			document.documentElement.setAttribute('data-theme', t);

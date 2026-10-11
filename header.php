@@ -3,6 +3,7 @@
 <?php /* oyc-rebuild v1.7.53 recovery — forces WP Pusher to overwrite this template */ ?>
 <html <?php language_attributes(); ?>>
 <head>
+	<script>/* apply saved color theme before paint — site-wide, default dark */try{var _ot=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(_ot==='light'||_ot==='dark')?_ot:'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}</script>
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="profile" href="https://gmpg.org/xfn/11" />
@@ -32,6 +33,9 @@
 			<button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">
 				<span class="sr-only"><?php esc_html_e( 'Menu', 'orienta-yacht-club' ); ?></span>
 				<span class="bars" aria-hidden="true"></span>
+			</button>
+			<button class="theme-btn" id="siteThemeToggle" type="button" aria-label="<?php esc_attr_e( 'Switch between light and dark mode', 'orienta-yacht-club' ); ?>" title="<?php esc_attr_e( 'Light / dark', 'orienta-yacht-club' ); ?>">
+				<span class="theme-ic theme-ic--moon" aria-hidden="true">&#9790;</span><span class="theme-ic theme-ic--sun" aria-hidden="true">&#9728;</span>
 			</button>
 			<?php
 			if ( has_nav_menu( 'primary' ) ) {
@@ -73,5 +77,7 @@
 		</nav>
 	</div>
 </header>
+<script>/* color-theme toggle (site-wide; persisted in localStorage key oyc_theme) */
+(function(){var b=document.getElementById('siteThemeToggle');if(!b)return;b.addEventListener('click',function(){var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var nxt=cur==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',nxt);try{localStorage.setItem('oyc_theme',nxt);}catch(e){}});})();</script>
 
 <main id="main">

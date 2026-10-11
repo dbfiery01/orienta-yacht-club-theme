@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.222
+Version: 1.7.224
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3420,3 +3420,131 @@ body.oyc-page-oyc-resources .dashboard-section { background: transparent; paddin
   border-width: 10px 0 10px 17px;
   border-color: transparent transparent transparent #fff;
 }
+
+/* =========================================================================
+   DARK THEME — site-wide. Toggled by data-theme="dark" on <html> (default
+   dark; chosen in the header, saved per visitor). Role-based overrides on top
+   of the color-named token palette; scoped entirely to [data-theme="dark"] so
+   light mode is untouched. Goal: every label/surface has strong contrast.
+   ========================================================================= */
+html[data-theme="dark"]{
+  color-scheme: dark;
+  --navy-ink: #e9e1d2;               /* body text token -> light */
+  --navy: #e4ddce;                   /* --navy is used for 98 text labels -> light (navy BACKGROUNDS are re-darkened below) */
+  --line: rgba(245, 239, 226, 0.15); /* hairlines -> light-on-dark */
+  --cream-soft: #0c2237;             /* tinted band bg -> dark */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.38);
+  --shadow-md: 0 6px 18px rgba(0,0,0,.55), 0 12px 32px rgba(0,0,0,.45);
+}
+html[data-theme="dark"] body{ background:#081a2c; color:var(--navy-ink); }
+html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,html[data-theme="dark"] h5,html[data-theme="dark"] h6{ color:#f4eddd; }
+html[data-theme="dark"] a{ color:#8cc1e6; }
+html[data-theme="dark"] a:hover{ color:var(--brass-bright); }
+html[data-theme="dark"] ::placeholder{ color:#9db0c3; opacity:1; }
+html[data-theme="dark"] hr{ border-color:rgba(245,239,226,0.14); }
+
+/* sticky header: light cream glass -> deep-navy glass; nav ink -> light */
+html[data-theme="dark"] .site-header{ background:rgba(6,20,38,0.92); border-bottom-color:rgba(245,239,226,0.12); }
+html[data-theme="dark"] .site-header .primary-nav a{ color:#e9e1d2; }
+html[data-theme="dark"] #nav-menu{ background:rgba(6,20,38,0.98) !important; }
+
+/* alternating home bands */
+html[data-theme="dark"] .section-tinted{ background:#0b2236; border-block-color:rgba(245,239,226,0.10); }
+
+/* cards / panels / surfaces (were #fff / white) */
+html[data-theme="dark"] .card,html[data-theme="dark"] .tile,html[data-theme="dark"] .facts li,
+html[data-theme="dark"] .dash-card,html[data-theme="dark"] .dashboard-account-row,
+html[data-theme="dark"] .profile-card,html[data-theme="dark"] .resource-link,
+html[data-theme="dark"] .apply-info-card,html[data-theme="dark"] .apply-steps,
+html[data-theme="dark"] .app-section,html[data-theme="dark"] .app-section--submit,
+html[data-theme="dark"] .vp-card,html[data-theme="dark"] .thankyou-card,
+html[data-theme="dark"] .cal-cell,html[data-theme="dark"] .cal-popup-inner,
+html[data-theme="dark"] .cal-list-item,html[data-theme="dark"] .oyc-msg-popup__card,
+html[data-theme="dark"] .signup-note,html[data-theme="dark"] .signup-form #wpmem_reg,
+html[data-theme="dark"] .si-doc table{
+  background:#102b47 !important; border-color:rgba(245,239,226,0.15); color:#e9e1d2;
+}
+/* labels/strong/small inside darkened surfaces that were hard navy -> light */
+html[data-theme="dark"] .card *,html[data-theme="dark"] .tile *,html[data-theme="dark"] .dash-card *,
+html[data-theme="dark"] .profile-card *,html[data-theme="dark"] .vp-card *,
+html[data-theme="dark"] .apply-info-card *,html[data-theme="dark"] .app-section *,
+html[data-theme="dark"] .thankyou-card *{ border-color:rgba(245,239,226,0.14); }
+
+/* form controls */
+html[data-theme="dark"] input,html[data-theme="dark"] textarea,html[data-theme="dark"] select,
+html[data-theme="dark"] .contact-form,html[data-theme="dark"] .cal-export-select,
+html[data-theme="dark"] .cal-date-picker,html[data-theme="dark"] .cal-addcal-btn{
+  background:#0c2338 !important; color:#e9e1d2; border-color:rgba(245,239,226,0.22);
+}
+html[data-theme="dark"] .cal-view-btn.active{ background:#102b47 !important; color:#f4eddd; }
+html[data-theme="dark"] .cal-addcal-btn:hover{ background:#173c5e !important; }
+html[data-theme="dark"] body.oyc-page-calendar .cal-section .container{ background:transparent !important; }
+
+/* profile notices */
+html[data-theme="dark"] .profile-notice--success{ background:#0f3320 !important; color:#bfe6cc; }
+html[data-theme="dark"] .profile-notice--error{ background:#3a1510 !important; color:#f0c3bc; }
+
+/* color-theme toggle button (header; visible in both modes) */
+.theme-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--navy);cursor:pointer;font-size:17px;line-height:1;margin-left:10px;flex:none;padding:0}
+.theme-btn:hover{border-color:var(--brass);color:var(--brass)}
+.theme-ic{pointer-events:none}
+.theme-ic--sun{display:none}
+html[data-theme="dark"] .theme-btn{color:#f4eddd;border-color:rgba(245,239,226,0.3)}
+html[data-theme="dark"] .theme-btn:hover{color:var(--brass-bright);border-color:var(--brass-bright)}
+html[data-theme="dark"] .theme-ic--moon{display:none}
+html[data-theme="dark"] .theme-ic--sun{display:inline}
+body.has-hero-header .theme-btn{color:var(--cream);border-color:rgba(245,239,226,0.35)}
+
+/* --navy used as a BACKGROUND (buttons/badges/table heads/dots/dark bands) stays dark */
+html[data-theme="dark"] .skip,html[data-theme="dark"] .menu-item.cta a,
+html[data-theme="dark"] .section-dark,html[data-theme="dark"] .wpcf7-form .wpcf7-submit,
+html[data-theme="dark"] .app-section-num,html[data-theme="dark"] .cr-btn--active,
+html[data-theme="dark"] .app-section--submit .wpcf7-submit,html[data-theme="dark"] .thankyou-step-num,
+html[data-theme="dark"] .tribe-events-c-view-selector__list-item-link--active,
+html[data-theme="dark"] .tribe-events-c-subscribe-dropdown__button,
+html[data-theme="dark"] .cal-dot--race,html[data-theme="dark"] .cal-export-btn,
+html[data-theme="dark"] .cal-list-item--race .cal-list-stripe,
+html[data-theme="dark"] body.oyc-page-sailing-instructions .page-hero,
+html[data-theme="dark"] .si-doc thead th,html[data-theme="dark"] .si-matrix tbody th{ background:#0b2a4a !important; }
+
+/* literal-navy / dim labels that aren't token-driven -> light for contrast */
+html[data-theme="dark"] .cal-day-num{ color:#e4ddce !important; }
+html[data-theme="dark"] .cal-wx-lbl{ color:#bcc9d7 !important; }
+html[data-theme="dark"] .cal-export-label{ color:#aeb9c8 !important; }
+
+/* secondary/muted text with literal dark colors -> light-muted for contrast */
+html[data-theme="dark"] .section-lede,
+html[data-theme="dark"] .card p,
+html[data-theme="dark"] .tile p,
+html[data-theme="dark"] .profile-form__hint,
+html[data-theme="dark"] .pw-toggle,
+html[data-theme="dark"] .profile-meta,
+html[data-theme="dark"] .resource-date,
+html[data-theme="dark"] .resource-action,
+html[data-theme="dark"] .resource-pending-badge,
+html[data-theme="dark"] .apply-info-card li,
+html[data-theme="dark"] .apply-contact-block > p,
+html[data-theme="dark"] .apply-or,
+html[data-theme="dark"] .apply-step,
+html[data-theme="dark"] .app-label-hint,
+html[data-theme="dark"] .cr-btn,
+html[data-theme="dark"] .app-privacy-note,
+html[data-theme="dark"] .vp-subtitle,
+html[data-theme="dark"] .thankyou-card > p,
+html[data-theme="dark"] .thankyou-steps-list p,
+html[data-theme="dark"] .thankyou-contact > p,
+html[data-theme="dark"] .wp-caption-text,
+html[data-theme="dark"] .tribe-events-c-nav__next,
+html[data-theme="dark"] .cal-view-btn,
+html[data-theme="dark"] .cal-grid-head span,
+html[data-theme="dark"] .cal-popup-close,
+html[data-theme="dark"] .cal-popup-type,
+html[data-theme="dark"] .cal-popup-date,
+html[data-theme="dark"] .cal-popup-desc,
+html[data-theme="dark"] .cal-addcal-label,
+html[data-theme="dark"] .cal-list-item:hover,
+html[data-theme="dark"] .cal-list-date-col .cal-list-dow,
+html[data-theme="dark"] .cal-list-meta,
+html[data-theme="dark"] .oyc-msg-popup__card p{ color:#d6dfe9 !important; }
+html[data-theme="dark"] .cal-cell--other-month .cal-day-num{ color:#64748a !important; }
