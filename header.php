@@ -78,6 +78,9 @@
 	</div>
 </header>
 <script>/* color-theme toggle (site-wide; persisted in localStorage key oyc_theme) */
-(function(){var b=document.getElementById('siteThemeToggle');if(!b)return;b.addEventListener('click',function(){var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var nxt=cur==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',nxt);try{localStorage.setItem('oyc_theme',nxt);}catch(e){}});})();</script>
+(function(){var b=document.getElementById('siteThemeToggle');if(!b)return;b.addEventListener('click',function(){var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var nxt=cur==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',nxt);try{localStorage.setItem('oyc_theme',nxt);}catch(e){}});})();
+/* Un-lazy the brand logos: the dark variant is display:none in light mode, so a
+   lazy-load plugin may leave it a 1x1 placeholder that's blank once dark mode is on. */
+(function(){[].forEach.call(document.querySelectorAll('.brand .logo-img'),function(i){var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}});})();</script>
 
 <main id="main">

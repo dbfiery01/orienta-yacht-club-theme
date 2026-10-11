@@ -127,7 +127,7 @@ function oyc_marine_fc_build( $force = false ) {
 	$lat = '40.93717'; $lon = '-73.70217'; // Buoy 42 (matches the client constants)
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
-		. '&models=best_match,gfs_seamless,ecmwf_ifs025'
+		. '&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
 		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wave_height,wave_period,wave_direction&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
@@ -325,7 +325,7 @@ function oyc_forecast_table_html() {
     }).catch(function(){ return fetch(AJAX+'?action='+ajaxAction); });
   }
   var LAT=40.93717, LON=-73.70217;
-  var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'}]; /* trimmed from 5 → 3 models: the 5-model query 429'd Open-Meteo, so its warmed static file never wrote on prod; BLEND+GFS+ECMWF keep the useful comparison at ~40% less call weight */
+  var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   var card=function(d){return DIRS[Math.round((d%360)/22.5)%16];};
   var MODEL='best_match', DATA=null, WAVE={}, NOW=0, BUOY=null;
@@ -407,7 +407,7 @@ function oyc_forecast_table_html() {
   function clientWx(){
     var u='https://api.open-meteo.com/v1/forecast?latitude=40.93717&longitude=-73.70217'
       +'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
-      +'&models=best_match,gfs_seamless,ecmwf_ifs025'
+      +'&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
       +'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
     return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}).then(function(j){if(!j||!j.hourly)throw new Error('wx empty');return j;});
   }
