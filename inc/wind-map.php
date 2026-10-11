@@ -200,6 +200,16 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm.embed .card.dl .dl-btn{margin:0}
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
+/* ── Dark theme (driven by the board's data-theme="dark"): dark chrome; the
+   Leaflet map and its overlays (barbs, isobars, graticule, routebar, tip help)
+   stay on the light base map, as designed ── */
+[data-theme="dark"] #oycwm{--ink:#f0eadd;--mute:#aeb9c8;--faint:#8ba0b5;--line:rgba(245,239,226,.15);--panel:#0e2a47}
+[data-theme="dark"] #oycwm .erbar{background:linear-gradient(180deg,#143455,#0f2744)}
+[data-theme="dark"] #oycwm .erbar .er-name{color:#f0eadd}
+[data-theme="dark"] #oycwm .ctrl button{background:rgba(255,255,255,.06);color:#e7edf4;border-color:rgba(245,239,226,.18)}
+[data-theme="dark"] #oycwm .chart-sel{background:rgba(255,255,255,.06);color:#e7edf4}
+[data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
+[data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">

@@ -44,17 +44,26 @@ if ( ! $oyc_weather_menu ) {
 		. '</ul>';
 }
 ?><!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<script>/* apply the visitor's saved color theme before paint (no flash); default = dark */
+(function(){try{var t=localStorage.getItem('oyc_wx_theme');document.documentElement.setAttribute('data-theme',(t==='light'||t==='dark')?t:'dark');}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
 <style>
 	:root{
-		/* OYC light palette — white "readout sheet" cards on a soft harbor-light
-		   ground, navy ink, brass-gold + harbor-blue accents (matches the forecast
-		   table). Var names --teal (gold) / --amber (harbor) kept for a minimal diff. */
+		/* OYC DARK palette (default) — the July "signage" look: navy ground, cream
+		   ink, brass-gold + harbor-blue accents. Members switch to light with the
+		   header toggle (persisted). Var names --teal (gold) / --amber (harbor) kept. */
+		--bg1:#0b2a4a; --bg2:#04162a; --panel:rgba(11,42,74,.55); --panel2:rgba(7,32,58,.72);
+		--edge:rgba(245,239,226,.12); --edge2:rgba(245,239,226,.24);
+		--ink:#f5efe2; --muted:#aeb9c8; --faint:#84909f;
+		--teal:#d4a851; --teal2:#b08a3e; --amber:#57a6d6; --red:#c0392b; --green:#4ade80;
+	}
+	:root[data-theme="light"]{
+		/* OYC light palette — white "readout sheet" cards on a soft harbor-light ground */
 		--bg1:#eaf1f8; --bg2:#dde8f2; --panel:#ffffff; --panel2:#ffffff;
 		--edge:#e0e7f0; --edge2:#cbd8e6;
 		--ink:#16324a; --muted:#5a6b7d; --faint:#8a99a8;
@@ -64,10 +73,11 @@ if ( ! $oyc_weather_menu ) {
 	html,body{height:100%}
 	body{
 		font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-		background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,var(--bg1) 50%,var(--bg2) 100%);
+		background:radial-gradient(1200px 700px at 70% -10%,#12283f 0%,var(--bg1) 45%,var(--bg2) 100%);
 		color:var(--ink); min-height:100vh; padding:18px; overflow-x:hidden;
 		-webkit-font-smoothing:antialiased;
 	}
+	:root[data-theme="light"] body{background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,var(--bg1) 50%,var(--bg2) 100%)}
 	.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
 	.wrap{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:16px;min-height:calc(100vh - 36px)}
 
@@ -108,6 +118,11 @@ if ( ! $oyc_weather_menu ) {
 	.tb-brand:hover .tb-logo{opacity:.85}
 	.tb-title{color:var(--teal);font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:13px}
 	/* ---- mobile nav hamburger (board keeps its clean no-nav look on desktop) ---- */
+	/* color-theme selector (dark / light) — persisted per visitor */
+	.theme-toggle{display:inline-flex;align-self:center;margin:0 10px;border:1px solid var(--edge2);border-radius:999px;overflow:hidden;background:var(--panel2);flex:none}
+	.theme-toggle .tt-opt{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.72rem;font-weight:700;letter-spacing:.02em;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;line-height:1.1;white-space:nowrap}
+	.theme-toggle .tt-opt[aria-pressed="true"]{background:var(--ink);color:var(--bg1)}
+	.theme-toggle .tt-opt:not([aria-pressed="true"]):hover{color:var(--ink)}
 	.tb-toggle{display:none;background:none;border:0;cursor:pointer;padding:8px;margin-left:auto;align-self:center}
 	.tb-bars{position:relative;display:block;width:22px;height:2px;background:var(--ink);border-radius:2px}
 	.tb-bars::before,.tb-bars::after{content:"";position:absolute;left:0;width:22px;height:2px;background:var(--ink);border-radius:2px;transition:transform .2s}
@@ -307,6 +322,10 @@ if ( ! $oyc_weather_menu ) {
 			<a class="tb-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> — Home"><?php oyc_burgee( 'tb-logo' ); ?></a>
 			<div class="tb-title">Mamaroneck Harbor &middot; Live Conditions</div>
 		</div>
+		<div class="theme-toggle" id="themeToggle" role="group" aria-label="Color theme">
+			<button type="button" class="tt-opt" data-set="dark" aria-pressed="true"><span aria-hidden="true">&#9790;</span> Dark</button>
+			<button type="button" class="tt-opt" data-set="light" aria-pressed="false"><span aria-hidden="true">&#9728;</span> Light</button>
+		</div>
 		<button class="tb-toggle" id="navToggle" aria-expanded="false" aria-controls="boardNav" aria-label="Menu"><span class="tb-bars" aria-hidden="true"></span></button>
 		<div class="clockwrap">
 			<div class="updated"><span class="dot" id="statusDot"></span><span id="updated">Connecting&hellip;</span></div>
@@ -437,6 +456,25 @@ if ( ! $oyc_weather_menu ) {
 			sbBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
 		});
 	}
+
+	// ---------- COLOR THEME (dark / light, persisted per visitor; default dark) ----------
+	(function(){
+		var KEY = 'oyc_wx_theme', tt = document.getElementById('themeToggle');
+		function apply(t){
+			t = (t === 'light') ? 'light' : 'dark';
+			document.documentElement.setAttribute('data-theme', t);
+			try { localStorage.setItem(KEY, t); } catch(e){}
+			if (tt) [].forEach.call(tt.querySelectorAll('.tt-opt'), function(b){
+				b.setAttribute('aria-pressed', b.getAttribute('data-set') === t ? 'true' : 'false');
+			});
+		}
+		if (tt) tt.addEventListener('click', function(e){
+			var b = e.target.closest ? e.target.closest('.tt-opt') : null;
+			if (b) apply(b.getAttribute('data-set'));
+		});
+		// sync the pill to whatever the <head> script already applied
+		apply(document.documentElement.getAttribute('data-theme'));
+	})();
 
 	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
 	// One flat order of the 9 cards; desktop fills the columns 3/3/3 with it
