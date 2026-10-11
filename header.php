@@ -3,7 +3,7 @@
 <?php /* oyc-rebuild v1.7.53 recovery — forces WP Pusher to overwrite this template */ ?>
 <html <?php language_attributes(); ?>>
 <head>
-	<script>/* apply saved color theme before paint — site-wide, default dark */try{var _ot=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(_ot==='light'||_ot==='dark')?_ot:'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}</script>
+	<script>/* apply saved color theme before paint — site-wide, default light (dark is opt-in) */try{var _ot=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(_ot==='light'||_ot==='dark')?_ot:'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 	<meta charset="<?php bloginfo( 'charset' ); ?>" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="profile" href="https://gmpg.org/xfn/11" />

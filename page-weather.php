@@ -44,11 +44,11 @@ if ( ! $oyc_weather_menu ) {
 		. '</ul>';
 }
 ?><!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <script>/* apply the visitor's saved color theme before paint (no flash); default = dark */
-(function(){try{var t=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(t==='light'||t==='dark')?t:'dark');}catch(e){}})();</script>
+(function(){try{var t=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(t==='light'||t==='dark')?t:'light');}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
@@ -323,8 +323,8 @@ if ( ! $oyc_weather_menu ) {
 			<div class="tb-title">Mamaroneck Harbor &middot; Live Conditions</div>
 		</div>
 		<div class="theme-toggle" id="themeToggle" role="group" aria-label="Color theme">
-			<button type="button" class="tt-opt" data-set="dark" aria-pressed="true"><span aria-hidden="true">&#9790;</span> Dark</button>
-			<button type="button" class="tt-opt" data-set="light" aria-pressed="false"><span aria-hidden="true">&#9728;</span> Light</button>
+			<button type="button" class="tt-opt" data-set="dark" aria-pressed="false"><span aria-hidden="true">&#9790;</span> Dark</button>
+			<button type="button" class="tt-opt" data-set="light" aria-pressed="true"><span aria-hidden="true">&#9728;</span> Light</button>
 		</div>
 		<button class="tb-toggle" id="navToggle" aria-expanded="false" aria-controls="boardNav" aria-label="Menu"><span class="tb-bars" aria-hidden="true"></span></button>
 		<div class="clockwrap">
@@ -457,11 +457,11 @@ if ( ! $oyc_weather_menu ) {
 		});
 	}
 
-	// ---------- COLOR THEME (dark / light, persisted per visitor; default dark) ----------
+	// ---------- COLOR THEME (dark / light, persisted per visitor; default light) ----------
 	(function(){
 		var KEY = 'oyc_theme', tt = document.getElementById('themeToggle');
 		function apply(t){
-			t = (t === 'light') ? 'light' : 'dark';
+			t = (t === 'dark') ? 'dark' : 'light';
 			document.documentElement.setAttribute('data-theme', t);
 			try { localStorage.setItem(KEY, t); } catch(e){}
 			if (tt) [].forEach.call(tt.querySelectorAll('.tt-opt'), function(b){
