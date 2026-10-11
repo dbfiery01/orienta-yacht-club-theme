@@ -120,6 +120,8 @@ if ( ! $oyc_weather_menu ) {
 	.tb-brand{display:inline-flex;align-items:center;line-height:0;text-decoration:none}
 	.tb-logo{height:40px;width:auto;display:block}
 	.tb-brand:hover .tb-logo{opacity:.85}
+	/* logo: white-ground PNG for light, cream-on-transparent variant for dark */
+	:root:not([data-theme="dark"]) .logo-dark{display:none} :root[data-theme="dark"] .logo-light{display:none}
 	.tb-title{color:var(--teal);font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:13px}
 	/* ---- mobile nav hamburger (board keeps its clean no-nav look on desktop) ---- */
 	/* color-theme selector (dark / light) — persisted per visitor */
@@ -351,7 +353,7 @@ if ( ! $oyc_weather_menu ) {
 	</div>
 	<script>
 	/* Standalone board: promote the lazy-load placeholder logo to its real src. */
-	(function(){var i=document.querySelector('.tb-logo');if(!i)return;var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}})();
+	(function(){[].forEach.call(document.querySelectorAll('.tb-logo'),function(i){var d=i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.getAttribute('data-smush-src');if(d){i.src=d;i.removeAttribute('loading');}});})();
 	</script>
 
 	<!-- ALERT (prominent, at the top) -->
