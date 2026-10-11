@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.87
+Version: 1.5.88
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -727,3 +727,143 @@ body.oyc-page-dock-and-dine .dd-desc { display:block; margin:0 0 9px; font-size:
 body.oyc-page-dock-and-dine .dd-dock { display:block; margin:0; font-size:0.85rem; color:#16324a !important; border-top:1px dashed rgba(11,42,74,0.14); padding-top:9px; }
 body.oyc-page-dock-and-dine .dd-dock strong { color:#16324a; }
 body.oyc-page-dock-and-dine .dd-dock::before { content:""; display:inline-block; width:15px; height:15px; margin-right:7px; vertical-align:-2px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23b08a3e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='2'/%3E%3Cpath d='M12 22V7M5 12H2a10 10 0 0 0 20 0h-3'/%3E%3C/svg%3E") no-repeat center / contain; }
+
+/* =====================================================================
+   53) DARK MODE (site-wide) — makes [data-theme="dark"] actually paint on
+   the home + immersive pages. The OYC Fun light rules above use !important,
+   so these overrides carry the same !important plus the html[data-theme]
+   prefix for higher specificity, and win the cascade. Palette matches the
+   weather board's dark theme (navy grounds, cream ink, blue + brass accents).
+   ===================================================================== */
+
+/* -- light/dark TOGGLE visibility on the OYC Fun white header --
+   The parent sets the toggle cream for a dark photo header; OYC Fun makes the
+   header WHITE, so in light mode the glyph must be navy to show. In dark mode
+   the header is navy, so the glyph goes cream. */
+body.has-hero-header .theme-btn { color: #16324a !important; border-color: rgba(11,46,74,0.30) !important; }
+body.has-hero-header .theme-btn:hover { color: #1583cf !important; border-color: #1583cf !important; }
+html[data-theme="dark"] .theme-btn,
+html[data-theme="dark"] body.has-hero-header .theme-btn { color: #f4eddd !important; border-color: rgba(245,239,226,0.34) !important; }
+html[data-theme="dark"] .theme-btn:hover,
+html[data-theme="dark"] body.has-hero-header .theme-btn:hover { color: #d4a851 !important; border-color: #d4a851 !important; }
+
+/* page backgrounds */
+html[data-theme="dark"] body.oyc-immersive,
+html[data-theme="dark"] body.home,
+html[data-theme="dark"] body.oyc-page-sailing-instructions { background: #081a2c !important; }
+
+/* page title bands / home hero */
+html[data-theme="dark"] body.oyc-immersive .page-hero,
+html[data-theme="dark"] body.home .hero,
+html[data-theme="dark"] body.oyc-page-sailing-instructions .page-hero { background: #0b2236 !important; border-bottom-color: rgba(245,239,226,0.12) !important; }
+html[data-theme="dark"] body.oyc-immersive .page-hero-title,
+html[data-theme="dark"] body.oyc-immersive .page-hero h1,
+html[data-theme="dark"] body.oyc-immersive .page-hero h2,
+html[data-theme="dark"] body.home .hero h1,
+html[data-theme="dark"] body.oyc-page-sailing-instructions .page-hero h1 { color: #f4eddd !important; }
+html[data-theme="dark"] body.oyc-immersive .page-hero .kicker,
+html[data-theme="dark"] body.oyc-immersive .page-hero-eyebrow,
+html[data-theme="dark"] body.oyc-immersive .page-hero-sub,
+html[data-theme="dark"] body.home .hero .eyebrow { color: #6cb6ea !important; }
+
+/* content text */
+html[data-theme="dark"] body.oyc-immersive .page-content,
+html[data-theme="dark"] body.oyc-immersive .entry-content,
+html[data-theme="dark"] body.oyc-immersive .entry-content p,
+html[data-theme="dark"] body.oyc-immersive .entry-content li,
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero),
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero) p,
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero) li,
+html[data-theme="dark"] body.home .hero .lede { color: #d6dfe9 !important; }
+html[data-theme="dark"] body.oyc-immersive .entry-content h1,
+html[data-theme="dark"] body.oyc-immersive .entry-content h2,
+html[data-theme="dark"] body.oyc-immersive .entry-content h3,
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero) h2,
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero) h3 { color: #f4eddd !important; }
+html[data-theme="dark"] body.oyc-immersive .entry-content a:not(.btn),
+html[data-theme="dark"] body.oyc-immersive .section:not(.section-photo-hero) a:not(.btn) { color: #6cb6ea !important; }
+
+/* white cards -> dark panels */
+html[data-theme="dark"] .tile--on-photo,
+html[data-theme="dark"] .fee-schedule-card,
+html[data-theme="dark"] .roster-card,
+html[data-theme="dark"] .roster-gate,
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .dash-card,
+html[data-theme="dark"] .approach-figure,
+html[data-theme="dark"] .approach-launch,
+html[data-theme="dark"] .oyc-map-embed,
+html[data-theme="dark"] .harbor-col,
+html[data-theme="dark"] .harbor-card,
+html[data-theme="dark"] .video-card { background: #102b47 !important; border-color: rgba(245,239,226,0.14) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important; }
+html[data-theme="dark"] .tile--on-photo, html[data-theme="dark"] .tile--on-photo p, html[data-theme="dark"] .tile--on-photo li, html[data-theme="dark"] .tile--on-photo strong,
+html[data-theme="dark"] .fee-schedule-intro, html[data-theme="dark"] .fee-schedule-table td, html[data-theme="dark"] .fee-schedule-note,
+html[data-theme="dark"] .roster-card__contact li, html[data-theme="dark"] .roster-card__addr, html[data-theme="dark"] .roster-card__spouse,
+html[data-theme="dark"] .dash-card__label, html[data-theme="dark"] .approach-figure figcaption, html[data-theme="dark"] .approach-launch p, html[data-theme="dark"] .approach-launch li,
+html[data-theme="dark"] .membership-types li, html[data-theme="dark"] .profile-card, html[data-theme="dark"] .harbor-col, html[data-theme="dark"] .harbor-col p,
+html[data-theme="dark"] .harbor-card, html[data-theme="dark"] .harbor-card p, html[data-theme="dark"] .harbor-card li, html[data-theme="dark"] .harbor-card strong,
+html[data-theme="dark"] .video-card figcaption { color: #d6dfe9 !important; }
+html[data-theme="dark"] .tile--on-photo h3, html[data-theme="dark"] .roster-card__name, html[data-theme="dark"] .approach-launch__title, html[data-theme="dark"] .fee-schedule-card h2,
+html[data-theme="dark"] .harbor-col h3, html[data-theme="dark"] .harbor-card h2, html[data-theme="dark"] .harbor-card h3, html[data-theme="dark"] .harbor-card h4 { color: #f4eddd !important; }
+html[data-theme="dark"] .harbor-card a { color: #6cb6ea !important; }
+
+/* tinted home sections + fact figures */
+html[data-theme="dark"] #about { background: #0b2236 !important; }
+html[data-theme="dark"] #membership.section-tinted { background: #0e2740 !important; }
+html[data-theme="dark"] #about .facts strong, html[data-theme="dark"] .kicker, html[data-theme="dark"] .entry-content .facts strong { color: #6cb6ea !important; }
+html[data-theme="dark"] .entry-content .facts span, html[data-theme="dark"] .entry-content .facts li { color: #d6dfe9 !important; }
+
+/* home photo-hero section headings (Boating/Fishing/Visitors) */
+html[data-theme="dark"] body.home .section-photo-hero { background: #081a2c !important; }
+html[data-theme="dark"] body.home .section-photo-hero h2 { color: #f4eddd !important; }
+html[data-theme="dark"] body.home .section-photo-hero p,
+html[data-theme="dark"] body.home .section-photo-hero .bullets li,
+html[data-theme="dark"] body.home .section-photo-hero .section-lede { color: #d6dfe9 !important; }
+
+/* header */
+html[data-theme="dark"] .site-header,
+html[data-theme="dark"] body.has-hero-header .site-header,
+html[data-theme="dark"] body.has-hero-header .site-header:not(.is-scrolled),
+html[data-theme="dark"] body.has-hero-header .site-header.is-scrolled { background: rgba(6,20,38,0.96) !important; box-shadow: 0 1px 0 rgba(245,239,226,0.08), 0 6px 18px rgba(0,0,0,0.4) !important; }
+html[data-theme="dark"] .site-header .primary-nav a,
+html[data-theme="dark"] body.has-hero-header .site-header .primary-nav a,
+html[data-theme="dark"] body.has-hero-header .site-header.is-scrolled .primary-nav a,
+html[data-theme="dark"] #nav-menu a { color: #e9e1d2 !important; }
+html[data-theme="dark"] .site-header .primary-nav a:hover,
+html[data-theme="dark"] #nav-menu a:hover { color: #6cb6ea !important; }
+html[data-theme="dark"] body.has-hero-header .site-header .nav-toggle .bars,
+html[data-theme="dark"] body.has-hero-header .site-header .nav-toggle .bars::before,
+html[data-theme="dark"] body.has-hero-header .site-header .nav-toggle .bars::after { background: #e9e1d2 !important; }
+html[data-theme="dark"] body.has-hero-header .site-header:not(.is-scrolled) .brand,
+html[data-theme="dark"] .site-header .brand-name { color: #f4eddd !important; }
+
+/* mobile dropdown panel */
+@media (max-width: 880px) {
+  html[data-theme="dark"] #nav-menu { background: #0b2236 !important; border-bottom-color: rgba(245,239,226,0.12) !important; }
+  html[data-theme="dark"] #nav-menu li { border-bottom-color: rgba(245,239,226,0.10) !important; }
+}
+
+/* CTA pills in the menu */
+html[data-theme="dark"] .primary-nav li.cta > a,
+html[data-theme="dark"] #nav-menu li.cta > a,
+html[data-theme="dark"] #nav-menu .menu-item.cta a { background: rgba(16,43,71,0.92) !important; color: #f4eddd !important; box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important; }
+html[data-theme="dark"] .primary-nav li.cta > a:hover,
+html[data-theme="dark"] #nav-menu li.cta > a:hover { background: rgba(22,54,88,0.98) !important; color: #6cb6ea !important; }
+html[data-theme="dark"] #nav-menu li.cta.cta--member-login > a { background: #d4a851 !important; color: #081a2c !important; }
+html[data-theme="dark"] #nav-menu li.cta.cta--member-login > a:hover { background: #e0b968 !important; color: #081a2c !important; }
+
+/* reciprocity list table */
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content table { background: #102b47 !important; border-color: rgba(245,239,226,0.14) !important; }
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content td,
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content th { color: #e9e1d2 !important; border-color: rgba(245,239,226,0.12) !important; }
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content tr:nth-child(odd) td { background: #102b47 !important; }
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content tr:nth-child(even) td { background: #0c2338 !important; }
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content tr:first-child th,
+html[data-theme="dark"] body.oyc-page-reciprocity-list .entry-content thead td { background: #0e2a47 !important; }
+
+/* dock & dine cards */
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-card { background: #102b47 !important; border-color: rgba(245,239,226,0.14) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important; }
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-name,
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-dock,
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-dock strong { color: #f4eddd !important; }
+html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-desc { color: #c3cedb !important; }
