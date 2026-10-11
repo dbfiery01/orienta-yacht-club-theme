@@ -213,6 +213,11 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .ctrl .tlabel{color:#f0eadd}
 [data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
 [data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
+/* Full screen: on the board the card is transparent (embed) and the fullscreen
+   backdrop is white, so the card's chrome (tab row, padding) showed the white
+   through in dark mode. Give the expanded card a solid dark ground so the whole
+   view is dark (the Leaflet map still renders its light tiles below). */
+[data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
