@@ -191,6 +191,9 @@ if ( ! $oyc_weather_menu ) {
 	.trend{margin-top:12px;display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;
 		text-transform:uppercase;font-size:14px}
 	.trend.falling{color:var(--amber)} .trend.rising{color:var(--teal)}
+	/* pressure-tendency arrow in the Conditions card (mirrors the tide trend colours) */
+	.ptrend{margin-left:5px;font-size:.5em;vertical-align:middle;font-weight:800;line-height:1}
+	.ptrend.rising{color:var(--teal)} .ptrend.falling{color:var(--amber)} .ptrend.steady{color:var(--faint)}
 	.tide-cap{color:var(--faint);font-size:11px;margin-top:10px;letter-spacing:.03em}
 
 	/* next tides */
@@ -427,7 +430,7 @@ if ( ! $oyc_weather_menu ) {
 					<div class="cell"><div class="v" id="airTemp">&mdash;</div><div class="k">Air Temp</div></div>
 					<div class="cell"><div class="v" id="hiLoTemp">&mdash;</div><div class="k">Today Hi / Lo</div></div>
 					<div class="cell"><div class="v" id="waterTemp">&mdash;</div><div class="k">Water Temp</div></div>
-					<div class="cell"><div class="v" id="pressure">&mdash;</div><div class="k">Pressure</div></div>
+					<div class="cell"><div class="v"><span id="pressure">&mdash;</span><span class="ptrend" id="pressureTrend"></span></div><div class="k">Pressure</div></div>
 					<div class="cell"><div class="v" id="humidity">&mdash;</div><div class="k">Humidity</div></div>
 					<div class="cell"><div class="v" id="visibility">&mdash;</div><div class="k">Visibility</div></div>
 				</div>
@@ -966,6 +969,26 @@ if ( ! $oyc_weather_menu ) {
 		// humidity + visibility always come from the ASOS observation
 		obsCell('humidity', function(p){ return (p.relativeHumidity && p.relativeHumidity.value!=null) ? Math.round(p.relativeHumidity.value)+'%' : null; });
 		obsCell('visibility', function(p){ return (p.visibility && p.visibility.value!=null) ? (p.visibility.value/1852).toFixed(1)+' nm' : null; });
+		loadPressureTrend();
+	}
+	// Pressure tendency: the 3-hour change from the harbor pressure forecast
+	// (Open-Meteo pressure_msl — same source as the Marine Forecast table) drives a
+	// ▲ rising / ▼ falling / → steady glyph beside the Pressure value, mirroring the
+	// tide trend indicator.
+	function loadPressureTrend(){
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&hourly=pressure_msl&past_hours=6&forecast_hours=2&timezone=America/New_York')
+			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
+			.then(function(j){
+				var H=j&&j.hourly, el=$('pressureTrend');
+				if(!el||!H||!H.pressure_msl||!H.time) return;
+				var now=Date.now(), bi=0, bd=1e15;
+				for(var i=0;i<H.time.length;i++){ var dd=Math.abs(new Date(H.time[i]).getTime()-now); if(dd<bd){ bd=dd; bi=i; } }
+				var cur=H.pressure_msl[bi], prev=H.pressure_msl[Math.max(0,bi-3)];
+				if(cur==null||prev==null) return;
+				var delta=cur-prev;
+				if(Math.abs(delta)<0.4){ el.className='ptrend steady'; el.innerHTML='&#8594;'; el.title='Steady ('+delta.toFixed(1)+' mb / 3h)'; }
+				else { var rising=delta>0; el.className='ptrend '+(rising?'rising':'falling'); el.innerHTML=rising?'&#9650;':'&#9660;'; el.title=(rising?'Rising':'Falling')+' '+Math.abs(delta).toFixed(1)+' mb / 3h'; }
+			}).catch(function(){});
 	}
 
 	// ---------- FORECAST ----------
