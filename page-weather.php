@@ -193,7 +193,9 @@ if ( ! $oyc_weather_menu ) {
 	.trend.falling{color:var(--amber)} .trend.rising{color:var(--teal)}
 	/* pressure-tendency arrow in the Conditions card (mirrors the tide trend colours) */
 	.ptrend{margin-left:5px;font-size:.5em;vertical-align:middle;font-weight:800;line-height:1}
-	.ptrend.rising{color:var(--teal)} .ptrend.falling{color:var(--amber)} .ptrend.steady{color:var(--faint)}
+	/* rising = green, falling = red (base values tuned for the dark navy card) */
+	.ptrend.rising{color:#39d353} .ptrend.falling{color:#f0564a} .ptrend.steady{color:var(--faint)}
+	:root[data-theme="light"] .ptrend.rising{color:#1e8e4a} :root[data-theme="light"] .ptrend.falling{color:#c0392b}
 	.tide-cap{color:var(--faint);font-size:11px;margin-top:10px;letter-spacing:.03em}
 
 	/* next tides */
