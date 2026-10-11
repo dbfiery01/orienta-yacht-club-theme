@@ -210,6 +210,20 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .chart-sel{background:rgba(255,255,255,.06);color:#e7edf4}
 [data-theme="dark"] #oycwm .barbhint svg line{stroke:#cdd8e4}
 [data-theme="dark"] #oycwm .barbhint svg circle{fill:#cdd8e4}
+/* The layer-toggle bar is transparent, so in full screen (where the card sits
+   over a white backdrop at 55% opacity) the light label/hint text washed out and
+   was hard to read. Give the bar a solid dark background; strengthen the toggle
+   pills (visible border, blue fill when checked) and brighten the hint text. */
+[data-theme="dark"] #oycwm .layers{background:#0e2a47}
+[data-theme="dark"] #oycwm .layers label{border-color:rgba(245,239,226,.30)}
+[data-theme="dark"] #oycwm .layers label:has(input:checked){background:rgba(87,166,214,.20);border-color:rgba(87,166,214,.6)}
+[data-theme="dark"] #oycwm .layers .hint{color:#c3cedb}
+/* Route-help tip (over the light map) + wind-barb legend were light text on a
+   white/transparent background → nearly invisible in dark mode. Make them dark
+   panels with light text. */
+[data-theme="dark"] #oycwm .tiphelp{background:rgba(9,27,46,.93);color:#eef3f8;border-color:rgba(245,239,226,.22)}
+[data-theme="dark"] #oycwm .barbhint{background:#0e2a47;color:#e7edf4}
+[data-theme="dark"] #oycwm .barbhint b{color:#ffffff}
 </style>
 <div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
 <div class="wrap">
@@ -381,6 +395,19 @@ function oyc_wind_map_html( $embed = false ) {
 (function(){
 "use strict";
 var AJAX=<?php echo wp_json_encode( $oyc_ajax ); ?>;
+var STAT=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' ) ); ?>; // cron-warmed static JSON (Apache-served, no WP boot)
+/* Fetch the cron-warmed static file first (served by Apache in ~50ms, vs ~1.3s
+   for admin-ajax which boots all of WordPress), falling back to the proxy if the
+   file is missing or stale. Resolves to a Response so callers keep using .json(). */
+function statFetch(file, ajaxAction, maxAgeMin, timeout){
+	if(!STAT) return fetchT(AJAX+'?action='+ajaxAction, timeout);
+	return fetch(STAT+file+'.json',{cache:'no-store'}).then(function(r){
+		if(!r.ok) throw 0;
+		var lm=r.headers.get('last-modified');
+		if(lm && (Date.now()-Date.parse(lm)) > maxAgeMin*60000) throw 0; // stale → proxy
+		return r;
+	}).catch(function(){ return fetchT(AJAX+'?action='+ajaxAction, timeout); });
+}
 var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638','#b23a2a','#8f2d20'];
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
@@ -604,6 +631,24 @@ function fcSeriesFrom(res){
 		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;}),
 		wavePer:h.time.map(function(s){return wper[s]!=null?wper[s]:null;})};
 }
+/* Browser-direct wave fetch — Open-Meteo rate-limits (HTTP 429) the SERVER's
+   marine calls when the host IP is throttled, so the cached proxy comes back
+   with marine:null and waves vanish from the pins/readout. The visitor's IP is
+   not throttled, so pull the waves straight from the browser and merge them in.
+   Shape matches the server's marine payload, so fcSeriesFrom reads it unchanged. */
+function fetchMarineDirect(lat,lon){
+	var u='https://marine-api.open-meteo.com/v1/marine?latitude='+(+lat).toFixed(3)+'&longitude='+(+lon).toFixed(3)
+		+'&hourly=wave_height,wave_period&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+	return fetch(u).then(function(r){if(!r.ok)throw new Error('mar '+r.status);return r.json();});
+}
+/* Resolve to a {wx,marine} response with waves present: if the server gave us
+   the wind forecast but no marine (429), fill the marine in from the browser. */
+function withMarine(res,lat,lon){
+	if(res&&res.wx&&res.wx.hourly&&(!res.marine||!res.marine.hourly)){
+		return fetchMarineDirect(lat,lon).then(function(mar){res.marine=mar;return res;},function(){return res;});
+	}
+	return Promise.resolve(res);
+}
 function fcAt(S,i){return {kt:S.kt[i],gust:S.gust[i],dir:S.dir[i],mb:S.mb[i],tempF:S.tempF[i],pop:S.pop?S.pop[i]:null,waveFt:S.waveFt[i],wavePer:S.wavePer?S.wavePer[i]:null};}
 function fcInterp(S,ep){if(!S||!S.t.length)return null;var T=S.t,n=T.length;
 	if(ep<=T[0])return fcAt(S,0);
@@ -620,7 +665,9 @@ function fcForFrame(S,epoch,isNow){return isNow?fcNearest(S,Date.now()):fcInterp
 
 var ERFC=null;
 function loadERFC(){
-	fetchT(AJAX+'?action=oyc_marine_fc',12000).then(function(r){return r.json();}).then(function(res){
+	statFetch('marine_fc','oyc_marine_fc',25,12000).then(function(r){return r.json();}).then(function(res){
+		return withMarine(res,ER.lat,ER.lon); /* fill waves from the browser if the server was 429'd */
+	}).then(function(res){
 		var S=fcSeriesFrom(res);if(!S)return;ERFC=S;
 		/* refresh the readout for the frame the slider is on right now */
 		if(mode==='radar'){var fr=RV.frames[RV.idx];setER(erForFrame(curEpoch(),!!(fr&&fr.off===0)));}
@@ -722,9 +769,21 @@ function refreshRoute(){
 /* re-render only the callout text for every pin (numbers don't change on a move) */
 function rerenderCallouts(){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));}
 /* fetch a waypoint's exact-point forecast (cached server proxy) and re-render it */
+/* Browser-direct point WIND forecast — used when the server's oyc_point_fc is
+   429'd (ok:false). The visitor's IP isn't throttled, so the pin still gets its
+   own forecast (then withMarine adds the waves). Matches the server's keys. */
+function clientPointWx(lat,lon){
+	var u='https://api.open-meteo.com/v1/forecast?latitude='+(+lat).toFixed(3)+'&longitude='+(+lon).toFixed(3)
+		+'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
+		+'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
+	return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}).then(function(wx){return {ok:true,wx:wx,marine:null};});
+}
 function loadPinFC(pin){
 	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
-		.then(function(r){return r.json();}).then(function(res){
+		.then(function(r){return r.json();})
+		.then(function(res){ return (res&&res.ok&&res.wx&&res.wx.hourly) ? res : clientPointWx(pin.lat,pin.lon); }) /* server wx 429'd → browser-direct wx */
+		.then(function(res){return withMarine(res,pin.lat,pin.lon);}) /* fill waves from the browser if the server was 429'd */
+		.then(function(res){
 			var S=fcSeriesFrom(res);if(!S||pin._gone)return;pin.fc=S;
 			pin.popup.setContent(pinContent(pin,curTi));
 		}).catch(function(){});
@@ -1156,12 +1215,21 @@ function loadWaves(g,cb){
 	g.wvLoading=true;
 	var N=g.LAT.length,CH=140,chunks=[];for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
 	g.WV=new Array(N);g.WP=new Array(N);var wvt=null,ci=0,CONC=2;
+	function absorb(arr,a){var list=Array.isArray(arr)?arr:[arr],got=0;for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;g.WP[a+k]=h.wave_period||null;got++;}}return got;}
+	/* Browser-direct wave fetch for a chunk — the server proxy returns [] when the
+	   host IP is 429'd by marine-api, so pull the same chunk straight from the
+	   visitor's connection (not throttled). Matches the proxy's hourly_3 steps. */
+	function clientWaves(idx){var a=chunks[idx][0],b=chunks[idx][1];
+		var u='https://marine-api.open-meteo.com/v1/marine?latitude='+g.LAT.slice(a,b).join(',')+'&longitude='+g.LON.slice(a,b).join(',')
+			+'&hourly=wave_height,wave_period&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+		return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(arr){absorb(arr,a);}).catch(function(){});
+	}
 	function fc(idx,tries){var a=chunks[idx][0];
 		/* cached per-chunk server proxy (CH=140 matches oyc_waves) */
 		return fetchT(AJAX+'?action=oyc_waves&grid='+(g.name||'local')+'&chunk='+idx,15000)
 			.then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
-			.then(function(arr){var list=Array.isArray(arr)?arr:[arr];for(var k=0;k<list.length;k++){var h=list[k].hourly;if(h){if(!wvt&&h.time)wvt=h.time;g.WV[a+k]=h.wave_height||null;g.WP[a+k]=h.wave_period||null;}}})
-			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);});});
+			.then(function(arr){ if(absorb(arr,a)===0) return clientWaves(idx); /* server empty (429) → browser-direct */ })
+			.catch(function(){if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fc(idx,tries+1);}); return clientWaves(idx);});
 	}
 	function pump(){if(ci>=chunks.length)return Promise.resolve();var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fc(ci,0));
 		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});}
@@ -1197,8 +1265,8 @@ function loadLocal(tries){
 		   proxy calls (cuts the initial admin-ajax burst that could trip host 429s) */
 		loadWaves(LOCAL,function(){updateER(curTi);});
 	}
-	/* cached server proxy first; browser direct if the host can't reach Open-Meteo */
-	fetchT(AJAX+'?action=oyc_wind_local',15000)
+	/* cron-warmed static file first, then the proxy; browser direct if the host can't reach Open-Meteo */
+	statFetch('wind_local','oyc_wind_local',25,15000)
 		.then(function(r){return r.ok?r.json():null;})
 		.catch(function(){return null;})
 		.then(function(arr){return valid(arr)?arr:clientLocal();})

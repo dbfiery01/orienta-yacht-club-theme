@@ -23,9 +23,13 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 add_action( 'wp_ajax_oyc_buoy',        'oyc_buoy_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_buoy', 'oyc_buoy_proxy' );
 function oyc_buoy_proxy() {
-	$cached = get_transient( 'oyc_buoy_obs' );
-	if ( false !== $cached ) { wp_send_json( $cached ); }
-
+	wp_send_json( oyc_buoy_build() );
+}
+function oyc_buoy_build( $force = false ) {
+	if ( ! $force ) {
+		$cached = get_transient( 'oyc_buoy_obs' );
+		if ( false !== $cached ) { return $cached; }
+	}
 	$out = array( 'ok' => false );
 	foreach ( array( array( '44022', 'Execution Rocks' ), array( '44040', 'Western LI Sound' ) ) as $st ) {
 		$resp = wp_remote_get( 'https://www.ndbc.noaa.gov/data/realtime2/' . $st[0] . '.txt', array( 'timeout' => 6 ) );
@@ -53,7 +57,7 @@ function oyc_buoy_proxy() {
 	// Cache even an offline (ok:false) result so we don't hammer NDBC while the
 	// seasonal LIS buoys are hauled out.
 	set_transient( 'oyc_buoy_obs', $out, 20 * MINUTE_IN_SECONDS );
-	wp_send_json( $out );
+	return $out;
 }
 
 /* ── All live LIS buoys as an array (for the Wind page's Wave tab markers) ──
@@ -101,8 +105,24 @@ function oyc_buoys_proxy() {
 add_action( 'wp_ajax_oyc_marine_fc',        'oyc_marine_fc_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_marine_fc', 'oyc_marine_fc_proxy' );
 function oyc_marine_fc_proxy() {
-	$cached = get_transient( 'oyc_marine_fc_b42' );
-	if ( false !== $cached ) { wp_send_json( $cached ); }
+	wp_send_json( oyc_marine_fc_build() );
+}
+/* Build (or return cached) the Buoy-42 marine reading. $force bypasses the fresh
+   cache (used by the cron warmer). Coalesces concurrent misses via a 25s lock —
+   a sibling request mid-fetch gets the last-known "stale" copy instead of firing
+   a second slow Open-Meteo call — and keeps a 6h stale copy for resilience. */
+function oyc_marine_fc_build( $force = false ) {
+	$key = 'oyc_marine_fc_b42';
+	if ( ! $force ) {
+		$cached = get_transient( $key );
+		if ( false !== $cached ) { return $cached; }
+	}
+	$lock = $key . '_lk';
+	if ( false !== get_transient( $lock ) ) {           // another fetch is in flight
+		$st = get_transient( $key . '_st' );
+		return ( false !== $st ) ? $st : array( 'ok' => false, 'err' => 'busy' );
+	}
+	set_transient( $lock, 1, 25 );
 
 	$lat = '40.93717'; $lon = '-73.70217'; // Buoy 42 (matches the client constants)
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
@@ -125,11 +145,15 @@ function oyc_marine_fc_proxy() {
 		}
 	}
 	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) {
-		// Report the real reason so the cause is visible; the client falls back to a
-		// direct browser fetch, so visitors still get the forecast.
+		// wx failed (e.g. 429). Prefer the last-known good reading over an error so
+		// the readout keeps showing data; otherwise report the reason (the client
+		// also falls back to a direct browser fetch).
+		delete_transient( $lock );
+		$st = get_transient( $key . '_st' );
+		if ( false !== $st ) { return $st; }
 		$out = array( 'ok' => false, 'err' => $wxdiag ? ( 'wx ' . $wxdiag ) : 'wx unavailable' );
-		set_transient( 'oyc_marine_fc_b42', $out, 2 * MINUTE_IN_SECONDS );
-		wp_send_json( $out );
+		set_transient( $key, $out, 2 * MINUTE_IN_SECONDS );
+		return $out;
 	}
 
 	$mar = null; // waves are optional — the table still renders without them
@@ -139,11 +163,13 @@ function oyc_marine_fc_proxy() {
 		if ( ! is_array( $mar ) ) { $mar = null; }
 	}
 
-	// Cache the full reading 15 min; but if the marine/wave fetch failed, keep it
-	// short (3 min) so waves recover quickly instead of showing "—" for 15 min.
+	// Cache the full reading 15 min; if waves failed, keep it short (3 min) so they
+	// recover quickly. Keep a 6h "stale" copy for coalesced/failed reads.
 	$out = array( 'ok' => true, 'wx' => $wx, 'marine' => $mar );
-	set_transient( 'oyc_marine_fc_b42', $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
-	wp_send_json( $out );
+	set_transient( $key, $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
+	set_transient( $key . '_st', $out, 6 * HOUR_IN_SECONDS );
+	delete_transient( $lock );
+	return $out;
 }
 
 /* ── Point forecast at an arbitrary lat/lon (for the map's passage pins) ──
@@ -184,14 +210,18 @@ function oyc_point_fc_proxy() {
 		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
 		if ( ! is_array( $mar ) ) { $mar = null; }
 	}
+	// Cache 15 min normally; if waves failed (Open-Meteo 429'd the host), keep it
+	// short (3 min) so the server-side marine data recovers quickly instead of
+	// serving marine:null for 15 min. The client also fills waves browser-direct.
 	$out = wp_json_encode( array( 'ok' => true, 'wx' => $wx, 'marine' => $mar ) );
-	set_transient( $key, $out, 15 * MINUTE_IN_SECONDS );
+	set_transient( $key, $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
 	oyc_send_raw_json( $out );
 }
 
 /* ── Markup + scoped styles + widget script ──────────────────────────────── */
 function oyc_forecast_table_html() {
-	$ajax  = esc_url( admin_url( 'admin-ajax.php' ) );
+	$ajax   = esc_url( admin_url( 'admin-ajax.php' ) );
+	$static = esc_url( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' );
 	$inner = <<<'HTML'
 <div class="oyc-ft-card">
   <div class="hd"><div class="ttl">Marine Forecast</div><span class="loc">Buoy 42 &middot; hourly, 7 days &middot; knots / ft / &deg;F</span><span class="upd" id="oycft-upd"></span><button type="button" class="fsbtn" id="oycftFs" title="Full screen" aria-label="Full screen"></button></div>
@@ -282,6 +312,18 @@ function oyc_forecast_table_html() {
   var ROOT=document.currentScript&&document.currentScript.closest?document.currentScript.closest('.oyc-ft'):document.querySelector('.oyc-ft');
   if(!ROOT)ROOT=document.querySelector('.oyc-ft');
   var AJAX=ROOT.getAttribute('data-ajax');
+  var STAT=ROOT.getAttribute('data-static')||''; // cron-warmed static JSON (Apache-served, no WP boot)
+  /* Try the cron-warmed static file first (~50ms), fall back to the admin-ajax
+     proxy if it's missing or stale (>25 min). Resolves to a Response. */
+  function statFetch(file, ajaxAction, maxAgeMin){
+    if(!STAT) return fetch(AJAX+'?action='+ajaxAction);
+    return fetch(STAT+file+'.json',{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw 0;
+      var lm=r.headers.get('last-modified');
+      if(lm && (Date.now()-Date.parse(lm)) > maxAgeMin*60000) throw 0;
+      return r;
+    }).catch(function(){ return fetch(AJAX+'?action='+ajaxAction); });
+  }
   var LAT=40.93717, LON=-73.70217;
   var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
@@ -323,7 +365,7 @@ function oyc_forecast_table_html() {
 
   function loadBuoy(){
     if(!AJAX)return Promise.resolve(null);
-    return fetch(AJAX+'?action=oyc_buoy').then(function(r){return r.json();}).then(function(o){
+    return statFetch('buoy','oyc_buoy',25).then(function(r){return r.json();}).then(function(o){
       return (o&&o.ok&&o.ft!=null)?{ft:o.ft,dir:o.dir,dpd:o.dpd,ageMin:o.ageMin,station:o.station,id:o.id}:null;
     }).catch(function(){return null;});
   }
@@ -372,7 +414,7 @@ function oyc_forecast_table_html() {
   function fail(e){$('oycft-tbl').textContent='Could not load forecast ('+e+').';}
   // Try the cached server proxy first (efficient, no per-visitor load); fall back
   // to a direct browser fetch whenever the host can't reach Open-Meteo.
-  fetch(AJAX+'?action=oyc_marine_fc').then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
+  statFetch('marine_fc','oyc_marine_fc',25).then(function(r){if(!r.ok)throw new Error('fc '+r.status);return r.json();}).then(function(res){
     if(res&&res.ok&&res.wx&&res.wx.hourly){ boot(res.wx,res.marine); }
     else { clientWx().then(function(wx){boot(wx,null);}).catch(fail); }
   }).catch(function(){ clientWx().then(function(wx){boot(wx,null);}).catch(fail); });
@@ -449,5 +491,5 @@ function oyc_forecast_table_html() {
 })();
 </script>
 HTML;
-	return '<section class="oyc-ft" data-ajax="' . $ajax . '">' . $inner . '</section>';
+	return '<section class="oyc-ft" data-ajax="' . $ajax . '" data-static="' . $static . '">' . $inner . '</section>';
 }

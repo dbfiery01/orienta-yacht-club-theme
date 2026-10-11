@@ -172,6 +172,13 @@ require_once get_template_directory() . '/inc/wind-map.php';
 require_once get_template_directory() . '/inc/header-weather.php';
 
 /**
+ * WP-Cron warmer that keeps the board's always-loaded weather readings hot in
+ * the transient cache (so visitors hit warm cache instead of slow upstream
+ * fetches). Loaded after the proxies above, whose *_build()/_spec() it calls.
+ */
+require_once get_template_directory() . '/inc/weather-warm.php';
+
+/**
  * Progressive Web App: manifest, service worker, and iOS meta tags.
  */
 require_once get_template_directory() . '/inc/pwa.php';
