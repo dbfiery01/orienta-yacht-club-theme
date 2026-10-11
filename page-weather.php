@@ -306,7 +306,8 @@ if ( ! $oyc_weather_menu ) {
 		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
 	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
 	.marquee span{display:inline-block;white-space:nowrap;color:#ffd9d4;font-size:14px;
-		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite;color:#8f2d20}
+		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
+	:root[data-theme="light"] .marquee span{color:#8f2d20} /* dark maroon on the light board; light pink (above) stays for dark */
 	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
 
 	.miss{color:var(--faint)}
