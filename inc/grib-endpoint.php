@@ -206,33 +206,61 @@ function oyc_send_raw_json( $body ) {
 	wp_die();
 }
 
-/* Fetch $url, cache the raw body under $key for $ttl on success, and serve it.
-   On failure serve "[]" WITHOUT caching so the client retries (its parser treats
-   an empty array as "no data" → retry). */
+/* Fetch $url and store the raw JSON body under $key for $ttl. Also keeps a
+   long-lived "stale" copy ($key._st, 6h) so a concurrent miss or a later failure
+   can serve last-known data instead of a second live fetch. A 20s lock coalesces
+   concurrent misses: if another request (or the cron warmer) is already fetching
+   this key, return null instead of piling a second slow fetch onto Open-Meteo.
+   Returns the JSON string on success, '' on a failed fetch, null if coalesced.
+   Shared by the live proxy (oyc_om_cached) and the cron warmer. */
+function oyc_om_fetch_store( $key, $url, $ttl ) {
+	$lock = $key . '_lk';
+	if ( false !== get_transient( $lock ) ) { return null; } // a fetch is already in flight
+	set_transient( $lock, 1, 20 );
+	$body = '';
+	$r = wp_remote_get( $url, array( 'timeout' => 15, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+		$b = (string) wp_remote_retrieve_body( $r );
+		$c = ( '' !== $b ) ? $b[0] : '';
+		if ( '[' === $c || '{' === $c ) {           // looks like JSON
+			set_transient( $key, $b, $ttl );
+			set_transient( $key . '_st', $b, 6 * HOUR_IN_SECONDS );
+			$body = $b;
+		}
+	}
+	delete_transient( $lock );
+	return $body;
+}
+
+/* Serve $key from cache; on a miss, fetch (coalesced) and serve, falling back to
+   the last-known "stale" copy when a sibling request is mid-fetch or the fetch
+   fails — so a duplicate/concurrent call never triggers a second slow fetch and
+   a transient Open-Meteo hiccup still shows data. "[]" only if nothing is known. */
 function oyc_om_cached( $key, $url, $ttl ) {
 	$body = get_transient( $key );
 	if ( false !== $body ) { oyc_send_raw_json( $body ); }
-	$r = wp_remote_get( $url, array( 'timeout' => 15, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
-	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
-		$body = (string) wp_remote_retrieve_body( $r );
-		$c = ( '' !== $body ) ? $body[0] : '';
-		if ( '[' === $c || '{' === $c ) {           // looks like JSON
-			set_transient( $key, $body, $ttl );
-			oyc_send_raw_json( $body );
-		}
-	}
+	$fresh = oyc_om_fetch_store( $key, $url, $ttl );
+	if ( is_string( $fresh ) && '' !== $fresh ) { oyc_send_raw_json( $fresh ); } // fetched now
+	$stale = get_transient( $key . '_st' );                                      // coalesced or failed
+	if ( false !== $stale ) { oyc_send_raw_json( $stale ); }
 	oyc_send_raw_json( '[]' );
 }
 
 /* LOCAL wind field — 7-day, 3-hourly. Cached 15 min. */
 add_action( 'wp_ajax_oyc_wind_local',        'oyc_wind_local_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_local', 'oyc_wind_local_proxy' );
-function oyc_wind_local_proxy() {
+/* (key,url,ttl) for the LOCAL wind field — shared by the live proxy and the cron
+   warmer so there's one source of truth for the query. */
+function oyc_wind_local_spec() {
 	list( $lat, $lon ) = oyc_local_grid_csv();
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'
 		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-	oyc_om_cached( 'oyc_wind_local', $url, 15 * MINUTE_IN_SECONDS );
+	return array( 'oyc_wind_local', $url, 15 * MINUTE_IN_SECONDS );
+}
+function oyc_wind_local_proxy() {
+	list( $k, $u, $t ) = oyc_wind_local_spec();
+	oyc_om_cached( $k, $u, $t );
 }
 
 /* HRRR precip for Radar mode — 15-min steps, recent past (−1 h) → +18 h. Cached 10 min (near-real-time). */

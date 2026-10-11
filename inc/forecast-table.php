@@ -23,9 +23,13 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 add_action( 'wp_ajax_oyc_buoy',        'oyc_buoy_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_buoy', 'oyc_buoy_proxy' );
 function oyc_buoy_proxy() {
-	$cached = get_transient( 'oyc_buoy_obs' );
-	if ( false !== $cached ) { wp_send_json( $cached ); }
-
+	wp_send_json( oyc_buoy_build() );
+}
+function oyc_buoy_build( $force = false ) {
+	if ( ! $force ) {
+		$cached = get_transient( 'oyc_buoy_obs' );
+		if ( false !== $cached ) { return $cached; }
+	}
 	$out = array( 'ok' => false );
 	foreach ( array( array( '44022', 'Execution Rocks' ), array( '44040', 'Western LI Sound' ) ) as $st ) {
 		$resp = wp_remote_get( 'https://www.ndbc.noaa.gov/data/realtime2/' . $st[0] . '.txt', array( 'timeout' => 6 ) );
@@ -53,7 +57,7 @@ function oyc_buoy_proxy() {
 	// Cache even an offline (ok:false) result so we don't hammer NDBC while the
 	// seasonal LIS buoys are hauled out.
 	set_transient( 'oyc_buoy_obs', $out, 20 * MINUTE_IN_SECONDS );
-	wp_send_json( $out );
+	return $out;
 }
 
 /* ── All live LIS buoys as an array (for the Wind page's Wave tab markers) ──
@@ -101,8 +105,24 @@ function oyc_buoys_proxy() {
 add_action( 'wp_ajax_oyc_marine_fc',        'oyc_marine_fc_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_marine_fc', 'oyc_marine_fc_proxy' );
 function oyc_marine_fc_proxy() {
-	$cached = get_transient( 'oyc_marine_fc_b42' );
-	if ( false !== $cached ) { wp_send_json( $cached ); }
+	wp_send_json( oyc_marine_fc_build() );
+}
+/* Build (or return cached) the Buoy-42 marine reading. $force bypasses the fresh
+   cache (used by the cron warmer). Coalesces concurrent misses via a 25s lock —
+   a sibling request mid-fetch gets the last-known "stale" copy instead of firing
+   a second slow Open-Meteo call — and keeps a 6h stale copy for resilience. */
+function oyc_marine_fc_build( $force = false ) {
+	$key = 'oyc_marine_fc_b42';
+	if ( ! $force ) {
+		$cached = get_transient( $key );
+		if ( false !== $cached ) { return $cached; }
+	}
+	$lock = $key . '_lk';
+	if ( false !== get_transient( $lock ) ) {           // another fetch is in flight
+		$st = get_transient( $key . '_st' );
+		return ( false !== $st ) ? $st : array( 'ok' => false, 'err' => 'busy' );
+	}
+	set_transient( $lock, 1, 25 );
 
 	$lat = '40.93717'; $lon = '-73.70217'; // Buoy 42 (matches the client constants)
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
@@ -125,11 +145,15 @@ function oyc_marine_fc_proxy() {
 		}
 	}
 	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) {
-		// Report the real reason so the cause is visible; the client falls back to a
-		// direct browser fetch, so visitors still get the forecast.
+		// wx failed (e.g. 429). Prefer the last-known good reading over an error so
+		// the readout keeps showing data; otherwise report the reason (the client
+		// also falls back to a direct browser fetch).
+		delete_transient( $lock );
+		$st = get_transient( $key . '_st' );
+		if ( false !== $st ) { return $st; }
 		$out = array( 'ok' => false, 'err' => $wxdiag ? ( 'wx ' . $wxdiag ) : 'wx unavailable' );
-		set_transient( 'oyc_marine_fc_b42', $out, 2 * MINUTE_IN_SECONDS );
-		wp_send_json( $out );
+		set_transient( $key, $out, 2 * MINUTE_IN_SECONDS );
+		return $out;
 	}
 
 	$mar = null; // waves are optional — the table still renders without them
@@ -139,11 +163,13 @@ function oyc_marine_fc_proxy() {
 		if ( ! is_array( $mar ) ) { $mar = null; }
 	}
 
-	// Cache the full reading 15 min; but if the marine/wave fetch failed, keep it
-	// short (3 min) so waves recover quickly instead of showing "—" for 15 min.
+	// Cache the full reading 15 min; if waves failed, keep it short (3 min) so they
+	// recover quickly. Keep a 6h "stale" copy for coalesced/failed reads.
 	$out = array( 'ok' => true, 'wx' => $wx, 'marine' => $mar );
-	set_transient( 'oyc_marine_fc_b42', $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
-	wp_send_json( $out );
+	set_transient( $key, $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
+	set_transient( $key . '_st', $out, 6 * HOUR_IN_SECONDS );
+	delete_transient( $lock );
+	return $out;
 }
 
 /* ── Point forecast at an arbitrary lat/lon (for the map's passage pins) ──
