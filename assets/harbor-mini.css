@@ -160,3 +160,15 @@
 	font-size: 11px;
 	color: #1583cf;
 }
+
+/* Dark mode — the embedded variant uses dark text for a light card; the
+   surrounding .harbor-card is darkened by the site dark layer, so re-color the
+   widget's text light for readability on the navy panel. */
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini {
+	border-bottom-color: rgba(245, 239, 226, 0.14);
+}
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini .ohm-head { color: #f4eddd; }
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini .ohm-live { color: #aeb9c8; }
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini .ohm-k { color: #9fb0c2; }
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini .ohm-v { color: #f4eddd; }
+html[data-theme="dark"] .harbor-card .oyc-harbor-mini .ohm-cta { color: #6cb6ea; }

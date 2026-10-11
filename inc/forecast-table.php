@@ -254,6 +254,28 @@ function oyc_forecast_table_html() {
 .oyc-ft .legend .sw i{width:15px;height:12px;border-radius:3px;display:inline-block}
 .oyc-ft .foot{padding:8px 18px 16px;font-size:.72rem;color:#6b7280}
 .oyc-ft .msg{padding:40px 18px;text-align:center;color:#6b7280}
+/* ── Dark theme (driven by the board's data-theme="dark") — chrome + structural
+   rows go navy; the opaque heatmap cells keep their colours, and the three
+   translucent rows (precip/cloud/pressure) get light ink so they stay legible ── */
+[data-theme="dark"] .oyc-ft .oyc-ft-card{background:#0d2846;border-color:rgba(245,239,226,.14);color:#e7edf4;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+[data-theme="dark"] .oyc-ft .hd .ttl{color:#f5efe2}
+[data-theme="dark"] .oyc-ft .hd .loc,[data-theme="dark"] .oyc-ft .hd .upd{color:#aeb9c8}
+[data-theme="dark"] .oyc-ft .models button{background:rgba(255,255,255,.04);border-color:rgba(245,239,226,.18);color:#c7d2e0}
+[data-theme="dark"] .oyc-ft .models button:hover{border-color:#57a6d6}
+[data-theme="dark"] .oyc-ft .obs{color:#dbe6f2}
+[data-theme="dark"] .oyc-ft table{background:#0b2238}
+[data-theme="dark"] .oyc-ft td{border-right-color:rgba(245,239,226,.10)}
+[data-theme="dark"] .oyc-ft tr.dayh td{background:#122f4e;color:#f5efe2;border-bottom-color:rgba(245,239,226,.12)}
+[data-theme="dark"] .oyc-ft tr.hr td{background:#0f2944;color:#aeb9c8;border-bottom-color:rgba(245,239,226,.12)}
+[data-theme="dark"] .oyc-ft tr.sky td{background:#0b2238}
+[data-theme="dark"] .oyc-ft tr.pr td,[data-theme="dark"] .oyc-ft tr.cl td{color:#eaf0f6 !important}
+[data-theme="dark"] .oyc-ft tr.ps td{background:rgba(120,145,175,.16) !important;color:#dbe6f2 !important}
+[data-theme="dark"] .oyc-ft .navwrap{background:#0f2944;border-color:rgba(245,239,226,.18)}
+[data-theme="dark"] .oyc-ft .navwin{border-color:#d4a851;background:rgba(212,168,81,.12)}
+[data-theme="dark"] .oyc-ft .navdays{color:#aeb9c8}
+[data-theme="dark"] .oyc-ft .navdays span{border-left-color:rgba(245,239,226,.12)}
+[data-theme="dark"] .oyc-ft .legend,[data-theme="dark"] .oyc-ft .foot,[data-theme="dark"] .oyc-ft .msg{color:#aeb9c8}
+[data-theme="dark"] .oyc-ft td.divmid{box-shadow:inset 2px 0 0 #d4a851}
 </style>
 <script>
 (function(){
