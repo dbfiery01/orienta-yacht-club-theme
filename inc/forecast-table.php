@@ -184,8 +184,11 @@ function oyc_point_fc_proxy() {
 		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
 		if ( ! is_array( $mar ) ) { $mar = null; }
 	}
+	// Cache 15 min normally; if waves failed (Open-Meteo 429'd the host), keep it
+	// short (3 min) so the server-side marine data recovers quickly instead of
+	// serving marine:null for 15 min. The client also fills waves browser-direct.
 	$out = wp_json_encode( array( 'ok' => true, 'wx' => $wx, 'marine' => $mar ) );
-	set_transient( $key, $out, 15 * MINUTE_IN_SECONDS );
+	set_transient( $key, $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
 	oyc_send_raw_json( $out );
 }
 

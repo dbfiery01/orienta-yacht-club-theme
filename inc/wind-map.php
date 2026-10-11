@@ -618,6 +618,24 @@ function fcSeriesFrom(res){
 		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;}),
 		wavePer:h.time.map(function(s){return wper[s]!=null?wper[s]:null;})};
 }
+/* Browser-direct wave fetch — Open-Meteo rate-limits (HTTP 429) the SERVER's
+   marine calls when the host IP is throttled, so the cached proxy comes back
+   with marine:null and waves vanish from the pins/readout. The visitor's IP is
+   not throttled, so pull the waves straight from the browser and merge them in.
+   Shape matches the server's marine payload, so fcSeriesFrom reads it unchanged. */
+function fetchMarineDirect(lat,lon){
+	var u='https://marine-api.open-meteo.com/v1/marine?latitude='+(+lat).toFixed(3)+'&longitude='+(+lon).toFixed(3)
+		+'&hourly=wave_height,wave_period&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
+	return fetch(u).then(function(r){if(!r.ok)throw new Error('mar '+r.status);return r.json();});
+}
+/* Resolve to a {wx,marine} response with waves present: if the server gave us
+   the wind forecast but no marine (429), fill the marine in from the browser. */
+function withMarine(res,lat,lon){
+	if(res&&res.wx&&res.wx.hourly&&(!res.marine||!res.marine.hourly)){
+		return fetchMarineDirect(lat,lon).then(function(mar){res.marine=mar;return res;},function(){return res;});
+	}
+	return Promise.resolve(res);
+}
 function fcAt(S,i){return {kt:S.kt[i],gust:S.gust[i],dir:S.dir[i],mb:S.mb[i],tempF:S.tempF[i],pop:S.pop?S.pop[i]:null,waveFt:S.waveFt[i],wavePer:S.wavePer?S.wavePer[i]:null};}
 function fcInterp(S,ep){if(!S||!S.t.length)return null;var T=S.t,n=T.length;
 	if(ep<=T[0])return fcAt(S,0);
@@ -635,6 +653,8 @@ function fcForFrame(S,epoch,isNow){return isNow?fcNearest(S,Date.now()):fcInterp
 var ERFC=null;
 function loadERFC(){
 	fetchT(AJAX+'?action=oyc_marine_fc',12000).then(function(r){return r.json();}).then(function(res){
+		return withMarine(res,ER.lat,ER.lon); /* fill waves from the browser if the server was 429'd */
+	}).then(function(res){
 		var S=fcSeriesFrom(res);if(!S)return;ERFC=S;
 		/* refresh the readout for the frame the slider is on right now */
 		if(mode==='radar'){var fr=RV.frames[RV.idx];setER(erForFrame(curEpoch(),!!(fr&&fr.off===0)));}
@@ -738,7 +758,9 @@ function rerenderCallouts(){for(var i=0;i<pins.length;i++)pins[i].popup.setConte
 /* fetch a waypoint's exact-point forecast (cached server proxy) and re-render it */
 function loadPinFC(pin){
 	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
-		.then(function(r){return r.json();}).then(function(res){
+		.then(function(r){return r.json();})
+		.then(function(res){return withMarine(res,pin.lat,pin.lon);}) /* fill waves from the browser if the server was 429'd */
+		.then(function(res){
 			var S=fcSeriesFrom(res);if(!S||pin._gone)return;pin.fc=S;
 			pin.popup.setContent(pinContent(pin,curTi));
 		}).catch(function(){});
