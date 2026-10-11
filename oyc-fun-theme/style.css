@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.90
+Version: 1.5.91
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -665,9 +665,16 @@ body .container { width: min(1140px, 92%); max-width: none; }
    the reel's right edge. Tightens the inter-item gap, shrinks the link size, and
    lets the CTA pills size to their text (was a forced 92px min-width). */
 @media (min-width: 881px) {
-  .site-header .primary-nav ul { gap: 0.9rem; }
-  .site-header .primary-nav a { font-size: 1rem; }
+  .site-header .primary-nav ul { gap: 0.5rem; }
+  .site-header .primary-nav a { font-size: 0.9rem; }
   .site-header .primary-nav li.cta a { min-width: 0; }
+  /* The CTA pills default to 1.14rem (set via an #nav-menu id selector), which
+     made Member Login ~190px + Reservations ~146px and pushed the row past the
+     viewport at ~1200px (Reservations clipped). Shrink them — id-level so it
+     beats that 1.14rem rule — so the whole nav (incl. the toggle) fits to
+     ~1200px. */
+  #nav-menu li.cta > a,
+  #nav-menu .menu-item.cta a { font-size: 0.95rem !important; padding: 7px 12px !important; }
 }
 
 /* 50b) Desktop light/dark toggle placement. As a block, .primary-nav stacked
@@ -675,7 +682,7 @@ body .container { width: min(1140px, 92%); max-width: none; }
    logo — easy to miss). Make the nav a flex row so the toggle sits inline and
    vertically centered just left of the menu, where it's clearly visible. */
 @media (min-width: 881px) {
-  .site-header .primary-nav { display: flex; align-items: center; gap: 0.9rem; }
+  .site-header .primary-nav { display: flex; align-items: center; gap: 0.5rem; }
   .site-header .primary-nav .theme-btn { order: -1; margin: 0; }
 }
 
