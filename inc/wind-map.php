@@ -43,24 +43,38 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
-/* Landscape (phones AND tablets): in full-screen the header, Buoy readout,
-   layer chips, the long help hint, the route-help tip and the footnote stacked
-   taller than the short viewport and squeezed the map to almost nothing. In any
-   short landscape viewport, drop everything non-essential (title, status line,
-   readout, hint, route tip, footnote), tighten padding and make each layer row
-   a single horizontally-scrollable strip so the MAP gets the height. Keyed on
-   orientation+max-height so it covers iPad landscape (~820px) but never phone
-   or tablet portrait, where there is room. */
+/* Floating hamburger menu (shown only in landscape full-screen — see below).
+   Inert elsewhere: the button is hidden and the panel only ever appears when
+   JS has folded the tabs + layer toggles into it. Colours use the component
+   tokens so it tracks light/dark automatically. */
+#oycwm .burger{display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:44px;height:34px;flex:none;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);cursor:pointer}
+#oycwm .burger span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;transition:.2s}
+#oycwm .card.menuopen .burger span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+#oycwm .card.menuopen .burger span:nth-child(2){opacity:0}
+#oycwm .card.menuopen .burger span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+#oycwm .mobpanel{flex-direction:column;gap:9px;position:absolute;z-index:600;left:10px;right:10px;top:50px;max-height:calc(100% - 120px);overflow:auto;-webkit-overflow-scrolling:touch;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px;box-shadow:0 14px 36px rgba(0,0,0,.34)}
+#oycwm .mobpanel .tabs{flex-wrap:wrap}
+#oycwm .mobpanel .layers{display:flex;flex-wrap:wrap;padding:0}
+
+/* Landscape (phones AND tablets): full-screen folds the tab bar and every layer
+   toggle into the floating hamburger, so only a slim [burger … Exit] bar and the
+   time slider stay in flow and the MAP gets almost the whole height. The Buoy
+   readout, help hint, route tip and footnote are dropped. Keyed on
+   orientation+max-height so it covers iPad landscape (~820px) but never phone or
+   tablet portrait, where there is room. */
 @media (orientation:landscape) and (max-height:900px){
-	#oycwm .card.isfull .hd{padding:6px 14px 2px;gap:6px 10px}
+	#oycwm .card.isfull .hd{padding:7px 12px;gap:8px}
 	#oycwm .card.isfull .hd h2,
 	#oycwm .card.isfull .hd .st{display:none}
 	#oycwm .card.isfull .erbar{display:none}
-	#oycwm .card.isfull .layers{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 14px}
 	#oycwm .card.isfull .layers .hint{display:none}
 	#oycwm .card.isfull .ctrl{padding:5px 14px}
-	#oycwm .card.isfull .tiphelp{display:none}
+	#oycwm .card.isfull .tiphelp,
 	#oycwm .card.isfull .foot{display:none}
+	#oycwm .card.isfull.hasburger .burger{display:inline-flex}
+	#oycwm .card.isfull.hasburger .fsbtn{margin-left:auto}
+	#oycwm .card.isfull .mobpanel{display:none}
+	#oycwm .card.isfull.menuopen .mobpanel{display:flex}
 }
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
@@ -1696,6 +1710,56 @@ map.on('zoomend',function(){
 	}
 	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
 	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+})();
+
+/* ---------- landscape full-screen: fold the tabs + layer toggles into a
+   floating hamburger so the map gets the whole height ----------
+   The tab bar and every .layers row are MOVED into a floating panel (their event
+   listeners travel with the nodes, so tabs and checkboxes keep working) and
+   restored to their original spots when leaving this mode. Only active in
+   landscape full-screen on a short viewport. */
+(function(){
+	var card=document.querySelector('#oycwm .card'),
+	    hd=card&&card.querySelector('.hd'),
+	    tabs=card&&card.querySelector('.tabs'),
+	    exitBtn=document.getElementById('oycwmFs');
+	if(!card||!hd||!tabs)return;
+	var layers=[].slice.call(card.querySelectorAll('.layers'));
+	var burger=document.createElement('button');
+	burger.type='button';burger.className='burger';burger.setAttribute('aria-label','Views & layers');burger.setAttribute('aria-expanded','false');
+	burger.innerHTML='<span></span><span></span><span></span>';
+	var panel=document.createElement('div');panel.className='mobpanel';
+	/* comment anchors mark where each moved node came from, so we can put it back */
+	var tabsHome=document.createComment('tabs');tabs.parentNode.insertBefore(tabsHome,tabs);
+	var layerHomes=layers.map(function(l){var c=document.createComment('ly');l.parentNode.insertBefore(c,l);return c;});
+	var mq=window.matchMedia('(orientation:landscape) and (max-height:900px)'),on=false;
+	function enter(){
+		if(on)return;on=true;
+		hd.insertBefore(burger,hd.firstChild);
+		panel.appendChild(tabs);
+		layers.forEach(function(l){panel.appendChild(l);});
+		card.insertBefore(panel,card.querySelector('.ctrl')||card.querySelector('.mapwrap'));
+		card.classList.add('hasburger');
+		refit();
+	}
+	function leave(){
+		if(!on)return;on=false;
+		card.classList.remove('hasburger','menuopen');burger.setAttribute('aria-expanded','false');
+		if(burger.parentNode)burger.parentNode.removeChild(burger);
+		tabsHome.parentNode.insertBefore(tabs,tabsHome);
+		layerHomes.forEach(function(c,i){c.parentNode.insertBefore(layers[i],c);});
+		if(panel.parentNode)panel.parentNode.removeChild(panel);
+		refit();
+	}
+	function refit(){setTimeout(function(){try{map.invalidateSize();}catch(e){}},60);}
+	burger.addEventListener('click',function(){
+		var o=card.classList.toggle('menuopen');burger.setAttribute('aria-expanded',o?'true':'false');
+	});
+	function sync(){ if(card.classList.contains('isfull')&&mq.matches)enter();else leave(); }
+	new MutationObserver(sync).observe(card,{attributes:true,attributeFilter:['class']});
+	if(mq.addEventListener)mq.addEventListener('change',sync);else if(mq.addListener)mq.addListener(sync);
+	window.addEventListener('orientationchange',sync);
+	sync();
 })();
 
 loadLocal();
