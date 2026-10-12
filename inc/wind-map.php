@@ -43,6 +43,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
+/* Native-fullscreen backdrop: default is black — match the themed card ground. */
+#oycwm .card.isfull::backdrop{background:#fff}
 /* Floating hamburger menu (shown only in landscape full-screen — see below).
    Inert elsewhere: the button is hidden and the panel only ever appears when
    JS has folded the tabs + layer toggles into it. Colours use the component
@@ -251,6 +253,7 @@ function oyc_wind_map_html( $embed = false ) {
    through in dark mode. Give the expanded card a solid dark ground so the whole
    view is dark (the Leaflet map still renders its light tiles below). */
 [data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
+[data-theme="dark"] #oycwm .card.isfull::backdrop{background:#081a2c}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
@@ -1693,10 +1696,28 @@ map.on('zoomend',function(){
 			window.scrollTo(0,savedY);
 		}
 	}
+	/* Native Fullscreen API — on iPad Safari and desktop this hides the browser's
+	   own address bar and tab strip for a true full-screen map. Layered on TOP of
+	   the .isfull overlay (which stays the single source of styling), so if the
+	   request is unsupported or rejected (iPhone Safari never grants it) the
+	   overlay still fills the viewport exactly as before. Must run in the click
+	   gesture, which apply() does. */
+	function nativeFs(on){
+		try{
+			if(on){
+				var rq=fsEl.requestFullscreen||fsEl.webkitRequestFullscreen;
+				if(rq&&!(document.fullscreenElement||document.webkitFullscreenElement)){var p=rq.call(fsEl);if(p&&p.catch)p.catch(function(){});}
+			}else{
+				var ex=document.exitFullscreen||document.webkitExitFullscreen;
+				if(ex&&(document.fullscreenElement||document.webkitFullscreenElement))ex.call(document);
+			}
+		}catch(e){}
+	}
 	function apply(on){
 		fsEl.classList.toggle('isfull',on);
 		lockScroll(on);
 		backdrop(on);
+		nativeFs(on);
 		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
 		setTimeout(function(){
 			map.invalidateSize();
@@ -1710,6 +1731,13 @@ map.on('zoomend',function(){
 	}
 	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
 	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+	/* If the user leaves native full-screen by the system gesture/Esc rather than
+	   our Exit button, collapse the overlay too so the two stay in sync. */
+	['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){
+		document.addEventListener(ev,function(){
+			if(!(document.fullscreenElement||document.webkitFullscreenElement)&&fsEl.classList.contains('isfull'))apply(false);
+		});
+	});
 })();
 
 /* ---------- landscape full-screen: fold the tabs + layer toggles into a

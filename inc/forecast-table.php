@@ -248,6 +248,7 @@ function oyc_forecast_table_html() {
 .oyc-ft .fsbtn svg{display:block}
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
+.oyc-ft .oyc-ft-card.isfull::backdrop{background:#fff}
 .oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
 /* Landscape (phones AND tablets): in full-screen the week ribbon, colour legend
    and footnote stack below the table and crush it into a sliver on a short
@@ -502,15 +503,37 @@ function oyc_forecast_table_html() {
         window.scrollTo(0,savedY);
       }
     }
+    /* Native Fullscreen API — hides the browser's address bar + tab strip on
+       iPad Safari and desktop. Layered on top of the .isfull overlay, which
+       stays the source of styling; if unsupported/rejected (iPhone Safari) the
+       overlay still fills the viewport. Must run in the click gesture. */
+    function nativeFs(on){
+      try{
+        if(on){
+          var rq=fsEl.requestFullscreen||fsEl.webkitRequestFullscreen;
+          if(rq&&!(document.fullscreenElement||document.webkitFullscreenElement)){var p=rq.call(fsEl);if(p&&p.catch)p.catch(function(){});}
+        }else{
+          var ex=document.exitFullscreen||document.webkitExitFullscreen;
+          if(ex&&(document.fullscreenElement||document.webkitFullscreenElement))ex.call(document);
+        }
+      }catch(e){}
+    }
     function apply(on){
       fsEl.classList.toggle('isfull',on);
       lockScroll(on);
       backdrop(on);
+      nativeFs(on);
       btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
       setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
     }
     btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+    /* keep the overlay in sync if native full-screen is left by gesture/Esc */
+    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){
+      document.addEventListener(ev,function(){
+        if(!(document.fullscreenElement||document.webkitFullscreenElement)&&fsEl.classList.contains('isfull'))apply(false);
+      });
+    });
   })();
 })();
 </script>
