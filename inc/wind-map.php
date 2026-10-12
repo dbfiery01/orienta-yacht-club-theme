@@ -38,11 +38,50 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .fsbtn{flex:none;margin-left:8px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.76rem;font-weight:700;letter-spacing:.02em;line-height:1}
 #oycwm .fsbtn:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .fsbtn svg{display:block}
+/* Full-screen is a desktop-only affordance — the expanded overlay never worked
+   well on phones/tablets, so hide the button on touch devices and let the map
+   sit inline (it scrolls fine within the page). */
+@media (hover:none) and (pointer:coarse){ #oycwm .fsbtn{display:none !important} }
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 #oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
+/* Native-fullscreen backdrop: default is black — match the themed card ground. */
+#oycwm .card.isfull::backdrop{background:#fff}
+/* Floating hamburger menu (shown only in landscape full-screen — see below).
+   Inert elsewhere: the button is hidden and the panel only ever appears when
+   JS has folded the tabs + layer toggles into it. Colours use the component
+   tokens so it tracks light/dark automatically. */
+#oycwm .burger{display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:44px;height:34px;flex:none;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);cursor:pointer}
+#oycwm .burger span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;transition:.2s}
+#oycwm .card.menuopen .burger span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+#oycwm .card.menuopen .burger span:nth-child(2){opacity:0}
+#oycwm .card.menuopen .burger span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+#oycwm .mobpanel{flex-direction:column;gap:9px;position:absolute;z-index:600;left:10px;right:10px;top:50px;max-height:calc(100% - 120px);overflow:auto;-webkit-overflow-scrolling:touch;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px;box-shadow:0 14px 36px rgba(0,0,0,.34)}
+#oycwm .mobpanel .tabs{flex-wrap:wrap}
+#oycwm .mobpanel .layers{display:flex;flex-wrap:wrap;padding:0}
+
+/* Landscape (phones AND tablets): full-screen folds the tab bar and every layer
+   toggle into the floating hamburger, so only a slim [burger … Exit] bar and the
+   time slider stay in flow and the MAP gets almost the whole height. The Buoy
+   readout, help hint, route tip and footnote are dropped. Keyed on
+   orientation+max-height so it covers iPad landscape (~820px) but never phone or
+   tablet portrait, where there is room. */
+@media (orientation:landscape) and (max-height:900px){
+	#oycwm .card.isfull .hd{padding:7px 12px;gap:8px}
+	#oycwm .card.isfull .hd h2,
+	#oycwm .card.isfull .hd .st{display:none}
+	#oycwm .card.isfull .erbar{display:none}
+	#oycwm .card.isfull .layers .hint{display:none}
+	#oycwm .card.isfull .ctrl{padding:5px 14px}
+	#oycwm .card.isfull .tiphelp,
+	#oycwm .card.isfull .foot{display:none}
+	#oycwm .card.isfull.hasburger .burger{display:inline-flex}
+	#oycwm .card.isfull.hasburger .fsbtn{margin-left:auto}
+	#oycwm .card.isfull .mobpanel{display:none}
+	#oycwm .card.isfull.menuopen .mobpanel{display:flex}
+}
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
 #oycwm .tabs button.on{background:var(--harbor);color:#fff}
@@ -101,9 +140,15 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 #oycwm .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 #oycwm .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
-/* lat/lon graticule labels on the chart edges — same look as the pressure labels */
+/* lat/lon graticule: light dashed grid lines + edge labels (same look as the
+   pressure labels) */
 #oycwm .grat{position:absolute;inset:0;z-index:500;pointer-events:none;overflow:hidden}
 #oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .grat .gl{position:absolute;pointer-events:none}
+/* A thin white halo (box-shadow) keeps the dash legible over both light water
+   and busy land tiles without having to make the line heavy. */
+#oycwm .grat .gl-h{left:0;right:0;border-top:1px dashed rgba(12,23,42,.45);box-shadow:0 1px 0 rgba(255,255,255,.2),0 -1px 0 rgba(255,255,255,.2)}
+#oycwm .grat .gl-v{top:0;bottom:0;border-left:1px dashed rgba(12,23,42,.45);box-shadow:1px 0 0 rgba(255,255,255,.2),-1px 0 0 rgba(255,255,255,.2)}
 /* numbered passage waypoint marker */
 #oycwm .wp-mk{background:none;border:none}
 #oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 4px;border-radius:12px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;box-sizing:border-box;cursor:grab}
@@ -218,6 +263,10 @@ function oyc_wind_map_html( $embed = false ) {
    through in dark mode. Give the expanded card a solid dark ground so the whole
    view is dark (the Leaflet map still renders its light tiles below). */
 [data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
+[data-theme="dark"] #oycwm .card.isfull::backdrop{background:#081a2c}
+/* NB: no dark-mode override for the graticule lines — the Leaflet tiles stay
+   light in both themes, so the base dark-dash + white-halo rule is correct in
+   dark mode too. A light-dash/dark-halo variant read as a fuzzy double line. */
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
@@ -978,6 +1027,7 @@ function drawIso(g,ti,step){isoLayer.clearLayers();
 	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
 	var mn=1e9,mx=-1e9;for(r=0;r<NY;r++)for(c=0;c<NX;c++){if(P[r][c]<mn)mn=P[r][c];if(P[r][c]>mx)mx=P[r][c];}
 	function lerp(a,b,t,axa,axb){return axa+(axb-axa)*((t-a)/(b-a));}
+	var labN={}; /* per-isobar segment counter, so each line is labelled a few times, spaced out */
 	for(var thr=Math.ceil(mn/step)*step;thr<=mx;thr+=step){
 		for(r=0;r<NY-1;r++)for(c=0;c<NX-1;c++){
 			var tl=P[r][c],tr=P[r][c+1],br=P[r+1][c+1],bl=P[r+1][c],pts=[];
@@ -988,7 +1038,13 @@ function drawIso(g,ti,step){isoLayer.clearLayers();
 			if(pts.length>=2){
 				L.polyline([pts[0],pts[1]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
 				if(pts.length===4)L.polyline([pts[2],pts[3]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
-				if(r%3===0&&c===Math.floor(NX/2))L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[26,12]}),interactive:false}).addTo(isoLayer);
+				/* Label each pressure line with its value (mb): once near its start
+				   (so every line gets at least one) and again every 9th segment for
+				   long lines, keeping the labels spaced along the isobar. */
+				var n=(labN[thr]=(labN[thr]||0)+1);
+				if(n===2||n%9===0){
+					L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[30,14],iconAnchor:[15,7]}),interactive:false}).addTo(isoLayer);
+				}
 			}
 		}
 	}}
@@ -1599,14 +1655,18 @@ function drawGraticule(){
 	var b=map.getBounds(),S=b.getSouth(),N=b.getNorth(),Wd=b.getWest(),Ed=b.getEast(),out='';
 	var ls=gratStep(N-S),ld=gratDec(ls),lat=Math.ceil(S/ls)*ls,g;
 	for(g=0;lat<=N&&g<80;lat+=ls,g++){
-		var y=Math.round(map.latLngToContainerPoint([lat,Wd]).y);if(y<10||y>H-10)continue;
+		var y=Math.round(map.latLngToContainerPoint([lat,Wd]).y);if(y<0||y>H)continue;
+		out+='<i class="gl gl-h" style="top:'+y+'px"></i>';
+		if(y<10||y>H-10)continue;
 		var t=gratLat(lat,ld);
 		out+='<span style="left:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>'
 			+'<span style="right:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>';
 	}
 	var os=gratStep(Ed-Wd),od=gratDec(os),lon=Math.ceil(Wd/os)*os,h;
 	for(h=0;lon<=Ed&&h<80;lon+=os,h++){
-		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<16||x>W-16)continue;
+		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<0||x>W)continue;
+		out+='<i class="gl gl-v" style="left:'+x+'px"></i>';
+		if(x<16||x>W-16)continue;
 		var lt=gratLon(lon,od);
 		out+='<span style="left:'+x+'px;top:3px;transform:translateX(-50%)">'+lt+'</span>'
 			+'<span style="left:'+x+'px;bottom:3px;transform:translateX(-50%)">'+lt+'</span>';
@@ -1646,10 +1706,42 @@ map.on('zoomend',function(){
 		if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
 		else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
 	}
+	/* Scroll lock. iOS Safari ignores body{overflow:hidden} on the document
+	   scroller, so with the page scrolled the background kept scrolling behind
+	   the fixed overlay and the retracting toolbar mis-sized inset:0 — stranding
+	   the Exit button and gestures ("locks the screen"). Pinning the body at
+	   -scrollY freezes it reliably; we restore the offset on exit. */
+	var savedY=0;
+	function lockScroll(on){
+		var b=document.body;
+		if(on){ savedY=window.pageYOffset||document.documentElement.scrollTop||0;
+			b.style.top=(-savedY)+'px';b.style.position='fixed';b.style.left='0';b.style.right='0';b.style.width='100%';b.style.overflow='hidden';
+		}else{ b.style.position='';b.style.top='';b.style.left='';b.style.right='';b.style.width='';b.style.overflow='';
+			window.scrollTo(0,savedY);
+		}
+	}
+	/* Native Fullscreen API — on iPad Safari and desktop this hides the browser's
+	   own address bar and tab strip for a true full-screen map. Layered on TOP of
+	   the .isfull overlay (which stays the single source of styling), so if the
+	   request is unsupported or rejected (iPhone Safari never grants it) the
+	   overlay still fills the viewport exactly as before. Must run in the click
+	   gesture, which apply() does. */
+	function nativeFs(on){
+		try{
+			if(on){
+				var rq=fsEl.requestFullscreen||fsEl.webkitRequestFullscreen;
+				if(rq&&!(document.fullscreenElement||document.webkitFullscreenElement)){var p=rq.call(fsEl);if(p&&p.catch)p.catch(function(){});}
+			}else{
+				var ex=document.exitFullscreen||document.webkitExitFullscreen;
+				if(ex&&(document.fullscreenElement||document.webkitFullscreenElement))ex.call(document);
+			}
+		}catch(e){}
+	}
 	function apply(on){
 		fsEl.classList.toggle('isfull',on);
-		document.body.style.overflow=on?'hidden':'';
+		lockScroll(on);
 		backdrop(on);
+		nativeFs(on);
 		btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
 		setTimeout(function(){
 			map.invalidateSize();
@@ -1663,6 +1755,63 @@ map.on('zoomend',function(){
 	}
 	btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
 	document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+	/* If the user leaves native full-screen by the system gesture/Esc rather than
+	   our Exit button, collapse the overlay too so the two stay in sync. */
+	['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){
+		document.addEventListener(ev,function(){
+			if(!(document.fullscreenElement||document.webkitFullscreenElement)&&fsEl.classList.contains('isfull'))apply(false);
+		});
+	});
+})();
+
+/* ---------- landscape full-screen: fold the tabs + layer toggles into a
+   floating hamburger so the map gets the whole height ----------
+   The tab bar and every .layers row are MOVED into a floating panel (their event
+   listeners travel with the nodes, so tabs and checkboxes keep working) and
+   restored to their original spots when leaving this mode. Only active in
+   landscape full-screen on a short viewport. */
+(function(){
+	var card=document.querySelector('#oycwm .card'),
+	    hd=card&&card.querySelector('.hd'),
+	    tabs=card&&card.querySelector('.tabs'),
+	    exitBtn=document.getElementById('oycwmFs');
+	if(!card||!hd||!tabs)return;
+	var layers=[].slice.call(card.querySelectorAll('.layers'));
+	var burger=document.createElement('button');
+	burger.type='button';burger.className='burger';burger.setAttribute('aria-label','Views & layers');burger.setAttribute('aria-expanded','false');
+	burger.innerHTML='<span></span><span></span><span></span>';
+	var panel=document.createElement('div');panel.className='mobpanel';
+	/* comment anchors mark where each moved node came from, so we can put it back */
+	var tabsHome=document.createComment('tabs');tabs.parentNode.insertBefore(tabsHome,tabs);
+	var layerHomes=layers.map(function(l){var c=document.createComment('ly');l.parentNode.insertBefore(c,l);return c;});
+	var mq=window.matchMedia('(orientation:landscape) and (max-height:900px)'),on=false;
+	function enter(){
+		if(on)return;on=true;
+		hd.insertBefore(burger,hd.firstChild);
+		panel.appendChild(tabs);
+		layers.forEach(function(l){panel.appendChild(l);});
+		card.insertBefore(panel,card.querySelector('.ctrl')||card.querySelector('.mapwrap'));
+		card.classList.add('hasburger');
+		refit();
+	}
+	function leave(){
+		if(!on)return;on=false;
+		card.classList.remove('hasburger','menuopen');burger.setAttribute('aria-expanded','false');
+		if(burger.parentNode)burger.parentNode.removeChild(burger);
+		tabsHome.parentNode.insertBefore(tabs,tabsHome);
+		layerHomes.forEach(function(c,i){c.parentNode.insertBefore(layers[i],c);});
+		if(panel.parentNode)panel.parentNode.removeChild(panel);
+		refit();
+	}
+	function refit(){setTimeout(function(){try{map.invalidateSize();}catch(e){}},60);}
+	burger.addEventListener('click',function(){
+		var o=card.classList.toggle('menuopen');burger.setAttribute('aria-expanded',o?'true':'false');
+	});
+	function sync(){ if(card.classList.contains('isfull')&&mq.matches)enter();else leave(); }
+	new MutationObserver(sync).observe(card,{attributes:true,attributeFilter:['class']});
+	if(mq.addEventListener)mq.addEventListener('change',sync);else if(mq.addListener)mq.addListener(sync);
+	window.addEventListener('orientationchange',sync);
+	sync();
 })();
 
 loadLocal();

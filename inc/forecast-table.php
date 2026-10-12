@@ -246,9 +246,25 @@ function oyc_forecast_table_html() {
 .oyc-ft .fsbtn{flex:none;align-self:center;margin-left:10px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid #0b2a4a;background:#0b2a4a;color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;line-height:1}
 .oyc-ft .fsbtn:hover{background:#1583cf;border-color:#1583cf}
 .oyc-ft .fsbtn svg{display:block}
+/* Full-screen is a desktop-only affordance — hide the button on touch devices
+   (phones/tablets); the table scrolls fine inline there. */
+@media (hover:none) and (pointer:coarse){ .oyc-ft .fsbtn{display:none !important} }
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
+.oyc-ft .oyc-ft-card.isfull::backdrop{background:#fff}
 .oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
+/* Landscape (phones AND tablets): in full-screen the week ribbon, colour legend
+   and footnote stack below the table and crush it into a sliver on a short
+   viewport. Drop that chrome and tighten the header so the table gets the
+   height. Keyed on orientation+max-height so it also covers iPad landscape
+   (~820px) but never portrait, where there is room. */
+@media (orientation:landscape) and (max-height:900px){
+  .oyc-ft .oyc-ft-card.isfull .nav,
+  .oyc-ft .oyc-ft-card.isfull .legend,
+  .oyc-ft .oyc-ft-card.isfull .foot{display:none}
+  .oyc-ft .oyc-ft-card.isfull .hd{padding:10px 18px 4px}
+  .oyc-ft .oyc-ft-card.isfull .models{padding:4px 18px 8px}
+}
 .oyc-ft .models{display:flex;flex-wrap:wrap;gap:6px;padding:6px 18px 10px}
 .oyc-ft .models button{border:1px solid #dfe7f0;background:#fff;font:inherit;font-size:.74rem;font-weight:600;color:#6b7280;padding:5px 11px;border-radius:999px;cursor:pointer;transition:.15s;letter-spacing:0}
 .oyc-ft .models button:hover{border-color:#1583cf}
@@ -478,15 +494,49 @@ function oyc_forecast_table_html() {
       if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
       else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
     }
+    /* Scroll lock — iOS Safari ignores body{overflow:hidden} on the document
+       scroller, so pin the body at -scrollY instead (restored on exit). See the
+       fuller note in the map component. */
+    var savedY=0;
+    function lockScroll(on){
+      var b=document.body;
+      if(on){ savedY=window.pageYOffset||document.documentElement.scrollTop||0;
+        b.style.top=(-savedY)+'px';b.style.position='fixed';b.style.left='0';b.style.right='0';b.style.width='100%';b.style.overflow='hidden';
+      }else{ b.style.position='';b.style.top='';b.style.left='';b.style.right='';b.style.width='';b.style.overflow='';
+        window.scrollTo(0,savedY);
+      }
+    }
+    /* Native Fullscreen API — hides the browser's address bar + tab strip on
+       iPad Safari and desktop. Layered on top of the .isfull overlay, which
+       stays the source of styling; if unsupported/rejected (iPhone Safari) the
+       overlay still fills the viewport. Must run in the click gesture. */
+    function nativeFs(on){
+      try{
+        if(on){
+          var rq=fsEl.requestFullscreen||fsEl.webkitRequestFullscreen;
+          if(rq&&!(document.fullscreenElement||document.webkitFullscreenElement)){var p=rq.call(fsEl);if(p&&p.catch)p.catch(function(){});}
+        }else{
+          var ex=document.exitFullscreen||document.webkitExitFullscreen;
+          if(ex&&(document.fullscreenElement||document.webkitFullscreenElement))ex.call(document);
+        }
+      }catch(e){}
+    }
     function apply(on){
       fsEl.classList.toggle('isfull',on);
-      document.body.style.overflow=on?'hidden':'';
+      lockScroll(on);
       backdrop(on);
+      nativeFs(on);
       btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
       setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
     }
     btn.addEventListener('click',function(){apply(!fsEl.classList.contains('isfull'));});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsEl.classList.contains('isfull'))apply(false);});
+    /* keep the overlay in sync if native full-screen is left by gesture/Esc */
+    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){
+      document.addEventListener(ev,function(){
+        if(!(document.fullscreenElement||document.webkitFullscreenElement)&&fsEl.classList.contains('isfull'))apply(false);
+      });
+    });
   })();
 })();
 </script>
