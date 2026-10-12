@@ -543,3 +543,73 @@
 
 .officer-btn--confirm { color: #1d6b2c; border-color: rgba(29, 107, 44, 0.4); }
 .officer-btn--confirm:hover { background: #1d6b2c; border-color: #1d6b2c; color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK MODE — officer area
+   The page ground + hero are locked light with !important in an inline
+   wp_head(999) block (inc/officer-admin.php); their dark counterparts live
+   there too. These rules recolour the officer *components*: white
+   cards/panels/buttons → dark panels, and the hard-coded rgba(4,22,42,…) muted
+   text → legible light. Scoped with html[data-theme] + body class so they win
+   over the component defaults above without needing !important. Surfaces that
+   use var(--cream-soft) (notices, message text, dashboard block) and headings
+   that use var(--navy)/var(--navy-ink) re-colour themselves via the token remap
+   and are intentionally left alone; the self-contained status chips stay too.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme="dark"] body.oyc-officer-page .officer-tile,
+html[data-theme="dark"] body.oyc-officer-page .officer-panel,
+html[data-theme="dark"] body.oyc-officer-page .officer-message,
+html[data-theme="dark"] body.oyc-officer-page .officer-btn,
+html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__links a {
+  background: #102b47;
+  border-color: rgba(245, 239, 226, 0.14);
+  color: #e9e1d2;
+}
+
+html[data-theme="dark"] body.oyc-officer-page .officer-tile:hover,
+html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__links a:hover {
+  border-color: var(--brass);
+  background: #163655;
+}
+
+/* Active tab / current page number — var(--navy) remaps light, so recolour
+   these solid pills to the brass accent on dark ink instead. */
+html[data-theme="dark"] body.oyc-officer-page .officer-btn.is-current,
+html[data-theme="dark"] body.oyc-officer-page .officer-pagination .page-numbers.current {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #081a2c;
+}
+
+/* Muted text hard-coded as rgba(4,22,42,…) → legible light on the dark ground */
+html[data-theme="dark"] body.oyc-officer-page .officer-intro,
+html[data-theme="dark"] body.oyc-officer-page .officer-tile__meta,
+html[data-theme="dark"] body.oyc-officer-page .officer-panel__sub,
+html[data-theme="dark"] body.oyc-officer-page .officer-form__hint,
+html[data-theme="dark"] body.oyc-officer-page .officer-form__optional,
+html[data-theme="dark"] body.oyc-officer-page .officer-table th,
+html[data-theme="dark"] body.oyc-officer-page .officer-locked,
+html[data-theme="dark"] body.oyc-officer-page .officer-count,
+html[data-theme="dark"] body.oyc-officer-page .officer-empty,
+html[data-theme="dark"] body.oyc-officer-page .officer-message__date,
+html[data-theme="dark"] body.oyc-officer-page .officer-message__meta dt,
+html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__intro {
+  color: #9fb0c2;
+}
+
+/* Green / red action buttons — brighten the resting text so it reads on dark;
+   the solid-fill hover states keep their white text. */
+html[data-theme="dark"] body.oyc-officer-page .officer-btn--danger  { color: #ef8178; border-color: rgba(239, 129, 120, 0.45); }
+html[data-theme="dark"] body.oyc-officer-page .officer-btn--confirm { color: #5fcf7a; border-color: rgba(95, 207, 122, 0.45); }
+html[data-theme="dark"] body.oyc-officer-page .officer-btn--danger:hover,
+html[data-theme="dark"] body.oyc-officer-page .officer-btn--confirm:hover { color: #fff; }
+
+/* Error notice */
+html[data-theme="dark"] body.oyc-officer-page .officer-notice--error {
+  background: rgba(160, 44, 44, 0.18);
+  color: #f0b4ac;
+}
+
+/* Collapsible "+" summary row now sits on a dark panel */
+html[data-theme="dark"] body.oyc-officer-page .officer-panel--collapsible > summary { color: #e9e1d2; }
