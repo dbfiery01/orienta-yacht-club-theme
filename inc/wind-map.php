@@ -145,8 +145,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .grat{position:absolute;inset:0;z-index:500;pointer-events:none;overflow:hidden}
 #oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
 #oycwm .grat .gl{position:absolute;pointer-events:none}
-#oycwm .grat .gl-h{left:0;right:0;border-top:1px dashed rgba(20,32,54,.22)}
-#oycwm .grat .gl-v{top:0;bottom:0;border-left:1px dashed rgba(20,32,54,.22)}
+#oycwm .grat .gl-h{left:0;right:0;border-top:1px dashed rgba(14,26,46,.45)}
+#oycwm .grat .gl-v{top:0;bottom:0;border-left:1px dashed rgba(14,26,46,.45)}
 /* numbered passage waypoint marker */
 #oycwm .wp-mk{background:none;border:none}
 #oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 4px;border-radius:12px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;box-sizing:border-box;cursor:grab}
@@ -262,8 +262,8 @@ function oyc_wind_map_html( $embed = false ) {
    view is dark (the Leaflet map still renders its light tiles below). */
 [data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
 [data-theme="dark"] #oycwm .card.isfull::backdrop{background:#081a2c}
-[data-theme="dark"] #oycwm .grat .gl-h{border-top-color:rgba(230,238,247,.20)}
-[data-theme="dark"] #oycwm .grat .gl-v{border-left-color:rgba(230,238,247,.20)}
+[data-theme="dark"] #oycwm .grat .gl-h{border-top-color:rgba(235,242,250,.34)}
+[data-theme="dark"] #oycwm .grat .gl-v{border-left-color:rgba(235,242,250,.34)}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
