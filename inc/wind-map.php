@@ -140,9 +140,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 #oycwm .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
 #oycwm .iso-lbl{background:none;border:none;box-shadow:none;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff}
-/* lat/lon graticule labels on the chart edges — same look as the pressure labels */
+/* lat/lon graticule: light dashed grid lines + edge labels (same look as the
+   pressure labels) */
 #oycwm .grat{position:absolute;inset:0;z-index:500;pointer-events:none;overflow:hidden}
 #oycwm .grat span{position:absolute;color:#334;font-size:10px;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .grat .gl{position:absolute;pointer-events:none}
+#oycwm .grat .gl-h{left:0;right:0;border-top:1px dashed rgba(20,32,54,.22)}
+#oycwm .grat .gl-v{top:0;bottom:0;border-left:1px dashed rgba(20,32,54,.22)}
 /* numbered passage waypoint marker */
 #oycwm .wp-mk{background:none;border:none}
 #oycwm .wp-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:22px;height:22px;padding:0 4px;border-radius:12px;background:#1583cf;border:2px solid #0b2a4a;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;box-sizing:border-box;cursor:grab}
@@ -258,6 +262,8 @@ function oyc_wind_map_html( $embed = false ) {
    view is dark (the Leaflet map still renders its light tiles below). */
 [data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
 [data-theme="dark"] #oycwm .card.isfull::backdrop{background:#081a2c}
+[data-theme="dark"] #oycwm .grat .gl-h{border-top-color:rgba(230,238,247,.20)}
+[data-theme="dark"] #oycwm .grat .gl-v{border-left-color:rgba(230,238,247,.20)}
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
@@ -1018,6 +1024,7 @@ function drawIso(g,ti,step){isoLayer.clearLayers();
 	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
 	var mn=1e9,mx=-1e9;for(r=0;r<NY;r++)for(c=0;c<NX;c++){if(P[r][c]<mn)mn=P[r][c];if(P[r][c]>mx)mx=P[r][c];}
 	function lerp(a,b,t,axa,axb){return axa+(axb-axa)*((t-a)/(b-a));}
+	var labN={}; /* per-isobar segment counter, so each line is labelled a few times, spaced out */
 	for(var thr=Math.ceil(mn/step)*step;thr<=mx;thr+=step){
 		for(r=0;r<NY-1;r++)for(c=0;c<NX-1;c++){
 			var tl=P[r][c],tr=P[r][c+1],br=P[r+1][c+1],bl=P[r+1][c],pts=[];
@@ -1028,7 +1035,13 @@ function drawIso(g,ti,step){isoLayer.clearLayers();
 			if(pts.length>=2){
 				L.polyline([pts[0],pts[1]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
 				if(pts.length===4)L.polyline([pts[2],pts[3]],{color:'#37506b',weight:1.2,opacity:.8,interactive:false}).addTo(isoLayer);
-				if(r%3===0&&c===Math.floor(NX/2))L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[26,12]}),interactive:false}).addTo(isoLayer);
+				/* Label each pressure line with its value (mb): once near its start
+				   (so every line gets at least one) and again every 9th segment for
+				   long lines, keeping the labels spaced along the isobar. */
+				var n=(labN[thr]=(labN[thr]||0)+1);
+				if(n===2||n%9===0){
+					L.marker(pts[0],{icon:L.divIcon({className:'iso-lbl',html:Math.round(thr)+'',iconSize:[30,14],iconAnchor:[15,7]}),interactive:false}).addTo(isoLayer);
+				}
 			}
 		}
 	}}
@@ -1639,14 +1652,18 @@ function drawGraticule(){
 	var b=map.getBounds(),S=b.getSouth(),N=b.getNorth(),Wd=b.getWest(),Ed=b.getEast(),out='';
 	var ls=gratStep(N-S),ld=gratDec(ls),lat=Math.ceil(S/ls)*ls,g;
 	for(g=0;lat<=N&&g<80;lat+=ls,g++){
-		var y=Math.round(map.latLngToContainerPoint([lat,Wd]).y);if(y<10||y>H-10)continue;
+		var y=Math.round(map.latLngToContainerPoint([lat,Wd]).y);if(y<0||y>H)continue;
+		out+='<i class="gl gl-h" style="top:'+y+'px"></i>';
+		if(y<10||y>H-10)continue;
 		var t=gratLat(lat,ld);
 		out+='<span style="left:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>'
 			+'<span style="right:3px;top:'+y+'px;transform:translateY(-50%)">'+t+'</span>';
 	}
 	var os=gratStep(Ed-Wd),od=gratDec(os),lon=Math.ceil(Wd/os)*os,h;
 	for(h=0;lon<=Ed&&h<80;lon+=os,h++){
-		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<16||x>W-16)continue;
+		var x=Math.round(map.latLngToContainerPoint([S,lon]).x);if(x<0||x>W)continue;
+		out+='<i class="gl gl-v" style="left:'+x+'px"></i>';
+		if(x<16||x>W-16)continue;
 		var lt=gratLon(lon,od);
 		out+='<span style="left:'+x+'px;top:3px;transform:translateX(-50%)">'+lt+'</span>'
 			+'<span style="left:'+x+'px;bottom:3px;transform:translateX(-50%)">'+lt+'</span>';
