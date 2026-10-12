@@ -264,8 +264,9 @@ function oyc_wind_map_html( $embed = false ) {
    view is dark (the Leaflet map still renders its light tiles below). */
 [data-theme="dark"] #oycwm .card.isfull{background:#081a2c}
 [data-theme="dark"] #oycwm .card.isfull::backdrop{background:#081a2c}
-[data-theme="dark"] #oycwm .grat .gl-h{border-top-color:rgba(238,244,252,.38);box-shadow:0 1px 0 rgba(4,12,24,.18),0 -1px 0 rgba(4,12,24,.18)}
-[data-theme="dark"] #oycwm .grat .gl-v{border-left-color:rgba(238,244,252,.38);box-shadow:1px 0 0 rgba(4,12,24,.18),-1px 0 0 rgba(4,12,24,.18)}
+/* NB: no dark-mode override for the graticule lines — the Leaflet tiles stay
+   light in both themes, so the base dark-dash + white-halo rule is correct in
+   dark mode too. A light-dash/dark-halo variant read as a fuzzy double line. */
 /* The layer-toggle bar is transparent, so in full screen (where the card sits
    over a white backdrop at 55% opacity) the light label/hint text washed out and
    was hard to read. Give the bar a solid dark background; strengthen the toggle
