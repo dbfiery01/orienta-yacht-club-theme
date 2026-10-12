@@ -560,18 +560,31 @@
 html[data-theme="dark"] body.oyc-officer-page .officer-tile,
 html[data-theme="dark"] body.oyc-officer-page .officer-panel,
 html[data-theme="dark"] body.oyc-officer-page .officer-message,
-html[data-theme="dark"] body.oyc-officer-page .officer-btn,
-html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__links a {
+html[data-theme="dark"] body.oyc-officer-page .officer-btn {
   background: #102b47;
   border-color: rgba(245, 239, 226, 0.14);
   color: #e9e1d2;
 }
 
-html[data-theme="dark"] body.oyc-officer-page .officer-tile:hover,
-html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__links a:hover {
+html[data-theme="dark"] body.oyc-officer-page .officer-tile:hover {
   border-color: var(--brass);
   background: #163655;
 }
+
+/* The officer link block (.dashboard-officer) renders on the Member Dashboard
+   (body.oyc-page-members-area), NOT on the officer pages, so its dark treatment
+   must stay unscoped — officer.css loads on both (see the enqueue in
+   inc/officer-admin.php). */
+html[data-theme="dark"] .dashboard-officer__links a {
+  background: #102b47;
+  border-color: rgba(245, 239, 226, 0.14);
+  color: #e9e1d2;
+}
+html[data-theme="dark"] .dashboard-officer__links a:hover {
+  background: #163655;
+  border-color: var(--brass);
+}
+html[data-theme="dark"] .dashboard-officer__intro { color: #9fb0c2; }
 
 /* Active tab / current page number — var(--navy) remaps light, so recolour
    these solid pills to the brass accent on dark ink instead. */
@@ -593,8 +606,7 @@ html[data-theme="dark"] body.oyc-officer-page .officer-locked,
 html[data-theme="dark"] body.oyc-officer-page .officer-count,
 html[data-theme="dark"] body.oyc-officer-page .officer-empty,
 html[data-theme="dark"] body.oyc-officer-page .officer-message__date,
-html[data-theme="dark"] body.oyc-officer-page .officer-message__meta dt,
-html[data-theme="dark"] body.oyc-officer-page .dashboard-officer__intro {
+html[data-theme="dark"] body.oyc-officer-page .officer-message__meta dt {
   color: #9fb0c2;
 }
 
