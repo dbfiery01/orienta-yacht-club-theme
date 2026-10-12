@@ -249,6 +249,16 @@ function oyc_forecast_table_html() {
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
 .oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
+/* Landscape phones: in full-screen the week ribbon, colour legend and footnote
+   stack below the table and crush it into a sliver on a short viewport. Drop
+   that chrome and tighten the header so the table itself gets the height. */
+@media (max-height:540px){
+  .oyc-ft .oyc-ft-card.isfull .nav,
+  .oyc-ft .oyc-ft-card.isfull .legend,
+  .oyc-ft .oyc-ft-card.isfull .foot{display:none}
+  .oyc-ft .oyc-ft-card.isfull .hd{padding:10px 18px 4px}
+  .oyc-ft .oyc-ft-card.isfull .models{padding:4px 18px 8px}
+}
 .oyc-ft .models{display:flex;flex-wrap:wrap;gap:6px;padding:6px 18px 10px}
 .oyc-ft .models button{border:1px solid #dfe7f0;background:#fff;font:inherit;font-size:.74rem;font-weight:600;color:#6b7280;padding:5px 11px;border-radius:999px;cursor:pointer;transition:.15s;letter-spacing:0}
 .oyc-ft .models button:hover{border-color:#1583cf}
