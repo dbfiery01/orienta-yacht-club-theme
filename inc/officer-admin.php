@@ -397,6 +397,14 @@ add_action( 'wp_head', function () {
 }
 {$sel} .section { padding-top:14px !important; padding-bottom:18px !important; }
 {$sel} .oyc-carousel { display:none !important; }
+
+/* Dark mode — these four are locked light with !important above, so their
+   dark counterparts must live here (same inline block, printed last) to win.
+   The officer components themselves are recoloured in assets/officer.css. */
+html[data-theme=\"dark\"] {$sel} { background:#081a2c !important; }
+html[data-theme=\"dark\"] {$sel} .page-hero { background:#0b2236 !important; border-bottom-color:rgba(245,239,226,0.12) !important; }
+html[data-theme=\"dark\"] {$sel} .page-hero-title { color:#f4eddd !important; }
+html[data-theme=\"dark\"] {$sel} .page-hero-eyebrow { color:#6cb6ea !important; }
 ";
 
 	echo "<style id=\"oyc-officer-hero\">" . wp_strip_all_tags( $css ) . "</style>\n";
