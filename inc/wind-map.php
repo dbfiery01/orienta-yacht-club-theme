@@ -43,6 +43,21 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
+/* Landscape phones: in full-screen the header, readout, layer chips, the long
+   help hint and the footnote stacked taller than the viewport and squeezed the
+   map to 0. On a short viewport drop the non-essential chrome (title, status,
+   hint, footnote), tighten padding and make each layer row a single
+   horizontally-scrollable strip so the map keeps real height. */
+@media (max-height:540px){
+	#oycwm .card.isfull .hd{padding:6px 14px 2px;gap:6px 10px}
+	#oycwm .card.isfull .hd h2,
+	#oycwm .card.isfull .hd .st{display:none}
+	#oycwm .card.isfull .erbar{margin:0 14px 4px;padding:5px 10px}
+	#oycwm .card.isfull .layers{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 14px}
+	#oycwm .card.isfull .layers .hint{display:none}
+	#oycwm .card.isfull .ctrl{padding:5px 14px}
+	#oycwm .card.isfull .foot{display:none}
+}
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 #oycwm .tabs button{border:0;background:none;color:var(--mute);font-weight:700;font-size:.8rem;letter-spacing:.04em;padding:6px 16px;border-radius:999px;cursor:pointer}
 #oycwm .tabs button.on{background:var(--harbor);color:#fff}
