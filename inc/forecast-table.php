@@ -249,10 +249,12 @@ function oyc_forecast_table_html() {
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
 .oyc-ft .oyc-ft-card.isfull .scroll{flex:1 1 auto;min-height:0}
-/* Landscape phones: in full-screen the week ribbon, colour legend and footnote
-   stack below the table and crush it into a sliver on a short viewport. Drop
-   that chrome and tighten the header so the table itself gets the height. */
-@media (max-height:540px){
+/* Landscape (phones AND tablets): in full-screen the week ribbon, colour legend
+   and footnote stack below the table and crush it into a sliver on a short
+   viewport. Drop that chrome and tighten the header so the table gets the
+   height. Keyed on orientation+max-height so it also covers iPad landscape
+   (~820px) but never portrait, where there is room. */
+@media (orientation:landscape) and (max-height:900px){
   .oyc-ft .oyc-ft-card.isfull .nav,
   .oyc-ft .oyc-ft-card.isfull .legend,
   .oyc-ft .oyc-ft-card.isfull .foot{display:none}

@@ -43,19 +43,23 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
-/* Landscape phones: in full-screen the header, readout, layer chips, the long
-   help hint and the footnote stacked taller than the viewport and squeezed the
-   map to 0. On a short viewport drop the non-essential chrome (title, status,
-   hint, footnote), tighten padding and make each layer row a single
-   horizontally-scrollable strip so the map keeps real height. */
-@media (max-height:540px){
+/* Landscape (phones AND tablets): in full-screen the header, Buoy readout,
+   layer chips, the long help hint, the route-help tip and the footnote stacked
+   taller than the short viewport and squeezed the map to almost nothing. In any
+   short landscape viewport, drop everything non-essential (title, status line,
+   readout, hint, route tip, footnote), tighten padding and make each layer row
+   a single horizontally-scrollable strip so the MAP gets the height. Keyed on
+   orientation+max-height so it covers iPad landscape (~820px) but never phone
+   or tablet portrait, where there is room. */
+@media (orientation:landscape) and (max-height:900px){
 	#oycwm .card.isfull .hd{padding:6px 14px 2px;gap:6px 10px}
 	#oycwm .card.isfull .hd h2,
 	#oycwm .card.isfull .hd .st{display:none}
-	#oycwm .card.isfull .erbar{margin:0 14px 4px;padding:5px 10px}
+	#oycwm .card.isfull .erbar{display:none}
 	#oycwm .card.isfull .layers{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 14px}
 	#oycwm .card.isfull .layers .hint{display:none}
 	#oycwm .card.isfull .ctrl{padding:5px 14px}
+	#oycwm .card.isfull .tiphelp{display:none}
 	#oycwm .card.isfull .foot{display:none}
 }
 #oycwm .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
