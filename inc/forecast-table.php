@@ -246,6 +246,9 @@ function oyc_forecast_table_html() {
 .oyc-ft .fsbtn{flex:none;align-self:center;margin-left:10px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid #0b2a4a;background:#0b2a4a;color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:.02em;line-height:1}
 .oyc-ft .fsbtn:hover{background:#1583cf;border-color:#1583cf}
 .oyc-ft .fsbtn svg{display:block}
+/* Full-screen is a desktop-only affordance — hide the button on touch devices
+   (phones/tablets); the table scrolls fine inline there. */
+@media (hover:none) and (pointer:coarse){ .oyc-ft .fsbtn{display:none !important} }
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 .oyc-ft .oyc-ft-card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;background:#fff}
 .oyc-ft .oyc-ft-card.isfull::backdrop{background:#fff}

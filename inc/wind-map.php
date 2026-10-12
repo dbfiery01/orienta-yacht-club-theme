@@ -38,6 +38,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .fsbtn{flex:none;margin-left:8px;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.76rem;font-weight:700;letter-spacing:.02em;line-height:1}
 #oycwm .fsbtn:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .fsbtn svg{display:block}
+/* Full-screen is a desktop-only affordance — the expanded overlay never worked
+   well on phones/tablets, so hide the button on touch devices and let the map
+   sit inline (it scrolls fine within the page). */
+@media (hover:none) and (pointer:coarse){ #oycwm .fsbtn{display:none !important} }
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 #oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
