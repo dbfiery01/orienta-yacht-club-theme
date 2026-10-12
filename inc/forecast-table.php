@@ -478,9 +478,21 @@ function oyc_forecast_table_html() {
       if(on){ if(!bd){bd=document.createElement('div');bd.setAttribute('aria-hidden','true');bd.style.cssText='position:fixed;inset:0;background:#fff;z-index:2147483646';} if(!bd.parentNode)document.body.appendChild(bd); }
       else if(bd&&bd.parentNode){bd.parentNode.removeChild(bd);}
     }
+    /* Scroll lock — iOS Safari ignores body{overflow:hidden} on the document
+       scroller, so pin the body at -scrollY instead (restored on exit). See the
+       fuller note in the map component. */
+    var savedY=0;
+    function lockScroll(on){
+      var b=document.body;
+      if(on){ savedY=window.pageYOffset||document.documentElement.scrollTop||0;
+        b.style.top=(-savedY)+'px';b.style.position='fixed';b.style.left='0';b.style.right='0';b.style.width='100%';b.style.overflow='hidden';
+      }else{ b.style.position='';b.style.top='';b.style.left='';b.style.right='';b.style.width='';b.style.overflow='';
+        window.scrollTo(0,savedY);
+      }
+    }
     function apply(on){
       fsEl.classList.toggle('isfull',on);
-      document.body.style.overflow=on?'hidden':'';
+      lockScroll(on);
       backdrop(on);
       btn.innerHTML=on?COL:EXP;btn.title=on?'Exit full screen':'Full screen';btn.setAttribute('aria-label',btn.title);
       setTimeout(function(){try{renderRibbon();syncNav();}catch(e){}},90);
