@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.92
+Version: 1.5.93
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -822,6 +822,15 @@ html[data-theme="dark"] .video-card figcaption { color: #d6dfe9 !important; }
 html[data-theme="dark"] .tile--on-photo h3, html[data-theme="dark"] .roster-card__name, html[data-theme="dark"] .approach-launch__title, html[data-theme="dark"] .fee-schedule-card h2,
 html[data-theme="dark"] .harbor-col h3, html[data-theme="dark"] .harbor-card h2, html[data-theme="dark"] .harbor-card h3, html[data-theme="dark"] .harbor-card h4 { color: #f4eddd !important; }
 html[data-theme="dark"] .harbor-card a { color: #6cb6ea !important; }
+
+/* Member Dashboard "Your Account" side card — the light layout sets it #fff
+   (rule 36 above); darken the outer card so the cream heading and the inner
+   account row read on the dark ground instead of floating on white. */
+html[data-theme="dark"] body.oyc-page-members-area .dashboard-side .dashboard-account {
+  background: #0b2236 !important;
+  border-color: rgba(245,239,226,0.14) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.38) !important;
+}
 
 /* tinted home sections + fact figures */
 html[data-theme="dark"] #about { background: #0b2236 !important; }
