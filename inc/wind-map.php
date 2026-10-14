@@ -807,9 +807,11 @@ function pinContent(pin,ti){
 	   itself shows none (its distance from Buoy 42 is the first leg label). */
 	/* 3-line card: (1) label + cumulative total, (2) coords, (3) one weather line.
 	   Per-leg distances live on the route line (drawLegLabels). */
-	var total = i===0 ? '' : '<span class="co-tot"> &middot; Total '+cumFromStart(pin).toFixed(1)+' nm</span>';
+	/* No "Pt N" label — the numbered marker already identifies the point. Start
+	   shows only coords + weather; later points add a "Total X nm" line. */
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
-		+'<div class="co-t">'+lg.label+total+'</div><div class="co-ll">'+ll+'</div>';
+		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
+		+'<div class="co-ll">'+ll+'</div>';
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
 	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span></span>')
@@ -817,8 +819,6 @@ function pinContent(pin,ti){
 	var wx='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">g</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
-		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')
-		+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'&deg;F</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft</span></span>':'')+'</div>';
 	return '<div class="pin-co">'+hd+wx+'</div>';
