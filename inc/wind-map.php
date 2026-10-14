@@ -228,9 +228,9 @@ function oyc_wind_map_html( $embed = false ) {
    tiles in both themes, so no dark variant */
 #oycwm .cur-mk{background:none;border:none}
 #oycwm .cur-ic{display:flex;flex-direction:column;align-items:center;pointer-events:none}
-#oycwm .cur-ic svg{display:block;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff)}
-#oycwm .cur-lbl{font-size:10px;font-weight:800;line-height:1;margin-top:-3px;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
-#oycwm .cur-dot{display:block;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px #fff}
+#oycwm .cur-ic svg{display:block}
+#oycwm .cur-lbl{font-size:11.5px;font-weight:800;line-height:1;margin-top:-4px;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
+#oycwm .cur-dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35)}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
 #oycwm .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
@@ -1286,14 +1286,18 @@ var CURSTA=[
 ];
 var curLayer=L.layerGroup(), CURDATA=null, curLoading=false;
 function curOn(){var el=document.getElementById('tgCur');return !!(el&&el.checked);}
-function curColor(sp){return sp<0.15?'#8aa0ac':sp<0.7?'#3fb6ae':sp<1.5?'#1a938d':'#0c6f79';}
+function curColor(sp){return sp<0.15?'#44525c':sp<0.7?'#0b8f9c':sp<1.5?'#076f86':'#083e74';}
 function curArrowHTML(dir,sp){
 	var c=curColor(sp);
 	if(sp<0.1)return '<div class="cur-ic"><span class="cur-dot" style="background:'+c+'"></span><b class="cur-lbl" style="color:'+c+'">slack</b></div>';
-	var L=Math.min(30,13+sp*8);
-	var svg='<svg width="40" height="40" viewBox="-20 -20 40 40" style="overflow:visible"><g transform="rotate('+Math.round(dir)+')">'
-		+'<line x1="0" y1="'+(L/2).toFixed(1)+'" x2="0" y2="'+(-L/2).toFixed(1)+'" stroke="'+c+'" stroke-width="3" stroke-linecap="round"/>'
-		+'<path d="M0,'+(-L/2-2).toFixed(1)+' L-4.5,'+(-L/2+6).toFixed(1)+' L4.5,'+(-L/2+6).toFixed(1)+' Z" fill="'+c+'"/>'
+	var L=Math.min(44,20+sp*11);
+	/* white casing stroke under the coloured arrow gives it an outline so it pops
+	   against both pale water and busy land tiles */
+	var svg='<svg width="56" height="56" viewBox="-28 -28 56 56" style="overflow:visible"><g transform="rotate('+Math.round(dir)+')">'
+		+'<line x1="0" y1="'+(L/2).toFixed(1)+'" x2="0" y2="'+(-L/2).toFixed(1)+'" stroke="#fff" stroke-width="8" stroke-linecap="round"/>'
+		+'<path d="M0,'+(-L/2-3).toFixed(1)+' L-7,'+(-L/2+8).toFixed(1)+' L7,'+(-L/2+8).toFixed(1)+' Z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>'
+		+'<line x1="0" y1="'+(L/2).toFixed(1)+'" x2="0" y2="'+(-L/2).toFixed(1)+'" stroke="'+c+'" stroke-width="4.5" stroke-linecap="round"/>'
+		+'<path d="M0,'+(-L/2-3).toFixed(1)+' L-7,'+(-L/2+8).toFixed(1)+' L7,'+(-L/2+8).toFixed(1)+' Z" fill="'+c+'"/>'
 		+'</g></svg>';
 	return '<div class="cur-ic">'+svg+'<b class="cur-lbl" style="color:'+c+'">'+sp.toFixed(1)+' kt</b></div>';
 }
@@ -1320,7 +1324,7 @@ function drawCurrents(){
 		var best=null,bd=1/0;for(var i=0;i<arr.length;i++){var d=Math.abs(arr[i].t-tE);if(d<bd){bd=d;best=arr[i];}}
 		if(!best||bd>3*36e5)return; /* nearest prediction is >3 h away → skip */
 		var sp=Math.abs(best.v),dir=(best.v>=0)?best.fl:best.eb;
-		L.marker([st.lat,st.lon],{icon:L.divIcon({className:'cur-mk',html:curArrowHTML(dir,sp),iconSize:[44,56],iconAnchor:[22,22]}),interactive:false,keyboard:false,zIndexOffset:360}).addTo(curLayer);
+		L.marker([st.lat,st.lon],{icon:L.divIcon({className:'cur-mk',html:curArrowHTML(dir,sp),iconSize:[60,74],iconAnchor:[30,30]}),interactive:false,keyboard:false,zIndexOffset:360}).addTo(curLayer);
 	});
 }
 
