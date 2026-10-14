@@ -209,9 +209,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hl.hi b{color:#1f6fb0}
 #oycwm .hl span{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:10px;font-weight:700;color:#26384a;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 3px #fff;margin-top:1px}
 #oycwm .pin-co{position:relative}
-#oycwm .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:1px;padding-right:20px}
+#oycwm .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:1px;padding:0 18px;text-align:center}
+#oycwm .pin-co .co-t .co-tot{font-weight:700;color:var(--navy);font-size:.72rem;white-space:nowrap}
 #oycwm .pin-co .co-ll{font-weight:600;color:var(--faint);font-size:.66rem;text-align:center;margin-bottom:4px}
-#oycwm .pin-co .co-row{display:flex;gap:12px;font-size:.78rem}
+#oycwm .pin-co .co-row{display:flex;gap:8px;font-size:.74rem;justify-content:center;white-space:nowrap}
 #oycwm .pin-co .co-row .v{font-weight:800;color:var(--ink)}
 #oycwm .pin-co .co-row .k{color:var(--mute);font-size:.7rem}
 #oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 2px}
@@ -785,11 +786,11 @@ var routeLayer=L.layerGroup().addTo(map);
 function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
 /* First point is the Start (leg measured from Buoy 42); later points are
    Waypoint 1..n, each leg measured from the previous point. */
-function wpBadge(i){return i===0?'S':''+i;}
+function wpBadge(i){return ''+(i+1);}
 function legInfo(pin){
 	var i=pins.indexOf(pin);
-	if(i<=0)return {label:'Start',dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
-	return {label:'Waypoint '+i,dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:(i===1?'Start':'Waypoint '+(i-1))};
+	if(i<=0)return {label:'Pt 1',dist:nmFromBuoy42(pin.lat,pin.lon),from:'Buoy 42'};
+	return {label:'Pt '+(i+1),dist:distNM(pins[i-1].lat,pins[i-1].lon,pin.lat,pin.lon),from:'Pt '+i};
 }
 /* cumulative route length from the Start up to a given point (sum of its legs) */
 function cumFromStart(pin){var i=pins.indexOf(pin),t=0;for(var j=1;j<=i;j++)t+=distNM(pins[j-1].lat,pins[j-1].lon,pins[j].lat,pins[j].lon);return t;}
@@ -804,21 +805,23 @@ function pinContent(pin,ti){
 	/* Per-leg distances now live as labels on the route line (drawLegLabels); the
 	   card carries only the cumulative distance from the Start waypoint. The Start
 	   itself shows none (its distance from Buoy 42 is the first leg label). */
-	var dist = i===0 ? '' : '<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';
+	/* 3-line card: (1) label + cumulative total, (2) coords, (3) one weather line.
+	   Per-leg distances live on the route line (drawLegLabels). */
+	var total = i===0 ? '' : '<span class="co-tot"> &middot; Total '+cumFromStart(pin).toFixed(1)+' nm</span>';
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
-		+'<div class="co-t">'+lg.label+'</div><div class="co-ll">'+ll+'</div>'+dist;
+		+'<div class="co-t">'+lg.label+total+'</div><div class="co-ll">'+ll+'</div>';
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
-	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
-		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
-		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
-		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')+'</div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
-	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">precip</span></span>')
+	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span></span>')
 		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
-	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
+	var wx='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
+		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">g</span></span>':'')
+		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
+		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')
+		+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'&deg;F</span></span>':'')
 		+pcp
-		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co">'+hd+row+row2+'</div>';
+		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft</span></span>':'')+'</div>';
+	return '<div class="pin-co">'+hd+wx+'</div>';
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
    (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
@@ -878,7 +881,7 @@ function addPin(lat,lon){
 	/* closeButton:false — removal is the explicit "✕ Remove" control in the callout,
 	   NOT closing the popup. Removal is deliberately decoupled from the marker click
 	   and popup-close so grabbing a marker to DRAG it can never delete it. */
-	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,className:'pin-pop'}).setLatLng([lat,lon]);
+	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,maxWidth:360,className:'pin-pop'}).setLatLng([lat,lon]);
 	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null,id:++pinSeq};
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
