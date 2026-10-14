@@ -217,6 +217,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-co .co-total{font-size:.72rem;font-weight:800;color:var(--navy);margin:0 0 5px}
 #oycwm .pin-co .co-x{margin-top:7px;display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;color:#c0392b;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;user-select:none;-webkit-user-select:none}
 #oycwm .pin-co .co-x:hover{background:#fdecea;border-color:#c0392b}
+/* leg-distance labels at each route-segment midpoint (light map tiles in both
+   themes, so no dark variant — matches the isobar / lat-long labels) */
+#oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
+#oycwm .leg-lbl b{font-size:10.5px;font-weight:800;color:#0b2a4a;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,42,74,.14);text-shadow:0 0 2px #fff}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
 #oycwm .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
@@ -795,11 +799,10 @@ function pinContent(pin,ti){
 	/* Start → distance from Buoy 42. Every waypoint shows its cumulative distance
 	   "from start"; waypoints past the first also show their own leg from the
 	   previous point (for WP1 the leg IS the distance from start, so show it once). */
-	var dist;
-	if(i===0){dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from Buoy 42</div>';}
-	else if(i===1){dist='<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
-	else{dist='<div class="co-dist">'+lg.dist.toFixed(1)+' nm from '+lg.from+'</div>'
-		+'<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';}
+	/* Per-leg distances now live as labels on the route line (drawLegLabels); the
+	   card carries only the cumulative distance from the Start waypoint. The Start
+	   itself shows none (its distance from Buoy 42 is the first leg label). */
+	var dist = i===0 ? '' : '<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';
 	var hd='<div class="co-t">'+lg.label+'<span class="co-ll">'+ll+'</span></div>'+dist;
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
@@ -816,12 +819,28 @@ function pinContent(pin,ti){
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
    (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
-var routeLine=null;
+var routeLine=null, legLayer=L.layerGroup().addTo(map);
+/* A small "X.X nm" label at each segment midpoint (Buoy 42→Start, Start→WP1, …).
+   Skipped when the segment is shorter than ~40 px on screen so short legs / a
+   zoomed-out view never pile labels on top of each other. Re-run on draw, drag
+   and map move/zoom (the pixel length changes with zoom). */
+function drawLegLabels(){
+	legLayer.clearLayers();
+	if(!pins.length)return;
+	var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
+	for(var i=0;i<pts.length-1;i++){
+		var a=pts[i],b=pts[i+1],pa=map.latLngToContainerPoint(a),pb=map.latLngToContainerPoint(b);
+		if(Math.hypot(pb.x-pa.x,pb.y-pa.y)<40)continue;
+		var d=distNM(a[0],a[1],b[0],b[1]),mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+		L.marker(mid,{icon:L.divIcon({className:'leg-lbl',html:'<b>'+d.toFixed(1)+' nm</b>',iconSize:[60,16],iconAnchor:[30,8]}),interactive:false,keyboard:false,zIndexOffset:400}).addTo(legLayer);
+	}
+}
 function drawRouteLine(){
-	if(!pins.length){routeLayer.clearLayers();routeLine=null;return;}
+	if(!pins.length){routeLayer.clearLayers();routeLine=null;legLayer.clearLayers();return;}
 	var pts=[[ER.lat,ER.lon]];for(var k=0;k<pins.length;k++)pts.push([pins[k].lat,pins[k].lon]);
 	if(routeLine&&routeLayer.hasLayer(routeLine)){routeLine.setLatLngs(pts);}
 	else{routeLayer.clearLayers();routeLine=L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);}
+	drawLegLabels();
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
@@ -1673,7 +1692,7 @@ function drawGraticule(){
 	}
 	host.innerHTML=out;
 }
-map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();drawGraticule();});
+map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();drawGraticule();drawLegLabels();});
 /* radar: switch between the local HRRR field and the national NEXRAD mosaic as
    the view zooms across the local-grid boundary (resets the slider to 'now') */
 map.on('zoomend',function(){
