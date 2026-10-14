@@ -436,7 +436,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to plot a route &mdash; the first point is the Start, then drop waypoints. Each waypoint shows its distance from the Start. Drag a point to move it; use &#10005; Remove in its callout to delete it.</div>
+			<div class="tiphelp" id="tipHelp">Click the map to plot a route. Drag a point to move it; tap it to hide its card and see the line; use &#10005; in a card to remove the point.</div>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
@@ -886,9 +886,10 @@ function addPin(lat,lon){
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);m.openPopup();
-	/* keep the callout visible — if a marker click toggles it closed, re-open it
-	   (unless the waypoint is being removed or is mid-drag) */
-	m.on('popupclose',function(){if(!pin._gone&&!pin._dragging)setTimeout(function(){if(!pin._gone)m.openPopup();},0);});
+	/* The card is open by default; a TAP on the numbered marker toggles it shut
+	   (Leaflet's bindPopup click-toggle) so you can hide it and see the route line
+	   underneath, then tap again to show it. Dragging the marker never closes it —
+	   a drag isn't a click — so you can still freely re-place the point. */
 	/* drag to re-place: rubber-band the route line live, then recompute legs +
 	   pull a fresh point forecast for the new spot on drop. Numbers don't change on
 	   a move, so re-render callouts only (no setIcon, which would churn the icon). */
