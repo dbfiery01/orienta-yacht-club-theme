@@ -224,6 +224,13 @@ function oyc_wind_map_html( $embed = false ) {
    themes, so no dark variant — matches the isobar / lat-long labels) */
 #oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
 #oycwm .leg-lbl b{font-size:10.5px;font-weight:800;color:#0b2a4a;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,42,74,.14);text-shadow:0 0 2px #fff}
+/* western-Sound tidal-current arrows (NOAA current predictions) — light map
+   tiles in both themes, so no dark variant */
+#oycwm .cur-mk{background:none;border:none}
+#oycwm .cur-ic{display:flex;flex-direction:column;align-items:center;pointer-events:none}
+#oycwm .cur-ic svg{display:block;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff)}
+#oycwm .cur-lbl{font-size:10px;font-weight:800;line-height:1;margin-top:-3px;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
+#oycwm .cur-dot{display:block;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px #fff}
 #oycwm .leaflet-popup-content{margin:9px 12px}
 #oycwm .dl{padding:16px 18px}
 #oycwm .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
@@ -347,8 +354,9 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgTemp"> Temp</label>
 			<label><input type="checkbox" id="tgPrecip"> Precip</label>
 			<label><input type="checkbox" id="tgWave"> Waves</label>
+			<label><input type="checkbox" id="tgCur"> Current</label>
 			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
-			<span class="hint">Zoom out for the Atlantic pattern &middot; temp shades the whole basin, precip the Sound &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<span class="hint">Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
@@ -1256,11 +1264,71 @@ function buildVL(g,ti){
 	setParticlesVisible(mode==='wind'&&document.getElementById('tgParticles').checked);
 }
 
+/* ---------- western LI Sound tidal current (NOAA current predictions) ----------
+   Open-Meteo's global ocean model is null inside the Sound, so we use NOAA's
+   harmonic current-prediction stations: each one gives a signed Velocity_Major
+   (knots; +flood / −ebb) plus mean flood/ebb set directions. We draw a teal
+   arrow per station pointing the way the current SETS at the slider's time, with
+   a kt label — so it reverses as you scrub the tide. Points only (NOAA has no
+   gridded current for the Sound). Fetched browser-direct (CORS ok, not IP
+   throttled like the prod host) and cached. */
+var CURSTA=[
+	{id:'LIS1036',lat:40.873,lon:-73.733}, /* Execution Rocks (off OYC) */
+	{id:'ACT3201',lat:40.939,lon:-73.675}, /* Peningo Neck — off Mamaroneck */
+	{id:'ACT3236',lat:40.917,lon:-73.712}, /* Delancey Point */
+	{id:'LIS1035',lat:40.925,lon:-73.656}, /* Matinecock Point NW */
+	{id:'ACT3176',lat:40.960,lon:-73.561}, /* Greenwich Point */
+	{id:'ACT3181',lat:40.925,lon:-73.567}, /* Oak Neck Point */
+	{id:'LIS1037',lat:40.843,lon:-73.762}, /* Hart Island SE */
+	{id:'LIS1038',lat:40.801,lon:-73.792}, /* Throgs Neck Bridge */
+	{id:'ACT3346',lat:40.802,lon:-73.827}, /* Bronx-Whitestone Bridge */
+	{id:'ACT3161',lat:40.883,lon:-73.533}  /* nr Cold Spring Harbor (W of Soper Pt) */
+];
+var curLayer=L.layerGroup(), CURDATA=null, curLoading=false;
+function curOn(){var el=document.getElementById('tgCur');return !!(el&&el.checked);}
+function curColor(sp){return sp<0.15?'#8aa0ac':sp<0.7?'#3fb6ae':sp<1.5?'#1a938d':'#0c6f79';}
+function curArrowHTML(dir,sp){
+	var c=curColor(sp);
+	if(sp<0.1)return '<div class="cur-ic"><span class="cur-dot" style="background:'+c+'"></span><b class="cur-lbl" style="color:'+c+'">slack</b></div>';
+	var L=Math.min(30,13+sp*8);
+	var svg='<svg width="40" height="40" viewBox="-20 -20 40 40" style="overflow:visible"><g transform="rotate('+Math.round(dir)+')">'
+		+'<line x1="0" y1="'+(L/2).toFixed(1)+'" x2="0" y2="'+(-L/2).toFixed(1)+'" stroke="'+c+'" stroke-width="3" stroke-linecap="round"/>'
+		+'<path d="M0,'+(-L/2-2).toFixed(1)+' L-4.5,'+(-L/2+6).toFixed(1)+' L4.5,'+(-L/2+6).toFixed(1)+' Z" fill="'+c+'"/>'
+		+'</g></svg>';
+	return '<div class="cur-ic">'+svg+'<b class="cur-lbl" style="color:'+c+'">'+sp.toFixed(1)+' kt</b></div>';
+}
+function loadCurrents(cb){
+	if(CURDATA){cb&&cb();return;}
+	if(curLoading)return;curLoading=true;
+	function ymd(d){return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
+	var t0=new Date(),t1=new Date(t0.getTime()+7*864e5);
+	var base='https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=currents_predictions&application=OYC_wind_map&time_zone=gmt&units=english&format=json&interval=60&bin=1&begin_date='+ymd(t0)+'&end_date='+ymd(t1);
+	var data={},pending=CURSTA.length;
+	CURSTA.forEach(function(st){
+		fetch(base+'&station='+st.id).then(function(r){return r.json();}).then(function(j){
+			var arr=(j.current_predictions&&j.current_predictions.cp)||[];
+			data[st.id]=arr.map(function(p){return {t:new Date(p.Time.replace(' ','T')+'Z').getTime(),v:+p.Velocity_Major,fl:+p.meanFloodDir,eb:+p.meanEbbDir};});
+		}).catch(function(){data[st.id]=[];}).then(function(){if(--pending===0){CURDATA=data;curLoading=false;cb&&cb();}});
+	});
+}
+function drawCurrents(){
+	curLayer.clearLayers();
+	if(!curOn()||!CURDATA)return;
+	var tE=curEpoch();
+	CURSTA.forEach(function(st){
+		var arr=CURDATA[st.id];if(!arr||!arr.length)return;
+		var best=null,bd=1/0;for(var i=0;i<arr.length;i++){var d=Math.abs(arr[i].t-tE);if(d<bd){bd=d;best=arr[i];}}
+		if(!best||bd>3*36e5)return; /* nearest prediction is >3 h away → skip */
+		var sp=Math.abs(best.v),dir=(best.v>=0)?best.fl:best.eb;
+		L.marker([st.lat,st.lon],{icon:L.divIcon({className:'cur-mk',html:curArrowHTML(dir,sp),iconSize:[44,56],iconAnchor:[22,22]}),interactive:false,keyboard:false,zIndexOffset:360}).addTo(curLayer);
+	});
+}
+
 /* ---------- wind-mode render ---------- */
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -1662,6 +1730,10 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 		   the heavy per-point current off marine-api, which the prod host throttles) */
 		loadGSWall(function(){drawGulf(curTi);updateLegend();});
 	}else{map.removeLayer(gsBandLayer);gsBandLayer.clearLayers();map.removeLayer(gsArrows);gsArrows.clearLayers();gsBandBuilt=false;updateLegend();}
+});
+document.getElementById('tgCur').addEventListener('change',function(){
+	if(this.checked){curLayer.addTo(map);loadCurrents(drawCurrents);}
+	else{map.removeLayer(curLayer);curLayer.clearLayers();}
 });
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);updateBarbHint();});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
