@@ -208,15 +208,17 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hl.lo b{color:#c0392b}
 #oycwm .hl.hi b{color:#1f6fb0}
 #oycwm .hl span{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:10px;font-weight:700;color:#26384a;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 3px #fff;margin-top:1px}
-#oycwm .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:3px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-#oycwm .pin-co .co-t .co-ll{font-weight:600;color:var(--faint);font-size:.66rem}
+#oycwm .pin-co{position:relative}
+#oycwm .pin-co .co-t{font-weight:800;color:var(--navy);font-size:.8rem;margin-bottom:1px;padding-right:20px}
+#oycwm .pin-co .co-ll{font-weight:600;color:var(--faint);font-size:.66rem;text-align:center;margin-bottom:4px}
 #oycwm .pin-co .co-row{display:flex;gap:12px;font-size:.78rem}
 #oycwm .pin-co .co-row .v{font-weight:800;color:var(--ink)}
 #oycwm .pin-co .co-row .k{color:var(--mute);font-size:.7rem}
 #oycwm .pin-co .co-dist{font-size:.74rem;font-weight:800;color:var(--harbor);margin:-1px 0 2px}
-#oycwm .pin-co .co-total{font-size:.72rem;font-weight:800;color:var(--navy);margin:0 0 5px}
-#oycwm .pin-co .co-x{margin-top:7px;display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;color:#c0392b;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;user-select:none;-webkit-user-select:none}
-#oycwm .pin-co .co-x:hover{background:#fdecea;border-color:#c0392b}
+#oycwm .pin-co .co-total{font-size:.72rem;font-weight:800;color:var(--navy);text-align:center;margin:0 0 5px}
+/* removal is now a small ✕ in the callout's top-right corner (no labelled row) */
+#oycwm .pin-co .co-x{position:absolute;top:2px;right:2px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0;border:none;background:none;color:var(--mute);font-size:13px;font-weight:700;line-height:1;cursor:pointer;border-radius:5px;user-select:none;-webkit-user-select:none}
+#oycwm .pin-co .co-x:hover{background:#fdecea;color:#c0392b}
 /* leg-distance labels at each route-segment midpoint (light map tiles in both
    themes, so no dark variant — matches the isobar / lat-long labels) */
 #oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
@@ -803,8 +805,9 @@ function pinContent(pin,ti){
 	   card carries only the cumulative distance from the Start waypoint. The Start
 	   itself shows none (its distance from Buoy 42 is the first leg label). */
 	var dist = i===0 ? '' : '<div class="co-total">'+cumFromStart(pin).toFixed(1)+' nm from start</div>';
-	var hd='<div class="co-t">'+lg.label+'<span class="co-ll">'+ll+'</span></div>'+dist;
-	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div><div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
+	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
+		+'<div class="co-t">'+lg.label+'</div><div class="co-ll">'+ll+'</div>'+dist;
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
 	var row='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">gust</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
@@ -815,7 +818,7 @@ function pinContent(pin,ti){
 	var row2='<div class="co-row">'+(s.tempF!=null?'<span><span class="v">'+Math.round(s.tempF)+'°F</span> <span class="k">air</span></span>':'')
 		+pcp
 		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':'')+'</span></span>':'')+'</div>';
-	return '<div class="pin-co">'+hd+row+row2+'<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0">✕ Remove point</div></div>';
+	return '<div class="pin-co">'+hd+row+row2+'</div>';
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
    (setLatLngs) so a live drag doesn't thrash the SVG layer each frame. */
