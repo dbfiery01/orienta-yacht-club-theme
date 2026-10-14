@@ -166,3 +166,63 @@ body.login {
   color: var(--navy-ink) !important;
   box-shadow: 0 2px 10px rgba(11,42,74,0.08) !important;
 }
+
+/* ── Dark theme ──────────────────────────────────────────────
+   Follows the site's saved oyc_theme choice (set on <html> by the login_head
+   script in inc/login-experience.php), using the same surfaces as the main
+   stylesheet's [data-theme="dark"] block. */
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="dark"] body.login { background: #081a2c; }
+
+html[data-theme="dark"] #login h1 a,
+html[data-theme="dark"] .login h1 a { background-image: url('oyc-logo-dark.png') !important; }
+
+html[data-theme="dark"] #loginform,
+html[data-theme="dark"] #lostpasswordform,
+html[data-theme="dark"] #registerform {
+  background: #102b47 !important;
+  border-color: rgba(245,239,226,0.15) !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45) !important;
+}
+
+html[data-theme="dark"] .login label { color: #e4ddce !important; }
+html[data-theme="dark"] .login .forgetmenot label { color: #aeb9c8 !important; }
+
+html[data-theme="dark"] .login input[type="text"],
+html[data-theme="dark"] .login input[type="password"],
+html[data-theme="dark"] .login input[type="email"] {
+  background: #0c2338 !important;
+  border-color: rgba(245,239,226,0.22) !important;
+  color: #e9e1d2 !important;
+}
+html[data-theme="dark"] .login input[type="text"]:focus,
+html[data-theme="dark"] .login input[type="password"]:focus,
+html[data-theme="dark"] .login input[type="email"]:focus {
+  border-color: #8cc1e6 !important;
+  box-shadow: 0 0 0 3px rgba(140,193,230,0.22) !important;
+}
+html[data-theme="dark"] .login .wp-pwd .button.wp-hide-pw .dashicons { color: #aeb9c8; }
+
+html[data-theme="dark"] #nav a,
+html[data-theme="dark"] .login-route a,
+html[data-theme="dark"] .login-footer-note a { color: #8cc1e6 !important; }
+html[data-theme="dark"] #nav a:hover,
+html[data-theme="dark"] .login-route a:hover,
+html[data-theme="dark"] .login-footer-note a:hover { color: var(--brass-bright) !important; }
+
+html[data-theme="dark"] .login-routes {
+  background: rgba(16,43,71,0.72);
+  border-color: rgba(245,239,226,0.14);
+}
+html[data-theme="dark"] .login-route + .login-route { border-top-color: rgba(245,239,226,0.12); }
+html[data-theme="dark"] .login-route-q,
+html[data-theme="dark"] .login-footer-note { color: #aeb9c8; }
+
+html[data-theme="dark"] .login-gate-note,
+html[data-theme="dark"] #login_error,
+html[data-theme="dark"] .login .message,
+html[data-theme="dark"] .login .success {
+  background: #102b47 !important;
+  color: #e9e1d2 !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
+}

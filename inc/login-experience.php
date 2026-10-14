@@ -22,6 +22,15 @@ add_action( 'login_enqueue_scripts', function () {
 	);
 } );
 
+// wp-login.php never runs header.php, so it missed the site's saved color theme
+// and always rendered light. Apply the same oyc_theme choice before paint so
+// assets/login.css can follow it.
+add_action( 'login_head', function () {
+	?>
+	<script>try{var _ot=localStorage.getItem('oyc_theme');document.documentElement.setAttribute('data-theme',(_ot==='light'||_ot==='dark')?_ot:'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
+	<?php
+}, 1 );
+
 // Replace WordPress logo URL with OYC home page
 add_filter( 'login_headerurl',  fn() => home_url( '/' ) );
 add_filter( 'login_headertext', fn() => get_bloginfo( 'name' ) );
@@ -58,12 +67,38 @@ add_filter( 'login_message', function ( $message ) {
 // Show club name as page title above the form
 add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member Login' );
 
+// The login screen's "Set up your login" link points at /member-login-setup/,
+// but page-member-login-setup.php only renders when a published Page with that
+// slug exists. Without one the request 404s into index.php ("Nothing to see
+// here yet.") and members can't request an account. Serve the template at that
+// address anyway, so the route never depends on the Page record.
+function oyc_is_login_setup_fallback() {
+	global $wp;
+	return is_404() && isset( $wp->request ) && 'member-login-setup' === untrailingslashit( $wp->request );
+}
+
+add_filter( 'template_include', function ( $template ) {
+	if ( ! oyc_is_login_setup_fallback() ) {
+		return $template;
+	}
+	$setup = locate_template( 'page-member-login-setup.php' );
+	if ( ! $setup ) {
+		return $template;
+	}
+	global $wp_query;
+	$wp_query->is_404 = false;
+	status_header( 200 );
+	add_filter( 'pre_get_document_title', fn() => __( 'Set Up Your Member Login', 'orienta-yacht-club' ) . ' — ' . get_bloginfo( 'name' ) );
+	add_filter( 'body_class', fn( $classes ) => array_merge( $classes, array( 'has-hero-header', 'oyc-page-member-login-setup', 'oyc-immersive' ) ) );
+	return $setup;
+} );
+
 // Never page-cache the login-setup page. It hosts the WP-Members registration
 // form, which carries a security nonce and is per-request dynamic — a cached
 // copy serves stale nonces (breaking submissions) and, as seen, can even cache
 // a blank/form-less version. DONOTCACHEPAGE is honoured by WP-Optimize et al.
 add_action( 'template_redirect', function () {
-	if ( is_page( 'member-login-setup' ) ) {
+	if ( is_page( 'member-login-setup' ) || oyc_is_login_setup_fallback() ) {
 		nocache_headers();
 		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
 			define( 'DONOTCACHEPAGE', true );
