@@ -125,9 +125,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm #satLayers .sat-t.on{background:var(--harbor);color:#fff;border-color:var(--harbor)}
 #oycwm .chart-sel{border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:.82rem;padding:6px 12px;border-radius:10px;cursor:pointer;min-width:220px}
 #oycwm .chart-sel:hover{border-color:var(--harbor)}
-#oycwm .hovertip{position:absolute;z-index:600;pointer-events:none;background:rgba(11,42,74,.92);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
-#oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block}
-#oycwm .tiphelp{position:absolute;z-index:590;left:12px;bottom:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
+/* lower-left overlay stack: the hover readout sits ABOVE the route tip so it
+   never follows (or blocks) the cursor */
+#oycwm .map-ll{position:absolute;z-index:596;left:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:min(320px,72%)}
+#oycwm .hovertip{background:rgba(11,42,74,.94);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;line-height:1.35;display:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:1px}
+#oycwm .tiphelp{background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
 /* route export bar — appears top-right once waypoints are dropped */
 #oycwm .routebar{position:absolute;z-index:596;right:10px;top:10px;display:none;flex-direction:column;gap:6px;align-items:flex-end;max-width:70%}
 #oycwm .routebar.on{display:flex}
@@ -443,8 +446,10 @@ function oyc_wind_map_html( $embed = false ) {
 			<div id="map"></div>
 			<div class="grat" id="gratic" aria-hidden="true"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
-			<div class="hovertip" id="hoverTip"></div>
-			<div class="tiphelp" id="tipHelp">Click the map to plot a route. Drag a point to move it; tap it to hide its card and see the line; use &#10005; in a card to remove the point.</div>
+			<div class="map-ll">
+				<div class="hovertip" id="hoverTip"></div>
+				<div class="tiphelp" id="tipHelp">Click the map to plot a route. Drag a point to move it; tap it to hide its card and see the line; use &#10005; in a card to remove the point.</div>
+			</div>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
@@ -1349,15 +1354,12 @@ map.on('zoomend',maybeSwitchGrid);
 /* ---------- hover pointer ---------- */
 var hoverTip=document.getElementById('hoverTip');
 map.on('mousemove',function(e){
-	/* While passage waypoints are on the map, suppress the cursor readout — it
-	   overlaps the waypoint callouts and gets in the way (desktop + mobile tap). */
-	if(pins.length){hoverTip.style.display='none';return;}
 	if(!activeGrid.loaded){hoverTip.style.display='none';return;}
 	var lon=((e.latlng.lng+540)%360)-180;
 	var s=readPoint(e.latlng.lat,lon,curTi);
 	if(!s){hoverTip.style.display='none';return;}
+	/* fixed box in the lower-left (see .map-ll) — no longer tracks the cursor */
 	hoverTip.style.display='block';
-	hoverTip.style.left=e.containerPoint.x+'px';hoverTip.style.top=e.containerPoint.y+'px';
 	var gsh=gsAt(e.latlng.lat,lon);
 	hoverTip.innerHTML='<span class="hd2">'+e.latlng.lat.toFixed(4)+', '+lon.toFixed(4)+' &middot; '+nmFromBuoy42(e.latlng.lat,lon).toFixed(1)+' nm from Buoy 42</span>'
 		+Math.round(s.kt)+' kt '+card(s.dir)+(s.mb!=null?' · '+Math.round(s.mb)+' mb':'')+(s.tempF!=null?' · '+Math.round(s.tempF)+'°F':'')+(s.waveFt!=null?' · '+s.waveFt.toFixed(1)+' ft seas'+(s.wavePer!=null?' ('+Math.round(s.wavePer)+' s)':''):'')
