@@ -127,10 +127,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .chart-sel:hover{border-color:var(--harbor)}
 /* lower-left overlay stack: the hover readout sits ABOVE the route tip so it
    never follows (or blocks) the cursor */
-#oycwm .map-ll{position:absolute;z-index:596;left:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:min(320px,72%)}
-#oycwm .hovertip{background:rgba(11,42,74,.94);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;line-height:1.35;display:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#oycwm .map-ll{position:absolute;z-index:596;left:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;align-items:stretch;pointer-events:none;width:min(300px,72%)}
+#oycwm .hovertip{box-sizing:border-box;background:rgba(11,42,74,.94);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;line-height:1.35;display:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 #oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:1px}
-#oycwm .tiphelp{background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;max-width:230px;line-height:1.35}
+#oycwm .tiphelp{box-sizing:border-box;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;line-height:1.35}
 /* route export bar — appears top-right once waypoints are dropped */
 #oycwm .routebar{position:absolute;z-index:596;right:10px;top:10px;display:none;flex-direction:column;gap:6px;align-items:flex-end;max-width:70%}
 #oycwm .routebar.on{display:flex}
