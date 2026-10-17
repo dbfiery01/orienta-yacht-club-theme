@@ -71,15 +71,20 @@ function oyc_header_wx_build( $force = false ) {
 }
 
 // Prepend the weather link as the first item of the primary nav.
+/* Glyph markup — reused by the nav menu item (desktop) and a header-bar copy
+   printed next to the logo for mobile (see header.php). Class-based so the JS
+   updates every instance; the link opens the weather page. */
+function oyc_header_wx_glyph( $class = '' ) {
+	return '<a class="oyc-wx-link' . ( $class ? ' ' . esc_attr( $class ) : '' ) . '" href="' . esc_url( home_url( '/weather/' ) ) . '" hidden'
+		. ' aria-label="' . esc_attr__( 'Harbor weather', 'orienta-yacht-club' ) . '">'
+		. '<span class="oyc-wx-ico" aria-hidden="true"></span>'
+		. '<span class="oyc-wx-temp"></span></a>';
+}
 add_filter( 'wp_nav_menu_items', function ( $items, $args ) {
 	if ( ! isset( $args->theme_location ) || 'primary' !== $args->theme_location ) {
 		return $items;
 	}
-	$link = '<a class="oyc-wx-link" id="oycWxLink" href="' . esc_url( home_url( '/weather/' ) ) . '" hidden'
-		. ' aria-label="' . esc_attr__( 'Harbor weather', 'orienta-yacht-club' ) . '">'
-		. '<span class="oyc-wx-ico" id="oycWxIco" aria-hidden="true"></span>'
-		. '<span class="oyc-wx-temp" id="oycWxTemp"></span></a>';
-	return '<li class="oyc-wx-item menu-item">' . $link . '</li>' . $items;
+	return '<li class="oyc-wx-item menu-item">' . oyc_header_wx_glyph() . '</li>' . $items;
 }, 10, 2 );
 
 // Styles (in <head> so the icon is styled the moment JS reveals it).
@@ -94,6 +99,15 @@ add_action( 'wp_head', function () {
 	.oyc-wx-link .oyc-wx-ico svg{display:block}
 	.oyc-wx-link .oyc-wx-temp{font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.01em}
 	.oyc-wx-item .oyc-wx-link::after{display:none !important}
+	/* Mobile copy next to the logo: hidden on desktop (the nav item carries the
+	   glyph there); on mobile the nav collapses into the hamburger, so show this
+	   one in the header bar instead, to the right of the logo. */
+	.oyc-wx-mobile{display:none}
+	@media (max-width:880px){
+		.oyc-wx-item{display:none !important}
+		.oyc-wx-mobile{margin-left:4px;margin-right:auto}
+		.oyc-wx-mobile:not([hidden]){display:inline-flex}
+	}
 	</style>
 	<?php
 } );
@@ -103,8 +117,7 @@ add_action( 'wp_footer', function () {
 	?>
 	<script>
 	(function(){
-		var link=document.getElementById('oycWxLink'); if(!link) return;
-		var icoEl=document.getElementById('oycWxIco'), tempEl=document.getElementById('oycWxTemp');
+		var links=[].slice.call(document.querySelectorAll('.oyc-wx-link')); if(!links.length) return;
 		function G(inner){ return '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>'; }
 		var sunRays='<line x1="12" y1="1.8" x2="12" y2="3.6"/><line x1="12" y1="20.4" x2="12" y2="22.2"/><line x1="1.8" y1="12" x2="3.6" y2="12"/><line x1="20.4" y1="12" x2="22.2" y2="12"/><line x1="4.6" y1="4.6" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.4" y2="19.4"/><line x1="4.6" y1="19.4" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.4" y2="4.6"/>';
 		var cloud='<path d="M7.5 18h9a3.4 3.4 0 0 0 .2-6.8 4.8 4.8 0 0 0-9.2-1.3A3.5 3.5 0 0 0 7.5 18Z"/>';
@@ -122,12 +135,15 @@ add_action( 'wp_footer', function () {
 		var STAT=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_weather_static_url' ) ? oyc_weather_static_url() : '' ) ); ?>; // cron-warmed static JSON (served by Apache, no WP boot)
 		function render(code,temp,cloud){
 			if(temp==null) return;
-			var label=LABEL[code]||'Weather';
-			icoEl.innerHTML=glyph(code, cloud);
-			tempEl.textContent=temp+'°';
-			link.setAttribute('title', label+' · '+temp+'° — harbor weather');
-			link.setAttribute('aria-label', label+', '+temp+' degrees. Open the weather page.');
-			link.hidden=false;
+			var label=LABEL[code]||'Weather', svg=glyph(code, cloud);
+			links.forEach(function(link){
+				var ico=link.querySelector('.oyc-wx-ico'), t=link.querySelector('.oyc-wx-temp');
+				if(ico) ico.innerHTML=svg;
+				if(t) t.textContent=temp+'°';
+				link.setAttribute('title', label+' · '+temp+'° — harbor weather');
+				link.setAttribute('aria-label', label+', '+temp+' degrees. Open the weather page.');
+				link.hidden=false;
+			});
 		}
 		/* If the cached server proxy can't reach Open-Meteo (host IP throttled/blocked),
 		   fetch current conditions straight from the visitor's browser — CORS-ok, uses

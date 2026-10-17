@@ -29,6 +29,7 @@
 			</span>
 			<?php endif; ?>
 		</a>
+		<?php if ( function_exists( 'oyc_header_wx_glyph' ) ) echo oyc_header_wx_glyph( 'oyc-wx-mobile' ); // live harbor-weather glyph beside the logo (mobile only) ?>
 		<nav class="primary-nav" aria-label="<?php esc_attr_e( 'Primary', 'orienta-yacht-club' ); ?>">
 			<button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">
 				<span class="sr-only"><?php esc_html_e( 'Menu', 'orienta-yacht-club' ); ?></span>
