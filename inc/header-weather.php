@@ -104,7 +104,7 @@ add_action( 'wp_head', function () {
 	   one in the header bar instead, to the right of the logo. */
 	.oyc-wx-mobile{display:none}
 	@media (max-width:880px){
-		.oyc-wx-item{display:none !important}
+		/* nav copy stays (shows inside the hamburger); header-bar copy also shows */
 		.oyc-wx-mobile{margin-left:4px;margin-right:auto}
 		.oyc-wx-mobile:not([hidden]){display:inline-flex}
 	}
