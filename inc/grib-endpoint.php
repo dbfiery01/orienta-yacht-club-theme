@@ -213,7 +213,7 @@ function oyc_send_raw_json( $body ) {
    this key, return null instead of piling a second slow fetch onto Open-Meteo.
    Returns the JSON string on success, '' on a failed fetch, null if coalesced.
    Shared by the live proxy (oyc_om_cached) and the cron warmer. */
-function oyc_om_fetch_store( $key, $url, $ttl ) {
+function oyc_om_fetch_store( $key, $url, $ttl, $stale_ttl = 6 * HOUR_IN_SECONDS ) {
 	$lock = $key . '_lk';
 	if ( false !== get_transient( $lock ) ) { return null; } // a fetch is already in flight
 	set_transient( $lock, 1, 20 );
@@ -224,7 +224,7 @@ function oyc_om_fetch_store( $key, $url, $ttl ) {
 		$c = ( '' !== $b ) ? $b[0] : '';
 		if ( '[' === $c || '{' === $c ) {           // looks like JSON
 			set_transient( $key, $b, $ttl );
-			set_transient( $key . '_st', $b, 6 * HOUR_IN_SECONDS );
+			set_transient( $key . '_st', $b, $stale_ttl );
 			$body = $b;
 		}
 	}
@@ -236,10 +236,10 @@ function oyc_om_fetch_store( $key, $url, $ttl ) {
    the last-known "stale" copy when a sibling request is mid-fetch or the fetch
    fails — so a duplicate/concurrent call never triggers a second slow fetch and
    a transient Open-Meteo hiccup still shows data. "[]" only if nothing is known. */
-function oyc_om_cached( $key, $url, $ttl ) {
+function oyc_om_cached( $key, $url, $ttl, $stale_ttl = 6 * HOUR_IN_SECONDS ) {
 	$body = get_transient( $key );
 	if ( false !== $body ) { oyc_send_raw_json( $body ); }
-	$fresh = oyc_om_fetch_store( $key, $url, $ttl );
+	$fresh = oyc_om_fetch_store( $key, $url, $ttl, $stale_ttl );
 	if ( is_string( $fresh ) && '' !== $fresh ) { oyc_send_raw_json( $fresh ); } // fetched now
 	$stale = get_transient( $key . '_st' );                                      // coalesced or failed
 	if ( false !== $stale ) { oyc_send_raw_json( $stale ); }
@@ -275,18 +275,34 @@ function oyc_wind_radar_proxy() {
 
 /* BASIN wind field (Atlantic 3° grid), one client chunk per request so each
    stays small & separately cached. ?chunk=N — CH=150 MUST match the JS loadBasin
-   chunk size. Cached 15 min. */
+   chunk size.
+   The 3° GFS field only changes when GFS runs (every 6 h), so the warmer
+   (inc/weather-warm.php) refreshes it in the background one chunk per tick and
+   the copies are kept long: 12 h fresh, 48 h last-known. Fetching all nine
+   chunks at once on a cold 15-minute cache tripped Open-Meteo's free-tier rate
+   limits and left bands of the Atlantic map empty. */
+function oyc_basin_chunk_count() {
+	list( $lat ) = oyc_named_grid( 'basin' );
+	return (int) ceil( count( $lat ) / 150 );
+}
+/* [ transient key, Open-Meteo URL, fresh TTL, last-known TTL ] for one chunk, or null past the end. */
+function oyc_wind_basin_spec( $chunk ) {
+	list( $lat, $lon ) = oyc_named_grid( 'basin' );
+	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 150 );
+	if ( null === $cs ) { return null; }
+	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $cs[0] . '&longitude=' . $cs[1]
+		. '&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
+		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+	return array( 'oyc_wind_basin_' . $chunk, $url, 12 * HOUR_IN_SECONDS, 48 * HOUR_IN_SECONDS );
+}
 add_action( 'wp_ajax_oyc_wind_basin',        'oyc_wind_basin_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_basin', 'oyc_wind_basin_proxy' );
 function oyc_wind_basin_proxy() {
 	$chunk = isset( $_GET['chunk'] ) ? max( 0, (int) $_GET['chunk'] ) : 0;
-	list( $lat, $lon ) = oyc_named_grid( 'basin' );
-	$cs = oyc_chunk_csv( $lat, $lon, $chunk, 150 );
-	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
-	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $cs[0] . '&longitude=' . $cs[1]
-		. '&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
-		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-	oyc_om_cached( 'oyc_wind_basin_' . $chunk, $url, 15 * MINUTE_IN_SECONDS );
+	$spec  = oyc_wind_basin_spec( $chunk );
+	if ( null === $spec ) { oyc_send_raw_json( '[]' ); }
+	list( $key, $url, $ttl, $stale ) = $spec;
+	oyc_om_cached( $key, $url, $ttl, $stale );
 }
 
 /* Wave field (Open-Meteo Marine) for the Wave tab, one client chunk per request.

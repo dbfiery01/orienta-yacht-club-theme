@@ -6,7 +6,8 @@
  * transient cache via WP-Cron, so a visitor hits warm cache (<0.1s) instead of
  * the 2-5s live upstream fetch that dominated the board's load profile. Covers
  * the local wind grid, the Buoy-42 marine reading (wind + waves), the live buoy
- * observation, and the sitewide header glyph.
+ * observation, the sitewide header glyph, and (slowly, a chunk at a time) the
+ * Atlantic basin wind field.
  *
  * WP-Cron fires on site traffic, in a background request after the page is sent,
  * so the warming fetch never blocks a visitor — the one whose visit triggers the
@@ -100,4 +101,39 @@ function oyc_warm_weather_run() {
 		$h = oyc_header_wx_build( true );
 		if ( is_array( $h ) && ! empty( $h['ok'] ) ) { oyc_weather_static_write( 'header_wx', wp_json_encode( $h ) ); }
 	}
+	// Atlantic basin wind field (the zoomed-out map view).
+	if ( function_exists( 'oyc_wind_basin_spec' ) ) { oyc_warm_basin_chunk(); }
+}
+
+/* Refresh at most ONE 150-point basin chunk per tick: the stalest one, and only
+   once it is 6 h old (GFS runs every 6 h). Nine chunks take ~45 min to cycle, so
+   the warmer never asks Open-Meteo for the whole 1,271-point grid at once. A chunk
+   whose fetch failed is left alone for 30 min. Each chunk is mirrored to
+   wind_basin_N.json, from the fresh fetch or else the last-known copy. */
+function oyc_warm_basin_chunk() {
+	$n    = oyc_basin_chunk_count();
+	$done = get_option( 'oyc_basin_warmed', array() ); // chunk => last successful fetch
+	$try  = get_option( 'oyc_basin_tried', array() );  // chunk => last attempt
+	$now  = time();
+	$pick = null;
+	$best = PHP_INT_MAX;
+	for ( $i = 0; $i < $n; $i++ ) {
+		$ok = isset( $done[ $i ] ) ? (int) $done[ $i ] : 0;
+		$at = isset( $try[ $i ] ) ? (int) $try[ $i ] : 0;
+		if ( $now - $ok < 6 * HOUR_IN_SECONDS || $now - $at < 30 * MINUTE_IN_SECONDS ) { continue; }
+		if ( $ok < $best ) { $best = $ok; $pick = $i; }
+	}
+	if ( null === $pick ) { return; }
+	$try[ $pick ] = $now;
+	update_option( 'oyc_basin_tried', $try, false );
+
+	list( $key, $url, $ttl, $stale ) = oyc_wind_basin_spec( $pick );
+	$body = oyc_om_fetch_store( $key, $url, $ttl, $stale );
+	if ( is_string( $body ) && '' !== $body ) {
+		$done[ $pick ] = $now;
+		update_option( 'oyc_basin_warmed', $done, false );
+	} else {
+		$body = get_transient( $key . '_st' );
+	}
+	if ( is_string( $body ) && '' !== $body ) { oyc_weather_static_write( 'wind_basin_' . $pick, $body ); }
 }
