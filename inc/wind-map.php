@@ -145,7 +145,7 @@ function oyc_wind_map_html( $embed = false ) {
    summary + Save/Clear buttons move from the map's corner into its header. */
 #oycwm .mapgrid{display:flex;align-items:stretch}
 #oycwm .mapgrid .mapwrap{flex:1 1 auto;min-width:0}
-#oycwm .wptab{display:none;flex:0 0 360px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
+#oycwm .wptab{display:none;flex:0 0 410px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
 #oycwm .mapgrid.has-wp .wptab{display:flex}
 #oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
@@ -494,7 +494,7 @@ function oyc_wind_map_html( $embed = false ) {
 			</div>
 			<div class="wpt-wrap">
 				<table class="wpt">
-					<thead><tr><th class="n">#</th><th>Position</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
+					<thead><tr><th class="n">#</th><th>Position</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th>Press.</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
 					<tbody id="wptBody"></tbody>
 				</table>
 			</div>
@@ -872,11 +872,13 @@ function pinContent(pin,ti){
 	/* precip: probability % from the point forecast, else grid amount in inches */
 	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span></span>')
 		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
+	/* weather line: wind (+gust), direction, wave height, pressure, then precip */
 	var wx='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">g</span></span>':'')
 		+'<span><span class="v">'+card(s.dir)+'</span> <span class="k">'+Math.round(s.dir)+'°</span></span>'
-		+pcp
-		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft</span></span>':'')+'</div>';
+		+(s.waveFt!=null?'<span><span class="v">'+s.waveFt.toFixed(1)+'</span> <span class="k">ft</span></span>':'')
+		+(s.mb!=null?'<span><span class="v">'+Math.round(s.mb)+'</span> <span class="k">mb</span></span>':'')
+		+pcp+'</div>';
 	return '<div class="pin-co">'+hd+wx+'</div>';
 }
 /* dashed route line Buoy 42 → WP1 → … — ONE persistent polyline updated in place
@@ -972,13 +974,14 @@ function wpRow(pin,i,ti){
 	var dist=(i===0)
 		?'<span class="v">'+lg.dist.toFixed(1)+'</span><span class="s">from Buoy 42</span>'
 		:'<span class="v">'+cumFromStart(pin).toFixed(1)+' total</span><span class="s">leg '+lg.dist.toFixed(1)+'</span>';
-	var wind='<span class="s">No data</span>',sea='';
+	var wind='<span class="s">No data</span>',sea='',prs='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'gust '+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
 		var pc=(s.pop!=null)?Math.round(s.pop)+'%':(s.precip!=null?s.precip.toFixed(2)+' in':'—');
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—')+'</span><span class="s">'+pc+'</span>';
+		prs='<span class="v">'+(s.mb!=null?Math.round(s.mb):'—')+'</span><span class="s">mb</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td>'+pos+'</td><td>'+dist+'</td><td>'+wind+'</td><td>'+sea+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td>'+pos+'</td><td>'+dist+'</td><td>'+wind+'</td><td>'+sea+'</td><td>'+prs+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 function renderWpTable(){
