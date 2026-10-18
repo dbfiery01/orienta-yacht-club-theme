@@ -145,7 +145,7 @@ function oyc_wind_map_html( $embed = false ) {
    summary + Save/Clear buttons move from the map's corner into its header. */
 #oycwm .mapgrid{display:flex;align-items:stretch;position:relative}
 #oycwm .mapgrid .mapwrap{flex:1 1 auto;min-width:0}
-#oycwm .wptab{display:none;flex:0 0 320px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
+#oycwm .wptab{display:none;flex:0 0 260px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
 #oycwm .mapgrid.has-wp .wptab{display:flex}
 #oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
@@ -165,22 +165,21 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .x button:hover{background:#fdecea;color:#c0392b}
 #oycwm .wpt-foot{padding:8px 12px;font-size:.68rem;color:var(--mute);border-top:1px solid var(--line)}
 #oycwm .wpt .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-/* Every row is a compact two-line grid — distance · wind · pressure on top,
-   position · seas + precip below — so the full reading fits the narrow 320px
-   desktop column and a phone-width panel without sideways scrolling. Each value
-   carries its own unit, so the column headings stay hidden (screen readers keep
-   them). */
+/* Every waypoint is one compact row — number · distance · wind · seas + precip ·
+   remove — that fits the 260px column (desktop) and panel (phones) without
+   sideways scrolling. Each value carries its own unit, so the column headings
+   stay hidden (screen readers keep them). The last track takes the spare width
+   and pushes the ✕ to the right edge. */
 #oycwm .wpt,#oycwm .wpt tbody{display:block}
 #oycwm .wpt thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-#oycwm .wpt tbody tr{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.25fr) auto 24px;grid-template-areas:"n d w p x" "n l s p x";column-gap:6px;row-gap:3px;padding:7px 8px;border-bottom:1px solid var(--line)}
+#oycwm .wpt tbody tr{display:grid;grid-template-columns:24px auto auto auto 1fr;grid-template-areas:"n d w s x";column-gap:8px;padding:7px 8px;border-bottom:1px solid var(--line)}
 #oycwm .wpt td{padding:0;border:0}
 #oycwm .wpt .n{grid-area:n;width:auto;padding:0}
 #oycwm .wpt .dist{grid-area:d}
 #oycwm .wpt .wind{grid-area:w}
-#oycwm .wpt .prs{grid-area:p;text-align:right}
-#oycwm .wpt .pos{grid-area:l}
 #oycwm .wpt .sea{grid-area:s}
-#oycwm .wpt .x{grid-area:x;width:auto;padding:0}
+#oycwm .wpt .x{grid-area:x;width:auto;padding:0;justify-self:end}
+#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
 /* "Hide table" / "Show table (N)" works at every width: hiding collapses the
    table to its header (route summary + buttons), floating at the map's top-right.
    On desktop that also drops the side column, so the map takes the full width. */
@@ -197,9 +196,8 @@ function oyc_wind_map_html( $embed = false ) {
    left 56px stay clear for the zoom buttons. */
 @media (max-width:900px){
 	#oycwm .mapgrid{display:block}
-	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(340px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(260px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
 	#oycwm .wptab .routebar{padding:8px 10px;gap:6px}
-	#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
 	#oycwm .mapgrid.has-wp .map-ll{display:none}
 	#oycwm .wpt{font-size:.7rem}
 	#oycwm .card.isfull .mapgrid .mapwrap{height:100%}
@@ -227,6 +225,11 @@ function oyc_wind_map_html( $embed = false ) {
    it) and let popupAnchor lift the box clear of the number. */
 #oycwm .pin-pop .leaflet-popup-tip-container,#oycwm .pin-pop .leaflet-popup-tip{display:none}
 #oycwm .pin-pop .leaflet-popup-content-wrapper{box-shadow:0 4px 16px rgba(11,42,74,.26)}
+/* cards are movable: drag one off the route and a leader line ties it back to its
+   point (wireCardDrag); double-click / double-tap snaps it back */
+#oycwm .pin-pop .leaflet-popup-content-wrapper{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#oycwm .pin-pop.co-dragging .leaflet-popup-content-wrapper{cursor:grabbing;box-shadow:0 8px 24px rgba(11,42,74,.38)}
+#oycwm .pin-pop .co-lead{position:absolute;left:0;top:0;height:2px;margin-top:-1px;background:#0b2a4a;opacity:.75;box-shadow:0 0 0 1px rgba(255,255,255,.7);transform-origin:0 50%;pointer-events:none;display:none}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 /* POI markers — reciprocal clubs (burgee pennant) + dock & dine (navy fork circle) */
 #oycwm .poi-mk{background:none;border:none}
@@ -516,7 +519,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map to plot a route; each point is added to the waypoint table. Drag a point to move it, tap it to show its card on the map, and use &#10005; in the table to remove it.</div>
+				<div class="tiphelp" id="tipHelp">Click the map to plot a route; each point is added to the waypoint table. Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; in the table to remove a point.</div>
 			</div>
 		</div>
 		<aside class="wptab" id="wpTab" aria-label="Passage waypoints">
@@ -530,7 +533,7 @@ function oyc_wind_map_html( $embed = false ) {
 			</div>
 			<div class="wpt-wrap">
 				<table class="wpt">
-					<thead><tr><th class="n">#</th><th>Position</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th>Press.</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
+					<thead><tr><th class="n">#</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
 					<tbody id="wptBody"></tbody>
 				</table>
 			</div>
@@ -906,8 +909,8 @@ function pinContent(pin,ti){
 		+'<div class="co-ll">'+ll+'</div>';
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
-	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span></span>')
-		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
+	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">rain</span></span>')
+		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in rain</span></span>':'');
 	/* weather line: wind (+gust), direction, wave height, pressure, then precip */
 	var wx='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">g</span></span>':'')
@@ -981,6 +984,7 @@ function addPin(lat,lon){
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);
+	wireCardDrag(pin);
 	/* The card starts closed: the waypoint table beside the map carries the same
 	   readings. A TAP on the numbered marker toggles its card open on the map
 	   (Leaflet's bindPopup click-toggle). Dragging the marker is not a click, so
@@ -995,6 +999,67 @@ function addPin(lat,lon){
 	refreshRoute();
 	loadPinFC(pin);
 }
+/* ---------- movable cards ----------
+   A card can be dragged anywhere so it doesn't hide the route or another card.
+   Its spot is kept as a pixel offset on the popup, so it rides along when the map
+   pans/zooms or the point itself is dragged; a leader line joins a moved card to
+   its point. Double-click / double-tap the card to snap it back. */
+var CO_BASE=L.point(L.Popup.prototype.options.offset||[0,7]);
+function coApply(pin){
+	var p=pin.popup,o=pin.coOff||[0,0];
+	p.options.offset=[CO_BASE.x+o[0],CO_BASE.y+o[1]];
+	if(p.isOpen()){if(p._updatePosition)p._updatePosition();else p.update();}
+	coLead(pin);
+}
+/* leader line from the card's nearest edge to the point (measured on screen) */
+function coLead(pin){
+	var c=pin.popup.getElement&&pin.popup.getElement(),mk=pin.marker.getElement&&pin.marker.getElement();
+	if(!c||!mk||!pin.popup.isOpen())return;
+	var ln=c.querySelector('.co-lead'),o=pin.coOff||[0,0];
+	if(!o[0]&&!o[1]){if(ln)ln.style.display='none';return;}
+	if(!ln){ln=document.createElement('div');ln.className='co-lead';c.appendChild(ln);}
+	var cr=c.getBoundingClientRect(),mr=mk.getBoundingClientRect();
+	var px=mr.left+mr.width/2-cr.left,py=mr.top+mr.height/2-cr.top,
+		sx=Math.max(0,Math.min(cr.width,px)),sy=Math.max(0,Math.min(cr.height,py)),
+		dx=px-sx,dy=py-sy,len=Math.hypot(dx,dy)-13; /* stop at the marker's edge */
+	if(len<4){ln.style.display='none';return;}
+	ln.style.display='block';ln.style.left=sx+'px';ln.style.top=sy+'px';ln.style.width=len+'px';
+	ln.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+}
+function wireCardDrag(pin){
+	var p=pin.popup;
+	p.on('add',function(){
+		var c=p.getElement();if(!c)return;
+		if(c._coWired){coLead(pin);return;}
+		c._coWired=true;
+		var w=c.querySelector('.leaflet-popup-content-wrapper')||c,st=null,lastTap=0;
+		w.addEventListener('pointerdown',function(e){
+			if(e.button>0||(e.target.closest&&e.target.closest('.co-x')))return;
+			var o=pin.coOff||[0,0];st={x:e.clientX,y:e.clientY,ox:o[0],oy:o[1],id:e.pointerId,moved:false};
+			try{w.setPointerCapture(e.pointerId);}catch(_){}
+			e.preventDefault();e.stopPropagation();
+		});
+		w.addEventListener('pointermove',function(e){
+			if(!st||e.pointerId!==st.id)return;
+			var dx=e.clientX-st.x,dy=e.clientY-st.y;
+			if(!st.moved&&Math.abs(dx)+Math.abs(dy)<4)return;
+			if(!st.moved){st.moved=true;c.classList.add('co-dragging');hoverTip.style.display='none';}
+			pin.coOff=[st.ox+dx,st.oy+dy];coApply(pin);
+		});
+		function end(e){
+			if(!st||e.pointerId!==st.id)return;
+			var tap=!st.moved&&e.type==='pointerup';st=null;c.classList.remove('co-dragging');
+			try{w.releasePointerCapture(e.pointerId);}catch(_){}
+			if(!tap)return;
+			var now=Date.now();
+			if(now-lastTap<350){lastTap=0;pin.coOff=[0,0];coApply(pin);}else lastTap=now; /* double-tap: snap back */
+		}
+		w.addEventListener('pointerup',end);w.addEventListener('pointercancel',end);
+		coLead(pin);
+	});
+	/* content re-renders can change the card's width → re-aim the line once laid out */
+	p.on('contentupdate',function(){requestAnimationFrame(function(){coLead(pin);});});
+}
 function removePin(pin){if(pin._gone)return;pin._gone=true;pin._dragging=false;try{if(pin.marker.dragging&&pin.marker.dragging.disable)pin.marker.dragging.disable();}catch(e){}map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();}
 
@@ -1005,19 +1070,19 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    point; the row's ✕ removes it. */
 var wptShown=false;
 function wpRow(pin,i,ti){
+	/* Kept to distance, wind and seas so the column stays narrow; position and
+	   pressure remain on the point's map card (and in the CSV export). */
 	var s=pinReading(pin.lat,pin.lon,ti,pin.fc),lg=legInfo(pin);
-	var pos='<span class="v">'+pin.lat.toFixed(4)+'</span><span class="s">'+pin.lon.toFixed(4)+'</span>';
 	var dist=(i===0)
 		?'<span class="v">'+lg.dist.toFixed(1)+'</span><span class="s">from Buoy 42</span>'
 		:'<span class="v">'+cumFromStart(pin).toFixed(1)+' total</span><span class="s">leg '+lg.dist.toFixed(1)+'</span>';
-	var wind='<span class="s">No data</span>',sea='',prs='';
+	var wind='<span class="s">No data</span>',sea='';
 	if(s){
-		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'gust '+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
-		var pc=(s.pop!=null)?Math.round(s.pop)+'%':(s.precip!=null?s.precip.toFixed(2)+' in':'—');
+		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
+		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—')+'</span><span class="s">'+pc+'</span>';
-		prs='<span class="v">'+(s.mb!=null?Math.round(s.mb):'—')+'</span><span class="s">mb</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="pos">'+pos+'</td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td><td class="prs">'+prs+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 function renderWpTable(){
@@ -1151,9 +1216,10 @@ function updateRouteBar(){
 	var rb=document.getElementById('routeBar');if(!rb)return;
 	if(!pins.length){rb.classList.remove('on');return;}
 	rb.classList.add('on');
+	/* count every numbered point, matching the rows in the table */
 	var info=(pins.length===1)
-		?('Start set · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
-		:((pins.length-1)+' waypoint'+((pins.length-1)===1?'':'s')+' · '+routeTotalFromWP1().toFixed(1)+' nm from start');
+		?('1 waypoint · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
+		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm from start');
 	document.getElementById('routeInfo').textContent=info;
 }
 (function(){
