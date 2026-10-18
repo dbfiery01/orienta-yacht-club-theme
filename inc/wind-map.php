@@ -511,17 +511,17 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map to plot a route; each point is added to the waypoint table. Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; in the table to remove a point.</div>
+				<div class="tiphelp" id="tipHelp">Click the map to plot a route, then tap Show table for every point&rsquo;s forecast. Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
 			</div>
 		</div>
-		<aside class="wptab" id="wpTab" aria-label="Passage waypoints">
+		<aside class="wptab collapsed" id="wpTab" aria-label="Passage waypoints"><?php /* starts hidden: only the summary bar + buttons show until "Show table" */ ?>
 			<div class="routebar" id="routeBar">
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
-					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="true" aria-controls="wpTab" title="Hide or show the waypoint table">Hide</button>
+					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="false" aria-controls="wpTab" title="Hide or show the waypoint table">Show table</button>
 				</div>
 			</div>
 			<div class="wpt-wrap">
