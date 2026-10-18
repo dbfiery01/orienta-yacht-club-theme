@@ -1650,7 +1650,7 @@ function loadLocal(tries){
 		maybeSwitchGrid(); /* picks up a zoom-out that happened before the local grid (and TIMES) arrived */
 	}
 	/* cron-warmed static file first, then the proxy; browser direct if the host can't reach Open-Meteo */
-	statFetch('wind_local','oyc_wind_local',25,15000)
+	statFetch('wind_local','oyc_wind_local',90,15000) /* warmed hourly now */
 		.then(function(r){return r.ok?r.json():null;})
 		.catch(function(){return null;})
 		.then(function(arr){return valid(arr)?arr:clientLocal();})

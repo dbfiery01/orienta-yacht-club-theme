@@ -11,10 +11,12 @@
  *
  * WP-Cron fires on site traffic, in a background request after the page is sent,
  * so the warming fetch never blocks a visitor — the one whose visit triggers the
- * run doesn't wait, and the next visitor reads warm cache. Transients live 15
- * min; refreshing every 5 min means they effectively never expire under normal
- * traffic, which also collapses the per-visitor upstream calls into one shared
- * fetch (and sidesteps the Open-Meteo 429s the per-request fetches were tripping).
+ * run doesn't wait, and the next visitor reads warm cache. The tick is every 5
+ * min, but each reading has its own interval (oyc_warm_due): marine forecast and
+ * header glyph 15 min, the 230-point local wind grid hourly, Atlantic chunks 12 h.
+ * Live and staging share one server address and so one Open-Meteo allowance;
+ * staging skips the grids and refreshes the rest every 30 min, and nothing is
+ * fetched while Open-Meteo has the server in cooldown (oyc_om_cooling).
  *
  * @package Orienta_Yacht_Club
  */
@@ -78,17 +80,37 @@ function oyc_weather_static_write( $name, $json ) {
    static file. Every build is guarded by its own in-flight lock, so a concurrent
    live request is never double-fetched — if a visitor is mid-fetch the warmer
    skips that key this tick (and keeps last tick's static file). */
+/* Each reading has its own minimum interval, so the 5-minute tick only asks
+   Open-Meteo for what is actually due. Records the attempt time (not success) so
+   a failing source isn't retried every tick. */
+function oyc_warm_due( $name, $minutes ) {
+	$at  = get_option( 'oyc_warm_at', array() );
+	$now = time();
+	if ( isset( $at[ $name ] ) && $now - (int) $at[ $name ] < $minutes * MINUTE_IN_SECONDS ) { return false; }
+	$at[ $name ] = $now;
+	update_option( 'oyc_warm_at', $at, false );
+	return true;
+}
+/* staging.orientayachtclub.com shares live's server address and so its Open-Meteo
+   allowance: there the warmer skips the big grids and refreshes the rest slowly. */
+function oyc_is_staging_site() {
+	$h = wp_parse_url( home_url(), PHP_URL_HOST );
+	return is_string( $h ) && 0 === strpos( $h, 'staging.' );
+}
+
 add_action( 'oyc_warm_weather', 'oyc_warm_weather_run' );
 function oyc_warm_weather_run() {
-	// Local wind field (Open-Meteo) — the default map layer, loaded on every view.
-	if ( function_exists( 'oyc_wind_local_spec' ) && function_exists( 'oyc_om_fetch_store' ) ) {
+	$staging = oyc_is_staging_site();
+	$slow    = $staging ? 30 : 15; // minutes between single-point Open-Meteo refreshes
+	// Local wind field (Open-Meteo, 230 points) — the default map layer. Hourly.
+	if ( ! $staging && function_exists( 'oyc_wind_local_spec' ) && function_exists( 'oyc_om_fetch_store' ) && oyc_warm_due( 'local', 60 ) ) {
 		list( $k, $u, $t ) = oyc_wind_local_spec();
 		$body = oyc_om_fetch_store( $k, $u, $t );
 		if ( ! is_string( $body ) || '' === $body ) { $body = get_transient( $k . '_st' ); } // coalesced/failed → last-known
 		if ( is_string( $body ) && '' !== $body ) { oyc_weather_static_write( 'wind_local', $body ); }
 	}
 	// Buoy-42 marine reading — the Execution Rock readout + the Marine Forecast table.
-	if ( function_exists( 'oyc_marine_fc_build' ) ) {
+	if ( function_exists( 'oyc_marine_fc_build' ) && oyc_warm_due( 'marine', $slow ) ) {
 		$m = oyc_marine_fc_build( true );
 		if ( is_array( $m ) && ! empty( $m['ok'] ) ) { oyc_weather_static_write( 'marine_fc', wp_json_encode( $m ) ); }
 	}
@@ -97,19 +119,21 @@ function oyc_warm_weather_run() {
 		oyc_weather_static_write( 'buoy', wp_json_encode( oyc_buoy_build( true ) ) );
 	}
 	// Sitewide header weather glyph.
-	if ( function_exists( 'oyc_header_wx_build' ) ) {
+	if ( function_exists( 'oyc_header_wx_build' ) && oyc_warm_due( 'header', $slow ) ) {
 		$h = oyc_header_wx_build( true );
 		if ( is_array( $h ) && ! empty( $h['ok'] ) ) { oyc_weather_static_write( 'header_wx', wp_json_encode( $h ) ); }
 	}
-	// Atlantic basin wind field (the zoomed-out map view).
-	if ( function_exists( 'oyc_wind_basin_spec' ) ) { oyc_warm_basin_chunk(); }
+	// Atlantic basin wind field (the zoomed-out map view). Live only.
+	if ( ! $staging && function_exists( 'oyc_wind_basin_spec' ) ) { oyc_warm_basin_chunk(); }
 }
 
 /* Refresh at most ONE 150-point basin chunk per tick: the stalest one, and only
-   once it is 6 h old (GFS runs every 6 h). Nine chunks take ~45 min to cycle, so
-   the warmer never asks Open-Meteo for the whole 1,271-point grid at once. A chunk
-   whose fetch failed is left alone for 30 min. Each chunk is mirrored to
-   wind_basin_N.json, from the fresh fetch or else the last-known copy. */
+   once it is 12 h old (a 3-degree synoptic field; every other GFS run is plenty).
+   Nine chunks take ~45 min to cycle, so the warmer never asks Open-Meteo for the
+   whole 1,271-point grid at once. A chunk whose fetch failed is left alone for
+   2 h, and nothing is fetched while Open-Meteo has the server in cooldown. Each
+   chunk is mirrored to wind_basin_N.json, from the fresh fetch or else the
+   last-known copy. */
 function oyc_warm_basin_chunk() {
 	$n    = oyc_basin_chunk_count();
 	$done = get_option( 'oyc_basin_warmed', array() ); // chunk => last successful fetch
@@ -120,10 +144,10 @@ function oyc_warm_basin_chunk() {
 	for ( $i = 0; $i < $n; $i++ ) {
 		$ok = isset( $done[ $i ] ) ? (int) $done[ $i ] : 0;
 		$at = isset( $try[ $i ] ) ? (int) $try[ $i ] : 0;
-		if ( $now - $ok < 6 * HOUR_IN_SECONDS || $now - $at < 30 * MINUTE_IN_SECONDS ) { continue; }
+		if ( $now - $ok < 12 * HOUR_IN_SECONDS || $now - $at < 2 * HOUR_IN_SECONDS ) { continue; }
 		if ( $ok < $best ) { $best = $ok; $pick = $i; }
 	}
-	if ( null === $pick ) { return; }
+	if ( null === $pick || ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) ) { return; }
 	$try[ $pick ] = $now;
 	update_option( 'oyc_basin_tried', $try, false );
 

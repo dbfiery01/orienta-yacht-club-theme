@@ -37,9 +37,11 @@ function oyc_header_wx_build( $force = false ) {
 	}
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=40.939&longitude=-73.734'
 		. '&current=weather_code,cloud_cover,temperature_2m&temperature_unit=fahrenheit&timezone=America%2FNew_York';
-	$r    = wp_remote_get( $url, array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	$cooling = function_exists( 'oyc_om_cooling' ) && oyc_om_cooling(); // rate-limited: skip straight to last-known
+	$r    = $cooling ? null : wp_remote_get( $url, array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	if ( $r && function_exists( 'oyc_om_note_status' ) ) { oyc_om_note_status( $r ); }
 	$good = null;
-	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
+	if ( $r && ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
 		$j = json_decode( (string) wp_remote_retrieve_body( $r ), true );
 		if ( is_array( $j ) && isset( $j['current']['temperature_2m'] ) ) {
 			$c    = $j['current'];

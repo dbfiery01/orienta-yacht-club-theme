@@ -117,6 +117,10 @@ function oyc_marine_fc_build( $force = false ) {
 		$cached = get_transient( $key );
 		if ( false !== $cached ) { return $cached; }
 	}
+	if ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) { // Open-Meteo rate-limited the server: don't ask
+		$st = get_transient( $key . '_st' );
+		return ( false !== $st ) ? $st : array( 'ok' => false, 'err' => 'cooldown' );
+	}
 	$lock = $key . '_lk';
 	if ( false !== get_transient( $lock ) ) {           // another fetch is in flight
 		$st = get_transient( $key . '_st' );
@@ -136,6 +140,7 @@ function oyc_marine_fc_build( $force = false ) {
 
 	$wx = null; $wxdiag = '';
 	$r  = wp_remote_get( $wx_url, $args );
+	if ( function_exists( 'oyc_om_note_status' ) ) { oyc_om_note_status( $r ); }
 	if ( is_wp_error( $r ) ) {
 		$wxdiag = 'wp:' . $r->get_error_code(); // e.g. http_request_failed (timeout/DNS/TLS)
 	} else {
@@ -158,6 +163,7 @@ function oyc_marine_fc_build( $force = false ) {
 
 	$mar = null; // waves are optional — the table still renders without them
 	$rm  = wp_remote_get( $mar_url, $args );
+	if ( function_exists( 'oyc_om_note_status' ) ) { oyc_om_note_status( $rm ); }
 	if ( ! is_wp_error( $rm ) && 200 === (int) wp_remote_retrieve_response_code( $rm ) ) {
 		$mar = json_decode( (string) wp_remote_retrieve_body( $rm ), true );
 		if ( ! is_array( $mar ) ) { $mar = null; }
@@ -189,6 +195,7 @@ function oyc_point_fc_proxy() {
 	$key  = 'oyc_ptfcp_' . md5( $rlat . '_' . $rlon ); // …p = includes wave_period (bump key on schema change)
 	$cached = get_transient( $key );
 	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
+	if ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) { oyc_send_raw_json( '{"ok":false}' ); } // client goes browser-direct
 
 	$args   = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $rlat . '&longitude=' . $rlon
@@ -199,6 +206,7 @@ function oyc_point_fc_proxy() {
 
 	$wx = null;
 	$r  = wp_remote_get( $wx_url, $args );
+	if ( function_exists( 'oyc_om_note_status' ) ) { oyc_om_note_status( $r ); }
 	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
 		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
 	}
