@@ -143,9 +143,9 @@ function oyc_wind_map_html( $embed = false ) {
 /* Passage table: each waypoint's card as a row in a side table beside the map
    (stacked under it on narrow screens). Hidden until the first waypoint; the route
    summary + Save/Clear buttons move from the map's corner into its header. */
-#oycwm .mapgrid{display:flex;align-items:stretch}
+#oycwm .mapgrid{display:flex;align-items:stretch;position:relative}
 #oycwm .mapgrid .mapwrap{flex:1 1 auto;min-width:0}
-#oycwm .wptab{display:none;flex:0 0 410px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
+#oycwm .wptab{display:none;flex:0 0 320px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
 #oycwm .mapgrid.has-wp .wptab{display:flex}
 #oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
@@ -165,9 +165,44 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .x button:hover{background:#fdecea;color:#c0392b}
 #oycwm .wpt-foot{padding:8px 12px;font-size:.68rem;color:var(--mute);border-top:1px solid var(--line)}
 #oycwm .wpt .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Every row is a compact two-line grid — distance · wind · pressure on top,
+   position · seas + precip below — so the full reading fits the narrow 320px
+   desktop column and a phone-width panel without sideways scrolling. Each value
+   carries its own unit, so the column headings stay hidden (screen readers keep
+   them). */
+#oycwm .wpt,#oycwm .wpt tbody{display:block}
+#oycwm .wpt thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#oycwm .wpt tbody tr{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.25fr) auto 24px;grid-template-areas:"n d w p x" "n l s p x";column-gap:6px;row-gap:3px;padding:7px 8px;border-bottom:1px solid var(--line)}
+#oycwm .wpt td{padding:0;border:0}
+#oycwm .wpt .n{grid-area:n;width:auto;padding:0}
+#oycwm .wpt .dist{grid-area:d}
+#oycwm .wpt .wind{grid-area:w}
+#oycwm .wpt .prs{grid-area:p;text-align:right}
+#oycwm .wpt .pos{grid-area:l}
+#oycwm .wpt .sea{grid-area:s}
+#oycwm .wpt .x{grid-area:x;width:auto;padding:0}
+/* "Hide table" / "Show table (N)" works at every width: hiding collapses the
+   table to its header (route summary + buttons), floating at the map's top-right.
+   On desktop that also drops the side column, so the map takes the full width. */
+#oycwm .route-btns .rb-tog{background:#fff;color:var(--navy)}
+#oycwm .route-btns .rb-tog:hover{background:#eef4fa;color:var(--navy)}
+#oycwm .wptab.collapsed .wpt-wrap,
+#oycwm .wptab.collapsed .wpt-foot{display:none}
+#oycwm .mapgrid.has-wp .wptab.collapsed{position:absolute;top:10px;right:10px;z-index:1001;flex:none;width:auto;max-width:calc(100% - 70px);max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+#oycwm .wptab.collapsed .routebar{border-bottom:0}
+/* Narrow screens (phones): the table floats over the upper-right of the map, so it
+   is in view while you tap waypoints (stacked BELOW the tall map it sat off-screen,
+   and swiping over the map pans it instead of scrolling the page). Its list is
+   sized in JS (wpFit) to show exactly two waypoints and scrolls for the rest. The
+   left 56px stay clear for the zoom buttons. */
 @media (max-width:900px){
-	#oycwm .mapgrid{flex-direction:column}
-	#oycwm .wptab{flex:none;max-height:none;border-left:0;border-top:1px solid var(--line)}
+	#oycwm .mapgrid{display:block}
+	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(340px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+	#oycwm .wptab .routebar{padding:8px 10px;gap:6px}
+	#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
+	#oycwm .mapgrid.has-wp .map-ll{display:none}
+	#oycwm .wpt{font-size:.7rem}
+	#oycwm .card.isfull .mapgrid .mapwrap{height:100%}
 }
 #oycwm .card.isfull .mapgrid{flex:1 1 auto;min-height:0}
 #oycwm .card.isfull .wptab{max-height:none}
@@ -490,6 +525,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="route-btns">
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
+					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="true" aria-controls="wpTab">Hide table</button>
 				</div>
 			</div>
 			<div class="wpt-wrap">
@@ -981,7 +1017,7 @@ function wpRow(pin,i,ti){
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—')+'</span><span class="s">'+pc+'</span>';
 		prs='<span class="v">'+(s.mb!=null?Math.round(s.mb):'—')+'</span><span class="s">mb</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td>'+pos+'</td><td>'+dist+'</td><td>'+wind+'</td><td>'+sea+'</td><td>'+prs+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="pos">'+pos+'</td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td><td class="prs">'+prs+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 function renderWpTable(){
@@ -993,7 +1029,29 @@ function renderWpTable(){
 	document.getElementById('wptFoot').textContent=f?('Forecast for '+f.big+', '+f.small+'. Move the time slider to update.'):'';
 	if(on!==wptShown){wptShown=on;grid.classList.toggle('has-wp',on);
 		setTimeout(function(){try{map.invalidateSize({pan:false});drawGraticule();}catch(e){}},0);}
+	wpToggleLabel();
+	wpFit();
 }
+/* Hide/Show table, at every width */
+function wpToggleLabel(){var tab=document.getElementById('wpTab'),b=document.getElementById('rbToggle');if(!tab||!b)return;
+	var c=tab.classList.contains('collapsed');b.textContent=c?('Show table ('+pins.length+')'):'Hide table';b.setAttribute('aria-expanded',c?'false':'true');}
+/* Phones: size the list to exactly its first two rows (it scrolls for the rest).
+   Desktop: no cap — the side column runs the map's height. */
+var WP_NARROW=window.matchMedia('(max-width:900px)');
+function wpFit(){
+	var wrap=document.querySelector('#oycwm .wpt-wrap');if(!wrap)return;
+	if(!WP_NARROW.matches){wrap.style.maxHeight='';return;}
+	var rows=document.querySelectorAll('#wptBody tr'),h=0;
+	for(var i=0;i<rows.length&&i<2;i++)h+=rows[i].getBoundingClientRect().height;
+	wrap.style.maxHeight=h?Math.ceil(h)+'px':'';
+}
+window.addEventListener('resize',wpFit);
+(function(){var b=document.getElementById('rbToggle'),tab=document.getElementById('wpTab');if(!b||!tab)return;
+	b.addEventListener('click',function(){
+		tab.classList.toggle('collapsed');wpToggleLabel();wpFit();
+		/* desktop: the side column comes and goes, so the map's width changes */
+		setTimeout(function(){try{map.invalidateSize({pan:false});drawGraticule();}catch(e){}},0);
+	});})();
 (function(){
 	var tab=document.getElementById('wpTab');if(!tab)return;
 	tab.addEventListener('click',function(e){
