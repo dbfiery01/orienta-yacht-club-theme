@@ -445,12 +445,13 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 		<!-- POI layers: always visible, independent of the view tabs -->
 		<div class="layers" id="poiLayers">
+			<label><input type="checkbox" id="tgChart" checked> NOAA chart</label>
 			<label><input type="checkbox" id="tgClubs" checked> Reciprocal clubs</label>
 			<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
 			<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
 			<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
 			<label><input type="checkbox" id="tgFish" checked> Fishing spots</label>
-			<span class="hint">Tap a pin for distance from OYC &amp; links &middot; fuel, anchorage and fishing notes are local knowledge — verify on the chart and call ahead</span>
+			<span class="hint">NOAA chart = official electronic chart data (depths, buoys, lights, rocks), not for navigation &middot; tap a pin for distance from OYC &amp; links &middot; fuel, anchorage and fishing notes are local knowledge — verify on the chart and call ahead</span>
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
@@ -691,6 +692,19 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
+/* NOAA nautical chart over the street map. NOAA retired its raster (paper-style)
+   chart tiles in 2025; this is its Chart Display Service, which draws the official
+   electronic charts (ENC) with standard chart symbols. Only the water-side layers
+   are requested, on a transparent background, so land stays the OSM street map:
+   2 depths & soundings, 3 rocks/wrecks/obstructions, 4 traffic routes, 5 special
+   areas (cable, anchorage), 6 buoys/beacons/lights, 7 small-craft facilities.
+   The service picks detail by map scale and shows little at the board's default
+   zoom 12, so tiles at zoom <= 13 are requested at 2x pixels (symbols draw
+   half-size, full detail; crisp on retina). Shown from zoom 9 in. The "NOAA chart"
+   chip toggles it (wired with the POI chips below). Not for navigation. */
+var EncWMS=L.TileLayer.WMS.extend({getTileUrl:function(c){var f=(c.z<=13)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);}});
+var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
+	{layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'});
 /* default view: Mamaroneck harbor / western Sound (set at map init above) */
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
@@ -1992,6 +2006,7 @@ poiWire('tgDine',poiDine,'oyc_wm_dine');
 poiWire('tgFuel',poiFuel,'oyc_wm_fuel');
 poiWire('tgAnch',poiAnch,'oyc_wm_anch');
 poiWire('tgFish',poiFish,'oyc_wm_fish');
+poiWire('tgChart',encLayer,'oyc_wm_chart');
 /* "Add to route" inside a POI popup drops a REGULAR passage waypoint at the
    destination via addPin() — same pin as a map click, so it's draggable,
    numbered, forecast-fetching and GPX/CSV-exportable, and the route line runs
