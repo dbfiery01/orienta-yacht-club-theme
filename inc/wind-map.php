@@ -225,6 +225,11 @@ function oyc_wind_map_html( $embed = false ) {
    it) and let popupAnchor lift the box clear of the number. */
 #oycwm .pin-pop .leaflet-popup-tip-container,#oycwm .pin-pop .leaflet-popup-tip{display:none}
 #oycwm .pin-pop .leaflet-popup-content-wrapper{box-shadow:0 4px 16px rgba(11,42,74,.26)}
+/* cards are movable: drag one off the route and a leader line ties it back to its
+   point (wireCardDrag); double-click / double-tap snaps it back */
+#oycwm .pin-pop .leaflet-popup-content-wrapper{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#oycwm .pin-pop.co-dragging .leaflet-popup-content-wrapper{cursor:grabbing;box-shadow:0 8px 24px rgba(11,42,74,.38)}
+#oycwm .pin-pop .co-lead{position:absolute;left:0;top:0;height:2px;margin-top:-1px;background:#0b2a4a;opacity:.75;box-shadow:0 0 0 1px rgba(255,255,255,.7);transform-origin:0 50%;pointer-events:none;display:none}
 #oycwm .map-label{background:none;border:none;box-shadow:none;display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800;font-size:11px;color:#0b2a4a;text-shadow:0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;transform:translate(-4px,-7px)}
 /* POI markers — reciprocal clubs (burgee pennant) + dock & dine (navy fork circle) */
 #oycwm .poi-mk{background:none;border:none}
@@ -514,7 +519,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map to plot a route; each point is added to the waypoint table. Drag a point to move it, tap it to show its card on the map, and use &#10005; in the table to remove it.</div>
+				<div class="tiphelp" id="tipHelp">Click the map to plot a route; each point is added to the waypoint table. Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; in the table to remove a point.</div>
 			</div>
 		</div>
 		<aside class="wptab" id="wpTab" aria-label="Passage waypoints">
@@ -904,8 +909,8 @@ function pinContent(pin,ti){
 		+'<div class="co-ll">'+ll+'</div>';
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
-	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span></span>')
-		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in</span></span>':'');
+	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">rain</span></span>')
+		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in rain</span></span>':'');
 	/* weather line: wind (+gust), direction, wave height, pressure, then precip */
 	var wx='<div class="co-row"><span><span class="v">'+Math.round(s.kt)+'</span> <span class="k">kt</span></span>'
 		+(s.gust!=null?'<span><span class="v">'+Math.round(s.gust)+'</span> <span class="k">g</span></span>':'')
@@ -979,6 +984,7 @@ function addPin(lat,lon){
 	pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);
+	wireCardDrag(pin);
 	/* The card starts closed: the waypoint table beside the map carries the same
 	   readings. A TAP on the numbered marker toggles its card open on the map
 	   (Leaflet's bindPopup click-toggle). Dragging the marker is not a click, so
@@ -992,6 +998,67 @@ function addPin(lat,lon){
 	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
+}
+/* ---------- movable cards ----------
+   A card can be dragged anywhere so it doesn't hide the route or another card.
+   Its spot is kept as a pixel offset on the popup, so it rides along when the map
+   pans/zooms or the point itself is dragged; a leader line joins a moved card to
+   its point. Double-click / double-tap the card to snap it back. */
+var CO_BASE=L.point(L.Popup.prototype.options.offset||[0,7]);
+function coApply(pin){
+	var p=pin.popup,o=pin.coOff||[0,0];
+	p.options.offset=[CO_BASE.x+o[0],CO_BASE.y+o[1]];
+	if(p.isOpen()){if(p._updatePosition)p._updatePosition();else p.update();}
+	coLead(pin);
+}
+/* leader line from the card's nearest edge to the point (measured on screen) */
+function coLead(pin){
+	var c=pin.popup.getElement&&pin.popup.getElement(),mk=pin.marker.getElement&&pin.marker.getElement();
+	if(!c||!mk||!pin.popup.isOpen())return;
+	var ln=c.querySelector('.co-lead'),o=pin.coOff||[0,0];
+	if(!o[0]&&!o[1]){if(ln)ln.style.display='none';return;}
+	if(!ln){ln=document.createElement('div');ln.className='co-lead';c.appendChild(ln);}
+	var cr=c.getBoundingClientRect(),mr=mk.getBoundingClientRect();
+	var px=mr.left+mr.width/2-cr.left,py=mr.top+mr.height/2-cr.top,
+		sx=Math.max(0,Math.min(cr.width,px)),sy=Math.max(0,Math.min(cr.height,py)),
+		dx=px-sx,dy=py-sy,len=Math.hypot(dx,dy)-13; /* stop at the marker's edge */
+	if(len<4){ln.style.display='none';return;}
+	ln.style.display='block';ln.style.left=sx+'px';ln.style.top=sy+'px';ln.style.width=len+'px';
+	ln.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+}
+function wireCardDrag(pin){
+	var p=pin.popup;
+	p.on('add',function(){
+		var c=p.getElement();if(!c)return;
+		if(c._coWired){coLead(pin);return;}
+		c._coWired=true;
+		var w=c.querySelector('.leaflet-popup-content-wrapper')||c,st=null,lastTap=0;
+		w.addEventListener('pointerdown',function(e){
+			if(e.button>0||(e.target.closest&&e.target.closest('.co-x')))return;
+			var o=pin.coOff||[0,0];st={x:e.clientX,y:e.clientY,ox:o[0],oy:o[1],id:e.pointerId,moved:false};
+			try{w.setPointerCapture(e.pointerId);}catch(_){}
+			e.preventDefault();e.stopPropagation();
+		});
+		w.addEventListener('pointermove',function(e){
+			if(!st||e.pointerId!==st.id)return;
+			var dx=e.clientX-st.x,dy=e.clientY-st.y;
+			if(!st.moved&&Math.abs(dx)+Math.abs(dy)<4)return;
+			if(!st.moved){st.moved=true;c.classList.add('co-dragging');hoverTip.style.display='none';}
+			pin.coOff=[st.ox+dx,st.oy+dy];coApply(pin);
+		});
+		function end(e){
+			if(!st||e.pointerId!==st.id)return;
+			var tap=!st.moved&&e.type==='pointerup';st=null;c.classList.remove('co-dragging');
+			try{w.releasePointerCapture(e.pointerId);}catch(_){}
+			if(!tap)return;
+			var now=Date.now();
+			if(now-lastTap<350){lastTap=0;pin.coOff=[0,0];coApply(pin);}else lastTap=now; /* double-tap: snap back */
+		}
+		w.addEventListener('pointerup',end);w.addEventListener('pointercancel',end);
+		coLead(pin);
+	});
+	/* content re-renders can change the card's width → re-aim the line once laid out */
+	p.on('contentupdate',function(){requestAnimationFrame(function(){coLead(pin);});});
 }
 function removePin(pin){if(pin._gone)return;pin._gone=true;pin._dragging=false;try{if(pin.marker.dragging&&pin.marker.dragging.disable)pin.marker.dragging.disable();}catch(e){}map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();}
@@ -1012,7 +1079,7 @@ function wpRow(pin,i,ti){
 	var wind='<span class="s">No data</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
-		var pc=(s.pop!=null)?Math.round(s.pop)+'%':(s.precip!=null?s.precip.toFixed(2)+' in':'—');
+		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—')+'</span><span class="s">'+pc+'</span>';
 	}
 	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
