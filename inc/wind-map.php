@@ -145,7 +145,7 @@ function oyc_wind_map_html( $embed = false ) {
    summary + Save/Clear buttons move from the map's corner into its header. */
 #oycwm .mapgrid{display:flex;align-items:stretch;position:relative}
 #oycwm .mapgrid .mapwrap{flex:1 1 auto;min-width:0}
-#oycwm .wptab{display:none;flex:0 0 320px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
+#oycwm .wptab{display:none;flex:0 0 260px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
 #oycwm .mapgrid.has-wp .wptab{display:flex}
 #oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
@@ -165,22 +165,21 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .x button:hover{background:#fdecea;color:#c0392b}
 #oycwm .wpt-foot{padding:8px 12px;font-size:.68rem;color:var(--mute);border-top:1px solid var(--line)}
 #oycwm .wpt .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-/* Every row is a compact two-line grid — distance · wind · pressure on top,
-   position · seas + precip below — so the full reading fits the narrow 320px
-   desktop column and a phone-width panel without sideways scrolling. Each value
-   carries its own unit, so the column headings stay hidden (screen readers keep
-   them). */
+/* Every waypoint is one compact row — number · distance · wind · seas + precip ·
+   remove — that fits the 260px column (desktop) and panel (phones) without
+   sideways scrolling. Each value carries its own unit, so the column headings
+   stay hidden (screen readers keep them). The last track takes the spare width
+   and pushes the ✕ to the right edge. */
 #oycwm .wpt,#oycwm .wpt tbody{display:block}
 #oycwm .wpt thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-#oycwm .wpt tbody tr{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.25fr) auto 24px;grid-template-areas:"n d w p x" "n l s p x";column-gap:6px;row-gap:3px;padding:7px 8px;border-bottom:1px solid var(--line)}
+#oycwm .wpt tbody tr{display:grid;grid-template-columns:24px auto auto auto 1fr;grid-template-areas:"n d w s x";column-gap:8px;padding:7px 8px;border-bottom:1px solid var(--line)}
 #oycwm .wpt td{padding:0;border:0}
 #oycwm .wpt .n{grid-area:n;width:auto;padding:0}
 #oycwm .wpt .dist{grid-area:d}
 #oycwm .wpt .wind{grid-area:w}
-#oycwm .wpt .prs{grid-area:p;text-align:right}
-#oycwm .wpt .pos{grid-area:l}
 #oycwm .wpt .sea{grid-area:s}
-#oycwm .wpt .x{grid-area:x;width:auto;padding:0}
+#oycwm .wpt .x{grid-area:x;width:auto;padding:0;justify-self:end}
+#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
 /* "Hide table" / "Show table (N)" works at every width: hiding collapses the
    table to its header (route summary + buttons), floating at the map's top-right.
    On desktop that also drops the side column, so the map takes the full width. */
@@ -197,9 +196,8 @@ function oyc_wind_map_html( $embed = false ) {
    left 56px stay clear for the zoom buttons. */
 @media (max-width:900px){
 	#oycwm .mapgrid{display:block}
-	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(340px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(260px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
 	#oycwm .wptab .routebar{padding:8px 10px;gap:6px}
-	#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
 	#oycwm .mapgrid.has-wp .map-ll{display:none}
 	#oycwm .wpt{font-size:.7rem}
 	#oycwm .card.isfull .mapgrid .mapwrap{height:100%}
@@ -530,7 +528,7 @@ function oyc_wind_map_html( $embed = false ) {
 			</div>
 			<div class="wpt-wrap">
 				<table class="wpt">
-					<thead><tr><th class="n">#</th><th>Position</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th>Press.</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
+					<thead><tr><th class="n">#</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
 					<tbody id="wptBody"></tbody>
 				</table>
 			</div>
@@ -1005,19 +1003,19 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    point; the row's ✕ removes it. */
 var wptShown=false;
 function wpRow(pin,i,ti){
+	/* Kept to distance, wind and seas so the column stays narrow; position and
+	   pressure remain on the point's map card (and in the CSV export). */
 	var s=pinReading(pin.lat,pin.lon,ti,pin.fc),lg=legInfo(pin);
-	var pos='<span class="v">'+pin.lat.toFixed(4)+'</span><span class="s">'+pin.lon.toFixed(4)+'</span>';
 	var dist=(i===0)
 		?'<span class="v">'+lg.dist.toFixed(1)+'</span><span class="s">from Buoy 42</span>'
 		:'<span class="v">'+cumFromStart(pin).toFixed(1)+' total</span><span class="s">leg '+lg.dist.toFixed(1)+'</span>';
-	var wind='<span class="s">No data</span>',sea='',prs='';
+	var wind='<span class="s">No data</span>',sea='';
 	if(s){
-		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'gust '+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
+		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
 		var pc=(s.pop!=null)?Math.round(s.pop)+'%':(s.precip!=null?s.precip.toFixed(2)+' in':'—');
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft':'—')+'</span><span class="s">'+pc+'</span>';
-		prs='<span class="v">'+(s.mb!=null?Math.round(s.mb):'—')+'</span><span class="s">mb</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="pos">'+pos+'</td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td><td class="prs">'+prs+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 function renderWpTable(){
