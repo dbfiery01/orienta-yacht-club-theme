@@ -1527,17 +1527,20 @@ if ( ! $oyc_weather_menu ) {
 		$('fishSpots').innerHTML = top.map(function(x, i){
 			var p=x.p, prime=x.ws.filter(function(o){ return o.w===2; }), list=(prime.length ? prime : x.ws).slice(0,3).map(function(o){ return o.s; }).join(', ');
 			var td = p.tide ? '<span class="td'+(x.fit ? ' fit' : '')+'">Best on the '+p.tide+(x.fit ? ' &middot; fits today&rsquo;s windows' : '')+'</span>' : '';
-			return '<button type="button" class="fish-spot" data-i="'+i+'" title="Show on the map"><span class="rk">'+(i+1)+'</span>'
+			return '<button type="button" class="fish-spot" data-i="'+i+'" aria-label="'+(i+1)+'. '+p.name.replace(/"/g,'&quot;')+', '+(x.d<10 ? x.d.toFixed(1) : Math.round(x.d))+' nautical miles. Show on the map"><span class="rk">'+(i+1)+'</span>'
 				+'<span class="nm">'+p.name+'</span>'
 				+'<span class="sp">'+(x.d<10 ? x.d.toFixed(1) : Math.round(x.d))+' nm '+fishBearing(FISH_HOME.lat, FISH_HOME.lon, p.lat, p.lng)+' &middot; '+list+'</span>'+td+'</button>';
 		}).join('');
 		wrap.hidden=false;
 	}
-	/* tap a spot: scroll to the map and open that spot's popup (wind-map.php exposes oycFishFocus) */
+	/* tap a spot: scroll the MAP itself to the middle of the screen (not the top of
+	   its card: on phones the layer controls above the map are ~700 px tall) and
+	   open that spot's popup (wind-map.php exposes oycFishFocus) */
 	$('fishSpots').addEventListener('click', function(e){
 		var b=e.target.closest ? e.target.closest('.fish-spot') : null; if(!b) return;
 		var x=fishTop[+b.getAttribute('data-i')]; if(!x) return;
-		var mc=document.querySelector('.windmap-card'); if(mc) mc.scrollIntoView({ behavior:'smooth', block:'start' });
+		var mc=document.querySelector('#oycwm .leaflet-container') || document.querySelector('.windmap-card');
+		if(mc) mc.scrollIntoView({ behavior:'smooth', block:'center' });
 		var tries=0;
 		(function go(){ if(window.oycFishFocus && window.oycFishFocus(x.p.name)) return; if(++tries<8) setTimeout(go, 500); })();
 	});
