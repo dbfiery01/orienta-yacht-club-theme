@@ -306,7 +306,7 @@ function oyc_wind_map_html( $embed = false ) {
 /* live "from you" bearing/distance line + the GPS location marker */
 #oycwm .pin-co .co-you{font-size:.72rem;font-weight:800;color:#1a73e8;text-align:center;margin:0 0 4px}
 #oycwm .me-mk{background:none;border:none}
-#oycwm .me-dot{display:block;width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(26,115,232,.55),0 1px 5px rgba(0,0,0,.4);margin:1px}
+#oycwm .me-mk svg{display:block;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff)}
 /* leg-distance labels at each route-segment midpoint (light map tiles in both
    themes, so no dark variant — matches the isobar / lat-long labels) */
 #oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
@@ -598,7 +598,8 @@ function setMyLoc(lat,lon,acc){
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
 	if(acc&&acc<4000)L.circle([lat,lon],{radius:acc,color:'#1a73e8',weight:1,opacity:.5,fillColor:'#1a73e8',fillOpacity:.1,interactive:false}).addTo(locLayer);
-	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:'<span class="me-dot"></span>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
+	var boat='<svg width="30" height="30" viewBox="-15 -15 30 30" style="overflow:visible"><path d="M0,-12.5 C5.5,-9 6.5,-1 6,6 L4,9.5 L-4,9.5 L-6,6 C-6.5,-1 -5.5,-9 0,-12.5 Z" fill="none" stroke="#15293b" stroke-width="2" stroke-linejoin="round"/><circle cx="0" cy="0" r="3.2" fill="#1a73e8" stroke="#fff" stroke-width="1.2"/></svg>';
+	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:boat,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
 	/* on the first fix, bring the map to you so the dot is obviously there; later
 	   updates just move the dot (you can pan away). */
 	if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
