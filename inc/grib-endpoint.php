@@ -206,6 +206,27 @@ function oyc_send_raw_json( $body ) {
 	wp_die();
 }
 
+/* ── Open-Meteo cooldown ─────────────────────────────────────────────────────
+   Live and staging run on the same server address, so they share ONE Open-Meteo
+   free allowance (600/min, 5,000/hour, 10,000/day), and the multi-point grid
+   requests appear to count each point. When Open-Meteo answers 429 we stop asking
+   until the limit that tripped has had time to reset, serving last-known data in
+   the meantime; the board's browsers fetch Open-Meteo directly as their fallback,
+   so visitors keep seeing data. Every server-side Open-Meteo call checks this. */
+function oyc_om_cooling() {
+	return false !== get_transient( 'oyc_om_cooldown' );
+}
+function oyc_om_note_status( $r ) {
+	if ( is_wp_error( $r ) || 429 !== (int) wp_remote_retrieve_response_code( $r ) ) { return; }
+	$why = strtolower( (string) wp_remote_retrieve_body( $r ) );
+	$now = time();
+	if ( false !== strpos( $why, 'minutely' ) )   { $wait = 2 * MINUTE_IN_SECONDS; }
+	elseif ( false !== strpos( $why, 'hourly' ) ) { $wait = ( (int) floor( $now / HOUR_IN_SECONDS ) + 1 ) * HOUR_IN_SECONDS + 60 - $now; }
+	elseif ( false !== strpos( $why, 'daily' ) )  { $wait = 3 * HOUR_IN_SECONDS; } // probe again every 3 h until the day resets
+	else                                          { $wait = 30 * MINUTE_IN_SECONDS; }
+	set_transient( 'oyc_om_cooldown', $now + $wait, $wait );
+}
+
 /* Fetch $url and store the raw JSON body under $key for $ttl. Also keeps a
    long-lived "stale" copy ($key._st, 6h) so a concurrent miss or a later failure
    can serve last-known data instead of a second live fetch. A 20s lock coalesces
@@ -214,11 +235,13 @@ function oyc_send_raw_json( $body ) {
    Returns the JSON string on success, '' on a failed fetch, null if coalesced.
    Shared by the live proxy (oyc_om_cached) and the cron warmer. */
 function oyc_om_fetch_store( $key, $url, $ttl, $stale_ttl = 6 * HOUR_IN_SECONDS ) {
+	if ( oyc_om_cooling() ) { return ''; } // rate-limited: fail fast, callers serve last-known
 	$lock = $key . '_lk';
 	if ( false !== get_transient( $lock ) ) { return null; } // a fetch is already in flight
 	set_transient( $lock, 1, 20 );
 	$body = '';
 	$r = wp_remote_get( $url, array( 'timeout' => 15, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) ) );
+	oyc_om_note_status( $r );
 	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
 		$b = (string) wp_remote_retrieve_body( $r );
 		$c = ( '' !== $b ) ? $b[0] : '';
@@ -241,12 +264,14 @@ function oyc_om_cached( $key, $url, $ttl, $stale_ttl = 6 * HOUR_IN_SECONDS ) {
 	if ( false !== $body ) { oyc_send_raw_json( $body ); }
 	$fresh = oyc_om_fetch_store( $key, $url, $ttl, $stale_ttl );
 	if ( is_string( $fresh ) && '' !== $fresh ) { oyc_send_raw_json( $fresh ); } // fetched now
+	if ( oyc_om_cooling() && ! headers_sent() ) { header( 'X-OYC-OM: cooldown' ); } // visible to curl when diagnosing
 	$stale = get_transient( $key . '_st' );                                      // coalesced or failed
 	if ( false !== $stale ) { oyc_send_raw_json( $stale ); }
 	oyc_send_raw_json( '[]' );
 }
 
-/* LOCAL wind field — 7-day, 3-hourly. Cached 15 min. */
+/* LOCAL wind field — 7-day, 3-hourly, 230 points. Cached 75 min; the warmer
+   refreshes it hourly (the model output doesn't change faster than that). */
 add_action( 'wp_ajax_oyc_wind_local',        'oyc_wind_local_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_local', 'oyc_wind_local_proxy' );
 /* (key,url,ttl) for the LOCAL wind field — shared by the live proxy and the cron
@@ -256,21 +281,21 @@ function oyc_wind_local_spec() {
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,temperature_2m,precipitation'
 		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-	return array( 'oyc_wind_local', $url, 15 * MINUTE_IN_SECONDS );
+	return array( 'oyc_wind_local', $url, 75 * MINUTE_IN_SECONDS );
 }
 function oyc_wind_local_proxy() {
 	list( $k, $u, $t ) = oyc_wind_local_spec();
 	oyc_om_cached( $k, $u, $t );
 }
 
-/* HRRR precip for Radar mode — 15-min steps, recent past (−1 h) → +18 h. Cached 10 min (near-real-time). */
+/* HRRR precip for Radar mode — 15-min steps, recent past (−1 h) → +18 h. Cached 20 min (HRRR runs hourly). */
 add_action( 'wp_ajax_oyc_wind_radar',        'oyc_wind_radar_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_radar', 'oyc_wind_radar_proxy' );
 function oyc_wind_radar_proxy() {
 	list( $lat, $lon ) = oyc_local_grid_csv();
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&minutely_15=precipitation&forecast_minutely_15=80&past_minutes=60&timezone=America%2FNew_York';
-	oyc_om_cached( 'oyc_wind_radar', $url, 10 * MINUTE_IN_SECONDS );
+	oyc_om_cached( 'oyc_wind_radar', $url, 20 * MINUTE_IN_SECONDS );
 }
 
 /* BASIN wind field (Atlantic 3° grid), one client chunk per request so each
@@ -307,7 +332,7 @@ function oyc_wind_basin_proxy() {
 
 /* Wave field (Open-Meteo Marine) for the Wave tab, one client chunk per request.
    ?grid=local|basin&chunk=N — CH=140 MUST match the JS loadWaves chunk size.
-   Waves move slowly → cached 30 min. */
+   Waves move slowly → cached 2 h (each request is up to 140 points). */
 add_action( 'wp_ajax_oyc_waves',        'oyc_waves_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_waves', 'oyc_waves_proxy' );
 function oyc_waves_proxy() {
@@ -320,12 +345,12 @@ function oyc_waves_proxy() {
 		. '&hourly=wave_height,wave_period&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
 	/* cache key carries the schema (…_p = includes wave_period) so a schema change
 	   doesn't serve stale height-only data from the old key's 30-min TTL */
-	oyc_om_cached( 'oyc_wavesp_' . $grid . '_' . $chunk, $url, 30 * MINUTE_IN_SECONDS );
+	oyc_om_cached( 'oyc_wavesp_' . $grid . '_' . $chunk, $url, 2 * HOUR_IN_SECONDS );
 }
 
 /* Gulf Stream ocean current — velocity + direction over the Florida→Newfoundland
    corridor (1° grid, 23×33=759 pts), one client chunk per request. CH=140 MUST
-   match the JS loadGulf chunk size. Ocean currents move slowly → cached 60 min.
+   match the JS loadGulf chunk size. Ocean currents move slowly → cached 3 h.
    Endpoint: admin-ajax.php?action=oyc_gulfstream&chunk=N */
 add_action( 'wp_ajax_oyc_gulfstream',        'oyc_gulfstream_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_gulfstream', 'oyc_gulfstream_proxy' );
@@ -336,7 +361,7 @@ function oyc_gulfstream_proxy() {
 	if ( null === $cs ) { oyc_send_raw_json( '[]' ); }
 	$url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $cs[0] . '&longitude=' . $cs[1]
 		. '&hourly=ocean_current_velocity,ocean_current_direction&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-	oyc_om_cached( 'oyc_gs_' . $chunk, $url, 60 * MINUTE_IN_SECONDS );
+	oyc_om_cached( 'oyc_gs_' . $chunk, $url, 3 * HOUR_IN_SECONDS );
 }
 
 /* Gulf Stream frontal analysis (NOAA OPC) — the authoritative north/south wall

@@ -244,6 +244,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .poi-fuel svg{display:block}
 #oycwm .poi-anc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#fff;border:1.5px solid #0b2a4a;box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 #oycwm .poi-anc svg{display:block}
+/* fishing spots: teal disc with a fish; faded when nothing there is in season this month */
+#oycwm .poi-fish{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#0f7a6c;border:1.5px solid #fff;box-shadow:0 0 0 1px #0a5a50,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+#oycwm .poi-fish svg{display:block}
+#oycwm .poi-fish.off{opacity:.5}
+#oycwm .poi-pop .pp-sp{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+#oycwm .poi-pop .pp-sp span{font-size:11px;font-weight:700;border-radius:999px;padding:2px 7px;background:#e3f2ef;color:#0a5a50}
+#oycwm .poi-pop .pp-sp span.out{background:#eef1f4;color:#7a8896;font-weight:600}
+#oycwm .poi-pop .pp-sp-k{font-size:10.5px;color:#7a8896;margin-top:6px;letter-spacing:.04em}
 #oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
 #oycwm .poi-pop .pp-sub{font-size:11.5px;color:#5a6b7d;margin-top:1px;font-weight:600}
 #oycwm .poi-pop .pp-desc{font-size:12px;color:#334455;margin-top:6px;line-height:1.45}
@@ -441,7 +449,8 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
 			<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
 			<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
-			<span class="hint">Tap a pin for distance from OYC &amp; links &middot; fuel &amp; anchorage notes are local knowledge — verify on the chart and call ahead</span>
+			<label><input type="checkbox" id="tgFish" checked> Fishing spots</label>
+			<span class="hint">Tap a pin for distance from OYC &amp; links &middot; fuel, anchorage and fishing notes are local knowledge — verify on the chart and call ahead</span>
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
@@ -1650,7 +1659,7 @@ function loadLocal(tries){
 		maybeSwitchGrid(); /* picks up a zoom-out that happened before the local grid (and TIMES) arrived */
 	}
 	/* cron-warmed static file first, then the proxy; browser direct if the host can't reach Open-Meteo */
-	statFetch('wind_local','oyc_wind_local',25,15000)
+	statFetch('wind_local','oyc_wind_local',90,15000) /* warmed hourly now */
 		.then(function(r){return r.ok?r.json():null;})
 		.catch(function(){return null;})
 		.then(function(arr){return valid(arr)?arr:clientLocal();})
@@ -1898,12 +1907,12 @@ document.getElementById('chartSel').addEventListener('change',loadChart);
 /* ---------- layer toggles ---------- */
 /* ---- POI layers: reciprocal clubs + dock & dine (assets/map-pois.json) ----
    Always-on chips (not tied to a view tab); choice persists per visitor. */
-var poiClubs=L.layerGroup(),poiDine=L.layerGroup(),poiFuel=L.layerGroup(),poiAnch=L.layerGroup();
+var poiClubs=L.layerGroup(),poiDine=L.layerGroup(),poiFuel=L.layerGroup(),poiAnch=L.layerGroup(),poiFish=L.layerGroup();
 var POI_HOME={lat:40.9486,lon:-73.7296};
 function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180,a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(POI_HOME.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
 var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
-var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage'};
+var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage',fish:'Fishing spot'};
 function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
 	var sub=(POI_KIND[kind]||'')+' &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.town?' &middot; '+p.town:'');
@@ -1911,6 +1920,32 @@ function poiPopup(p,kind){
 	if(p.url)links+='<a href="'+p.url+'" target="_blank" rel="noopener">Club site</a>';
 	links+='<a href="https://www.google.com/search?q='+encodeURIComponent(p.q||p.name)+'" target="_blank" rel="noopener">'+(kind==='dine'?'Reviews on Google':'Search on Google')+'</a>';
 	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'+(p.desc?'<div class="pp-desc">'+p.desc+'</div>':'')+'<div class="pp-links">'+links+'</div>';
+}
+/* Fishing spot popup: structure, the species anglers target there (in season this
+   month first, the rest greyed with their months), and one practical tip. Months
+   come from the spot's "months" map in map-pois.json (1 = Jan). */
+var FISH_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var FISH_RULES={NY:'https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations',CT:'https://portal.ct.gov/DEEP/Fishing/Saltwater-Fishing-Guide/Species-Regulations'};
+function fishMonths(ms){
+	/* [4,5,9,10,11] -> "Apr–May, Sep–Nov" */
+	var out=[],i=0;ms=(ms||[]).slice().sort(function(a,b){return a-b;});
+	while(i<ms.length){var a=ms[i];while(i+1<ms.length&&ms[i+1]===ms[i]+1)i++;out.push(a===ms[i]?FISH_MON[a-1]:FISH_MON[a-1]+'–'+FISH_MON[ms[i]-1]);i++;}
+	return out.join(', ');
+}
+function fishInSeason(p,mon){return (p.species||[]).filter(function(s){var m=p.months&&p.months[s];return !m||m.indexOf(mon)>=0;});}
+function fishPopup(p){
+	var d=poiNm(p.lat,p.lng),mon=new Date().getMonth()+1,now=fishInSeason(p,mon);
+	var sub='Fishing spot &middot; '+(d<10?d.toFixed(1):Math.round(d))+' nm '+poiDir(p.lat,p.lng)+(p.area?' &middot; '+p.area:'');
+	var chips=(p.species||[]).slice().sort(function(a,b){return (now.indexOf(b)>=0)-(now.indexOf(a)>=0);}).map(function(s){
+		var on=now.indexOf(s)>=0,m=p.months&&p.months[s];
+		return '<span'+(on?'':' class="out"')+' title="'+(m?fishMonths(m):'')+'">'+s+(on?'':' &middot; '+(m?fishMonths(m):''))+'</span>';
+	}).join('');
+	return '<div class="pp-name">'+p.name+'</div><div class="pp-sub">'+sub+'</div>'
+		+(p.structure?'<div class="pp-desc">'+p.structure+'</div>':'')
+		+'<div class="pp-sp-k">'+(!now.length?'NOTHING IN SEASON THIS MONTH':(now.length===(p.species||[]).length?'IN SEASON NOW':'IN SEASON NOW (GREY = OTHER MONTHS)'))+'</div><div class="pp-sp">'+chips+'</div>'
+		+(p.tip?'<div class="pp-desc">'+p.tip+'</div>':'')
+		+'<div class="pp-links"><a href="#" class="pp-route" data-lat="'+p.lat+'" data-lng="'+p.lng+'">&#x2693; Add to route</a>'
+		+'<a href="'+(p.state==='CT'?FISH_RULES.CT:FISH_RULES.NY)+'" target="_blank" rel="noopener">'+(p.state==='CT'?'CT':'NY')+' size &amp; season rules</a></div>';
 }
 fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
 	(j.clubs||[]).forEach(function(p){
@@ -1927,6 +1962,12 @@ fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.js
 	(j.anc||[]).forEach(function(p){
 		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),{className:'poi-pop',maxWidth:260}).addTo(poiAnch);
 	});
+	var POI_FISH='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12c2.6-4 6.1-6 10-6 3.6 0 6.3 2 8 6-1.7 4-4.4 6-8 6-3.9 0-7.4-2-10-6Z"/><path d="M2.5 12 .8 8.5M2.5 12 .8 15.5"/><circle cx="16.3" cy="10.6" r=".9" fill="#fff"/></svg>';
+	var fishMon=new Date().getMonth()+1;
+	(j.fish||[]).forEach(function(p){
+		var off=fishInSeason(p,fishMon).length?'':' off';
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),{className:'poi-pop',maxWidth:270}).addTo(poiFish);
+	});
 }).catch(function(){});
 function poiWire(id,layer,key){
 	var cb=document.getElementById(id),st=null;
@@ -1942,6 +1983,7 @@ poiWire('tgClubs',poiClubs,'oyc_wm_clubs');
 poiWire('tgDine',poiDine,'oyc_wm_dine');
 poiWire('tgFuel',poiFuel,'oyc_wm_fuel');
 poiWire('tgAnch',poiAnch,'oyc_wm_anch');
+poiWire('tgFish',poiFish,'oyc_wm_fish');
 /* "Add to route" inside a POI popup drops a REGULAR passage waypoint at the
    destination via addPin() — same pin as a map click, so it's draggable,
    numbered, forecast-fetching and GPX/CSV-exportable, and the route line runs
