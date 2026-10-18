@@ -1,5 +1,5 @@
 {
-  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). Clubs are the OYC reciprocity list (added 2026-10-08; Sag Harbor + Watch Hill coords supplied manually — the source list had a wrong-harbor longitude and a missing position). Anchorage and fuel entries are curated from local knowledge + OpenStreetMap (positions spot-checked; availability changes — popups say call ahead). Dine entries mirror the Dock & Dine page. Fields: name, town, lat, lng, desc, q (Google query), url (optional).",
+  "_note": "POI layers for the Wind & Radar map (inc/wind-map.php). Clubs are the OYC reciprocity list (added 2026-10-08; Sag Harbor + Watch Hill coords supplied manually — the source list had a wrong-harbor longitude and a missing position). Anchorage and fuel entries are curated from local knowledge + OpenStreetMap (positions spot-checked; availability changes — popups say call ahead). Dine entries mirror the Dock & Dine page. Fields: name, town, lat, lng, desc, q (Google query), url (optional). Fishing spots (added 2026-10-18) are 23 western-Sound spots researched from fishing reports and state reef pages; every pin sits on a NOAA chart feature (reef, ledge, light or the buoy marking the structure). Species are only those a source names for that spot; months are usual fishing months within legal seasons. Rules differ between NY and CT and change yearly.",
   "clubs": [
     {
       "name": "Allen Harbor YC",
@@ -982,6 +982,871 @@
       "lng": -71.872,
       "desc": "Classic summer anchorage behind the point; open W; beach ashore.",
       "q": "Napatree Point anchorage"
+    }
+  ],
+  "fish": [
+    {
+      "name": "Throgs Neck Bridge",
+      "area": "off Throgs Neck, Bronx / Fort Totten, Queens, NY",
+      "lat": 40.8031,
+      "lng": -73.7875,
+      "structure": "Bridge piers, rips and channel edges, 30–50 ft.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "fluke"
+      ],
+      "months": {
+        "striped bass": [
+          4,
+          5,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "bluefish": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fluke": [
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      "tip": "Anchor up-current of the bridge and fish bunker chunks on 3–6 oz sinkers; heavy tug and barge traffic, so stay out of the channel.",
+      "state": "NY"
+    },
+    {
+      "name": "Stepping Stones",
+      "area": "between City Island and Kings Point, NY",
+      "lat": 40.8258,
+      "lng": -73.777,
+      "structure": "Rock reef under Stepping Stones Light, drop-offs to 30–60 ft.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "fluke",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "bluefish": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "fluke": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Anchor in 40–50 ft on the southwest side to chunk bunker; the reef inside the light is shallow and mussel-covered.",
+      "state": "NY"
+    },
+    {
+      "name": "Big Tom",
+      "area": "off the south end of City Island, Bronx, NY",
+      "lat": 40.8358,
+      "lng": -73.7923,
+      "structure": "Charted rock and shoal off City Island's south tip (Big Tom Rock buoy BT).",
+      "species": [
+        "fluke"
+      ],
+      "months": {
+        "fluke": [
+          6,
+          7,
+          8
+        ]
+      },
+      "tip": "Drift for fluke around the edges of the shoal and keep clear of the rock marked by buoy BT; boat traffic off City Island is heavy.",
+      "state": "NY"
+    },
+    {
+      "name": "Hart Island (east side)",
+      "area": "east side of Hart Island, Bronx, NY",
+      "lat": 40.857,
+      "lng": -73.7627,
+      "structure": "Flat dropping from 10 to 32 ft near the green gong buoy; boulders on the northwest side.",
+      "species": [
+        "fluke",
+        "porgy",
+        "blackfish"
+      ],
+      "months": {
+        "fluke": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Drift 8–25 ft with ¾–1½ oz white bucktails. No landing on the island (city cemetery); watch for unmarked pot lines.",
+      "state": "NY"
+    },
+    {
+      "name": "Execution Rocks",
+      "area": "off Sands Point, NY",
+      "lat": 40.8781,
+      "lng": -73.7377,
+      "structure": "Rock reef and ledges under Execution Rocks Light, drop-offs to 40–60 ft.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "porgy",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "bluefish": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Fish the deep south side of the rocks on the ebb, when the current runs harder; the bottom is snaggy, so bring extra rigs.",
+      "state": "NY"
+    },
+    {
+      "name": "Sands Point",
+      "area": "off Sands Point, Port Washington, NY",
+      "lat": 40.8691,
+      "lng": -73.7336,
+      "structure": "Rocky reef off the point, inside Sands Point Reef buoy 25.",
+      "species": [
+        "fluke",
+        "porgy",
+        "striped bass",
+        "bluefish"
+      ],
+      "months": {
+        "fluke": [
+          5,
+          6,
+          7
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "striped bass": [
+          4,
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "bluefish": [
+          7,
+          8,
+          9
+        ]
+      },
+      "tip": "Fluke bite best on the incoming tide; the reef is shallow inside buoy 25, so approach from deep water.",
+      "state": "NY"
+    },
+    {
+      "name": "Prospect Point",
+      "area": "off Prospect Point, Sands Point, NY",
+      "lat": 40.8779,
+      "lng": -73.7162,
+      "structure": "Rocky shoal off the point, dropping to about 50 ft near buoy 23.",
+      "species": [
+        "striped bass",
+        "fluke",
+        "porgy"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "fluke": [
+          5,
+          6,
+          7
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "tip": "Chunk bunker in the 50-ft water off the point for bigger bass; fluke favor 10–15 ft on the incoming tide.",
+      "state": "NY"
+    },
+    {
+      "name": "Hen and Chickens",
+      "area": "off Larchmont / New Rochelle, NY",
+      "lat": 40.9104,
+      "lng": -73.7392,
+      "structure": "Rock reef at the Larchmont Harbor entrance, bare in places at low tide.",
+      "species": [
+        "fluke",
+        "porgy"
+      ],
+      "months": {
+        "fluke": [
+          5,
+          6,
+          7
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "tip": "The reef dries in places at low water; fish the edges from the buoyed sides and keep clear of the bare rocks.",
+      "state": "NY"
+    },
+    {
+      "name": "Huckleberry &amp; Davids Islands",
+      "area": "off New Rochelle, NY",
+      "lat": 40.8909,
+      "lng": -73.7565,
+      "structure": "Rocky island shores and drop-offs to 50–90 ft.",
+      "species": [
+        "blackfish",
+        "porgy"
+      ],
+      "months": {
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "tip": "Keeper blackfish come from the deeper drop-offs rather than the shallow rock piles; use green or fiddler crabs.",
+      "state": "NY"
+    },
+    {
+      "name": "Matinecock Point",
+      "area": "off Glen Cove, NY",
+      "lat": 40.9092,
+      "lng": -73.6358,
+      "structure": "Rock-strewn shoal off the point at green buoy 21, 10–45 ft.",
+      "species": [
+        "striped bass",
+        "weakfish",
+        "fluke",
+        "porgy",
+        "bluefish",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "weakfish": [
+          6
+        ],
+        "fluke": [
+          6,
+          7,
+          8
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "bluefish": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Anchor over the rocks near buoy 21 and chunk bunker on the ebb for bass; porgies hold in 20–30 ft. The state's Matinecock artificial reef is about 0.5 nm east.",
+      "state": "NY"
+    },
+    {
+      "name": "Centre Island Reef",
+      "area": "off Centre Island, Oyster Bay, NY",
+      "lat": 40.9178,
+      "lng": -73.5248,
+      "structure": "Rock reef off Centre Island's north shore, drying in places.",
+      "species": [
+        "striped bass",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          4,
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Parts of the reef dry at low tide, so approach slowly; fish crabs over the rocks for fall blackfish.",
+      "state": "NY"
+    },
+    {
+      "name": "Lloyd Point",
+      "area": "off Lloyd Neck (Caumsett State Park), NY",
+      "lat": 40.9613,
+      "lng": -73.4876,
+      "structure": "Shoal running north off the point to buoy 15.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "fluke",
+        "weakfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          10,
+          11
+        ],
+        "bluefish": [
+          10,
+          11
+        ],
+        "fluke": [
+          6,
+          7,
+          8
+        ],
+        "weakfish": [
+          5,
+          6
+        ]
+      },
+      "tip": "Work the shoal edge on the outgoing tide; shore access is through Caumsett State Park with a park fishing permit.",
+      "state": "NY"
+    },
+    {
+      "name": "Huntington / Oyster Bay Reef",
+      "area": "1.2 nm NE of Lloyd Point, NY",
+      "lat": 40.9588,
+      "lng": -73.461,
+      "structure": "State artificial reef, 50 acres, 47–53 ft (concrete; still being built).",
+      "species": [
+        "black sea bass",
+        "blackfish",
+        "porgy",
+        "fluke"
+      ],
+      "months": {
+        "black sea bass": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "fluke": [
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      "tip": "A young reef with little material on it so far; fish pots are banned here by state law.",
+      "state": "NY"
+    },
+    {
+      "name": "Target Rock",
+      "area": "west side of Huntington Bay, Lloyd Neck, NY",
+      "lat": 40.9296,
+      "lng": -73.4303,
+      "structure": "Boulder beach and rocky bottom, 15–40 ft.",
+      "species": [
+        "striped bass",
+        "porgy",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          4,
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "porgy": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11,
+          12
+        ]
+      },
+      "tip": "Boaters fish the boulders off the beach; shore fishing from the refuge beach is allowed only during open hours.",
+      "state": "NY"
+    },
+    {
+      "name": "Eatons Neck (buoy 11B)",
+      "area": "off Eatons Neck / Asharoken, NY",
+      "lat": 41.0003,
+      "lng": -73.395,
+      "structure": "Rocky high ground, boulders and rips at buoy 11B, 20–65 ft.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "fluke",
+        "porgy",
+        "black sea bass",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "bluefish": [
+          6,
+          7,
+          9,
+          10
+        ],
+        "fluke": [
+          6,
+          7
+        ],
+        "porgy": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "black sea bass": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          10,
+          11
+        ]
+      },
+      "tip": "Fish the inshore lump on the incoming and the deeper rips at 11B on the outgoing; the first two hours of the ebb are usually best. The area straddles the NY–CT line.",
+      "state": "NY"
+    },
+    {
+      "name": "Great Captain Island",
+      "area": "off Greenwich, CT",
+      "lat": 40.9776,
+      "lng": -73.6311,
+      "structure": "Rock pile on the southwest reef inside nun 2; reefs all around the island.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "bluefish": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11
+        ]
+      },
+      "tip": "Fish the rip off the east shore on the incoming tide; Cormorant Reef on the north side is also worth casting. Don't run between Great and Little Captain without local knowledge.",
+      "state": "CT"
+    },
+    {
+      "name": "Twenty-six Foot Spot (buoy 32A)",
+      "area": "south of Stamford Harbor, CT",
+      "lat": 40.9687,
+      "lng": -73.5468,
+      "structure": "26-ft hump marked by bell buoy 32A, 35–50 ft around it.",
+      "species": [
+        "fluke",
+        "striped bass",
+        "porgy"
+      ],
+      "months": {
+        "fluke": [
+          6,
+          7,
+          8
+        ],
+        "striped bass": [
+          5,
+          6,
+          9,
+          10,
+          11
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "tip": "Drift the edges of the hump in 35–50 ft with a hi-lo bucktail tipped with spearing or squid for fluke.",
+      "state": "CT"
+    },
+    {
+      "name": "The Cows",
+      "area": "off Shippan Point, Stamford, CT",
+      "lat": 41.0079,
+      "lng": -73.5235,
+      "structure": "Rock pile, awash at low tide, with bell buoy 32 south of it.",
+      "species": [
+        "striped bass",
+        "blackfish",
+        "bluefish",
+        "porgy",
+        "black sea bass"
+      ],
+      "months": {
+        "striped bass": [
+          6,
+          7,
+          9,
+          10,
+          11
+        ],
+        "blackfish": [
+          4,
+          10,
+          11
+        ],
+        "bluefish": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "black sea bass": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "tip": "The rocks are awash at low tide, so approach from the buoy 32 side; chunk fresh bunker for bass and use green crabs for fall blackfish.",
+      "state": "CT"
+    },
+    {
+      "name": "Greens Ledge",
+      "area": "off Rowayton / South Norwalk, CT",
+      "lat": 41.043,
+      "lng": -73.4383,
+      "structure": "Boulder ledge, 15–40 ft on the west side, dropping to 50–70 ft on the east.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "porgy",
+        "black sea bass",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          7,
+          9,
+          10,
+          11
+        ],
+        "bluefish": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "black sea bass": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          4,
+          10,
+          11
+        ]
+      },
+      "tip": "Anchor with plenty of scope rather than drifting, because the boulders snag rigs; carry a spare anchor.",
+      "state": "CT"
+    },
+    {
+      "name": "Sheffield Island rock piles",
+      "area": "Norwalk Islands, off Norwalk, CT",
+      "lat": 41.0448,
+      "lng": -73.4201,
+      "structure": "Rock piles south of Sheffield Island.",
+      "species": [
+        "blackfish",
+        "striped bass"
+      ],
+      "months": {
+        "blackfish": [
+          4,
+          10,
+          11
+        ],
+        "striped bass": [
+          5,
+          6,
+          7,
+          10,
+          11
+        ]
+      },
+      "tip": "Use half green crabs or whole Asian crabs on the rock piles for blackfish; parts of Sheffield are a wildlife refuge, so check before landing.",
+      "state": "CT"
+    },
+    {
+      "name": "Cable and Anchor Reef (buoy 28C)",
+      "area": "south of the Norwalk Islands, CT",
+      "lat": 41.011,
+      "lng": -73.4205,
+      "structure": "Rocky ledges with high spots to about 30 ft and drops to about 70 ft; wrecks just to the south.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "black sea bass",
+        "porgy",
+        "blackfish"
+      ],
+      "months": {
+        "striped bass": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "bluefish": [
+          7,
+          8,
+          9
+        ],
+        "black sea bass": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "porgy": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "blackfish": [
+          10,
+          11
+        ]
+      },
+      "tip": "Troll bunker spoons over the high spots on the outgoing tide; on the rocks, use a grapple anchor rather than a Danforth.",
+      "state": "CT"
+    },
+    {
+      "name": "Peck Ledge",
+      "area": "east end of the Norwalk Islands, CT",
+      "lat": 41.0754,
+      "lng": -73.3701,
+      "structure": "Shallow ledge marked by Peck Ledge Light, with nearby rock piles.",
+      "species": [
+        "porgy",
+        "fluke"
+      ],
+      "months": {
+        "porgy": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "fluke": [
+          6,
+          7,
+          8
+        ]
+      },
+      "tip": "The ledge is shallow around the light; work its deeper edges and the neighboring rock piles.",
+      "state": "CT"
+    },
+    {
+      "name": "Cockenoe Shoal",
+      "area": "off Cockenoe Island, Westport, CT",
+      "lat": 41.0808,
+      "lng": -73.339,
+      "structure": "Shoal off the east end of Cockenoe Island.",
+      "species": [
+        "striped bass",
+        "bluefish",
+        "false albacore"
+      ],
+      "months": {
+        "striped bass": [
+          10,
+          11
+        ],
+        "bluefish": [
+          10,
+          11
+        ],
+        "false albacore": [
+          9,
+          10
+        ]
+      },
+      "tip": "Late-season school bass with some blues work off the east end on any moving tide; look for diving birds.",
+      "state": "CT"
     }
   ]
 }
