@@ -663,6 +663,8 @@ function sampleGrid(g,lat,lon,ti){
 		if(a==null||b==null||c_==null||d==null)return null;
 		return a*(1-dr)*(1-dc)+b*(1-dr)*dc+c_*dr*(1-dc)+d*dr*dc;}
 	function uv(r,c){var sp=at(g.SP,r,c)||0,d=(at(g.DR,r,c)||0)*Math.PI/180;return [-sp*Math.sin(d),-sp*Math.cos(d)];}
+	/* a corner from a basin chunk that hasn't loaded (or failed) is null: no reading, not 0 kt */
+	if(at(g.SP,r0,c0)==null||at(g.SP,r0,c1)==null||at(g.SP,r1,c0)==null||at(g.SP,r1,c1)==null)return null;
 	var q00=uv(r0,c0),q01=uv(r0,c1),q10=uv(r1,c0),q11=uv(r1,c1);
 	var uu=q00[0]*(1-dr)*(1-dc)+q01[0]*(1-dr)*dc+q10[0]*dr*(1-dc)+q11[0]*dr*dc;
 	var vv=q00[1]*(1-dr)*(1-dc)+q01[1]*(1-dr)*dc+q10[1]*dr*(1-dc)+q11[1]*dr*dc;
@@ -1276,12 +1278,15 @@ function drawBarbs(){arrowsLayer.clearLayers();
 	}}
 function drawIso(g,ti,step){isoLayer.clearLayers();
 	var NY=g.NY,NX=g.NX,P=[];for(var r=0;r<NY;r++){P[r]=[];for(var c=0;c<NX;c++)P[r][c]=g.PR[r*NX+c][ti];}
-	var mn=1e9,mx=-1e9;for(r=0;r<NY;r++)for(c=0;c<NX;c++){if(P[r][c]<mn)mn=P[r][c];if(P[r][c]>mx)mx=P[r][c];}
+	/* null = no data yet (a basin chunk still loading, or one that failed): skipped, never read as 0 mb */
+	var mn=1e9,mx=-1e9;for(r=0;r<NY;r++)for(c=0;c<NX;c++){var pv=P[r][c];if(pv==null)continue;if(pv<mn)mn=pv;if(pv>mx)mx=pv;}
+	if(mn>mx)return;
 	function lerp(a,b,t,axa,axb){return axa+(axb-axa)*((t-a)/(b-a));}
 	var labN={}; /* per-isobar segment counter, so each line is labelled a few times, spaced out */
 	for(var thr=Math.ceil(mn/step)*step;thr<=mx;thr+=step){
 		for(r=0;r<NY-1;r++)for(c=0;c<NX-1;c++){
 			var tl=P[r][c],tr=P[r][c+1],br=P[r+1][c+1],bl=P[r+1][c],pts=[];
+			if(tl==null||tr==null||br==null||bl==null)continue;
 			if((tl-thr)*(tr-thr)<0)pts.push([g.lats[r],lerp(tl,tr,thr,g.lons[c],g.lons[c+1])]);
 			if((tr-thr)*(br-thr)<0)pts.push([lerp(tr,br,thr,g.lats[r],g.lats[r+1]),g.lons[c+1]]);
 			if((bl-thr)*(br-thr)<0)pts.push([g.lats[r+1],lerp(bl,br,thr,g.lons[c],g.lons[c+1])]);
@@ -1312,6 +1317,7 @@ function drawHL(g,ti){hlLayer.clearLayers();
 	function P(r,c){return g.PR[r*NX+c][ti];}
 	for(var r=R;r<NY-R;r++)for(var c=R;c<NX-R;c++){
 		var v=P(r,c),isL=true,isH=true,sum=0,n=0;
+		if(v==null)continue;
 		for(var dr=-R;dr<=R&&(isL||isH);dr++)for(var dc=-R;dc<=R;dc++){if(!dr&&!dc)continue;var nv=P(r+dr,c+dc);if(nv==null)continue;sum+=nv;n++;if(nv<=v)isL=false;if(nv>=v)isH=false;}
 		if((isL||isH)&&n){var mean=sum/n;if(Math.abs(v-mean)<THR)continue;
 			var lo=isL,html='<div class="hl '+(lo?'lo':'hi')+'"><b>'+(lo?'L':'H')+'</b><span>'+Math.round(v)+'</span></div>';
@@ -1554,12 +1560,22 @@ function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
 	return (b.getSouth()>=LOCAL.LA2-0.6&&b.getNorth()<=LOCAL.LA1+0.6&&b.getWest()>=LOCAL.LO1-0.6&&b.getEast()<=LOCAL.LO2+0.6)?LOCAL:BASIN;}
+function setFoot(){
+	document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Long Island Sound to Cape Cod ')+'&middot; Open-Meteo (GFS). Radar = HRRR precip.'
+		+((BASIN.note&&chooseGrid()===BASIN)?' &middot; <b>'+BASIN.note+'</b>':'');
+}
+/* Isobars are what make the Atlantic view readable, so they come on the first time
+   a visitor zooms out to it — unless the visitor has switched them off themselves. */
+var isoTouched=false;
+function autoIso(){var cb=document.getElementById('tgIso');if(isoTouched||cb.checked)return;cb.checked=true;isoLayer.addTo(map);refreshOverlays();}
 function maybeSwitchGrid(){
 	if(mode==='radar')return;
 	var want=chooseGrid();
 	if(want===BASIN&&!BASIN.loaded){loadBasin();want=LOCAL;}
-	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();drawHL(activeGrid,curTi);
-		document.getElementById('foot').innerHTML=(activeGrid===BASIN?'Atlantic basin wind field ':'Long Island Sound to Cape Cod ')+'&middot; Open-Meteo (GFS). Radar = HRRR precip.';}
+	var switched=false;
+	if(want!==activeGrid&&want.loaded){activeGrid=want;buildVL(activeGrid,curTi);refreshOverlays();drawField();drawHL(activeGrid,curTi);switched=true;
+		if(activeGrid===BASIN)autoIso();}
+	if(switched||chooseGrid()===BASIN)setFoot();
 }
 map.on('zoomend',maybeSwitchGrid);
 
@@ -1646,6 +1662,7 @@ function loadLocal(tries){
 		   time you zoom out to the Atlantic, so the harbor view doesn't fire its 9
 		   proxy calls (cuts the initial admin-ajax burst that could trip host 429s) */
 		loadWaves(LOCAL,function(){updateER(curTi);});
+		maybeSwitchGrid(); /* picks up a zoom-out that happened before the local grid (and TIMES) arrived */
 	}
 	/* cron-warmed static file first, then the proxy; browser direct if the host can't reach Open-Meteo */
 	statFetch('wind_local','oyc_wind_local',25,15000)
@@ -1659,45 +1676,68 @@ function loadLocal(tries){
 		});
 }
 
-/* chunked basin loader with limited concurrency + retry/backoff */
+/* Atlantic basin loader, in 150-point chunks (CH=150 matches oyc_wind_basin).
+   Each chunk comes from the cron-warmed static file first (refreshed every ~6 h,
+   accepted up to 48 h old), then the cached proxy, then straight from Open-Meteo.
+   Chunks are drawn as they arrive. Values are placed on the master time axis by
+   TIMESTAMP, not by index: a cached chunk can come from an earlier GFS run whose
+   series starts on the previous day. A chunk that never loads stays null (blank)
+   rather than being faked as calm air at 1013 mb. */
 function loadBasin(){
-	if(BASIN.loaded||BASIN.loading)return;BASIN.loading=true;
+	if(BASIN.loaded||BASIN.loading||!TIMES.length)return; /* needs the local grid's time axis */
+	BASIN.loading=true;
 	var N=BASIN.LAT.length,CH=150,chunks=[];
 	for(var s=0;s<N;s+=CH)chunks.push([s,Math.min(s+CH,N)]);
-	BASIN.SP=new Array(N);BASIN.DR=new Array(N);BASIN.PR=new Array(N);BASIN.TP=new Array(N);
-	var ci=0,CONC=2;
+	var T=TIMES.length,TIDX={};for(var t=0;t<T;t++)TIDX[TIMES[t]]=t;
+	function blank(){var b=new Array(T);for(var i=0;i<T;i++)b[i]=null;return b;}
+	BASIN.SP=[];BASIN.DR=[];BASIN.PR=[];BASIN.TP=[];
+	for(var i=0;i<N;i++){BASIN.SP.push(blank());BASIN.DR.push(blank());BASIN.PR.push(blank());BASIN.TP.push(blank());}
+	var got=0,failed=0,ci=0,CONC=3,timer=null;
+	BASIN.note='Loading Atlantic data… 0 of '+chunks.length;
+	function align(src,times){var out=blank();if(!src)return out;for(var j=0;j<times.length;j++){var ti=TIDX[times[j]];if(ti!=null)out[ti]=src[j];}return out;}
+	function valid(arr){return Array.isArray(arr)&&arr.length&&arr[0]&&arr[0].hourly&&arr[0].hourly.time;}
+	function store(a,arr){var list=Array.isArray(arr)?arr:[arr];
+		for(var k=0;k<list.length;k++){var h=list[k]&&list[k].hourly;if(!h||!h.time)continue;var gi=a+k;
+			BASIN.SP[gi]=align(h.wind_speed_10m,h.time);BASIN.DR[gi]=align(h.wind_direction_10m,h.time);
+			BASIN.PR[gi]=align(h.pressure_msl,h.time);BASIN.TP[gi]=align(h.temperature_2m,h.time);}}
+	/* browser direct fetch of this chunk's points — same grid slice/params as the
+	   proxy — for when the host can't reach Open-Meteo (keeps the national view alive) */
+	function clientChunk(a,b){
+		var u='https://api.open-meteo.com/v1/forecast?latitude='+BASIN.LAT.slice(a,b).join(',')+'&longitude='+BASIN.LON.slice(a,b).join(',')
+			+'&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
+			+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
+		return fetchT(u,30000).then(function(r){if(!r.ok)throw new Error('b '+r.status);return r.json();});
+	}
+	/* redraw at most every 250 ms as chunks land; switch to the basin view on the first one */
+	function progress(){if(!timer)timer=setTimeout(paint,250);}
+	function paint(){timer=null;
+		var done=got+failed>=chunks.length;
+		if(got){buildFrames(BASIN);BASIN.loaded=true;}
+		if(done)BASIN.loading=false;
+		BASIN.note=done?(failed?'Some Atlantic data is unavailable right now, so those areas are blank':''):'Loading Atlantic data… '+(got+failed)+' of '+chunks.length;
+		if(activeGrid===BASIN&&mode!=='radar'){
+			if(vl&&map.hasLayer(vl)&&BASIN.FRAMES[curTi])vl.setData(BASIN.FRAMES[curTi]);
+			refreshOverlays();drawField();drawHL(BASIN,curTi);setFoot();
+		}else maybeSwitchGrid();
+	}
 	function fetchChunk(idx,tries){
 		var a=chunks[idx][0],b=chunks[idx][1];
-		function valid(arr){return Array.isArray(arr)&&arr.length&&arr[0]&&arr[0].hourly;}
-		function store(arr){var list=Array.isArray(arr)?arr:[arr];
-			for(var k=0;k<list.length;k++){var gi=a+k;if(list[k]&&list[k].hourly){BASIN.SP[gi]=list[k].hourly.wind_speed_10m;BASIN.DR[gi]=list[k].hourly.wind_direction_10m;BASIN.PR[gi]=list[k].hourly.pressure_msl;BASIN.TP[gi]=list[k].hourly.temperature_2m;}}}
-		/* browser direct fetch of this chunk's points — same grid slice/params as the
-		   proxy — for when the host can't reach Open-Meteo (keeps the national view alive) */
-		function clientChunk(){
-			var u='https://api.open-meteo.com/v1/forecast?latitude='+BASIN.LAT.slice(a,b).join(',')+'&longitude='+BASIN.LON.slice(a,b).join(',')
-				+'&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
-				+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-			return fetch(u).then(function(r){if(!r.ok)throw new Error('b '+r.status);return r.json();});
-		}
-		/* cached per-chunk server proxy (CH=150 matches oyc_wind_basin), browser fallback */
-		return fetchT(AJAX+'?action=oyc_wind_basin&chunk='+idx,12000)
+		return statFetch('wind_basin_'+idx,'oyc_wind_basin&chunk='+idx,48*60,12000)
 			.then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
-			.then(function(arr){return valid(arr)?arr:clientChunk();})
-			.then(function(arr){if(!valid(arr))throw new Error('chunk');store(arr);})
+			.then(function(arr){return valid(arr)?arr:clientChunk(a,b);})
+			.then(function(arr){if(!valid(arr))throw new Error('chunk');store(a,arr);got++;progress();})
 			.catch(function(){
-				if(tries<2)return new Promise(function(res){setTimeout(res,800*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
+				if(tries<2)return new Promise(function(res){setTimeout(res,1500*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
+				failed++;progress();
 			});
 	}
 	function pump(){
 		if(ci>=chunks.length)return Promise.resolve();
 		var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fetchChunk(ci,0));
-		return Promise.all(batch).then(function(){return new Promise(function(res){setTimeout(res,300);}).then(pump);});
+		return Promise.all(batch).then(pump);
 	}
-	pump().then(function(){
-		for(var i=0;i<N;i++){if(!BASIN.SP[i]){BASIN.SP[i]=TIMES.map(function(){return 0;});BASIN.DR[i]=TIMES.map(function(){return 0;});BASIN.PR[i]=TIMES.map(function(){return 1013;});BASIN.TP[i]=TIMES.map(function(){return null;});}}
-		buildFrames(BASIN);BASIN.loaded=true;BASIN.loading=false;
-		maybeSwitchGrid();
-	});
+	if(chooseGrid()===BASIN)setFoot();
+	pump();
 }
 
 /* ---------- RADAR — precipitation (NOAA HRRR via Open-Meteo) ----------
@@ -1934,7 +1974,7 @@ document.getElementById('tgParticles').addEventListener('change',function(){if(m
 /* the "wind from" hint rides with the barbs — visible only while they're shown */
 function updateBarbHint(){var h=document.getElementById('barbHint');if(h)h.style.display=map.hasLayer(arrowsLayer)?'flex':'none';}
 document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);updateBarbHint();});
-document.getElementById('tgIso').addEventListener('change',function(){if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
+document.getElementById('tgIso').addEventListener('change',function(){isoTouched=true;if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
 document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
 	if(cb.checked){fieldMode=which;for(var k in ids){if(k!==which)document.getElementById(ids[k]).checked=false;}}
