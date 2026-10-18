@@ -1179,9 +1179,10 @@ function wpRow(pin,i,ti){
 	/* Kept to distance, wind and seas so the column stays narrow; position and
 	   pressure remain on the point's map card (and in the CSV export). */
 	var s=pinReading(pin.lat,pin.lon,ti,pin.fc),lg=legInfo(pin);
+	var prev=(i===0)?ER:pins[i-1],lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon); /* leg course (magnetic) from the previous point */
 	var dist=(i===0)
-		?'<span class="v">'+lg.dist.toFixed(1)+'</span><span class="s">from Buoy 42</span>'
-		:'<span class="v">'+cumFromStart(pin).toFixed(1)+' total</span><span class="s">leg '+lg.dist.toFixed(1)+'</span>';
+		?'<span class="v">'+lb+'°M</span><span class="s">'+lg.dist.toFixed(1)+' nm from Buoy 42</span>'
+		:'<span class="v">'+lb+'°M</span><span class="s">leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1)+'</span>';
 	var wind='<span class="s">No data</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
