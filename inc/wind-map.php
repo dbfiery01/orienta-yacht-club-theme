@@ -147,7 +147,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .mapgrid .mapwrap{flex:1 1 auto;min-width:0}
 #oycwm .wptab{display:none;flex:0 0 260px;flex-direction:column;min-height:0;max-height:min(64vh,600px);border-left:1px solid var(--line);background:var(--panel)}
 #oycwm .mapgrid.has-wp .wptab{display:flex}
-#oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
+#oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 8px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
 #oycwm .wptab .route-btns button,#oycwm .wptab .route-btns a{box-shadow:none}
 #oycwm .wpt-wrap{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
@@ -179,8 +179,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .wind{grid-area:w}
 #oycwm .wpt .sea{grid-area:s}
 #oycwm .wpt .x{grid-area:x;width:auto;padding:0;justify-self:end}
-#oycwm .wptab .route-btns button,#oycwm .wptab .route-btns a{padding:6px 10px;font-size:.7rem}
-/* "Hide table" / "Show table (N)" works at every width: hiding collapses the
+#oycwm .wptab .route-btns button,#oycwm .wptab .route-btns a{padding:6px 7px;font-size:.68rem;white-space:nowrap}
+/* Save route · GRIB · Clear · Hide on ONE line inside the 260px table (wraps only
+   in the collapsed floating bar, which sizes itself) */
+#oycwm .wptab:not(.collapsed) .route-btns{flex-wrap:nowrap;gap:4px;margin-left:auto}
+/* "Hide" / "Show table (N)" works at every width: hiding collapses the
    table to its header (route summary + buttons), floating at the map's top-right.
    On desktop that also drops the side column, so the map takes the full width. */
 #oycwm .route-btns .rb-tog{background:#fff;color:var(--navy)}
@@ -197,7 +200,7 @@ function oyc_wind_map_html( $embed = false ) {
 @media (max-width:900px){
 	#oycwm .mapgrid{display:block}
 	#oycwm .wptab{position:absolute;top:8px;right:8px;z-index:1001;width:min(260px,calc(100% - 56px));max-height:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
-	#oycwm .wptab .routebar{padding:8px 10px;gap:6px}
+	#oycwm .wptab .routebar{padding:8px;gap:6px}
 	#oycwm .mapgrid.has-wp .map-ll{display:none}
 	#oycwm .wpt{font-size:.7rem}
 	#oycwm .card.isfull .mapgrid .mapwrap{height:100%}
@@ -518,7 +521,7 @@ function oyc_wind_map_html( $embed = false ) {
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
-					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="true" aria-controls="wpTab">Hide table</button>
+					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="true" aria-controls="wpTab" title="Hide or show the waypoint table">Hide</button>
 				</div>
 			</div>
 			<div class="wpt-wrap">
@@ -1083,7 +1086,7 @@ function renderWpTable(){
 }
 /* Hide/Show table, at every width */
 function wpToggleLabel(){var tab=document.getElementById('wpTab'),b=document.getElementById('rbToggle');if(!tab||!b)return;
-	var c=tab.classList.contains('collapsed');b.textContent=c?('Show table ('+pins.length+')'):'Hide table';b.setAttribute('aria-expanded',c?'false':'true');}
+	var c=tab.classList.contains('collapsed');b.textContent=c?('Show table ('+pins.length+')'):'Hide';b.setAttribute('aria-expanded',c?'false':'true');}
 /* Phones: size the list to exactly its first two rows (it scrolls for the rest).
    Desktop: no cap — the side column runs the map's height. */
 var WP_NARROW=window.matchMedia('(max-width:900px)');
