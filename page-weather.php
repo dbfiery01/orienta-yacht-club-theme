@@ -65,6 +65,7 @@ if ( ! $oyc_weather_menu ) {
 		--edge:rgba(245,239,226,.12); --edge2:rgba(245,239,226,.24);
 		--ink:#f5efe2; --muted:#aeb9c8; --faint:#84909f;
 		--teal:#d4a851; --teal2:#b08a3e; --amber:#57a6d6; --red:#c0392b; --green:#4ade80;
+		--fish-track:rgba(245,239,226,.07); --fish-night:rgba(0,0,0,.28); --fish-gold:#d4a851; --fish-blue:#7cbbe2;
 	}
 	:root[data-theme="light"]{
 		/* OYC light palette — white "readout sheet" cards on a soft harbor-light ground */
@@ -72,6 +73,7 @@ if ( ! $oyc_weather_menu ) {
 		--edge:#e0e7f0; --edge2:#cbd8e6;
 		--ink:#16324a; --muted:#5a6b7d; --faint:#8a99a8;
 		--teal:#b0842f; --teal2:#916b26; --amber:#1583cf; --red:#c0392b; --green:#2e9e5b;
+		--fish-track:#eef2f7; --fish-night:#dbe3ed; --fish-gold:#86621f; --fish-blue:#0f68a6;
 	}
 	*{box-sizing:border-box;margin:0;padding:0}
 	html,body{height:100%}
@@ -300,6 +302,46 @@ if ( ! $oyc_weather_menu ) {
 	.cond .v{font-size:24px;font-weight:800;color:var(--ink)}
 	.cond .k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
 
+	/* fishing */
+	.fish-out{display:flex;gap:12px;align-items:center;margin-top:12px;background:rgba(212,168,81,.12);border:1px solid rgba(212,168,81,.38);border-radius:12px;padding:10px 12px}
+	.fish-score{text-align:center;min-width:64px}
+	.fish-word{font-size:21px;font-weight:800;color:var(--teal);line-height:1}
+	.fish-dots{display:flex;gap:3px;justify-content:center;margin-top:5px}
+	.fish-dots i{width:7px;height:7px;border-radius:50%;background:var(--teal)}
+	.fish-dots i.off{background:rgba(212,168,81,.3)}
+	.fish-out p{font-size:12px;line-height:1.45;color:var(--muted)}
+	.fish-k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:14px}
+	.fish-tl{position:relative;height:26px;border-radius:7px;background:var(--fish-track);overflow:hidden;margin-top:6px}
+	.fish-tl span{position:absolute;top:0;bottom:0}
+	.fish-tl .nt{background:var(--fish-night)}
+	.fish-tl .w{top:5px;bottom:5px;border-radius:4px}
+	.fish-tl .w.best{background:var(--teal)} .fish-tl .w.good{background:var(--amber)} .fish-tl .w.fair{background:var(--faint)}
+	.fish-tl .w.past{opacity:.35}
+	.fish-tl .now{width:2px;margin-left:-1px;background:var(--ink)}
+	.fish-ticks{position:relative;height:15px;font-size:11px;font-variant-numeric:tabular-nums}
+	.fish-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+	.fish-ticks.tide span{color:var(--ink);font-weight:700}
+	.fish-ticks.hrs span{color:var(--faint)}
+	.fish-wins{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;margin-top:8px;font-size:12px;align-items:baseline}
+	.fish-wins .chip{border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+	.fish-wins .chip.best{background:rgba(212,168,81,.2);color:var(--fish-gold)}
+	.fish-wins .chip.good{background:rgba(87,166,214,.18);color:var(--fish-blue)}
+	.fish-wins .chip.fair{background:var(--fish-track);color:var(--muted)}
+	.fish-wins b{font-variant-numeric:tabular-nums}
+	.fish-wins .why{color:var(--muted)}
+	.fish-wins .past{opacity:.5}
+	.fish-cond .v{font-size:19px}
+	.fish-cond .cell{padding:10px 12px}
+	.fish-cond .t{font-size:11px;margin-top:3px;color:var(--muted)}
+	.fish-cond .t.down{color:var(--amber)} .fish-cond .t.fall{color:var(--red)} .fish-cond .t.up{color:var(--green)}
+	.fish-sol{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:6px;font-size:12px;font-variant-numeric:tabular-nums}
+	.fish-sol .k{color:var(--faint);font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-right:4px}
+	.fish-sol .full{grid-column:1/-1;color:var(--muted)}
+	.fish-note{margin-top:12px;background:rgba(87,166,214,.12);border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.45}
+	.fish-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--faint)}
+	.fish-foot a{color:var(--amber);text-decoration:none}
+	.fish-foot a:hover{text-decoration:underline}
+
 	/* alert */
 	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
 	/* embedded Wind & Radar map card */
@@ -390,6 +432,29 @@ if ( ! $oyc_weather_menu ) {
 					<div class="it"><span class="k">Moon phase</span><span class="v" id="moonName">&mdash;</span></div>
 					<div class="it" style="text-align:right"><span class="k">Illuminated</span><span class="v" id="moonPct">&mdash;</span></div>
 				</div>
+			</div>
+
+			<div class="card" data-card="fish">
+				<h2>Fishing <span class="sta" id="fishDay">Today</span></h2>
+				<div class="fish-out">
+					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div></div>
+					<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
+				</div>
+				<div class="fish-k">Best windows</div>
+				<div class="fish-tl" id="fishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
+				<div class="fish-ticks tide" id="fishTide" aria-hidden="true"></div>
+				<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
+				<div class="fish-wins" id="fishWins"></div>
+				<div class="cond fish-cond">
+					<div class="cell"><div class="v" id="fishWater">&mdash;</div><div class="k">Water</div><div class="t" id="fishWaterT"></div></div>
+					<div class="cell"><div class="v" id="fishPres">&mdash;</div><div class="k">Pressure mb</div><div class="t" id="fishPresT"></div></div>
+					<div class="cell"><div class="v" id="fishWind">&mdash;</div><div class="k" id="fishWindK">Max wind</div><div class="t" id="fishWindT"></div></div>
+					<div class="cell"><div class="v" id="fishCur">&mdash;</div><div class="k">Peak current</div><div class="t" id="fishCurT"></div></div>
+				</div>
+				<div class="fish-k">Solunar</div>
+				<div class="fish-sol" id="fishSol"></div>
+				<div class="fish-note" id="fishNote" hidden></div>
+				<div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div>
 			</div>
 		</div>
 
@@ -494,15 +559,17 @@ if ( ! $oyc_weather_menu ) {
 	})();
 
 	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
-	// One flat order of the 9 cards; desktop fills the columns 3/3/3 with it
+	// One flat order of the 9 cards; desktop fills the columns 4/3/2 with it
 	// (middle column = the wide "featured" slots), mobile shows it as a list.
 	var ORDER_KEY = 'oyc_board_order_v3';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
+	var DEFAULT_ORDER = ['tide','next','sunmoon','fish','forecast','graph','wind','waves','cond'];
 	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
-	var ORDER_SPLIT = [3,3,3];
+	var ORDER_SPLIT = [4,3,2];
 	function getOrder(){
 		try{
 			var o = JSON.parse(localStorage.getItem(ORDER_KEY));
+			/* a saved order from before the Fishing card: slot it in after Sun & Moon */
+			if(Array.isArray(o) && o.indexOf('fish') < 0){ var si = o.indexOf('sunmoon'); o.splice(si < 0 ? o.length : si+1, 0, 'fish'); }
 			if(Array.isArray(o) && o.slice().sort().join() === DEFAULT_ORDER.slice().sort().join()){ return o; }
 		}catch(e){}
 		return DEFAULT_ORDER.slice();
@@ -1222,9 +1289,255 @@ if ( ! $oyc_weather_menu ) {
 		$('moon').innerHTML = moonSvg(mi.fraction, mi.phase<0.5);
 	}
 
+	// ---------- FISHING ----------
+	// The day's fishing outlook (today, or tomorrow after 8 PM) from data the board
+	// already uses: tide times (same bundle / NOAA source as Next Tides), NOAA
+	// current predictions at Execution Rocks, the Kings Point water temperature and
+	// its 3-day change, the Open-Meteo harbor forecast (wind + pressure tendency),
+	// and sun/moon positions computed here. Solunar majors = moon overhead or
+	// underfoot +/-1 h; minors = moonrise/moonset +/-30 min. Windows score dawn/dusk,
+	// the hour either side of a tide turn and a major period at 2 points each and a
+	// minor period at 1: 3+ is Good, 4+ (two strong signals) is Best. Current isn't
+	// scored: the Execution Rocks predictions are weak (under 0.5 kt) and peak
+	// several times a tide, which smeared windows into 3-hour blocks. It's a
+	// planning guide, not a promise.
+	var FISH_T0 = 5, FISH_T1 = 21;                      // timeline 5 AM - 9 PM
+	var FISH_CUR = 'LIS1036';                           // NOAA current station, Execution Rocks
+	var FISH_WORDS = ['Poor','Slow','Fair','Good','Excellent'];
+	function fishDayStart(){ var d=new Date(); if(d.getHours()>=20){ d.setDate(d.getDate()+1); } d.setHours(0,0,0,0); return d; }
+	function fishRange(a,b){ var A=hmt(a), B=hmt(b); return (A.slice(-2)===B.slice(-2)) ? A.slice(0,-3)+'–'+B : A+'–'+B; }
+	function fishPct(ms, day){ var a=day.getTime()+FISH_T0*3600000, b=day.getTime()+FISH_T1*3600000; return Math.max(0,Math.min(100,(ms-a)/(b-a)*100)); }
+
+	// moon altitude (radians, with refraction) and the day's rise / set / overhead / underfoot
+	function moonAltAt(date){
+		var lw=rad*-CFG.LON, phi=rad*CFG.LAT, d=toDays(date), c=moonCoords(d),
+			H=rad*(280.16+360.9856235*d)-lw-c.ra,
+			h=Math.asin(Math.sin(phi)*Math.sin(c.dec)+Math.cos(phi)*Math.cos(c.dec)*Math.cos(H)), hr=Math.max(h,0);
+		return h + 0.0002967/Math.tan(hr+0.00312536/(hr+0.08901179));
+	}
+	function moonEvents(day){
+		var t0=day.getTime(), step=5*60000, n=288, hc=0.133*rad, al=[], i, mx=0, mn=0,
+			out={ rise:null, set:null, over:null, under:null };
+		for(i=0;i<=n;i++){ al.push(moonAltAt(new Date(t0+i*step))); }
+		for(i=1;i<=n;i++){
+			if(al[i]>al[mx]) mx=i;
+			if(al[i]<al[mn]) mn=i;
+			var a=al[i-1]-hc, b=al[i]-hc;
+			if(a<0 && b>=0 && !out.rise) out.rise=new Date(t0+(i-1+a/(a-b))*step);
+			if(a>=0 && b<0 && !out.set)  out.set =new Date(t0+(i-1+a/(a-b))*step);
+		}
+		if(mx>0 && mx<n) out.over =new Date(t0+mx*step);
+		if(mn>0 && mn<n) out.under=new Date(t0+mn*step);
+		return out;
+	}
+
+	// data: each resolves to [] / null on failure so the card still renders what it has
+	function fishTides(day){
+		var t0=day.getTime()-3*3600000, t1=day.getTime()+27*3600000;
+		function keep(list){
+			return (list||[]).map(function(p){ return { t:new Date(String(p.t).replace(' ','T')), v:parseFloat(p.v), hi:p.type==='H' }; })
+				.filter(function(x){ var ms=x.t.getTime(); return ms>=t0 && ms<=t1; });
+		}
+		return bundledTides().then(function(ev){ var k=keep(ev); if(k.length<2) throw new Error('bundle'); return k; })
+			.catch(function(){
+				return coops('predictions', { begin_date:ymdhm(new Date(t0)), range:30, datum:'MLLW', interval:'hilo' })
+					.then(function(j){ var k=keep(j && j.predictions); if(k.length<2) throw new Error('hilo'); return k; });
+			})
+			.catch(function(){ return keep(readTideCache('hilo')); });
+	}
+	function fishCurrents(day){
+		var u=COOPS+'?product=currents_predictions&application=OYC-LiveConditions&station='+FISH_CUR
+			+'&time_zone=lst_ldt&units=english&format=json&interval=MAX_SLACK&begin_date='+ymd(day)+'&end_date='+ymd(day);
+		return fetch(u).then(function(r){ return r.json(); }).then(function(j){
+			var cp=j && j.current_predictions && j.current_predictions.cp;
+			return (cp||[]).filter(function(c){ return c.Type==='flood' || c.Type==='ebb'; })
+				.map(function(c){ return { t:new Date(String(c.Time).replace(' ','T')), v:Math.abs(parseFloat(c.Velocity_Major)), type:c.Type }; });
+		}).catch(function(){ return []; });
+	}
+	function fishWater(){
+		return coops('water_temperature', { begin_date:ymdhm(new Date(Date.now()-76*3600000)), end_date:ymdhm(new Date()), interval:'h' })
+			.then(function(j){
+				var d=((j && j.data) || []).filter(function(x){ return x.v!=null && x.v!==''; })
+					.map(function(x){ return { t:new Date(x.t.replace(' ','T')).getTime(), v:parseFloat(x.v) }; });
+				if(!d.length) return null;
+				var last=d[d.length-1], target=last.t-72*3600000, old=null, bd=1e15;
+				d.forEach(function(x){ var dd=Math.abs(x.t-target); if(dd<bd){ bd=dd; old=x; } });
+				return { v:last.v, delta:(old && bd<6*3600000) ? last.v-old.v : null };
+			}).catch(function(){ return null; });
+	}
+	function fishWx(){
+		return fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON
+			+'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl&wind_speed_unit=kn&past_days=1&forecast_days=3&timezone=America%2FNew_York')
+			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
+			.then(function(j){
+				var H=j && j.hourly; if(!H || !H.time) return null;
+				return H.time.map(function(t,i){ return { t:new Date(t).getTime(), sp:H.wind_speed_10m[i], gu:H.wind_gusts_10m[i], dir:H.wind_direction_10m[i], mb:H.pressure_msl[i] }; });
+			}).catch(function(){ return null; });
+	}
+	function fishWxAt(wx, ms){
+		var best=null, bd=1e15;
+		(wx||[]).forEach(function(x){ var d=Math.abs(x.t-ms); if(d<bd){ bd=d; best=x; } });
+		return (bd<=90*60000) ? best : null;
+	}
+
+	// score 10-minute slots and join the strong stretches into windows
+	function fishWindows(day, sun, tides, solu){
+		var H=3600000, t0=day.getTime()+FISH_T0*H, t1=day.getTime()+FISH_T1*H, step=10*60000, slots=[], per=[], t, i;
+		if(solu.over)  per.push({ a:solu.over.getTime()-H,    b:solu.over.getTime()+H,    pts:2, lbl:'major solunar' });
+		if(solu.under) per.push({ a:solu.under.getTime()-H,   b:solu.under.getTime()+H,   pts:2, lbl:'major solunar' });
+		if(solu.rise)  per.push({ a:solu.rise.getTime()-H/2,  b:solu.rise.getTime()+H/2,  pts:1, lbl:'minor solunar' });
+		if(solu.set)   per.push({ a:solu.set.getTime()-H/2,   b:solu.set.getTime()+H/2,   pts:1, lbl:'minor solunar' });
+		for(t=t0; t<t1; t+=step){
+			var m=t+step/2, sc=0, why=[];
+			if(Math.abs(m-sun.sunrise.getTime())<=H){ sc+=2; why.push('dawn'); }
+			if(Math.abs(m-sun.sunset.getTime())<=H){ sc+=2; why.push('sunset'); }
+			for(i=0;i<tides.length;i++){ if(Math.abs(m-tides[i].t.getTime())<=H){ sc+=2; why.push((tides[i].hi?'high':'low')+' tide '+hmt(tides[i].t).slice(0,-3)); break; } }
+			for(i=0;i<per.length;i++){ if(m>=per[i].a && m<=per[i].b){ sc+=per[i].pts; why.push(per[i].lbl); break; } }
+			slots.push({ a:t, b:t+step, sc:sc, why:why });
+		}
+		function build(min){
+			var wins=[], cur=null;
+			slots.forEach(function(s){
+				if(s.sc<min) return;
+				if(cur && s.a-cur.b<=20*60000){
+					cur.b=s.b; cur.peak=Math.max(cur.peak,s.sc);
+					s.why.forEach(function(w){ if(cur.why.indexOf(w)<0) cur.why.push(w); });
+				} else { cur={ a:s.a, b:s.b, peak:s.sc, why:s.why.slice() }; wins.push(cur); }
+			});
+			return wins;
+		}
+		var wins=build(3), fair=false;
+		if(!wins.length){ wins=build(2); fair=true; }
+		wins.forEach(function(w){ w.cls = fair ? 'fair' : (w.peak>=4 ? 'best' : 'good'); });
+		wins.sort(function(x,y){ return (y.peak-x.peak) || ((y.b-y.a)-(x.b-x.a)); });
+		return wins.slice(0,3).sort(function(x,y){ return x.a-y.a; });
+	}
+
+	// species line by water temperature; Aug-Dec reads as the cooling (fall) season
+	function fishNote(w, month){
+		if(w==null) return '';
+		var cooling = month>=7;
+		if(w<45) return 'Cold water. Most fish have left the western Sound; a few blackfish hold on deep structure.';
+		if(w<52) return cooling ? 'Late season: blackfish on the rock piles and the last of the striped bass.'
+			: 'Early season: holdover striped bass waking up in the harbors, flounder on the mud.';
+		if(w<58) return cooling ? 'Blackfish at their best on structure; striped bass feeding before they head south.'
+			: 'Striped bass arriving and porgies moving in.';
+		if(w<66) return cooling ? 'Prime for striped bass and blackfish. Bluefish are thinning out as it cools.'
+			: 'Striped bass and porgies; bluefish arrive as it warms.';
+		if(w<74) return 'Summer mix: porgy, black sea bass and fluke on the bottom; striped bass and bluefish early and late.';
+		return 'Warm water: fish go deeper, so work dawn and dusk. Bluefish, porgy, fluke and black sea bass.';
+	}
+
+	function renderFishing(day, isToday, sun, solu, mi, tides, curs, water, wx){
+		var H=3600000, now=Date.now(), t0=day.getTime()+FISH_T0*H, t1=day.getTime()+FISH_T1*H;
+		var D3=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+		$('fishDay').textContent = (isToday ? 'Today' : 'Tomorrow') + ' · ' + D3[day.getDay()] + ' ' + MON[day.getMonth()].slice(0,3) + ' ' + day.getDate();
+		var wins = fishWindows(day, sun, tides, solu);
+
+		// timeline: night ends, windows, now marker; tide turns above the hours
+		var tl = '<span class="nt" style="left:0;width:'+fishPct(sun.sunrise.getTime(),day).toFixed(1)+'%"></span>'
+			+ '<span class="nt" style="left:'+fishPct(sun.sunset.getTime(),day).toFixed(1)+'%;right:0"></span>';
+		wins.forEach(function(w){
+			var a=fishPct(w.a,day), b=fishPct(w.b,day);
+			tl += '<span class="w '+w.cls+(isToday && w.b<now ? ' past' : '')+'" style="left:'+a.toFixed(1)+'%;width:'+Math.max(1,b-a).toFixed(1)+'%"></span>';
+		});
+		if(isToday && now>t0 && now<t1){ tl += '<span class="now" style="left:'+fishPct(now,day).toFixed(1)+'%"></span>'; }
+		$('fishTl').innerHTML = tl;
+		$('fishTl').setAttribute('aria-label', wins.length
+			? 'Fishing windows: ' + wins.map(function(w){ return w.cls+' '+fishRange(new Date(w.a), new Date(w.b)); }).join(', ')
+			: 'No fishing windows found');
+		$('fishTide').innerHTML = tides.filter(function(x){ var ms=x.t.getTime(); return ms>=t0 && ms<=t1; }).map(function(x){
+			return '<span style="left:'+Math.max(3,Math.min(97,fishPct(x.t.getTime(),day))).toFixed(1)+'%">'+(x.hi?'H':'L')+'</span>';
+		}).join('');
+		$('fishWins').innerHTML = wins.length ? wins.map(function(w){
+			var past = (isToday && w.b<now) ? ' past' : '', lbl = w.cls==='best' ? 'Best' : (w.cls==='good' ? 'Good' : 'Fair');
+			return '<span class="chip '+w.cls+past+'">'+lbl+'</span><span class="'+past+'"><b>'+fishRange(new Date(w.a), new Date(w.b))+'</b> <span class="why">&middot; '+w.why.slice(0,3).join(', ')+'</span></span>';
+		}).join('') : '<span class="chip fair">None</span><span class="why">No overlapping signals today</span>';
+
+		// conditions
+		if(water){
+			$('fishWater').textContent = Math.round(water.v)+'°F';
+			var wt=$('fishWaterT'), dd=water.delta;
+			if(dd==null){ wt.textContent=''; wt.className='t'; }
+			else if(Math.abs(dd)<1){ wt.textContent='steady over 3 days'; wt.className='t'; }
+			else { wt.textContent=(dd<0?'▼ ':'▲ ')+Math.round(Math.abs(dd))+'° in 3 days'; wt.className='t '+(dd<0?'down':'up'); }
+		}
+		var rate=null, pNow=null;
+		if(wx){
+			if(isToday){ var pa=fishWxAt(wx, now), pb=fishWxAt(wx, now-3*H); if(pa){ pNow=pa.mb; } if(pa && pb && pa.mb!=null && pb.mb!=null){ rate=pa.mb-pb.mb; } }
+			else { var q6=fishWxAt(wx, day.getTime()+6*H), q12=fishWxAt(wx, day.getTime()+12*H), q18=fishWxAt(wx, day.getTime()+18*H);
+				if(q12){ pNow=q12.mb; } if(q6 && q18 && q6.mb!=null && q18.mb!=null){ rate=(q18.mb-q6.mb)/4; } }
+		}
+		if(pNow!=null){ $('fishPres').textContent = Math.round(pNow); }
+		var pt=$('fishPresT');
+		if(rate==null){ pt.textContent=''; pt.className='t'; }
+		else if(rate<=-0.4){ pt.textContent='▼ falling'; pt.className='t fall'; }
+		else if(rate>=0.4){ pt.textContent='▲ rising'; pt.className='t up'; }
+		else { pt.textContent='→ steady'; pt.className='t'; }
+		var maxW=null;
+		(wx||[]).forEach(function(x){ if(x.t>=t0 && x.t<=t1 && x.sp!=null && (!maxW || x.sp>maxW.sp)) maxW=x; });
+		var maxG=null;
+		(wx||[]).forEach(function(x){ if(x.t>=t0 && x.t<=t1 && x.gu!=null && (maxG==null || x.gu>maxG)) maxG=x.gu; });
+		if(maxW){
+			$('fishWind').textContent = Math.round(maxW.sp)+' kt';
+			$('fishWindK').textContent = 'Max wind' + (maxW.dir!=null ? ' · '+dirCardinal(maxW.dir) : '');
+			$('fishWindT').textContent = (maxG!=null) ? 'gusts '+Math.round(maxG)+' kt' : '';
+		}
+		var pk=null;
+		curs.forEach(function(c){ var ms=c.t.getTime(); if(ms>=t0 && ms<=t1 && (!pk || c.v>pk.v)) pk=c; });
+		$('fishCur').textContent = pk ? pk.v.toFixed(1)+' kt' : '—';
+		$('fishCurT').textContent = pk ? pk.type+' at '+hmt(pk.t) : (curs.length ? '' : 'no prediction');
+
+		// solunar
+		var sol=[];
+		if(solu.over)  sol.push({ t:solu.over,  html:'<span class="k">Major</span>'+fishRange(new Date(solu.over.getTime()-H), new Date(solu.over.getTime()+H)) });
+		if(solu.under) sol.push({ t:solu.under, html:'<span class="k">Major</span>'+fishRange(new Date(solu.under.getTime()-H), new Date(solu.under.getTime()+H)) });
+		if(solu.rise)  sol.push({ t:solu.rise,  html:'<span class="k">Minor</span>'+fishRange(new Date(solu.rise.getTime()-H/2), new Date(solu.rise.getTime()+H/2)) });
+		if(solu.set)   sol.push({ t:solu.set,   html:'<span class="k">Minor</span>'+fishRange(new Date(solu.set.getTime()-H/2), new Date(solu.set.getTime()+H/2)) });
+		sol.sort(function(a,b){ return a.t-b.t; });
+		$('fishSol').innerHTML = sol.map(function(x){ return '<div>'+x.html+'</div>'; }).join('')
+			+ '<div class="full">Moon: '+moonName(mi.phase).toLowerCase()+', '+Math.round(mi.fraction*100)+'% lit</div>';
+
+		// outlook: start at Fair and adjust
+		var sc=3, parts=[];
+		if(rate!=null && rate<=-0.4){ sc++; parts.push('falling pressure'); }
+		else if(rate!=null && rate>=1.0){ sc--; parts.push('pressure rising fast'); }
+		var best=wins.filter(function(w){ return w.cls==='best'; })[0], good=wins.filter(function(w){ return w.cls==='good'; })[0];
+		if(best){ sc++; parts.push('best around '+hmt(new Date(best.a))+' ('+best.why.slice(0,2).join(', ')+')'); }
+		else if(good){ parts.push('a good window around '+hmt(new Date(good.a))); }
+		else { sc--; parts.push('no strong windows'); }
+		var ph=mi.phase;
+		if(ph<0.07 || ph>0.93){ sc++; parts.push('new-moon tides'); }
+		else if(Math.abs(ph-0.5)<0.07){ sc++; parts.push('full-moon tides'); }
+		if(maxW && maxW.sp>=25){ sc-=2; parts.push('wind up to '+Math.round(maxW.sp)+' kt'); }
+		else if(maxW && maxW.sp>=18){ sc--; parts.push('breezy, up to '+Math.round(maxW.sp)+' kt'); }
+		sc=Math.max(1,Math.min(5,sc));
+		$('fishWord').textContent = FISH_WORDS[sc-1];
+		var dots=''; for(var k=1;k<=5;k++){ dots+='<i'+(k>sc?' class="off"':'')+'></i>'; }
+		$('fishDots').innerHTML = dots;
+		var why=parts.join('; ');
+		$('fishWhy').textContent = why ? why.charAt(0).toUpperCase()+why.slice(1)+'.' : '';
+
+		var note=fishNote(water ? water.v : null, new Date().getMonth()), ne=$('fishNote');
+		ne.textContent = note; ne.hidden = !note;
+	}
+
+	var fishBusy=false;
+	function loadFishing(){
+		if(fishBusy) return;
+		fishBusy=true;
+		var day=fishDayStart(), noon=new Date(day.getTime()+12*3600000), isToday=(new Date().getDate()===day.getDate());
+		var sun=sunTimes(noon, CFG.LAT, CFG.LON), solu=moonEvents(day), mi=moonIllum(noon);
+		Promise.all([fishTides(day), fishCurrents(day), fishWater(), fishWx()]).then(function(r){
+			fishBusy=false;
+			renderFishing(day, isToday, sun, solu, mi, r[0]||[], r[1]||[], r[2], r[3]);
+			markUpdated(true);
+		}).catch(function(){ fishBusy=false; });
+	}
+
 	// ---------- INIT + refresh ----------
 	refreshTideCache();                                // seed the 30-day fallback cache
-	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadPrecip(); loadAlerts(); loadSunMoon();
+	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadPrecip(); loadAlerts(); loadSunMoon(); loadFishing();
 	setInterval(updateCurrentTide, 60*1000);          // re-interpolate current level each minute
 	setInterval(function(){ drawGraph(); }, 5*60*1000);
 	setInterval(loadTides, 30*60*1000);
@@ -1236,6 +1549,7 @@ if ( ! $oyc_weather_menu ) {
 	setInterval(loadPrecip, 15*60*1000);
 	setInterval(loadAlerts, 5*60*1000);
 	setInterval(loadSunMoon, 30*60*1000);
+	setInterval(loadFishing, 15*60*1000);             // windows dim as they pass; flips to tomorrow at 8 PM
 })();
 </script>
 </body>
