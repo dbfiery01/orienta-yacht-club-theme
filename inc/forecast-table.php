@@ -128,7 +128,7 @@ function oyc_marine_fc_build( $force = false ) {
 	}
 	set_transient( $lock, 1, 25 );
 
-	$lat = '40.93717'; $lon = '-73.70217'; // Buoy 42 (matches the client constants)
+	$lat = '40.92465'; $lon = '-73.70251'; // Buoy 42 = Scotch Caps Lighted Bell Buoy 42, NOAA ENC position (matches the client constants)
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $lat . '&longitude=' . $lon
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
 		. '&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
@@ -348,7 +348,7 @@ function oyc_forecast_table_html() {
       return r;
     }).catch(function(){ return fetch(AJAX+'?action='+ajaxAction); });
   }
-  var LAT=40.93717, LON=-73.70217;
+  var LAT=40.92465, LON=-73.70251; // Buoy 42, NOAA ENC charted position
   var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   var card=function(d){return DIRS[Math.round((d%360)/22.5)%16];};
@@ -400,7 +400,7 @@ function oyc_forecast_table_html() {
   // it CAN reach), so the server proxy's wave fetch comes back empty — but the
   // visitor's browser reaches marine-api fine (CORS-ok). This is the authoritative
   // hourly wave source; the server-side marine (if any) is just a secondary fill.
-  var MAR_URL='https://marine-api.open-meteo.com/v1/marine?latitude=40.93717&longitude=-73.70217'
+  var MAR_URL='https://marine-api.open-meteo.com/v1/marine?latitude=40.92465&longitude=-73.70251'
     +'&hourly=wave_height,wave_period,wave_direction&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
   function mergeWaves(mh){
     if(!mh||!mh.time||!mh.wave_height)return 0;var n=0;
@@ -429,7 +429,7 @@ function oyc_forecast_table_html() {
   // Open-Meteo (host IP throttled/blocked), so the table loads from the visitor's
   // own connection instead of showing "unavailable".
   function clientWx(){
-    var u='https://api.open-meteo.com/v1/forecast?latitude=40.93717&longitude=-73.70217'
+    var u='https://api.open-meteo.com/v1/forecast?latitude=40.92465&longitude=-73.70251'
       +'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation_probability,cloud_cover,weather_code,pressure_msl'
       +'&models=best_match,gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
       +'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
