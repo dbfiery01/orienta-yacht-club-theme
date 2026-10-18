@@ -572,7 +572,7 @@ var RAMP=['#8fc0dd','#5aa6d0','#3f93c9','#d9c07a','#e0a13f','#dd7f3a','#cf5638',
 document.getElementById('scale').innerHTML=RAMP.map(function(c){return '<i style="background:'+c+'"></i>';}).join('');
 function spdColor(kt){var b=[[8,'#8fc0dd'],[11,'#5aa6d0'],[14,'#3f93c9'],[17,'#d9c07a'],[20,'#e0a13f'],[24,'#dd7f3a'],[28,'#cf5638'],[34,'#b23a2a'],[999,'#8f2d20']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return b[i][1];}
 var KT=1.94384;
-var ER={lat:40.93717,lon:-73.70217}; /* Buoy 42 — the weather-readout point, same as the /weather/ board */
+var ER={lat:40.92465,lon:-73.70251}; /* Buoy 42 = Scotch Caps Lighted Bell Buoy 42, at its NOAA ENC charted position (the old 40.93717,-73.70217 sat ~0.75 nm north, off the chart's R "42"); the weather-readout point, same as the /weather/ board */
 /* great-circle distance in nautical miles (haversine, R=3440.065 nm) */
 function distNM(lat1,lon1,lat2,lon2){var R=3440.065,d=Math.PI/180,
 	a=Math.sin((lat2-lat1)*d/2)*Math.sin((lat2-lat1)*d/2)+Math.cos(lat1*d)*Math.cos(lat2*d)*Math.sin((lon2-lon1)*d/2)*Math.sin((lon2-lon1)*d/2);
