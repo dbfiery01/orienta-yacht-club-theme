@@ -116,7 +116,23 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .ctrl .tlabel{font-weight:700;color:var(--navy);font-size:.9rem;white-space:nowrap;min-width:150px;text-align:right}
 #oycwm .ctrl .tlabel small{display:block;font-weight:600;color:var(--mute);font-size:.72rem}
 #oycwm .mapwrap{position:relative}
+#oycwm .maprot{position:relative}
 #oycwm #map{height:min(64vh,600px);width:100%;background:#dbe7f0}
+/* ---- Heads-up (course-up) navigation view ----
+   Tapping the compass rotates the chart so the GPS course is up. It's a LOCKED
+   view: interaction, the lat/long grid and open cards hide; flip back to
+   north-up to edit. The rose + boat + badges counter-rotate so they stay right. */
+#oycwm .navrose{position:absolute;z-index:596;right:10px;bottom:46px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(11,42,74,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
+#oycwm .navrose svg{display:block;transition:transform .2s ease}
+#oycwm .mapwrap.headsup{overflow:hidden}
+#oycwm .mapwrap.headsup .maprot{transform:rotate(calc(-1 * var(--hdg,0deg))) scale(1.5);transform-origin:center;transition:transform .25s ease}
+#oycwm .mapwrap.headsup .grat,
+#oycwm .mapwrap.headsup .map-ll,
+#oycwm .mapwrap.headsup .leaflet-control-container,
+#oycwm .mapwrap.headsup .leaflet-popup{display:none !important}
+#oycwm .mapwrap.headsup .wp-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
+#oycwm .mapwrap.headsup .navrose{background:#1a73e8;border-color:#1a73e8;box-shadow:0 2px 10px rgba(26,115,232,.5)}
+#oycwm .mapwrap.headsup .navrose svg{transform:rotate(calc(-1 * var(--hdg,0deg)))}
 #oycwm .satpanel{width:100%;min-height:280px;background:#0b1622;display:flex;align-items:center;justify-content:center;padding:6px}
 #oycwm .satpanel img{max-width:100%;max-height:min(66vh,640px);height:auto;width:auto;display:block}
 #oycwm .satpanel.loading::after{content:'Loading satellite\2026';color:#9fb4c6;font-size:.85rem}
@@ -304,9 +320,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pin-co .co-x{position:absolute;top:2px;right:2px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0;border:none;background:none;color:var(--mute);font-size:13px;font-weight:700;line-height:1;cursor:pointer;border-radius:5px;user-select:none;-webkit-user-select:none}
 #oycwm .pin-co .co-x:hover{background:#fdecea;color:#c0392b}
 /* live "from you" bearing/distance line + the GPS location marker */
+#oycwm .pin-co .co-leg{font-size:.72rem;font-weight:800;color:#0b2a4a;text-align:center;margin:0 0 2px}
 #oycwm .pin-co .co-you{font-size:.72rem;font-weight:800;color:#1a73e8;text-align:center;margin:0 0 4px}
 #oycwm .me-mk{background:none;border:none}
-#oycwm .me-mk svg{display:block;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff)}
+#oycwm .me-mk svg{display:block;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff);transform:rotate(var(--hdg,0deg))}
 /* leg-distance labels at each route-segment midpoint (light map tiles in both
    themes, so no dark variant — matches the isobar / lat-long labels) */
 #oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
@@ -521,8 +538,11 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="mapgrid" id="mapGrid">
 		<div class="mapwrap">
-			<div id="map"></div>
-			<div class="grat" id="gratic" aria-hidden="true"></div>
+			<div class="maprot" id="mapRot">
+				<div id="map"></div>
+				<div class="grat" id="gratic" aria-hidden="true"></div>
+			</div>
+			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -592,17 +612,28 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
-var myLoc=null, locLayer=null, locWatch=null, locFirst=false;
-function setMyLoc(lat,lon,acc){
+var myLoc=null, myHeading=null, locLayer=null, locWatch=null, locFirst=false;
+var headsUp=false, mapwrapEl=null;
+function mwEl(){if(!mapwrapEl)mapwrapEl=document.querySelector('#oycwm .mapwrap');return mapwrapEl;}
+function applyHdg(){mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
+/* heads-up is a LOCKED view — disable map interaction so the (CSS-rotated) chart
+   can't be panned/clicked into the wrong place */
+function lockMap(lock){['dragging','touchZoom','scrollWheelZoom','doubleClickZoom','boxZoom','keyboard','tap'].forEach(function(k){try{if(map[k]){lock?map[k].disable():map[k].enable();}}catch(e){}});}
+function setHeadsUp(on){
+	headsUp=on;mwEl().classList.toggle('headsup',on);lockMap(on);
+	if(on&&myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
+}
+function setMyLoc(lat,lon,acc,heading){
 	myLoc={lat:lat,lon:lon};
+	if(heading!=null&&isFinite(heading)&&heading>=0)myHeading=heading; /* phones report heading only while moving — keep the last good one when stopped */
+	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
 	if(acc&&acc<4000)L.circle([lat,lon],{radius:acc,color:'#1a73e8',weight:1,opacity:.5,fillColor:'#1a73e8',fillOpacity:.1,interactive:false}).addTo(locLayer);
 	var boat='<svg width="30" height="30" viewBox="-15 -15 30 30" style="overflow:visible"><path d="M0,-12.5 C5.5,-9 6.5,-1 6,6 L4,9.5 L-4,9.5 L-6,6 C-6.5,-1 -5.5,-9 0,-12.5 Z" fill="none" stroke="#15293b" stroke-width="2" stroke-linejoin="round"/><circle cx="0" cy="0" r="3.2" fill="#1a73e8" stroke="#fff" stroke-width="1.2"/></svg>';
 	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:boat,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
-	/* on the first fix, bring the map to you so the dot is obviously there; later
-	   updates just move the dot (you can pan away). */
-	if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
+	if(headsUp){try{map.setView([lat,lon],map.getZoom(),{animate:false});}catch(e){}} /* keep you centred so the chart turns around you */
+	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
 	rerenderCallouts();
 }
 function locFail(msg){
@@ -613,7 +644,7 @@ function startLoc(){
 	locFirst=false;
 	if(!navigator.geolocation){locFail('Location is not available in this browser.');return;}
 	locWatch=navigator.geolocation.watchPosition(
-		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy);},
+		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy,p.coords.heading);},
 		function(err){
 			var m=(err&&err.code===1)
 				? 'Location is blocked for this site.\n\nOn iPhone: Settings → Privacy & Security → Location Services → On, then scroll to Safari Websites → “While Using”. Or tap “aA” in Safari’s address bar → Website Settings → Location → Allow. Then tap My location again.'
@@ -625,8 +656,16 @@ function startLoc(){
 }
 function stopLoc(){
 	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
-	locWatch=null;myLoc=null;if(locLayer)locLayer.clearLayers();rerenderCallouts();
+	locWatch=null;myLoc=null;myHeading=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();rerenderCallouts();
 }
+/* compass button: North-up ↔ Heads-up (needs a GPS heading, so turn on My
+   location if it isn't already) */
+(function(){var b=document.getElementById('navRose');if(!b)return;
+	b.addEventListener('click',function(){
+		if(!headsUp){var t=document.getElementById('tgLoc');if(!myLoc&&t&&!t.checked){t.checked=true;startLoc();}setHeadsUp(true);}
+		else setHeadsUp(false);
+	});
+})();
 
 /* ---- overlay color ramps (temp °F, precip in/3h) ---- */
 var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
@@ -963,9 +1002,14 @@ function pinContent(pin,ti){
 	   Per-leg distances live on the route line (drawLegLabels). */
 	/* No "Pt N" label — the numbered marker already identifies the point. Start
 	   shows only coords + weather; later points add a "Total X nm" line. */
+	/* leg course (magnetic bearing) + distance from the previous point — Pt 1's leg
+	   is measured from Buoy 42 */
+	var prev=(i===0)?ER:pins[i-1];
+	var legLine='<div class="co-leg">Leg '+magBrg(prev.lat,prev.lon,lat,lon)+'&deg;M &middot; '+lg.dist.toFixed(1)+' nm</div>';
 	/* live bearing + distance from the viewer's GPS, when "My location" is on */
 	var youLine = myLoc ? '<div class="co-you">From you &middot; '+magBrg(myLoc.lat,myLoc.lon,lat,lon)+'&deg;M &middot; '+distNM(myLoc.lat,myLoc.lon,lat,lon).toFixed(1)+' nm</div>' : '';
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
+		+legLine
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
 		+'<div class="co-ll">'+ll+'</div>'+youLine;
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
@@ -996,7 +1040,8 @@ function drawLegLabels(){
 		var a=pts[i],b=pts[i+1],pa=map.latLngToContainerPoint(a),pb=map.latLngToContainerPoint(b);
 		if(Math.hypot(pb.x-pa.x,pb.y-pa.y)<40)continue;
 		var d=distNM(a[0],a[1],b[0],b[1]),mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-		L.marker(mid,{icon:L.divIcon({className:'leg-lbl',html:'<b>'+d.toFixed(1)+' nm</b>',iconSize:[60,16],iconAnchor:[30,8]}),interactive:false,keyboard:false,zIndexOffset:400}).addTo(legLayer);
+		var leg=magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+d.toFixed(1)+' nm'; /* leg course (magnetic) + distance to the next point */
+		L.marker(mid,{icon:L.divIcon({className:'leg-lbl',html:'<b>'+leg+'</b>',iconSize:[92,16],iconAnchor:[46,8]}),interactive:false,keyboard:false,zIndexOffset:400}).addTo(legLayer);
 	}
 }
 function drawRouteLine(){
@@ -1187,7 +1232,7 @@ window.addEventListener('resize',wpFit);
 		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){map.panTo([pins[i].lat,pins[i].lon]);break;}}}
 	});
 })();
-map.on('click',function(e){if(mode==='radar')return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+map.on('click',function(e){if(mode==='radar'||headsUp)return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
 map.getContainer().addEventListener('click',function(e){
 	var btn=e.target.closest?e.target.closest('.co-x[data-wp]'):null;
