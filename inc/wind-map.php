@@ -592,20 +592,33 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
-var myLoc=null, locLayer=null, locWatch=null;
+var myLoc=null, locLayer=null, locWatch=null, locFirst=false;
 function setMyLoc(lat,lon,acc){
 	myLoc={lat:lat,lon:lon};
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
 	if(acc&&acc<4000)L.circle([lat,lon],{radius:acc,color:'#1a73e8',weight:1,opacity:.5,fillColor:'#1a73e8',fillOpacity:.1,interactive:false}).addTo(locLayer);
 	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:'<span class="me-dot"></span>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
+	/* on the first fix, bring the map to you so the dot is obviously there; later
+	   updates just move the dot (you can pan away). */
+	if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
 	rerenderCallouts();
 }
+function locFail(msg){
+	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
+	alert(msg);
+}
 function startLoc(){
-	if(!navigator.geolocation){alert('Location is not available in this browser.');var t=document.getElementById('tgLoc');if(t)t.checked=false;return;}
+	locFirst=false;
+	if(!navigator.geolocation){locFail('Location is not available in this browser.');return;}
 	locWatch=navigator.geolocation.watchPosition(
 		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy);},
-		function(){stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;},
+		function(err){
+			var m=(err&&err.code===1)
+				? 'Location is blocked for this site.\n\nOn iPhone: Settings → Privacy & Security → Location Services → On, then scroll to Safari Websites → “While Using”. Or tap “aA” in Safari’s address bar → Website Settings → Location → Allow. Then tap My location again.'
+				: 'Could not get your location — make sure Location Services are on and you have a signal, then try again.';
+			locFail(m);
+		},
 		{enableHighAccuracy:true,maximumAge:5000,timeout:20000}
 	);
 }
