@@ -1216,9 +1216,10 @@ function updateRouteBar(){
 	var rb=document.getElementById('routeBar');if(!rb)return;
 	if(!pins.length){rb.classList.remove('on');return;}
 	rb.classList.add('on');
+	/* count every numbered point, matching the rows in the table */
 	var info=(pins.length===1)
-		?('Start set · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
-		:((pins.length-1)+' waypoint'+((pins.length-1)===1?'':'s')+' · '+routeTotalFromWP1().toFixed(1)+' nm from start');
+		?('1 waypoint · '+nmFromBuoy42(pins[0].lat,pins[0].lon).toFixed(1)+' nm from Buoy 42')
+		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm from start');
 	document.getElementById('routeInfo').textContent=info;
 }
 (function(){
