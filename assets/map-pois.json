@@ -1160,7 +1160,8 @@
         ]
       },
       "tip": "Fish the deep south side of the rocks on the ebb, when the current runs harder; the bottom is snaggy, so bring extra rigs.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "ebb"
     },
     {
       "name": "Sands Point",
@@ -1202,7 +1203,8 @@
         ]
       },
       "tip": "Fluke bite best on the incoming tide; the reef is shallow inside buoy 25, so approach from deep water.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "flood"
     },
     {
       "name": "Prospect Point",
@@ -1237,7 +1239,8 @@
         ]
       },
       "tip": "Chunk bunker in the 50-ft water off the point for bigger bass; fluke favor 10–15 ft on the incoming tide.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "flood"
     },
     {
       "name": "Hen and Chickens",
@@ -1343,7 +1346,8 @@
         ]
       },
       "tip": "Anchor over the rocks near buoy 21 and chunk bunker on the ebb for bass; porgies hold in 20–30 ft. The state's Matinecock artificial reef is about 0.5 nm east.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "ebb"
     },
     {
       "name": "Centre Island Reef",
@@ -1408,7 +1412,8 @@
         ]
       },
       "tip": "Work the shoal edge on the outgoing tide; shore access is through Caumsett State Park with a park fishing permit.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "ebb"
     },
     {
       "name": "Huntington / Oyster Bay Reef",
@@ -1542,7 +1547,8 @@
         ]
       },
       "tip": "Fish the inshore lump on the incoming and the deeper rips at 11B on the outgoing; the first two hours of the ebb are usually best. The area straddles the NY–CT line.",
-      "state": "NY"
+      "state": "NY",
+      "tide": "ebb"
     },
     {
       "name": "Great Captain Island",
@@ -1576,7 +1582,8 @@
         ]
       },
       "tip": "Fish the rip off the east shore on the incoming tide; Cormorant Reef on the north side is also worth casting. Don't run between Great and Little Captain without local knowledge.",
-      "state": "CT"
+      "state": "CT",
+      "tide": "flood"
     },
     {
       "name": "Twenty-six Foot Spot (buoy 32A)",
@@ -1791,7 +1798,8 @@
         ]
       },
       "tip": "Troll bunker spoons over the high spots on the outgoing tide; on the rocks, use a grapple anchor rather than a Danforth.",
-      "state": "CT"
+      "state": "CT",
+      "tide": "ebb"
     },
     {
       "name": "Peck Ledge",

@@ -347,13 +347,22 @@ if ( ! $oyc_weather_menu ) {
 	.fish-foot a:hover{text-decoration:underline}
 	/* full-width row: stacks on phones/tablets; three columns on the desktop board */
 	.fish-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px 28px;margin-top:12px;
-		grid-template-areas:"out" "win" "cond" "sol" "note" "foot"}
+		grid-template-areas:"out" "win" "spots" "cond" "sol" "note" "foot"}
 	.fish-grid > div > :first-child{margin-top:0}
-	.fa-out{grid-area:out} .fa-win{grid-area:win} .fa-cond{grid-area:cond} .fa-sol{grid-area:sol} .fa-note{grid-area:note} .fa-foot{grid-area:foot}
+	.fa-out{grid-area:out} .fa-win{grid-area:win} .fa-cond{grid-area:cond} .fa-sol{grid-area:sol} .fa-note{grid-area:note} .fa-foot{grid-area:foot} .fa-spots{grid-area:spots}
+	.fa-spots[hidden]{display:none}
+	.fish-spots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:6px}
+	.fish-spot{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;text-align:left;background:var(--fish-track);border:1px solid var(--edge);border-radius:12px;padding:10px 12px;color:var(--ink);font:inherit;cursor:pointer}
+	.fish-spot:hover,.fish-spot:focus-visible{border-color:var(--amber);outline:none}
+	.fish-spot .rk{grid-row:1 / span 3;width:22px;height:22px;border-radius:50%;background:#0f7a6c;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+	.fish-spot .nm{font-weight:700;font-size:13px}
+	.fish-spot .sp{font-size:12px;color:var(--muted)}
+	.fish-spot .td{font-size:11px;color:var(--faint)}
+	.fish-spot .td.fit{color:var(--green)}
 	.fa-note:empty, .fa-note:has(> [hidden]){display:none}
 	@media (min-width:1101px){
 		.fish-grid{grid-template-columns:minmax(250px,1fr) minmax(0,1.5fr) minmax(260px,1fr);align-items:start;
-			grid-template-areas:"out win cond" "sol win note" "foot foot foot"}
+			grid-template-areas:"out win cond" "sol win note" "spots spots spots" "foot foot foot"}
 	}
 
 	/* alert */
@@ -534,6 +543,10 @@ if ( ! $oyc_weather_menu ) {
 				<div class="fish-sol" id="fishSol"></div>
 			</div>
 			<div class="fa-note"><div class="fish-note" id="fishNote" hidden></div></div>
+			<div class="fa-spots" id="fishSpotsWrap" hidden>
+				<div class="fish-k">Top spots today</div>
+				<div class="fish-spots" id="fishSpots"></div>
+			</div>
 			<div class="fa-foot"><div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div></div>
 		</div>
 	</div>
@@ -1416,9 +1429,10 @@ if ( ! $oyc_weather_menu ) {
 			var m=t+step/2, sc=0, why=[];
 			if(Math.abs(m-sun.sunrise.getTime())<=H){ sc+=2; why.push('dawn'); }
 			if(Math.abs(m-sun.sunset.getTime())<=H){ sc+=2; why.push('sunset'); }
-			for(i=0;i<tides.length;i++){ if(Math.abs(m-tides[i].t.getTime())<=H){ sc+=2; why.push((tides[i].hi?'high':'low')+' tide '+hmt(tides[i].t).slice(0,-3)); break; } }
+			var tideStarts=null;
+			for(i=0;i<tides.length;i++){ if(Math.abs(m-tides[i].t.getTime())<=H){ sc+=2; why.push((tides[i].hi?'high':'low')+' tide '+hmt(tides[i].t).slice(0,-3)); tideStarts=tides[i].hi?'ebb':'flood'; break; } }
 			for(i=0;i<per.length;i++){ if(m>=per[i].a && m<=per[i].b){ sc+=per[i].pts; why.push(per[i].lbl); break; } }
-			slots.push({ a:t, b:t+step, sc:sc, why:why });
+			slots.push({ a:t, b:t+step, sc:sc, why:why, tide:tideStarts });
 		}
 		function build(min){
 			var wins=[], cur=null;
@@ -1427,7 +1441,8 @@ if ( ! $oyc_weather_menu ) {
 				if(cur && s.a-cur.b<=20*60000){
 					cur.b=s.b; cur.peak=Math.max(cur.peak,s.sc);
 					s.why.forEach(function(w){ if(cur.why.indexOf(w)<0) cur.why.push(w); });
-				} else { cur={ a:s.a, b:s.b, peak:s.sc, why:s.why.slice() }; wins.push(cur); }
+				} else { cur={ a:s.a, b:s.b, peak:s.sc, why:s.why.slice(), tides:[] }; wins.push(cur); }
+				if(s.tide && cur.tides.indexOf(s.tide)<0) cur.tides.push(s.tide);
 			});
 			return wins;
 		}
@@ -1453,7 +1468,84 @@ if ( ! $oyc_weather_menu ) {
 		return 'Warm water: fish go deeper, so work dawn and dusk. Bluefish, porgy, fluke and black sea bass.';
 	}
 
-	function renderFishing(day, isToday, sun, solu, mi, tides, curs, water, wx){
+	// ---- top 3 spots for the day (the map's Fishing spots, assets/map-pois.json) ----
+	// Score = the spot's two best species in season this month (2 = prime at
+	// today's water temperature, 1 = possible), +1 when its preferred tide (from
+	// the fishing reports) starts inside one of today's Best/Good windows, minus
+	// 0.15 per nm from OYC; on a windy day far spots lose more. Only the best two
+	// species count, so a spot doesn't win just because more were written up.
+	// Temperature bands are western-Sound rules of thumb (°F): prime lo-hi, possible lo-hi.
+	var FISH_POIS = '<?php echo esc_url( get_template_directory_uri() . '/assets/map-pois.json' ); ?>?v=<?php echo esc_js( defined( 'OYC_VERSION' ) ? OYC_VERSION : '' ); ?>';
+	var FISH_HOME = { lat:40.9486, lon:-73.7296 };       // OYC (same point the map measures from)
+	var FISH_TEMP = {
+		'striped bass':[50,68,45,72], 'blackfish':[48,62,44,66], 'bluefish':[64,76,58,80], 'porgy':[58,72,54,75],
+		'fluke':[60,75,56,78], 'black sea bass':[56,70,52,74], 'weakfish':[58,72,55,75], 'false albacore':[62,72,58,75],
+		'winter flounder':[40,55,36,58], 'bonito':[64,74,60,76]
+	};
+	var fishTop = [], fishSpotsP = null;
+	function fishSpotList(){
+		if(!fishSpotsP){
+			fishSpotsP = fetch(FISH_POIS).then(function(r){ if(!r.ok) throw new Error('pois '+r.status); return r.json(); })
+				.then(function(j){ return (j && j.fish) || []; })
+				.catch(function(){ fishSpotsP = null; return []; });
+		}
+		return fishSpotsP;
+	}
+	function fishNm(la1, lo1, la2, lo2){
+		var R=3440.065, d=Math.PI/180, a=Math.sin((la2-la1)*d/2), b=Math.sin((lo2-lo1)*d/2);
+		var x=a*a+Math.cos(la1*d)*Math.cos(la2*d)*b*b; return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));
+	}
+	function fishBearing(la1, lo1, la2, lo2){
+		var d=Math.PI/180, y=Math.sin((lo2-lo1)*d)*Math.cos(la2*d), x=Math.cos(la1*d)*Math.sin(la2*d)-Math.sin(la1*d)*Math.cos(la2*d)*Math.cos((lo2-lo1)*d);
+		return ['N','NE','E','SE','S','SW','W','NW'][Math.round(((Math.atan2(y,x)/d)+360)%360/45)%8];
+	}
+	function fishRankSpots(spots, mon, water, wins, maxW){
+		var starts={}, out=[], wind=maxW ? maxW.sp : 0;
+		wins.forEach(function(w){ if(w.cls!=='fair') (w.tides||[]).forEach(function(t){ starts[t]=1; }); });
+		spots.forEach(function(p){
+			var ws=[];
+			(p.species||[]).forEach(function(s){
+				var m=p.months && p.months[s]; if(m && m.indexOf(mon)<0) return;
+				var b=FISH_TEMP[s], w=1;
+				if(b && water!=null){ w = (water>=b[0] && water<=b[1]) ? 2 : ((water>=b[2] && water<=b[3]) ? 1 : 0); }
+				if(w) ws.push({ s:s, w:w });
+			});
+			if(!ws.length) return;
+			ws.sort(function(a,b){ return b.w-a.w; });
+			var d=fishNm(FISH_HOME.lat, FISH_HOME.lon, p.lat, p.lng), fit=!!(p.tide && starts[p.tide]);
+			var sc=ws[0].w+(ws[1] ? ws[1].w : 0)+(fit ? 1 : 0)-0.15*d;
+			if(wind>=20) sc-=0.25*Math.max(0,d-5); else if(wind>=15) sc-=0.1*Math.max(0,d-6);
+			out.push({ p:p, sc:sc, d:d, ws:ws, fit:fit });
+		});
+		out.sort(function(a,b){ return b.sc-a.sc; });
+		return out.slice(0,3);
+	}
+	function renderFishSpots(top){
+		fishTop = top;
+		var wrap=$('fishSpotsWrap');
+		if(!top.length){ wrap.hidden=true; return; }
+		$('fishSpots').innerHTML = top.map(function(x, i){
+			var p=x.p, prime=x.ws.filter(function(o){ return o.w===2; }), list=(prime.length ? prime : x.ws).slice(0,3).map(function(o){ return o.s; }).join(', ');
+			var td = p.tide ? '<span class="td'+(x.fit ? ' fit' : '')+'">Best on the '+p.tide+(x.fit ? ' &middot; fits today&rsquo;s windows' : '')+'</span>' : '';
+			return '<button type="button" class="fish-spot" data-i="'+i+'" aria-label="'+(i+1)+'. '+p.name.replace(/"/g,'&quot;')+', '+(x.d<10 ? x.d.toFixed(1) : Math.round(x.d))+' nautical miles. Show on the map"><span class="rk">'+(i+1)+'</span>'
+				+'<span class="nm">'+p.name+'</span>'
+				+'<span class="sp">'+(x.d<10 ? x.d.toFixed(1) : Math.round(x.d))+' nm '+fishBearing(FISH_HOME.lat, FISH_HOME.lon, p.lat, p.lng)+' &middot; '+list+'</span>'+td+'</button>';
+		}).join('');
+		wrap.hidden=false;
+	}
+	/* tap a spot: scroll the MAP itself to the middle of the screen (not the top of
+	   its card: on phones the layer controls above the map are ~700 px tall) and
+	   open that spot's popup (wind-map.php exposes oycFishFocus) */
+	$('fishSpots').addEventListener('click', function(e){
+		var b=e.target.closest ? e.target.closest('.fish-spot') : null; if(!b) return;
+		var x=fishTop[+b.getAttribute('data-i')]; if(!x) return;
+		var mc=document.querySelector('#oycwm .leaflet-container') || document.querySelector('.windmap-card');
+		if(mc) mc.scrollIntoView({ behavior:'smooth', block:'center' });
+		var tries=0;
+		(function go(){ if(window.oycFishFocus && window.oycFishFocus(x.p.name)) return; if(++tries<8) setTimeout(go, 500); })();
+	});
+
+	function renderFishing(day, isToday, sun, solu, mi, tides, curs, water, wx, spots){
 		var H=3600000, now=Date.now(), t0=day.getTime()+FISH_T0*H, t1=day.getTime()+FISH_T1*H;
 		var D3=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 		$('fishDay').textContent = (isToday ? 'Today' : 'Tomorrow') + ' · ' + D3[day.getDay()] + ' ' + MON[day.getMonth()].slice(0,3) + ' ' + day.getDate();
@@ -1557,6 +1649,8 @@ if ( ! $oyc_weather_menu ) {
 
 		var note=fishNote(water ? water.v : null, new Date().getMonth()), ne=$('fishNote');
 		ne.textContent = note; ne.hidden = !note;
+
+		renderFishSpots(fishRankSpots(spots||[], day.getMonth()+1, water ? water.v : null, wins, maxW));
 	}
 
 	var fishBusy=false;
@@ -1565,9 +1659,9 @@ if ( ! $oyc_weather_menu ) {
 		fishBusy=true;
 		var day=fishDayStart(), noon=new Date(day.getTime()+12*3600000), isToday=(new Date().getDate()===day.getDate());
 		var sun=sunTimes(noon, CFG.LAT, CFG.LON), solu=moonEvents(day), mi=moonIllum(noon);
-		Promise.all([fishTides(day), fishCurrents(day), fishWater(), fishWx()]).then(function(r){
+		Promise.all([fishTides(day), fishCurrents(day), fishWater(), fishWx(), fishSpotList()]).then(function(r){
 			fishBusy=false;
-			renderFishing(day, isToday, sun, solu, mi, r[0]||[], r[1]||[], r[2], r[3]);
+			renderFishing(day, isToday, sun, solu, mi, r[0]||[], r[1]||[], r[2], r[3], r[4]);
 			markUpdated(true);
 		}).catch(function(){ fishBusy=false; });
 	}

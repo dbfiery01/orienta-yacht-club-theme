@@ -1925,6 +1925,14 @@ function poiPopup(p,kind){
    month first, the rest greyed with their months), and one practical tip. Months
    come from the spot's "months" map in map-pois.json (1 = Jan). */
 var FISH_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var fishMk={};
+/* The weather board's Fishing card ("Top spots today") calls this to show a spot:
+   turns the layer on if it was off, centres the map on the pin and opens its popup. */
+window.oycFishFocus=function(name){
+	var m=fishMk[name];if(!m)return false;
+	var cb=document.getElementById('tgFish');if(cb&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change'));}
+	map.setView(m.getLatLng(),Math.max(map.getZoom(),12));m.openPopup();return true;
+};
 var FISH_RULES={NY:'https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations',CT:'https://portal.ct.gov/DEEP/Fishing/Saltwater-Fishing-Guide/Species-Regulations'};
 function fishMonths(ms){
 	/* [4,5,9,10,11] -> "Apr–May, Sep–Nov" */
@@ -1966,7 +1974,7 @@ fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.js
 	var fishMon=new Date().getMonth()+1;
 	(j.fish||[]).forEach(function(p){
 		var off=fishInSeason(p,fishMon).length?'':' off';
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),{className:'poi-pop',maxWidth:270}).addTo(poiFish);
+		fishMk[p.name]=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),{className:'poi-pop',maxWidth:270}).addTo(poiFish);
 	});
 }).catch(function(){});
 function poiWire(id,layer,key){
