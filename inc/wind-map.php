@@ -303,6 +303,10 @@ function oyc_wind_map_html( $embed = false ) {
 /* removal is now a small ✕ in the callout's top-right corner (no labelled row) */
 #oycwm .pin-co .co-x{position:absolute;top:2px;right:2px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0;border:none;background:none;color:var(--mute);font-size:13px;font-weight:700;line-height:1;cursor:pointer;border-radius:5px;user-select:none;-webkit-user-select:none}
 #oycwm .pin-co .co-x:hover{background:#fdecea;color:#c0392b}
+/* live "from you" bearing/distance line + the GPS location marker */
+#oycwm .pin-co .co-you{font-size:.72rem;font-weight:800;color:#1a73e8;text-align:center;margin:0 0 4px}
+#oycwm .me-mk{background:none;border:none}
+#oycwm .me-dot{display:block;width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(26,115,232,.55),0 1px 5px rgba(0,0,0,.4);margin:1px}
 /* leg-distance labels at each route-segment midpoint (light map tiles in both
    themes, so no dark variant — matches the isobar / lat-long labels) */
 #oycwm .leg-lbl{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
@@ -429,7 +433,8 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgWave"> Waves</label>
 			<label><input type="checkbox" id="tgCur"> Current</label>
 			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
-			<span class="hint">Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<label><input type="checkbox" id="tgLoc"> My location</label>
+			<span class="hint">My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
@@ -578,6 +583,36 @@ function distNM(lat1,lon1,lat2,lon2){var R=3440.065,d=Math.PI/180,
 	a=Math.sin((lat2-lat1)*d/2)*Math.sin((lat2-lat1)*d/2)+Math.cos(lat1*d)*Math.cos(lat2*d)*Math.sin((lon2-lon1)*d/2)*Math.sin((lon2-lon1)*d/2);
 	return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));}
 function nmFromBuoy42(lat,lon){return distNM(ER.lat,ER.lon,lat,lon);}
+/* ---------- My location (live GPS) + magnetic bearing to each waypoint ----------
+   Geolocation works on the phone over HTTPS. Magnetic variation is ~13°W for the
+   western Sound, so magnetic bearing = true + 13. The marker + the "From you"
+   line on each waypoint card update live via watchPosition and on drag. */
+var MAGVAR=13;
+function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(lon2-lon1)*d;
+	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+	return (Math.atan2(y,x)/d+360)%360;}
+function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
+var myLoc=null, locLayer=null, locWatch=null;
+function setMyLoc(lat,lon,acc){
+	myLoc={lat:lat,lon:lon};
+	if(!locLayer)locLayer=L.layerGroup().addTo(map);
+	locLayer.clearLayers();
+	if(acc&&acc<4000)L.circle([lat,lon],{radius:acc,color:'#1a73e8',weight:1,opacity:.5,fillColor:'#1a73e8',fillOpacity:.1,interactive:false}).addTo(locLayer);
+	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:'<span class="me-dot"></span>',iconSize:[18,18],iconAnchor:[9,9]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
+	rerenderCallouts();
+}
+function startLoc(){
+	if(!navigator.geolocation){alert('Location is not available in this browser.');var t=document.getElementById('tgLoc');if(t)t.checked=false;return;}
+	locWatch=navigator.geolocation.watchPosition(
+		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy);},
+		function(){stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;},
+		{enableHighAccuracy:true,maximumAge:5000,timeout:20000}
+	);
+}
+function stopLoc(){
+	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
+	locWatch=null;myLoc=null;if(locLayer)locLayer.clearLayers();rerenderCallouts();
+}
 
 /* ---- overlay color ramps (temp °F, precip in/3h) ---- */
 var TEMP_COLS=['#3b4cc0','#7ba8dc','#93c47d','#ffd966','#e69138','#cc0000'];
@@ -914,9 +949,11 @@ function pinContent(pin,ti){
 	   Per-leg distances live on the route line (drawLegLabels). */
 	/* No "Pt N" label — the numbered marker already identifies the point. Start
 	   shows only coords + weather; later points add a "Total X nm" line. */
+	/* live bearing + distance from the viewer's GPS, when "My location" is on */
+	var youLine = myLoc ? '<div class="co-you">From you &middot; '+magBrg(myLoc.lat,myLoc.lon,lat,lon)+'&deg;M &middot; '+distNM(myLoc.lat,myLoc.lon,lat,lon).toFixed(1)+' nm</div>' : '';
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
-		+'<div class="co-ll">'+ll+'</div>';
+		+'<div class="co-ll">'+ll+'</div>'+youLine;
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
 	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">rain</span></span>')
@@ -2043,6 +2080,7 @@ document.getElementById('tgCur').addEventListener('change',function(){
 	if(this.checked){curLayer.addTo(map);loadCurrents(drawCurrents);}
 	else{map.removeLayer(curLayer);curLayer.clearLayers();}
 });
+document.getElementById('tgLoc').addEventListener('change',function(){ if(this.checked)startLoc(); else stopLoc(); });
 document.getElementById('tgRadarWind').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);drawBarbs();}else map.removeLayer(arrowsLayer);updateBarbHint();});
 /* redraw the screen-lattice barbs after pan/zoom so density stays constant */
 /* ── lat/lon labels on the chart edges (graticule) — same look as pressure labels ── */
