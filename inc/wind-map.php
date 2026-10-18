@@ -136,8 +136,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .routebar.on{display:flex}
 #oycwm .route-info{background:rgba(11,42,74,.92);color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap}
 #oycwm .route-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-#oycwm .route-btns button{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-#oycwm .route-btns button:hover{background:var(--harbor);border-color:var(--harbor)}
+#oycwm .route-btns button,#oycwm .route-btns a{display:inline-flex;text-decoration:none;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#oycwm .route-btns button:hover,#oycwm .route-btns a:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .route-btns .rb-clear{background:#fff;color:var(--navy)}
 #oycwm .route-btns .rb-clear:hover{background:#eef4fa;color:var(--navy)}
 /* Passage table: each waypoint's card as a row in a side table beside the map
@@ -149,7 +149,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .mapgrid.has-wp .wptab{display:flex}
 #oycwm .wptab .routebar{position:static;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:none;padding:10px 12px;border-bottom:1px solid var(--line)}
 #oycwm .wptab .route-info{background:none;color:var(--navy);box-shadow:none;padding:0;font-size:.78rem;white-space:normal}
-#oycwm .wptab .route-btns button{box-shadow:none}
+#oycwm .wptab .route-btns button,#oycwm .wptab .route-btns a{box-shadow:none}
 #oycwm .wpt-wrap{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
 #oycwm .wpt{width:100%;border-collapse:collapse;font-size:.74rem;color:var(--ink);font-variant-numeric:tabular-nums}
 #oycwm .wpt th{position:sticky;top:0;z-index:1;background:var(--panel);text-align:left;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);padding:7px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -179,7 +179,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .wind{grid-area:w}
 #oycwm .wpt .sea{grid-area:s}
 #oycwm .wpt .x{grid-area:x;width:auto;padding:0;justify-self:end}
-#oycwm .wptab .route-btns button{padding:6px 10px;font-size:.7rem}
+#oycwm .wptab .route-btns button,#oycwm .wptab .route-btns a{padding:6px 10px;font-size:.7rem}
 /* "Hide table" / "Show table (N)" works at every width: hiding collapses the
    table to its header (route summary + buttons), floating at the map's top-right.
    On desktop that also drops the side column, so the map takes the full width. */
@@ -304,12 +304,6 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .cur-lbl{font-size:11.5px;font-weight:800;line-height:1;margin-top:-4px;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 4px #fff,0 0 4px #fff;white-space:nowrap}
 #oycwm .cur-dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.35)}
 #oycwm .leaflet-popup-content{margin:9px 12px}
-#oycwm .dl{padding:16px 18px}
-#oycwm .dl h2{margin:0 0 4px;font-size:1.05rem;color:var(--navy);font-weight:700}
-#oycwm .dl p{color:var(--mute);font-size:.86rem;line-height:1.5;margin:6px 0}
-#oycwm .dl-btn{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:var(--harbor);color:#fff;text-decoration:none;font-weight:700;font-size:.9rem;padding:11px 20px;border-radius:999px;transition:.15s}
-#oycwm .dl-btn:hover{background:#0f6fb0}
-#oycwm .dl .apps{color:var(--faint);font-size:.78rem;margin-top:10px}
 #oycwm .disclaimer{text-align:center;color:var(--mute);font-size:.82rem;font-style:italic}
 /* ---- embedded (card on /weather/): dissolve the component's own frame so it
    fills the host card flush and reads as one piece with it ---- */
@@ -324,11 +318,6 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm.embed .hd{padding:2px 18px 8px}
 #oycwm.embed .hd h2{display:none}
 #oycwm.embed #map{height:690px}
-/* keep the GRIB download on the board but compact — just the button, dropping
-   the heading and description paragraphs that made the block tall */
-#oycwm.embed .card.dl{padding:8px 18px 4px}
-#oycwm.embed .card.dl h2, #oycwm.embed .card.dl p{display:none}
-#oycwm.embed .card.dl .dl-btn{margin:0}
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
 /* ── Dark theme (driven by the board's data-theme="dark"): dark chrome; the
@@ -527,6 +516,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="route-info" id="routeInfo"></div>
 				<div class="route-btns">
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
+					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
 					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="true" aria-controls="wpTab">Hide table</button>
 				</div>
@@ -541,14 +531,6 @@ function oyc_wind_map_html( $embed = false ) {
 		</aside>
 		</div>
 		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar close-up = HRRR precipitation (Open-Meteo); national view = NEXRAD mosaic + HRRR reflectivity (Iowa State IEM).</div>
-	</div>
-
-	<!-- GRIB DOWNLOAD -->
-	<div class="card dl">
-		<h2>Download GRIB</h2>
-		<p>Grab the latest <strong>NOAA GFS</strong> forecast for the Sound as a GRIB2 file to open in your own navigation software &mdash; 10&nbsp;m wind, gusts and sea-level pressure, out to 48&nbsp;hours over the western Long Island Sound box.</p>
-		<a class="dl-btn" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow">&#8681;&nbsp;Download GRIB (latest GFS &middot; 0&ndash;48&nbsp;h)</a>
-		<p class="apps">Opens in OpenCPN, zyGrib / XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds while it is prepared.</p>
 	</div>
 
 	<p class="disclaimer">Forecasts are best treated as an opinion. Poseidon always has the final word.</p>
