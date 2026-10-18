@@ -329,6 +329,7 @@ if ( ! $oyc_weather_menu ) {
 	.fish-wins .chip.fair{background:var(--fish-track);color:var(--muted)}
 	.fish-wins b{font-variant-numeric:tabular-nums}
 	.fish-wins .why{color:var(--muted)}
+	.fish-wins .wx{display:block;color:var(--muted);font-size:11px;margin-top:2px}
 	.fish-wins .past{opacity:.5}
 	.fish-cond .v{font-size:19px}
 	.fish-cond .cell{padding:10px 12px}
@@ -1449,9 +1450,21 @@ if ( ! $oyc_weather_menu ) {
 		$('fishTide').innerHTML = tides.filter(function(x){ var ms=x.t.getTime(); return ms>=t0 && ms<=t1; }).map(function(x){
 			return '<span style="left:'+Math.max(3,Math.min(97,fishPct(x.t.getTime(),day))).toFixed(1)+'%">'+(x.hi?'H':'L')+'</span>';
 		}).join('');
+		// forecast wind during a window: hourly values inside it (else the hour nearest
+		// its middle), as "8-10 kt NE, gusts 14"; direction from the windiest hour
+		function winWind(w){
+			var hrs=(wx||[]).filter(function(x){ return x.t>=w.a && x.t<=w.b && x.sp!=null; });
+			if(!hrs.length){ var mid=fishWxAt(wx, (w.a+w.b)/2); if(mid && mid.sp!=null) hrs=[mid]; }
+			if(!hrs.length) return '';
+			var lo=Infinity, hi=null, g=null;
+			hrs.forEach(function(x){ lo=Math.min(lo,x.sp); if(!hi || x.sp>hi.sp) hi=x; if(x.gu!=null && (g==null || x.gu>g)) g=x.gu; });
+			var a=Math.round(lo), b=Math.round(hi.sp);
+			return 'Wind '+(a===b ? a : a+'–'+b)+' kt'+(hi.dir!=null ? ' '+dirCardinal(hi.dir) : '')+(g!=null ? ', gusts '+Math.round(g) : '');
+		}
 		$('fishWins').innerHTML = wins.length ? wins.map(function(w){
-			var past = (isToday && w.b<now) ? ' past' : '', lbl = w.cls==='best' ? 'Best' : (w.cls==='good' ? 'Good' : 'Fair');
-			return '<span class="chip '+w.cls+past+'">'+lbl+'</span><span class="'+past+'"><b>'+fishRange(new Date(w.a), new Date(w.b))+'</b> <span class="why">&middot; '+w.why.slice(0,3).join(', ')+'</span></span>';
+			var past = (isToday && w.b<now) ? ' past' : '', lbl = w.cls==='best' ? 'Best' : (w.cls==='good' ? 'Good' : 'Fair'), ww = winWind(w);
+			return '<span class="chip '+w.cls+past+'">'+lbl+'</span><span class="'+past+'"><b>'+fishRange(new Date(w.a), new Date(w.b))+'</b> <span class="why">&middot; '+w.why.slice(0,3).join(', ')+'</span>'
+				+ (ww ? '<span class="wx">'+ww+'</span>' : '')+'</span>';
 		}).join('') : '<span class="chip fair">None</span><span class="why">No overlapping signals today</span>';
 
 		// conditions
