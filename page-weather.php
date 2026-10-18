@@ -228,19 +228,22 @@ if ( ! $oyc_weather_menu ) {
 	.moon .shadow{position:absolute;inset:0;background:#0a1220;border-radius:50%}
 
 	/* graph */
+	/* The tide curve is drawn with preserveAspectRatio="none", so it takes the
+	   shape of its box: give it a FIXED height so it never stretches, whatever
+	   the column heights do. */
 	.graph-card{display:flex;flex-direction:column}
-	.graph-wrap{flex:1;min-height:190px;margin-top:8px;position:relative}
-	/* Desktop only: make each column's LAST card grow so all three columns fill
-	   to the same height — their tops AND bottoms line up. Guarded to the
-	   3-column layout because once the grid stacks (<=1100px) the columns are
-	   auto-height, and growing + min-height:0 with .card{overflow:hidden} would
-	   collapse/clip the content away. */
+	.graph-wrap{flex:none;height:230px;margin-top:8px;position:relative}
+	@media (max-width:560px){ .graph-wrap{height:190px} }
+	/* Desktop only: each column's LAST card grows so the three columns end level
+	   (by default that's Sun & Moon, Wind and Conditions). Conditions spreads its
+	   tiles to fill the extra height instead of leaving a blank strip. Guarded to
+	   the 3-column layout: once the grid stacks (<=1100px) columns are auto-height,
+	   and growing + min-height:0 with .card{overflow:hidden} would clip content. */
 	@media (min-width:1101px){
 		.grid .col > .card:last-child{flex:1 1 auto;min-height:0}
-		/* Center column: forecast + tide graph split the column evenly, so the two
-		   featured cards are the same height (basis:0 shares space equally). */
-		#colB > .card{flex:1 1 0;min-height:0}
-		#colB > .graph-card .graph-wrap{min-height:150px}
+		[data-card="cond"]{display:flex;flex-direction:column}
+		[data-card="cond"] .cond{flex:1;grid-auto-rows:1fr}
+		[data-card="cond"] .cond .cell{display:flex;flex-direction:column;justify-content:center}
 	}
 	#tideOutage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:20px}
 	#tideOutage .to-t{color:var(--teal);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:14px}
@@ -342,6 +345,16 @@ if ( ! $oyc_weather_menu ) {
 	.fish-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--faint)}
 	.fish-foot a{color:var(--amber);text-decoration:none}
 	.fish-foot a:hover{text-decoration:underline}
+	/* full-width row: stacks on phones/tablets; three columns on the desktop board */
+	.fish-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px 28px;margin-top:12px;
+		grid-template-areas:"out" "win" "cond" "sol" "note" "foot"}
+	.fish-grid > div > :first-child{margin-top:0}
+	.fa-out{grid-area:out} .fa-win{grid-area:win} .fa-cond{grid-area:cond} .fa-sol{grid-area:sol} .fa-note{grid-area:note} .fa-foot{grid-area:foot}
+	.fa-note:empty, .fa-note:has(> [hidden]){display:none}
+	@media (min-width:1101px){
+		.fish-grid{grid-template-columns:minmax(250px,1fr) minmax(0,1.5fr) minmax(260px,1fr);align-items:start;
+			grid-template-areas:"out win cond" "sol win note" "foot foot foot"}
+	}
 
 	/* alert */
 	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
@@ -434,29 +447,6 @@ if ( ! $oyc_weather_menu ) {
 					<div class="it" style="text-align:right"><span class="k">Illuminated</span><span class="v" id="moonPct">&mdash;</span></div>
 				</div>
 			</div>
-
-			<div class="card" data-card="fish">
-				<h2>Fishing <span class="sta" id="fishDay">Today</span></h2>
-				<div class="fish-out">
-					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div></div>
-					<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
-				</div>
-				<div class="fish-k">Best windows</div>
-				<div class="fish-tl" id="fishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
-				<div class="fish-ticks tide" id="fishTide" aria-hidden="true"></div>
-				<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
-				<div class="fish-wins" id="fishWins"></div>
-				<div class="cond fish-cond">
-					<div class="cell"><div class="v" id="fishWater">&mdash;</div><div class="k">Water</div><div class="t" id="fishWaterT"></div></div>
-					<div class="cell"><div class="v" id="fishPres">&mdash;</div><div class="k">Pressure mb</div><div class="t" id="fishPresT"></div></div>
-					<div class="cell"><div class="v" id="fishWind">&mdash;</div><div class="k" id="fishWindK">Max wind</div><div class="t" id="fishWindT"></div></div>
-					<div class="cell"><div class="v" id="fishCur">&mdash;</div><div class="k">Peak current</div><div class="t" id="fishCurT"></div></div>
-				</div>
-				<div class="fish-k">Solunar</div>
-				<div class="fish-sol" id="fishSol"></div>
-				<div class="fish-note" id="fishNote" hidden></div>
-				<div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div>
-			</div>
 		</div>
 
 		<!-- CENTER COLUMN -->
@@ -514,6 +504,40 @@ if ( ! $oyc_weather_menu ) {
 
 	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
 
+	<!-- FISHING (full-width row: outlook + solunar | best windows | conditions + species) -->
+	<div class="card fish-card" id="fishCard">
+		<h2>Fishing <span class="sta" id="fishDay">Today</span></h2>
+		<div class="fish-grid">
+			<div class="fa-out">
+				<div class="fish-out">
+					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div></div>
+					<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
+				</div>
+			</div>
+			<div class="fa-win">
+				<div class="fish-k">Best windows</div>
+				<div class="fish-tl" id="fishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
+				<div class="fish-ticks tide" id="fishTide" aria-hidden="true"></div>
+				<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
+				<div class="fish-wins" id="fishWins"></div>
+			</div>
+			<div class="fa-cond">
+				<div class="cond fish-cond">
+					<div class="cell"><div class="v" id="fishWater">&mdash;</div><div class="k">Water</div><div class="t" id="fishWaterT"></div></div>
+					<div class="cell"><div class="v" id="fishPres">&mdash;</div><div class="k">Pressure mb</div><div class="t" id="fishPresT"></div></div>
+					<div class="cell"><div class="v" id="fishWind">&mdash;</div><div class="k" id="fishWindK">Max wind</div><div class="t" id="fishWindT"></div></div>
+					<div class="cell"><div class="v" id="fishCur">&mdash;</div><div class="k">Peak current</div><div class="t" id="fishCurT"></div></div>
+				</div>
+			</div>
+			<div class="fa-sol">
+				<div class="fish-k">Solunar</div>
+				<div class="fish-sol" id="fishSol"></div>
+			</div>
+			<div class="fa-note"><div class="fish-note" id="fishNote" hidden></div></div>
+			<div class="fa-foot"><div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div></div>
+		</div>
+	</div>
+
 	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
 
 	<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
@@ -560,17 +584,17 @@ if ( ! $oyc_weather_menu ) {
 	})();
 
 	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
-	// One flat order of the 9 cards; desktop fills the columns 4/3/2 with it
+	// One flat order of the 8 cards; desktop fills the columns 3/3/3 with it
 	// (middle column = the wide "featured" slots), mobile shows it as a list.
 	var ORDER_KEY = 'oyc_board_order_v3';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','fish','forecast','graph','wind','waves','cond'];
+	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
 	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
-	var ORDER_SPLIT = [4,3,2];
+	var ORDER_SPLIT = [3,3,3];
 	function getOrder(){
 		try{
 			var o = JSON.parse(localStorage.getItem(ORDER_KEY));
-			/* a saved order from before the Fishing card: slot it in after Sun & Moon */
-			if(Array.isArray(o) && o.indexOf('fish') < 0){ var si = o.indexOf('sunmoon'); o.splice(si < 0 ? o.length : si+1, 0, 'fish'); }
+			/* the Fishing card sat in the columns briefly on staging; it's a full-width row now */
+			if(Array.isArray(o)){ o = o.filter(function(k){ return k !== 'fish'; }); }
 			if(Array.isArray(o) && o.slice().sort().join() === DEFAULT_ORDER.slice().sort().join()){ return o; }
 		}catch(e){}
 		return DEFAULT_ORDER.slice();
