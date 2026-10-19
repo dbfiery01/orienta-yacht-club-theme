@@ -1347,16 +1347,19 @@ function exportRoute(){
    board (e.g. "A F C A"); it overlays the chart with each leg's magnetic bearing
    + distance and the total. */
 var MARKS={
+	// Positions least-squares fit to the Table 4 distance/bearing grid, anchored
+	// on A at its NOAA-charted G"1" can position. Every leg reproduces Table 4
+	// within 0.04 nm / 2 deg. See tools/race-marks-fit.js for the solve.
 	A:{lat:40.92220,lon:-73.72070,buoy:'G "1" can',loc:'Off Delancey Pt, Larchmont (start/finish)'},
-	B:{lat:40.92500,lon:-73.70333,buoy:'Fl R "42" bell',loc:'SSW Peningo Pt'},
-	C:{lat:40.93540,lon:-73.68910,buoy:'R "40A" nun',loc:'Parsonage Pt / Porgy Shoal'},
-	D:{lat:40.90833,lon:-73.63667,buoy:'Fl G "21" gong',loc:'N Matinecock Pt'},
-	E:{lat:40.88533,lon:-73.65850,buoy:'G "1" can',loc:'N Weeks Pt'},
-	F:{lat:40.86750,lon:-73.67600,buoy:'R "6" bell',loc:'Picket Rock, Hempstead Hbr entr'},
-	G:{lat:40.88167,lon:-73.71667,buoy:'Fl G "23" gong',loc:'N Prospect Pt'},
-	H:{lat:40.86833,lon:-73.73833,buoy:'Fl G "25" can',loc:'NW Sands Pt'},
-	I:{lat:40.89300,lon:-73.73880,buoy:'G "1" can',loc:'N Execution Rocks'},
-	J:{lat:40.90330,lon:-73.73830,buoy:'Fl R "2"',loc:'Hens & Chickens'}
+	B:{lat:40.92439,lon:-73.70313,buoy:'Fl R "42" bell',loc:'SSW Peningo Pt'},
+	C:{lat:40.93487,lon:-73.68891,buoy:'R "40A" nun',loc:'Parsonage Pt / Porgy Shoal'},
+	D:{lat:40.90888,lon:-73.63743,buoy:'Fl G "21" gong',loc:'N Matinecock Pt'},
+	E:{lat:40.87798,lon:-73.65918,buoy:'G "1" can',loc:'N Weeks Pt'},
+	F:{lat:40.86023,lon:-73.67562,buoy:'R "6" bell',loc:'Picket Rock, Hempstead Hbr entr'},
+	G:{lat:40.87967,lon:-73.72161,buoy:'Fl G "23" gong',loc:'N Prospect Pt'},
+	H:{lat:40.86977,lon:-73.73896,buoy:'Fl G "25" can',loc:'NW Sands Pt'},
+	I:{lat:40.89153,lon:-73.73720,buoy:'G "1" can',loc:'N Execution Rocks'},
+	J:{lat:40.90333,lon:-73.73931,buoy:'Fl R "2"',loc:'Hens & Chickens'}
 };
 var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup();
 function drawRaceMarks(){
