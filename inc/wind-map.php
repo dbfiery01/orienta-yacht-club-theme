@@ -148,6 +148,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .race-leg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:none;pointer-events:none}
 #oycwm .race-leg b{font-size:10.5px;font-weight:800;color:#7a3d00;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(122,61,0,.2);text-shadow:0 0 2px #fff}
 #oycwm .race-leg i{font-style:normal;font-size:9.5px;font-weight:800;color:#0b3a66;background:rgba(224,240,251,.94);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,58,102,.28);text-shadow:0 0 2px #fff}
+#oycwm .race-leg u{text-decoration:none;font-size:9.5px;font-weight:800;color:#06675a;background:rgba(216,245,239,.94);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(6,103,90,.3);text-shadow:0 0 2px #fff}
 #oycwm .satpanel{width:100%;min-height:280px;background:#0b1622;display:flex;align-items:center;justify-content:center;padding:6px}
 #oycwm .satpanel img{max-width:100%;max-height:min(66vh,640px);height:auto;width:auto;display:block}
 #oycwm .satpanel.loading::after{content:'Loading satellite\2026';color:#9fb4c6;font-size:.85rem}
@@ -1363,18 +1364,54 @@ var MARKS={
 	J:{lat:40.90333,lon:-73.73931,buoy:'Fl R "2"',loc:'Hens & Chickens'}
 };
 var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup(), raceStr='';
-/* True wind angle for a leg: the angle between the true wind (met "from"
-   direction, sampled at the leg midpoint for the current slider time) and the
-   leg's course over ground. Reported as the angle off the bow (0 = dead upwind,
-   180 = dead downwind), the tack the wind is on (P/S), and the point of sail.
-   Returns '' when no wind reading is available (grid not loaded yet). */
-function twaTag(a,b,mid){
+var RACE_TACK=45;   /* assumed best upwind/downwind angle off the wind (deg) — a
+                       typical close-hauled / deep-run angle; tune per fleet. */
+function pad3(n){n=((Math.round(n)%360)+360)%360;return (n<10?'00':n<100?'0':'')+n;}
+/* Nearest NOAA tidal-current station's set (true — the way it flows TO) and drift
+   (kt) at the given epoch, or null (data not loaded, or no prediction within 3 h).
+   The stations sit right in the race area (Execution Rks, Delancey Pt, Peningo,
+   Matinecock), so nearest-station is a fair per-leg estimate. */
+function currentAt(lat,lon,epoch){
+	if(typeof CURDATA==='undefined'||!CURDATA)return null;
+	var best=null,bd=1/0;
+	for(var i=0;i<CURSTA.length;i++){var st=CURSTA[i],dd=(st.lat-lat)*(st.lat-lat)+(st.lon-lon)*(st.lon-lon);if(dd<bd){bd=dd;best=st;}}
+	var arr=best&&CURDATA[best.id];if(!arr||!arr.length)return null;
+	var bp=null,btd=1/0;for(var k=0;k<arr.length;k++){var td=Math.abs(arr[k].t-epoch);if(td<btd){btd=td;bp=arr[k];}}
+	if(!bp||btd>3*36e5)return null;
+	return {sp:Math.abs(bp.v),dir:(bp.v>=0)?bp.fl:bp.eb};
+}
+/* Full multi-line label for one race leg, for the current slider time:
+   (1) course (°M) + rhumb distance, with the real beat/run distance appended when
+       the rhumb line is inside the boat's pointing angle; (2) true wind angle +
+       point of sail, or — on a beat/run — the two tack/gybe headings (laylines);
+       (3) tidal set (°M) + drift (kt) and whether it helps (fair), hurts (foul) or
+       pushes across the leg. Wind + current sampled at the leg midpoint. */
+function legLabelHTML(a,b,d,mid){
+	var course=brgTrue(a[0],a[1],b[0],b[1]),RAD=Math.PI/180;
+	var l1='<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+d.toFixed(1)+' nm',l2='',l3='';
 	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
-	if(!r||r.dir==null)return '';
-	var rel=((r.dir-brgTrue(a[0],a[1],b[0],b[1])+540)%360)-180;   /* -180..180 */
-	var twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
-	var pos=twa<35?'no-go':twa<55?'beat':twa<80?'reach':twa<110?'beam':twa<150?'broad':'run';
-	return '<i>TWA '+Math.round(twa)+'°'+side+' &middot; '+pos+'</i>';
+	if(r&&r.dir!=null){
+		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
+		if(twa<RACE_TACK){            /* can't lay the rhumb line — beat */
+			l1+=' &middot; beat '+(d*Math.cos(twa*RAD)/Math.cos(RACE_TACK*RAD)).toFixed(1);
+			l2='<i>TWA '+Math.round(twa)+'° &middot; tacks '+pad3(r.dir+RACE_TACK+MAGVAR)+'/'+pad3(r.dir-RACE_TACK+MAGVAR)+'°M</i>';
+		}else if(twa>180-RACE_TACK){  /* dead run — gybe downwind */
+			var dw=r.dir+180;
+			l1+=' &middot; run '+(d*Math.cos((180-twa)*RAD)/Math.cos(RACE_TACK*RAD)).toFixed(1);
+			l2='<i>TWA '+Math.round(twa)+'° &middot; gybes '+pad3(dw+RACE_TACK+MAGVAR)+'/'+pad3(dw-RACE_TACK+MAGVAR)+'°M</i>';
+		}else{
+			var pos=twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad';
+			l2='<i>TWA '+Math.round(twa)+'°'+side+' &middot; '+pos+'</i>';
+		}
+	}
+	l1+='</b>';
+	var cur=currentAt(mid[0],mid[1],curEpoch());
+	if(cur){
+		if(cur.sp<0.1){l3='<u>slack current</u>';}   /* show slack explicitly, don't hide the line */
+		else{var al=cur.sp*Math.cos((((cur.dir-course+540)%360)-180)*RAD);
+			l3='<u>set '+pad3(cur.dir+MAGVAR)+'°M &middot; '+cur.sp.toFixed(1)+' kt &middot; '+(Math.abs(al)<0.1?'cross':(al>0?'fair':'foul'))+'</u>';}
+	}
+	return l1+l2+l3;
 }
 /* re-plot the active race course (e.g. when the time slider moves, so TWA tracks
    the forecast hour) */
@@ -1393,12 +1430,14 @@ function plotCourse(str){
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
 	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
+	/* pull the tidal-current predictions so legs can show set/drift even when the
+	   Current overlay isn't on; re-plots once they arrive */
+	if(typeof CURDATA!=='undefined'&&!CURDATA&&typeof loadCurrents==='function')loadCurrents(replotRace);
 	var tot=0;
 	for(i=0;i<pts.length-1;i++){
 		var a=pts[i],b=pts[i+1],d=distNM(a[0],a[1],b[0],b[1]);tot+=d;
 		var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-		var lab='<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+d.toFixed(1)+' nm</b>'+twaTag(a,b,mid);
-		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:lab,iconSize:[112,34],iconAnchor:[56,17]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
+		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:legLabelHTML(a,b,d,mid),iconSize:[164,50],iconAnchor:[82,25]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
 }
