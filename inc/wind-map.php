@@ -1347,7 +1347,7 @@ function exportRoute(){
    board (e.g. "A F C A"); it overlays the chart with each leg's magnetic bearing
    + distance and the total. */
 var MARKS={
-	A:{lat:40.90330,lon:-73.73830,buoy:'G "1" can',loc:'Larchmont Hbr (start/finish)'},
+	A:{lat:40.90520,lon:-73.74100,buoy:'G "1" can',loc:'Larchmont Hbr (start/finish)'},
 	B:{lat:40.92500,lon:-73.70333,buoy:'Fl R "42" bell',loc:'SSW Peningo Pt'},
 	C:{lat:40.93540,lon:-73.68910,buoy:'R "40A" nun',loc:'Parsonage Pt / Porgy Shoal'},
 	D:{lat:40.90833,lon:-73.63667,buoy:'Fl G "21" gong',loc:'N Matinecock Pt'},
@@ -1356,7 +1356,7 @@ var MARKS={
 	G:{lat:40.88167,lon:-73.71667,buoy:'Fl G "23" gong',loc:'N Prospect Pt'},
 	H:{lat:40.86833,lon:-73.73833,buoy:'Fl G "25" can',loc:'NW Sands Pt'},
 	I:{lat:40.89300,lon:-73.73880,buoy:'G "1" can',loc:'N Execution Rocks'},
-	J:{lat:40.88800,lon:-73.73300,buoy:'Fl R "2" nun',loc:'S Hens & Chickens'}
+	J:{lat:40.90330,lon:-73.73830,buoy:'Fl R "2"',loc:'Hens & Chickens'}
 };
 var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup();
 function drawRaceMarks(){
