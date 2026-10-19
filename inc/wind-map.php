@@ -1352,7 +1352,7 @@ var MARKS={
 	C:{lat:40.93540,lon:-73.68910,buoy:'R "40A" nun',loc:'Parsonage Pt / Porgy Shoal'},
 	D:{lat:40.90833,lon:-73.63667,buoy:'Fl G "21" gong',loc:'N Matinecock Pt'},
 	E:{lat:40.88533,lon:-73.65850,buoy:'G "1" can',loc:'N Weeks Pt'},
-	F:{lat:40.87867,lon:-73.71683,buoy:'R "6" bell',loc:'Prospect Pt, Hempstead Hbr'},
+	F:{lat:40.86750,lon:-73.67600,buoy:'R "6" bell',loc:'Picket Rock, Hempstead Hbr entr'},
 	G:{lat:40.88167,lon:-73.71667,buoy:'Fl G "23" gong',loc:'N Prospect Pt'},
 	H:{lat:40.86833,lon:-73.73833,buoy:'Fl G "25" can',loc:'NW Sands Pt'},
 	I:{lat:40.89300,lon:-73.73880,buoy:'G "1" can',loc:'N Execution Rocks'},
