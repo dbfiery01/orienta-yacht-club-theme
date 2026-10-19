@@ -145,8 +145,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
-#oycwm .race-leg{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
+#oycwm .race-leg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:none;pointer-events:none}
 #oycwm .race-leg b{font-size:10.5px;font-weight:800;color:#7a3d00;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(122,61,0,.2);text-shadow:0 0 2px #fff}
+#oycwm .race-leg i{font-style:normal;font-size:9.5px;font-weight:800;color:#0b3a66;background:rgba(224,240,251,.94);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,58,102,.28);text-shadow:0 0 2px #fff}
 #oycwm .satpanel{width:100%;min-height:280px;background:#0b1622;display:flex;align-items:center;justify-content:center;padding:6px}
 #oycwm .satpanel img{max-width:100%;max-height:min(66vh,640px);height:auto;width:auto;display:block}
 #oycwm .satpanel.loading::after{content:'Loading satellite\2026';color:#9fb4c6;font-size:.85rem}
@@ -1361,7 +1362,23 @@ var MARKS={
 	I:{lat:40.89153,lon:-73.73720,buoy:'G "1" can',loc:'N Execution Rocks'},
 	J:{lat:40.90333,lon:-73.73931,buoy:'Fl R "2"',loc:'Hens & Chickens'}
 };
-var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup();
+var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup(), raceStr='';
+/* True wind angle for a leg: the angle between the true wind (met "from"
+   direction, sampled at the leg midpoint for the current slider time) and the
+   leg's course over ground. Reported as the angle off the bow (0 = dead upwind,
+   180 = dead downwind), the tack the wind is on (P/S), and the point of sail.
+   Returns '' when no wind reading is available (grid not loaded yet). */
+function twaTag(a,b,mid){
+	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
+	if(!r||r.dir==null)return '';
+	var rel=((r.dir-brgTrue(a[0],a[1],b[0],b[1])+540)%360)-180;   /* -180..180 */
+	var twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
+	var pos=twa<35?'no-go':twa<55?'beat':twa<80?'reach':twa<110?'beam':twa<150?'broad':'run';
+	return '<i>TWA '+Math.round(twa)+'°'+side+' &middot; '+pos+'</i>';
+}
+/* re-plot the active race course (e.g. when the time slider moves, so TWA tracks
+   the forecast hour) */
+function replotRace(){var cb=document.getElementById('tgRace');if(cb&&cb.checked&&raceStr)plotCourse(raceStr);}
 function drawRaceMarks(){
 	raceMarkLayer.clearLayers();
 	for(var k in MARKS){var m=MARKS[k];
@@ -1370,8 +1387,9 @@ function drawRaceMarks(){
 }
 function plotCourse(str){
 	raceCourseLayer.clearLayers();
+	raceStr=(str!=null)?str:raceStr;   /* remember the course so time changes can re-plot it */
 	var info=document.getElementById('raceInfo');
-	var seq=(str||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
+	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
 	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
@@ -1379,13 +1397,14 @@ function plotCourse(str){
 	for(i=0;i<pts.length-1;i++){
 		var a=pts[i],b=pts[i+1],d=distNM(a[0],a[1],b[0],b[1]);tot+=d;
 		var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:'<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M · '+d.toFixed(1)+' nm</b>',iconSize:[92,16],iconAnchor:[46,8]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
+		var lab='<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+d.toFixed(1)+' nm</b>'+twaTag(a,b,mid);
+		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:lab,iconSize:[112,34],iconAnchor:[56,17]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
 }
 document.getElementById('tgRace').addEventListener('change',function(){
 	var bar=document.getElementById('raceBar');
-	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();if(bar)bar.classList.add('on');}
+	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();replotRace();if(bar)bar.classList.add('on');}
 	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');}
 });
 (function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
@@ -1734,7 +1753,7 @@ function drawCurrents(){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();replotRace();}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
