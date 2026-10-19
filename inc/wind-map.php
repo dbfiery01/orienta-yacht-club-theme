@@ -1406,9 +1406,10 @@ function legLabelHTML(a,b,d,mid){
 	}
 	l1+='</b>';
 	var cur=currentAt(mid[0],mid[1],curEpoch());
-	if(cur&&cur.sp>=0.1){
-		var al=cur.sp*Math.cos((((cur.dir-course+540)%360)-180)*RAD);
-		l3='<u>set '+pad3(cur.dir+MAGVAR)+'°M &middot; '+cur.sp.toFixed(1)+' kt &middot; '+(Math.abs(al)<0.1?'cross':(al>0?'fair':'foul'))+'</u>';
+	if(cur){
+		if(cur.sp<0.1){l3='<u>slack current</u>';}   /* show slack explicitly, don't hide the line */
+		else{var al=cur.sp*Math.cos((((cur.dir-course+540)%360)-180)*RAD);
+			l3='<u>set '+pad3(cur.dir+MAGVAR)+'°M &middot; '+cur.sp.toFixed(1)+' kt &middot; '+(Math.abs(al)<0.1?'cross':(al>0?'fair':'foul'))+'</u>';}
 	}
 	return l1+l2+l3;
 }
