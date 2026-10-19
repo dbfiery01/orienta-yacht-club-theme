@@ -133,6 +133,20 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .mapwrap.headsup .wp-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
 #oycwm .mapwrap.headsup .navrose{background:#1a73e8;border-color:#1a73e8;box-shadow:0 2px 10px rgba(26,115,232,.5)}
 #oycwm .mapwrap.headsup .navrose svg{transform:rotate(calc(-1 * var(--hdg,0deg)))}
+/* ---- Race course builder ---- */
+#oycwm .racebar{position:absolute;z-index:596;left:10px;top:10px;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:calc(100% - 20px);background:rgba(11,42,74,.92);color:#fff;padding:7px 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+#oycwm .racebar.on{display:flex}
+#oycwm .racebar .rc-lab{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#bfe4f5}
+#oycwm .racebar input{width:116px;font:inherit;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:7px;background:#fff;color:#0b2a4a}
+#oycwm .racebar button{font:inherit;font-size:.74rem;font-weight:700;padding:6px 11px;border-radius:999px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer}
+#oycwm .racebar button:hover{background:var(--harbor);border-color:var(--harbor)}
+#oycwm .racebar .rb-clear{background:#fff;color:var(--navy)}
+#oycwm .racebar .rc-info{flex-basis:100%;font-size:.72rem;font-weight:600;color:#dbeaf5}
+#oycwm .race-mk{background:none;border:none}
+#oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
+#oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
+#oycwm .race-leg{display:flex;align-items:center;justify-content:center;background:none;border:none;pointer-events:none}
+#oycwm .race-leg b{font-size:10.5px;font-weight:800;color:#7a3d00;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(122,61,0,.2);text-shadow:0 0 2px #fff}
 #oycwm .satpanel{width:100%;min-height:280px;background:#0b1622;display:flex;align-items:center;justify-content:center;padding:6px}
 #oycwm .satpanel img{max-width:100%;max-height:min(66vh,640px);height:auto;width:auto;display:block}
 #oycwm .satpanel.loading::after{content:'Loading satellite\2026';color:#9fb4c6;font-size:.85rem}
@@ -451,6 +465,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgCur"> Current</label>
 			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
 			<label><input type="checkbox" id="tgLoc"> My location</label>
+			<label><input type="checkbox" id="tgRace"> Race</label>
 			<span class="hint">My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -543,6 +558,13 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
 			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<div class="racebar" id="raceBar">
+				<span class="rc-lab">Course</span>
+				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
+				<button type="button" id="racePlot">Plot</button>
+				<button type="button" id="raceClear" class="rb-clear">Clear</button>
+				<span class="rc-info" id="raceInfo"></span>
+			</div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -1319,6 +1341,55 @@ function exportRoute(){
 	dlFile(base+'.gpx','application/gpx+xml',buildGPX());
 	setTimeout(function(){dlFile(base+'.csv','text/csv',buildCSV());},500);
 }
+/* ---------- Race course builder (OYC marks A–J, Sailing Instructions Table 3) ----------
+   COORDS ARE BEST-READ FROM THE CHART PHOTO — VERIFY against the NOAA marks and
+   correct any (each is one line). Enter a course as a letter string like the RC
+   board (e.g. "A F C A"); it overlays the chart with each leg's magnetic bearing
+   + distance and the total. */
+var MARKS={
+	A:{lat:40.92250,lon:-73.72067,buoy:'G "1" can',loc:'Delancy Pt (start/finish)'},
+	B:{lat:40.92500,lon:-73.70333,buoy:'Fl R "42" bell',loc:'SSW Peningo Pt'},
+	C:{lat:40.93540,lon:-73.68910,buoy:'R "40A" nun',loc:'Parsonage Pt / Porgy Shoal'},
+	D:{lat:40.90833,lon:-73.63667,buoy:'Fl G "21" gong',loc:'N Matinecock Pt'},
+	E:{lat:40.88533,lon:-73.65850,buoy:'G "1" can',loc:'N Weeks Pt'},
+	F:{lat:40.87867,lon:-73.71683,buoy:'R "6" bell',loc:'Prospect Pt, Hempstead Hbr'},
+	G:{lat:40.88167,lon:-73.71667,buoy:'Fl G "23" gong',loc:'N Prospect Pt'},
+	H:{lat:40.86833,lon:-73.73833,buoy:'Fl G "25" can',loc:'NW Sands Pt'},
+	I:{lat:40.89300,lon:-73.73880,buoy:'G "1" can',loc:'N Execution Rocks'},
+	J:{lat:40.90333,lon:-73.73833,buoy:'Fl R "2" nun',loc:'S Hens & Chickens'}
+};
+var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup();
+function drawRaceMarks(){
+	raceMarkLayer.clearLayers();
+	for(var k in MARKS){var m=MARKS[k];
+		L.marker([m.lat,m.lon],{icon:L.divIcon({className:'race-mk',html:'<span class="race-ic">'+k+'</span>',iconSize:[0,0]}),title:k+' — '+m.buoy+' ('+m.loc+')',zIndexOffset:700}).addTo(raceMarkLayer);
+	}
+}
+function plotCourse(str){
+	raceCourseLayer.clearLayers();
+	var info=document.getElementById('raceInfo');
+	var seq=(str||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
+	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
+	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
+	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
+	var tot=0;
+	for(i=0;i<pts.length-1;i++){
+		var a=pts[i],b=pts[i+1],d=distNM(a[0],a[1],b[0],b[1]);tot+=d;
+		var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:'<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M · '+d.toFixed(1)+' nm</b>',iconSize:[92,16],iconAnchor:[46,8]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
+	}
+	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
+}
+document.getElementById('tgRace').addEventListener('change',function(){
+	var bar=document.getElementById('raceBar');
+	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();if(bar)bar.classList.add('on');}
+	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');}
+});
+(function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
+	p.addEventListener('click',function(){plotCourse(inp.value);});
+	inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();plotCourse(inp.value);}});
+	c.addEventListener('click',function(){inp.value='';plotCourse('');});
+})();
 function updateRouteBar(){
 	var rb=document.getElementById('routeBar');if(!rb)return;
 	if(!pins.length){rb.classList.remove('on');return;}
