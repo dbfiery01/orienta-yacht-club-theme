@@ -1259,7 +1259,7 @@ window.addEventListener('resize',wpFit);
 		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){map.panTo([pins[i].lat,pins[i].lon]);break;}}}
 	});
 })();
-map.on('click',function(e){if(mode==='radar'||headsUp)return;addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+map.on('click',function(e){if(mode==='radar'||headsUp)return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
 map.getContainer().addEventListener('click',function(e){
 	var btn=e.target.closest?e.target.closest('.co-x[data-wp]'):null;
