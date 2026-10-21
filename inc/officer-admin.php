@@ -461,3 +461,27 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_get_theme()->get( 'Version' )
 	);
 }, 20 );
+
+/**
+ * Human-readable last-login string for a user, matching the "Last Login" column
+ * already shown in wp-admin → Users. That column is populated by the site's
+ * last-login plugin; we read the same user meta it writes (primary key
+ * `last_login`, with a couple of fallbacks), accepting either a Unix timestamp
+ * or a MySQL datetime string, and format it in the site's timezone. Returns an
+ * em dash when nothing is recorded.
+ *
+ * @param int $user_id
+ * @return string
+ */
+function oyc_last_login_display( $user_id ) {
+	$raw = '';
+	foreach ( array( 'last_login', 'wp_last_login', 'wfls-last-login', '_last_login' ) as $key ) {
+		$v = get_user_meta( $user_id, $key, true );
+		if ( '' !== $v && null !== $v ) { $raw = $v; break; }
+	}
+	if ( '' === $raw ) {
+		return '—';
+	}
+	$ts = is_numeric( $raw ) ? (int) $raw : strtotime( (string) $raw );
+	return $ts ? wp_date( 'M j, Y g:i a', $ts ) : '—';
+}
