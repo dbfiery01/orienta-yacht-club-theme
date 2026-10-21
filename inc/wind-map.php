@@ -145,7 +145,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
-#oycwm .race-leg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:none;pointer-events:none}
+#oycwm .race-leg{background:none;border:none;pointer-events:none}
+#oycwm .race-leg .rl-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:auto;cursor:grab;touch-action:none}
+#oycwm .race-leg.rl-grab .rl-wrap{cursor:grabbing}
 #oycwm .race-leg b{font-size:10.5px;font-weight:800;color:#7a3d00;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(122,61,0,.2);text-shadow:0 0 2px #fff}
 #oycwm .race-leg i{font-style:normal;font-size:9.5px;font-weight:800;color:#0b3a66;background:rgba(224,240,251,.94);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,58,102,.28);text-shadow:0 0 2px #fff}
 #oycwm .race-leg u{text-decoration:none;font-size:9.5px;font-weight:800;color:#06675a;background:rgba(216,245,239,.94);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(6,103,90,.3);text-shadow:0 0 2px #fff}
@@ -1364,6 +1366,40 @@ var MARKS={
 	J:{lat:40.90333,lon:-73.73931,buoy:'Fl R "2"',loc:'Hens & Chickens'}
 };
 var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup(), raceStr='';
+/* dragged-aside leg labels: per-leg {dlat,dlon} offset from the leg midpoint, so a
+   label you move stays put while the time slider re-plots. Reset when the course
+   marks change (raceSeqKey). */
+var raceLegOff={}, raceSeqKey='', legDragLine=null, lastLegTap={t:0,i:-1};
+function raceLeader(mid,pos){return L.polyline([mid,pos],{color:'#7a3d00',weight:1,opacity:.55,dashArray:'3 3',interactive:false});}
+/* make one leg label draggable (pointer events on its visible boxes only, so the
+   map still pans through the gaps); a thin leader ties it to the leg, and a
+   double-tap snaps it back to the midpoint — mirrors the waypoint-card behaviour. */
+function makeLegDraggable(m,i,mid){
+	var el=m.getElement();if(!el)return;
+	var wrap=el.querySelector('.rl-wrap');if(!wrap)return;
+	var st=null;
+	wrap.addEventListener('pointerdown',function(e){
+		st={x:e.clientX,y:e.clientY,ll:m.getLatLng(),moved:false};
+		try{wrap.setPointerCapture(e.pointerId);}catch(_){}
+		el.classList.add('rl-grab');map.dragging.disable();e.preventDefault();e.stopPropagation();
+	});
+	wrap.addEventListener('pointermove',function(e){
+		if(!st)return;
+		var dx=e.clientX-st.x,dy=e.clientY-st.y;if(Math.abs(dx)+Math.abs(dy)>3)st.moved=true;
+		var p=map.latLngToContainerPoint(st.ll),nll=map.containerPointToLatLng(L.point(p.x+dx,p.y+dy));
+		m.setLatLng(nll);
+		if(!legDragLine){legDragLine=raceLeader(mid,[nll.lat,nll.lng]).addTo(raceCourseLayer);}else legDragLine.setLatLngs([mid,[nll.lat,nll.lng]]);
+	});
+	function end(e){
+		if(!st)return;
+		el.classList.remove('rl-grab');map.dragging.enable();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}
+		if(st.moved){var ll=m.getLatLng();raceLegOff[i]=[ll.lat-mid[0],ll.lng-mid[1]];legDragLine=null;st=null;plotCourse(raceStr);return;}
+		var now=Date.now();
+		if(now-lastLegTap.t<350&&lastLegTap.i===i){delete raceLegOff[i];lastLegTap={t:0,i:-1};st=null;plotCourse(raceStr);return;}
+		lastLegTap={t:now,i:i};st=null;
+	}
+	wrap.addEventListener('pointerup',end);wrap.addEventListener('pointercancel',end);
+}
 var RACE_TACK=45;   /* assumed best upwind/downwind angle off the wind (deg) — a
                        typical close-hauled / deep-run angle; tune per fleet. */
 function pad3(n){n=((Math.round(n)%360)+360)%360;return (n<10?'00':n<100?'0':'')+n;}
@@ -1427,6 +1463,7 @@ function plotCourse(str){
 	raceStr=(str!=null)?str:raceStr;   /* remember the course so time changes can re-plot it */
 	var info=document.getElementById('raceInfo');
 	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
+	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels */
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
 	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
@@ -1437,7 +1474,10 @@ function plotCourse(str){
 	for(i=0;i<pts.length-1;i++){
 		var a=pts[i],b=pts[i+1],d=distNM(a[0],a[1],b[0],b[1]);tot+=d;
 		var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-		L.marker(mid,{icon:L.divIcon({className:'race-leg',html:legLabelHTML(a,b,d,mid),iconSize:[164,50],iconAnchor:[82,25]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
+		var off=raceLegOff[i],lpos=off?[mid[0]+off[0],mid[1]+off[1]]:mid;
+		if(off)raceLeader(mid,lpos).addTo(raceCourseLayer);   /* leader back to the leg it belongs to */
+		var lm=L.marker(lpos,{icon:L.divIcon({className:'race-leg',html:'<div class="rl-wrap" title="Drag aside · double-tap to snap back">'+legLabelHTML(a,b,d,mid)+'</div>',iconSize:[0,0]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
+		makeLegDraggable(lm,i,mid);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
 }

@@ -399,6 +399,7 @@ get_header();
 							<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Last login', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Profile', 'orienta-yacht-club' ); ?></th>
 						</tr>
 					</thead>
@@ -423,6 +424,7 @@ get_header();
 										<?php echo esc_html( oyc_user_approval_label( $u_state ) ); ?>
 									</span>
 								</td>
+								<td><?php echo esc_html( oyc_last_login_display( $u->ID ) ); ?></td>
 								<td class="officer-table__actions">
 									<?php if ( $manageable && ! oyc_user_is_confirmed( $u->ID ) ) : ?>
 										<form method="post" style="display:inline">
