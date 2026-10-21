@@ -312,6 +312,9 @@ if ( ! $oyc_weather_menu ) {
 	.fish-dots{display:flex;gap:3px;justify-content:center;margin-top:5px}
 	.fish-dots i{width:7px;height:7px;border-radius:50%;background:var(--teal)}
 	.fish-dots i.off{background:rgba(212,168,81,.3)}
+	.fish-wg{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:6px;font-size:11px;font-weight:700;color:var(--muted);line-height:1}
+	.fish-wg svg{flex:none;color:var(--teal)}
+	.fish-wg b{color:var(--teal);font-weight:800}
 	.fish-out p{font-size:12px;line-height:1.45;color:var(--muted)}
 	.fish-k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:14px}
 	.fish-tl{position:relative;height:26px;border-radius:7px;background:var(--fish-track);overflow:hidden;margin-top:6px}
@@ -519,7 +522,7 @@ if ( ! $oyc_weather_menu ) {
 		<div class="fish-grid">
 			<div class="fa-out">
 				<div class="fish-out">
-					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div></div>
+					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div><div class="fish-wg" id="fishWordWind"></div></div>
 					<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
 				</div>
 			</div>
@@ -1644,6 +1647,17 @@ if ( ! $oyc_weather_menu ) {
 		$('fishWord').textContent = FISH_WORDS[sc-1];
 		var dots=''; for(var k=1;k<=5;k++){ dots+='<i'+(k>sc?' class="off"':'')+'></i>'; }
 		$('fishDots').innerHTML = dots;
+		// small wind glyph + speed under the rating (peak wind for the day; the
+		// arrow flies the way the wind blows, matching the forecast-table arrows)
+		var _wg=$('fishWordWind');
+		if(_wg){
+			if(maxW && maxW.sp!=null){
+				var _rot=(maxW.dir!=null)?(((maxW.dir+180)%360)).toFixed(0):null;
+				_wg.innerHTML=(_rot!=null?'<svg viewBox="0 0 24 24" width="13" height="13" style="display:block;transform:rotate('+_rot+'deg)"><path d="M12 4.5 L12 19.5 M7 10 L12 4.5 L17 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')
+					+'<span><b>'+Math.round(maxW.sp)+'</b> kt</span>';
+				_wg.title='Peak wind '+Math.round(maxW.sp)+' kt'+(maxW.dir!=null?' from '+dirCardinal(maxW.dir):'');
+			} else { _wg.innerHTML=''; _wg.removeAttribute('title'); }
+		}
 		var why=parts.join('; ');
 		$('fishWhy').textContent = why ? why.charAt(0).toUpperCase()+why.slice(1)+'.' : '';
 
