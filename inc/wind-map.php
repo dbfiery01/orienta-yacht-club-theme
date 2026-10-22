@@ -45,6 +45,7 @@ function oyc_wind_map_html( $embed = false ) {
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 #oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
+#oycwm .card.isfull .maprot{height:100%}  /* the maprot wrapper must fill the card, else #map height:100% collapses to 0 (blank map on maximize) */
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
 /* Native-fullscreen backdrop: default is black — match the themed card ground. */
