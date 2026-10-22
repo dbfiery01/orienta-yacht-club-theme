@@ -45,6 +45,7 @@ function oyc_wind_map_html( $embed = false ) {
 /* full-screen (native Fullscreen API, or the .isfull class as a CSS fallback) */
 #oycwm .card.isfull{position:fixed;inset:0;z-index:2147483647;margin:0;border:0;border-radius:0;background:#fff;display:flex;flex-direction:column;max-width:none}
 #oycwm .card.isfull .mapwrap{flex:1 1 auto;min-height:0}
+#oycwm .card.isfull .maprot{height:100%}  /* the maprot wrapper must fill the card, else #map height:100% collapses to 0 (blank map on maximize) */
 #oycwm .card.isfull #map{height:100%}
 #oycwm .card.isfull .satpanel{flex:1 1 auto;max-height:none}
 /* Native-fullscreen backdrop: default is black — match the themed card ground. */
@@ -142,6 +143,31 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .racebar button:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .racebar .rb-clear{background:#fff;color:var(--navy)}
 #oycwm .racebar .rc-info{flex-basis:100%;font-size:.72rem;font-weight:600;color:#dbeaf5}
+/* Left stack: a live "Underway" boat card (mobile) above the race course sheet
+   (per-mark cards: lat/long, wind, wave, and the leg to the next mark). Each
+   card has a −/+ collapse button on the right. */
+#oycwm .leftstack{position:absolute;z-index:595;left:10px;top:70px;display:flex;flex-direction:column;gap:6px;width:min(214px,60%);pointer-events:none}
+#oycwm .boatinfo,#oycwm .racesheet{background:rgba(11,42,74,.92);color:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3);font-size:.72rem;line-height:1.35;pointer-events:auto}
+#oycwm .racesheet{display:none;flex-direction:column;gap:6px;padding:8px;max-height:calc(100% - 200px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#oycwm .racesheet.on{display:flex}
+#oycwm .boatinfo{display:none;padding:7px 9px}
+#oycwm .rs-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px}
+#oycwm .rs-h{display:flex;align-items:center;gap:6px}
+#oycwm .rs-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e8820c;border:1.5px solid #7a3d00;color:#fff;font-size:.66rem;font-weight:800;flex:none}
+#oycwm .rs-nm{font-weight:700;color:#dbeaf5}
+#oycwm .bi-title{font-weight:800;letter-spacing:.03em;text-transform:uppercase;font-size:.7rem;color:#bfe4f5}
+#oycwm .rs-ll{color:#bfe4f5;margin-top:2px;font-variant-numeric:tabular-nums}
+#oycwm .rs-ww{margin-top:2px;color:#eaf4fb}
+#oycwm .rs-ww b,#oycwm .rs-leg b{color:#fff;font-weight:800}
+#oycwm .rs-leg{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.15);color:#cfe6f3}
+#oycwm .card-min-btn{margin-left:auto;flex:none;width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#oycwm .card-min-btn:hover{background:rgba(255,255,255,.22)}
+#oycwm .rs-card.min .rs-body,#oycwm .boatinfo.min .rs-body{display:none}
+#oycwm .bi-row{display:flex;align-items:baseline;gap:5px;margin-top:3px}
+#oycwm .bi-v{font-size:1rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+#oycwm .bi-k{font-size:.68rem;color:#bfe4f5}
+#oycwm .mapwrap.headsup .racesheet{display:none !important}
+@media (max-width:880px){#oycwm .boatinfo.on{display:block}}
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
@@ -569,6 +595,10 @@ function oyc_wind_map_html( $embed = false ) {
 				<button type="button" id="raceClear" class="rb-clear">Clear</button>
 				<span class="rc-info" id="raceInfo"></span>
 			</div>
+			<div class="leftstack" id="leftStack">
+				<div class="boatinfo" id="boatInfo" aria-label="Live boat course and speed"></div>
+				<div class="racesheet" id="raceSheet" aria-label="Race course details"></div>
+			</div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -638,7 +668,7 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
-var myLoc=null, myHeading=null, locLayer=null, locWatch=null, locFirst=false;
+var myLoc=null, myHeading=null, mySpeedKt=null, locLayer=null, locWatch=null, locFirst=false;
 var headsUp=false, mapwrapEl=null;
 function mwEl(){if(!mapwrapEl)mapwrapEl=document.querySelector('#oycwm .mapwrap');return mapwrapEl;}
 function applyHdg(){mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
@@ -649,9 +679,10 @@ function setHeadsUp(on){
 	headsUp=on;mwEl().classList.toggle('headsup',on);lockMap(on);
 	if(on&&myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
 }
-function setMyLoc(lat,lon,acc,heading){
+function setMyLoc(lat,lon,acc,heading,speed){
 	myLoc={lat:lat,lon:lon};
 	if(heading!=null&&isFinite(heading)&&heading>=0)myHeading=heading; /* phones report heading only while moving — keep the last good one when stopped */
+	mySpeedKt=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:null; /* m/s → knots; null when not moving */
 	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
@@ -660,7 +691,7 @@ function setMyLoc(lat,lon,acc,heading){
 	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:boat,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
 	if(headsUp){try{map.setView([lat,lon],map.getZoom(),{animate:false});}catch(e){}} /* keep you centred so the chart turns around you */
 	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
-	rerenderCallouts();
+	rerenderCallouts();updateBoatInfo();
 }
 function locFail(msg){
 	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
@@ -670,7 +701,7 @@ function startLoc(){
 	locFirst=false;
 	if(!navigator.geolocation){locFail('Location is not available in this browser.');return;}
 	locWatch=navigator.geolocation.watchPosition(
-		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy,p.coords.heading);},
+		function(p){setMyLoc(p.coords.latitude,p.coords.longitude,p.coords.accuracy,p.coords.heading,p.coords.speed);},
 		function(err){
 			var m=(err&&err.code===1)
 				? 'Location is blocked for this site.\n\nOn iPhone: Settings → Privacy & Security → Location Services → On, then scroll to Safari Websites → “While Using”. Or tap “aA” in Safari’s address bar → Website Settings → Location → Allow. Then tap My location again.'
@@ -682,7 +713,7 @@ function startLoc(){
 }
 function stopLoc(){
 	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
-	locWatch=null;myLoc=null;myHeading=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();rerenderCallouts();
+	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();rerenderCallouts();updateBoatInfo();
 }
 /* compass button: North-up ↔ Heads-up (needs a GPS heading, so turn on My
    location if it isn't already) */
@@ -1370,6 +1401,7 @@ var raceMarkLayer=L.layerGroup(), raceCourseLayer=L.layerGroup(), raceStr='';
    label you move stays put while the time slider re-plots. Reset when the course
    marks change (raceSeqKey). */
 var raceLegOff={}, raceSeqKey='', legDragLine=null, lastLegTap={t:0,i:-1};
+var rsMin={}, boatMin=false;   /* collapsed state: rsMin keyed by leg index, boatMin for the Underway card */
 function raceLeader(mid,pos){return L.polyline([mid,pos],{color:'#7a3d00',weight:1,opacity:.55,dashArray:'3 3',interactive:false});}
 /* make one leg label draggable (pointer events on its visible boxes only, so the
    map still pans through the gaps); a thin leader ties it to the leg, and a
@@ -1458,14 +1490,84 @@ function drawRaceMarks(){
 		L.marker([m.lat,m.lon],{icon:L.divIcon({className:'race-mk',html:'<span class="race-ic">'+k+'</span>',iconSize:[0,0]}),title:k+' — '+m.buoy+' ('+m.loc+')',zIndexOffset:700}).addTo(raceMarkLayer);
 	}
 }
+/* ---- Race course sheet (left-side per-mark detail cards) ---- */
+function fmtRaceLL(lat,lon){return Math.abs(lat).toFixed(4)+'°'+(lat>=0?'N':'S')+', '+Math.abs(lon).toFixed(4)+'°'+(lon>=0?'E':'W');}
+/* wind + wave at a mark, for the current slider time */
+function raceWindWave(lat,lon){
+	var r=(typeof readPoint==='function')?readPoint(lat,lon,curTi):null;if(!r)return '—';
+	var out=[];
+	if(r.kt!=null)out.push('<b>'+Math.round(r.kt)+'</b> kt'+(r.dir!=null?' '+card(r.dir):''));
+	if(r.waveFt!=null)out.push('<b>'+r.waveFt.toFixed(1)+'</b> ft wave');
+	return out.length?out.join(' &middot; '):'—';
+}
+/* "128°M · 3.1 nm · TWA 95°S beam" for the leg a→b, at the current slider time */
+function raceLegLine(a,b){
+	var course=brgTrue(a[0],a[1],b[0],b[1]),mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+	var s=magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+distNM(a[0],a[1],b[0],b[1]).toFixed(1)+' nm';
+	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
+	if(r&&r.dir!=null){
+		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
+		var pos=twa<RACE_TACK?'beat':(twa>180-RACE_TACK?'run':(twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad'));
+		s+=' &middot; TWA '+Math.round(twa)+'°'+side+' '+pos;
+	}
+	return s;
+}
+/* −/+ collapse button for a card header */
+function cardMinBtn(min){return '<button type="button" class="card-min-btn" aria-label="'+(min?'Expand':'Collapse')+'">'+(min?'+':'−')+'</button>';}
+/* position the left stack just below the course bar (or at the top when it's off) */
+function layoutLeftStack(){
+	var ls=document.getElementById('leftStack'),rb=document.getElementById('raceBar');if(!ls)return;
+	ls.style.top=((rb&&rb.classList.contains('on'))?(rb.offsetTop+rb.offsetHeight+8):10)+'px';
+}
+/* live "Underway" card — SOG + COG/heading from GPS, shown on mobile while moving */
+function updateBoatInfo(){
+	var el=document.getElementById('boatInfo');if(!el)return;
+	if(!(myLoc&&mySpeedKt!=null&&mySpeedKt>=0.5)){el.classList.remove('on');el.innerHTML='';layoutLeftStack();return;}
+	var hd=(myHeading!=null)?Math.round(((myHeading+MAGVAR)%360+360)%360):null;
+	var rows='<div class="bi-row"><span class="bi-v">'+mySpeedKt.toFixed(1)+'</span><span class="bi-k">kt SOG</span></div>'
+		+'<div class="bi-row"><span class="bi-v">'+(hd!=null?pad3(hd)+'°M':'—')+'</span><span class="bi-k">COG'+(hd!=null?' '+card(hd):'')+'</span></div>';
+	el.innerHTML='<div class="rs-h"><span class="bi-title">Underway</span>'+cardMinBtn(boatMin)+'</div><div class="rs-body">'+rows+'</div>';
+	el.classList.toggle('min',boatMin);el.classList.add('on');
+	layoutLeftStack();
+}
+function renderRaceSheet(){
+	var el=document.getElementById('raceSheet');if(!el)return;
+	var cb=document.getElementById('tgRace');
+	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split('').filter(function(k){return MARKS[k];});
+	if(!cb||!cb.checked||seq.length<2){el.classList.remove('on');el.innerHTML='';layoutLeftStack();return;}
+	var h='';
+	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]],nx=(i<seq.length-1)?MARKS[seq[i+1]]:null,mn=!!rsMin[i];
+		h+='<div class="rs-card'+(mn?' min':'')+'" data-i="'+i+'"><div class="rs-h"><span class="rs-badge">'+seq[i]+'</span><span class="rs-nm">'+m.buoy+'</span>'+cardMinBtn(mn)+'</div>'
+			+'<div class="rs-body"><div class="rs-ll">'+fmtRaceLL(m.lat,m.lon)+'</div>'
+			+'<div class="rs-ww">'+raceWindWave(m.lat,m.lon)+'</div>'
+			+(nx?'<div class="rs-leg">&rarr; '+seq[i+1]+': '+raceLegLine([m.lat,m.lon],[nx.lat,nx.lon])+'</div>':'')
+			+'</div></div>';
+	}
+	el.innerHTML=h;el.classList.add('on');
+	layoutLeftStack();
+	/* waves are lazy per grid — pull them once so the wave figures fill in */
+	if(typeof loadWaves==='function'&&activeGrid&&!activeGrid.wvLoaded&&!activeGrid.wvLoading){loadWaves(activeGrid,renderRaceSheet);}
+}
+/* one delegated handler for every card's −/+ button (cards are re-rendered, the
+   stack is stable) */
+(function(){var ls=document.getElementById('leftStack');if(!ls)return;
+	ls.addEventListener('click',function(e){
+		var btn=e.target.closest&&e.target.closest('.card-min-btn');if(!btn)return;
+		var cardEl=btn.closest('.rs-card, .boatinfo');if(!cardEl)return;
+		var mn;
+		if(cardEl.classList.contains('boatinfo')){boatMin=!boatMin;mn=boatMin;}
+		else{var i=cardEl.getAttribute('data-i');mn=!rsMin[i];rsMin[i]=mn;}
+		cardEl.classList.toggle('min',mn);btn.textContent=mn?'+':'−';btn.setAttribute('aria-label',mn?'Expand':'Collapse');
+	});
+})();
 function plotCourse(str){
 	raceCourseLayer.clearLayers();
 	raceStr=(str!=null)?str:raceStr;   /* remember the course so time changes can re-plot it */
 	var info=document.getElementById('raceInfo');
 	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
-	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels */
+	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};rsMin={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels + collapse state */
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
-	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
+	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';renderRaceSheet();return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
 	/* pull the tidal-current predictions so legs can show set/drift even when the
 	   Current overlay isn't on; re-plots once they arrive */
@@ -1480,11 +1582,12 @@ function plotCourse(str){
 		makeLegDraggable(lm,i,mid);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
+	renderRaceSheet();
 }
 document.getElementById('tgRace').addEventListener('change',function(){
 	var bar=document.getElementById('raceBar');
 	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();replotRace();if(bar)bar.classList.add('on');}
-	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');}
+	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');renderRaceSheet();}
 });
 (function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
 	p.addEventListener('click',function(){plotCourse(inp.value);});
