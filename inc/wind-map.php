@@ -167,7 +167,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .bi-v{font-size:1rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
 #oycwm .bi-k{font-size:.68rem;color:#bfe4f5}
 #oycwm .mapwrap.headsup .racesheet{display:none !important}
-@media (max-width:880px){#oycwm .boatinfo.on{display:block}}
+/* mobile "hide all cards" master toggle */
+#oycwm .stack-toggle{display:none;align-self:flex-start;pointer-events:auto;cursor:pointer;background:rgba(11,42,74,.92);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 11px;font-size:.7rem;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+#oycwm .stack-toggle:hover{background:var(--harbor,#13507a)}
+#oycwm .leftstack.stack-hidden .boatinfo,#oycwm .leftstack.stack-hidden .racesheet{display:none !important}
+@media (max-width:880px){#oycwm .boatinfo.on{display:block}#oycwm .leftstack.has-cards .stack-toggle{display:inline-flex}}
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
@@ -596,6 +600,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<span class="rc-info" id="raceInfo"></span>
 			</div>
 			<div class="leftstack" id="leftStack">
+				<button type="button" class="stack-toggle" id="stackToggle" aria-label="Hide cards">Hide cards</button>
 				<div class="boatinfo" id="boatInfo" aria-label="Live boat course and speed"></div>
 				<div class="racesheet" id="raceSheet" aria-label="Race course details"></div>
 			</div>
@@ -668,7 +673,7 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
-var myLoc=null, myHeading=null, mySpeedKt=null, locLayer=null, locWatch=null, locFirst=false;
+var myLoc=null, myHeading=null, mySpeedKt=null, prevFix=null, locLayer=null, locWatch=null, locFirst=false;
 var headsUp=false, mapwrapEl=null;
 function mwEl(){if(!mapwrapEl)mapwrapEl=document.querySelector('#oycwm .mapwrap');return mapwrapEl;}
 function applyHdg(){mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
@@ -680,9 +685,18 @@ function setHeadsUp(on){
 	if(on&&myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
 }
 function setMyLoc(lat,lon,acc,heading,speed){
+	/* Prefer the device's own speed/heading; fall back to deltas from the previous
+	   fix for phones that report null speed (many Androids; iOS when stationary).
+	   Only count real movement — displacement must exceed the GPS accuracy, else
+	   it's just jitter and we read 0 kt. */
+	var nowT=Date.now(),dSpd=null,dCrs=null;
+	if(prevFix){var dt=(nowT-prevFix.t)/3600000,dnm=distNM(prevFix.lat,prevFix.lon,lat,lon);
+		if(dt>0&&dt<0.05){ if(dnm*1852>Math.max(acc||20,10)){dSpd=dnm/dt;dCrs=brgTrue(prevFix.lat,prevFix.lon,lat,lon);} else {dSpd=0;} }}
+	prevFix={lat:lat,lon:lon,t:nowT};
 	myLoc={lat:lat,lon:lon};
-	if(heading!=null&&isFinite(heading)&&heading>=0)myHeading=heading; /* phones report heading only while moving — keep the last good one when stopped */
-	mySpeedKt=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:null; /* m/s → knots; null when not moving */
+	var hd=(heading!=null&&isFinite(heading)&&heading>=0)?heading:dCrs;
+	if(hd!=null)myHeading=hd; /* GPS heading when moving, else course made good; keep the last good one when stopped */
+	mySpeedKt=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:dSpd; /* knots — device value, or computed from position */
 	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
@@ -713,7 +727,7 @@ function startLoc(){
 }
 function stopLoc(){
 	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
-	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();rerenderCallouts();updateBoatInfo();
+	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;prevFix=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();rerenderCallouts();updateBoatInfo();
 }
 /* compass button: North-up ↔ Heads-up (needs a GPS heading, so turn on My
    location if it isn't already) */
@@ -1518,15 +1532,23 @@ function cardMinBtn(min){return '<button type="button" class="card-min-btn" aria
 function layoutLeftStack(){
 	var ls=document.getElementById('leftStack'),rb=document.getElementById('raceBar');if(!ls)return;
 	ls.style.top=((rb&&rb.classList.contains('on'))?(rb.offsetTop+rb.offsetHeight+8):10)+'px';
+	var bi=document.getElementById('boatInfo'),rsEl=document.getElementById('raceSheet');
+	ls.classList.toggle('has-cards',(bi&&bi.classList.contains('on'))||(rsEl&&rsEl.classList.contains('on')));  /* show the "hide all" toggle only when there are cards */
 }
-/* live "Underway" card — SOG + COG/heading from GPS, shown on mobile while moving */
+/* mobile master toggle: hide/show every card at once */
+(function(){var b=document.getElementById('stackToggle'),ls=document.getElementById('leftStack');if(!b||!ls)return;
+	b.addEventListener('click',function(){var hide=!ls.classList.contains('stack-hidden');ls.classList.toggle('stack-hidden',hide);b.textContent=hide?'Show cards':'Hide cards';b.setAttribute('aria-label',b.textContent);});
+})();
+/* live boat card (mobile) — SOG + COG/heading from GPS; shown whenever My
+   location has a fix, so it's visible at rest too (reads "Underway" once moving) */
 function updateBoatInfo(){
 	var el=document.getElementById('boatInfo');if(!el)return;
-	if(!(myLoc&&mySpeedKt!=null&&mySpeedKt>=0.5)){el.classList.remove('on');el.innerHTML='';layoutLeftStack();return;}
-	var hd=(myHeading!=null)?Math.round(((myHeading+MAGVAR)%360+360)%360):null;
-	var rows='<div class="bi-row"><span class="bi-v">'+mySpeedKt.toFixed(1)+'</span><span class="bi-k">kt SOG</span></div>'
+	if(!myLoc){el.classList.remove('on');el.innerHTML='';layoutLeftStack();return;}
+	var sog=(mySpeedKt!=null)?mySpeedKt:0, moving=sog>=0.5;
+	var hd=(moving&&myHeading!=null)?Math.round(((myHeading+MAGVAR)%360+360)%360):null;
+	var rows='<div class="bi-row"><span class="bi-v">'+sog.toFixed(1)+'</span><span class="bi-k">kt SOG</span></div>'
 		+'<div class="bi-row"><span class="bi-v">'+(hd!=null?pad3(hd)+'°M':'—')+'</span><span class="bi-k">COG'+(hd!=null?' '+card(hd):'')+'</span></div>';
-	el.innerHTML='<div class="rs-h"><span class="bi-title">Underway</span>'+cardMinBtn(boatMin)+'</div><div class="rs-body">'+rows+'</div>';
+	el.innerHTML='<div class="rs-h"><span class="bi-title">'+(moving?'Underway':'My boat')+'</span>'+cardMinBtn(boatMin)+'</div><div class="rs-body">'+rows+'</div>';
 	el.classList.toggle('min',boatMin);el.classList.add('on');
 	layoutLeftStack();
 }

@@ -370,6 +370,8 @@ if ( ! $oyc_weather_menu ) {
 
 	/* alert */
 	.weather-disclaimer{text-align:center;color:#6b7280;font-size:0.82rem;margin:0.5rem 0 1rem;letter-spacing:0.02em}
+	.weather-legal{max-width:760px;margin:0 auto 1.5rem;text-align:center;color:#8a93a0;font-size:0.7rem;line-height:1.5}
+	.weather-owner{max-width:760px;margin:0 auto 1.5rem;text-align:center;color:#8a93a0;font-size:0.7rem;line-height:1.5}
 	/* embedded Wind & Radar map card */
 	.windmap-card{margin-top:14px}
 	/* break the map out of the card padding so it fills edge-to-edge (card clips
@@ -564,6 +566,8 @@ if ( ! $oyc_weather_menu ) {
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
+	<p class="weather-legal">The chart, wind, radar, tide, current, and navigation information on this page is provided for general information and planning purposes only and is <strong>not for navigation</strong>. It is drawn from third-party sources, may be delayed, incomplete, or inaccurate, and is no substitute for official government charts and publications, a proper lookout, and prudent seamanship. Orienta Yacht Club makes no representation or warranty, express or implied, as to its accuracy, completeness, or fitness for any purpose, and assumes no liability for any loss, damage, or injury arising from its use or from any errors or omissions. You use this information entirely at your own risk and are responsible for verifying it against official sources.</p>
+	<p class="weather-owner">&copy; <?php echo esc_html( date( 'Y' ) ); ?> Intualytics LLC. All rights reserved. This weather board &mdash; including its design, data compilations, and underlying software &mdash; is the property of Intualytics LLC. Intualytics&trade; is a trademark of Intualytics LLC.</p>
 </div>
 
 <script>
