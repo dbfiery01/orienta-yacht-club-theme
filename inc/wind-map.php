@@ -142,6 +142,19 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .racebar button:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .racebar .rb-clear{background:#fff;color:var(--navy)}
 #oycwm .racebar .rc-info{flex-basis:100%;font-size:.72rem;font-weight:600;color:#dbeaf5}
+/* Race course sheet: per-mark cards on the left (lat/long, wind, wave, and the
+   leg to the next mark) — shown once a course is plotted. */
+#oycwm .racesheet{position:absolute;z-index:595;left:10px;top:70px;display:none;flex-direction:column;gap:6px;width:min(214px,60%);max-height:calc(100% - 150px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(11,42,74,.92);color:#fff;padding:8px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3);font-size:.72rem;line-height:1.35}
+#oycwm .racesheet.on{display:flex}
+#oycwm .rs-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 8px}
+#oycwm .rs-h{display:flex;align-items:center;gap:6px}
+#oycwm .rs-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e8820c;border:1.5px solid #7a3d00;color:#fff;font-size:.66rem;font-weight:800;flex:none}
+#oycwm .rs-nm{font-weight:700;color:#dbeaf5}
+#oycwm .rs-ll{color:#bfe4f5;margin-top:2px;font-variant-numeric:tabular-nums}
+#oycwm .rs-ww{margin-top:2px;color:#eaf4fb}
+#oycwm .rs-ww b,#oycwm .rs-leg b{color:#fff;font-weight:800}
+#oycwm .rs-leg{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.15);color:#cfe6f3}
+#oycwm .mapwrap.headsup .racesheet{display:none !important}
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
@@ -569,6 +582,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<button type="button" id="raceClear" class="rb-clear">Clear</button>
 				<span class="rc-info" id="raceInfo"></span>
 			</div>
+			<div class="racesheet" id="raceSheet" aria-label="Race course details"></div>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -1458,6 +1472,46 @@ function drawRaceMarks(){
 		L.marker([m.lat,m.lon],{icon:L.divIcon({className:'race-mk',html:'<span class="race-ic">'+k+'</span>',iconSize:[0,0]}),title:k+' — '+m.buoy+' ('+m.loc+')',zIndexOffset:700}).addTo(raceMarkLayer);
 	}
 }
+/* ---- Race course sheet (left-side per-mark detail cards) ---- */
+function fmtRaceLL(lat,lon){return Math.abs(lat).toFixed(4)+'°'+(lat>=0?'N':'S')+', '+Math.abs(lon).toFixed(4)+'°'+(lon>=0?'E':'W');}
+/* wind + wave at a mark, for the current slider time */
+function raceWindWave(lat,lon){
+	var r=(typeof readPoint==='function')?readPoint(lat,lon,curTi):null;if(!r)return '—';
+	var out=[];
+	if(r.kt!=null)out.push('<b>'+Math.round(r.kt)+'</b> kt'+(r.dir!=null?' '+card(r.dir):''));
+	if(r.waveFt!=null)out.push('<b>'+r.waveFt.toFixed(1)+'</b> ft wave');
+	return out.length?out.join(' &middot; '):'—';
+}
+/* "128°M · 3.1 nm · TWA 95°S beam" for the leg a→b, at the current slider time */
+function raceLegLine(a,b){
+	var course=brgTrue(a[0],a[1],b[0],b[1]),mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+	var s=magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+distNM(a[0],a[1],b[0],b[1]).toFixed(1)+' nm';
+	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
+	if(r&&r.dir!=null){
+		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
+		var pos=twa<RACE_TACK?'beat':(twa>180-RACE_TACK?'run':(twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad'));
+		s+=' &middot; TWA '+Math.round(twa)+'°'+side+' '+pos;
+	}
+	return s;
+}
+function renderRaceSheet(){
+	var el=document.getElementById('raceSheet');if(!el)return;
+	var cb=document.getElementById('tgRace');
+	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split('').filter(function(k){return MARKS[k];});
+	if(!cb||!cb.checked||seq.length<2){el.classList.remove('on');el.innerHTML='';return;}
+	var h='';
+	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]],nx=(i<seq.length-1)?MARKS[seq[i+1]]:null;
+		h+='<div class="rs-card"><div class="rs-h"><span class="rs-badge">'+seq[i]+'</span><span class="rs-nm">'+m.buoy+'</span></div>'
+			+'<div class="rs-ll">'+fmtRaceLL(m.lat,m.lon)+'</div>'
+			+'<div class="rs-ww">'+raceWindWave(m.lat,m.lon)+'</div>'
+			+(nx?'<div class="rs-leg">&rarr; '+seq[i+1]+': '+raceLegLine([m.lat,m.lon],[nx.lat,nx.lon])+'</div>':'')
+			+'</div>';
+	}
+	el.innerHTML=h;el.classList.add('on');
+	var rb=document.getElementById('raceBar');if(rb)el.style.top=(rb.offsetTop+rb.offsetHeight+8)+'px';
+	/* waves are lazy per grid — pull them once so the wave figures fill in */
+	if(typeof loadWaves==='function'&&activeGrid&&!activeGrid.wvLoaded&&!activeGrid.wvLoading){loadWaves(activeGrid,renderRaceSheet);}
+}
 function plotCourse(str){
 	raceCourseLayer.clearLayers();
 	raceStr=(str!=null)?str:raceStr;   /* remember the course so time changes can re-plot it */
@@ -1465,7 +1519,7 @@ function plotCourse(str){
 	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
 	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels */
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
-	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';return;}
+	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';renderRaceSheet();return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
 	/* pull the tidal-current predictions so legs can show set/drift even when the
 	   Current overlay isn't on; re-plots once they arrive */
@@ -1480,11 +1534,12 @@ function plotCourse(str){
 		makeLegDraggable(lm,i,mid);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
+	renderRaceSheet();
 }
 document.getElementById('tgRace').addEventListener('change',function(){
 	var bar=document.getElementById('raceBar');
 	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();replotRace();if(bar)bar.classList.add('on');}
-	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');}
+	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');renderRaceSheet();}
 });
 (function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
 	p.addEventListener('click',function(){plotCourse(inp.value);});
