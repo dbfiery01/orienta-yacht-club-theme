@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.322
+Version: 1.7.323
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3506,6 +3506,21 @@ html[data-theme="dark"] .wpcf7-form input[type="number"],
 html[data-theme="dark"] .wpcf7-form textarea{ background:#0c2338 !important; color:#e9e1d2 !important; border-color:rgba(245,239,226,0.22) !important; }
 html[data-theme="dark"] .wpcf7-form input::placeholder,
 html[data-theme="dark"] .wpcf7-form textarea::placeholder{ color:#9fb0c2 !important; opacity:1; }
+/* Same trap on /member-login-setup/: WP-Members' own stylesheet styles its
+   fields by #wpmem_reg (an id), which out-ranks the generic rule's non-important
+   text colour — so the box went dark but the typed text stayed dark too. */
+html[data-theme="dark"] .signup-form input:not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] .signup-form select,
+html[data-theme="dark"] .signup-form textarea{
+  background:#0c2338 !important; color:#e9e1d2 !important; -webkit-text-fill-color:#e9e1d2;
+  caret-color:#e9e1d2; border-color:rgba(245,239,226,0.22) !important;
+}
+html[data-theme="dark"] .signup-form input::placeholder,
+html[data-theme="dark"] .signup-form textarea::placeholder{ color:#9fb0c2 !important; -webkit-text-fill-color:#9fb0c2; opacity:1; }
+/* Browser autofill paints its own light fill; keep it dark with readable text. */
+html[data-theme="dark"] .signup-form input:-webkit-autofill{
+  -webkit-text-fill-color:#e9e1d2; box-shadow:0 0 0 1000px #0c2338 inset; caret-color:#e9e1d2;
+}
 html[data-theme="dark"] .cal-view-btn.active{ background:#102b47 !important; color:#f4eddd; }
 html[data-theme="dark"] .cal-addcal-btn:hover{ background:#173c5e !important; }
 /* Event-category pills: the light layer uses a dark shade of each category
