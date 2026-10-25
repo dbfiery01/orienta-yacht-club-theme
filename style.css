@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.330
+Version: 1.7.331
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3529,6 +3529,12 @@ html[data-theme="dark"] .signup-form .link-text,
 html[data-theme="dark"] .signup-form #wpmem_login label{ color:#e4ddce !important; }
 html[data-theme="dark"] .signup-form .link-text a,
 html[data-theme="dark"] .signup-form #wpmem_login a{ color:#8cc1e6 !important; }
+/* Edit Profile "Changes saved" modal (styled white in oyc-fun-theme) — the dark
+   palette lightened its text but left the box white. */
+html[data-theme="dark"] .oyc-confirm-box{ background:#102b47 !important; border:1px solid rgba(245,239,226,0.15); color:#e9e1d2; }
+html[data-theme="dark"] .oyc-confirm-box h3{ color:#f4eddd !important; }
+html[data-theme="dark"] .oyc-confirm-box p{ color:#e9e1d2 !important; }
+html[data-theme="dark"] .oyc-confirm-check{ background:rgba(39,174,96,0.22) !important; color:#5fd38d !important; }
 /* Browser autofill paints its own light fill; keep it dark with readable text. */
 html[data-theme="dark"] .signup-form input:-webkit-autofill{
   -webkit-text-fill-color:#e9e1d2; box-shadow:0 0 0 1000px #0c2338 inset; caret-color:#e9e1d2;
