@@ -136,6 +136,20 @@ function oyc_signup_confirmation_state() {
 	return 'invalid';
 }
 
+/* ── WP-Members confirmation email ───────────────────────────────────────────
+ * WP-Members builds the confirm link from its "User Profile Page" setting
+ * (which on this site was a hand-typed URL to a page that no longer exists)
+ * and, when the email body has no [confirm_link], appends it after the text
+ * "Click to validate your account:". Send it to the setup page — which
+ * reports the confirmation — and word it as the club wants. */
+add_filter( 'wpmem_validation_link_return_url', function () {
+	return home_url( '/member-login-setup/' );
+} );
+add_filter( 'wpmem_validation_link_default_dialogs', function ( $dialogs ) {
+	$dialogs['email_text'] = __( 'Click to validate your email address:', 'orienta-yacht-club' );
+	return $dialogs;
+} );
+
 /* ── Lost password: explain the approval block ───────────────────────────────
  * With moderated registration WP-Members vetoes password resets for accounts
  * an officer has not approved, and WordPress then shows the bare "Password
