@@ -126,6 +126,22 @@ function oyc_signup_confirmation_state() {
 	return 'invalid';
 }
 
+/* ── Lost password: explain the approval block ───────────────────────────────
+ * With moderated registration WP-Members vetoes password resets for accounts
+ * an officer has not approved, and WordPress then shows the bare "Password
+ * reset is not allowed for this user". Keep the veto, but say why. Runs after
+ * WP-Members (priority 10); returning a WP_Error makes retrieve_password()
+ * show this text in place of the core one. */
+add_filter( 'allow_password_reset', function ( $allow, $user_id ) {
+	if ( false !== $allow || 'approved' === oyc_user_approval_state( $user_id ) ) {
+		return $allow;
+	}
+	return new WP_Error(
+		'no_password_reset',
+		__( 'Once the account is approved by the club secretary it will become accessible.', 'orienta-yacht-club' )
+	);
+}, 99, 2 );
+
 /* ── Member Login Setup: extra OPTIONAL profile fields on registration ──────
  * WP-Members' register form only carries its own configured fields. Add the
  * remaining /edit-profile/ fields — Country, Display Name, About Me and
