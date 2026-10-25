@@ -307,15 +307,15 @@ if ( ! $oyc_weather_menu ) {
 
 	/* fishing */
 	.fish-out{display:flex;gap:12px;align-items:center;margin-top:12px;background:rgba(212,168,81,.12);border:1px solid rgba(212,168,81,.38);border-radius:12px;padding:10px 12px}
-	.fish-score{text-align:center;min-width:64px}
-	.fish-word{font-size:21px;font-weight:800;color:var(--teal);line-height:1}
+	.fish-score{flex:none;text-align:center;min-width:64px}
+	.fish-word{white-space:nowrap;font-size:21px;font-weight:800;color:var(--teal);line-height:1}
 	.fish-dots{display:flex;gap:3px;justify-content:center;margin-top:5px}
 	.fish-dots i{width:7px;height:7px;border-radius:50%;background:var(--teal)}
 	.fish-dots i.off{background:rgba(212,168,81,.3)}
 	.fish-wg{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:6px;font-size:11px;font-weight:700;color:var(--muted);line-height:1}
 	.fish-wg svg{flex:none;color:var(--teal)}
 	.fish-wg b{color:var(--teal);font-weight:800}
-	.fish-out p{font-size:12px;line-height:1.45;color:var(--muted)}
+	.fish-out p{flex:1;min-width:0;font-size:12px;line-height:1.45;color:var(--muted)}
 	.fish-k{color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:14px}
 	.fish-tl{position:relative;height:26px;border-radius:7px;background:var(--fish-track);overflow:hidden;margin-top:6px}
 	.fish-tl span{position:absolute;top:0;bottom:0}
@@ -365,7 +365,8 @@ if ( ! $oyc_weather_menu ) {
 	.fa-note:empty, .fa-note:has(> [hidden]){display:none}
 	@media (min-width:1101px){
 		.fish-grid{grid-template-columns:minmax(250px,1fr) minmax(0,1.5fr) minmax(260px,1fr);align-items:start;
-			grid-template-areas:"out win cond" "sol win note" "spots spots spots" "foot foot foot"}
+			grid-template-rows:auto auto 1fr auto auto;
+			grid-template-areas:"out win cond" "sol win cond" "sol win note" "spots spots spots" "foot foot foot"}
 	}
 
 	/* alert */
