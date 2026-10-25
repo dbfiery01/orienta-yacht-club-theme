@@ -74,7 +74,17 @@ add_filter( 'login_title', fn( $title ) => get_bloginfo( 'name' ) . ' — Member
 // address anyway, so the route never depends on the Page record.
 function oyc_is_login_setup_fallback() {
 	global $wp;
-	return is_404() && isset( $wp->request ) && 'member-login-setup' === untrailingslashit( $wp->request );
+	if ( ! is_404() ) {
+		return false;
+	}
+	if ( isset( $wp->request ) && 'member-login-setup' === untrailingslashit( $wp->request ) ) {
+		return true;
+	}
+	// WP-Members' email confirmation link (?a=confirm&key=…&login=…) is built
+	// from a page setting; if that page is missing or unpublished the member got
+	// "Nothing to see here yet." Land them on the setup page, which reports the
+	// confirmation, wherever the link points.
+	return isset( $_GET['a'], $_GET['key'], $_GET['login'] ) && 'confirm' === $_GET['a']; // phpcs:ignore WordPress.Security.NonceVerification -- read-only routing.
 }
 
 add_filter( 'template_include', function ( $template ) {
