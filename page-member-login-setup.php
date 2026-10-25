@@ -48,7 +48,23 @@ get_header();
 
 		<div class="signup-form">
 			<?php
-			if ( shortcode_exists( 'wpmem_form' ) ) {
+			$oyc_confirm = function_exists( 'oyc_signup_confirmation_state' ) ? oyc_signup_confirmation_state() : '';
+			if ( 'confirmed' === $oyc_confirm ) {
+				// Arrived from the "confirm your email" link and WP-Members accepted it.
+				?>
+				<div class="profile-notice profile-notice--success" role="status">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+					<span><?php esc_html_e( 'Thank you, your email address is confirmed. A club officer will now check your request against the roster, and you will get an email as soon as your login is approved — usually within a few days.', 'orienta-yacht-club' ); ?></span>
+				</div>
+				<?php
+			} elseif ( 'invalid' === $oyc_confirm ) {
+				?>
+				<div class="profile-notice profile-notice--error" role="alert">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+					<span><?php esc_html_e( 'That confirmation link is not valid or has expired. Please contact the club office and we will confirm your email for you.', 'orienta-yacht-club' ); ?></span>
+				</div>
+				<?php
+			} elseif ( shortcode_exists( 'wpmem_form' ) ) {
 				$oyc_reg_form = do_shortcode( '[wpmem_form register]' );
 				// Inject the optional profile fields (Country, Display Name, About Me,
 				// Emergency Contact) just before the Register button, so signup collects
