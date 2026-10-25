@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.325
+Version: 1.7.327
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -3517,6 +3517,18 @@ html[data-theme="dark"] .signup-form textarea{
 }
 html[data-theme="dark"] .signup-form input::placeholder,
 html[data-theme="dark"] .signup-form textarea::placeholder{ color:#9fb0c2 !important; -webkit-text-fill-color:#9fb0c2; opacity:1; }
+/* After a signup WP-Members shows its message box (light, faint grey text) and
+   its own login form, whose #wpmem_login labels/legend out-rank the theme's. */
+html[data-theme="dark"] .signup-form .wpmem_msg{
+  background:#102b47 !important; border:1px solid var(--brass) !important; color:#e9e1d2 !important;
+}
+html[data-theme="dark"] .signup-form .wpmem_msg *{ color:#e9e1d2 !important; }
+html[data-theme="dark"] .signup-form label,
+html[data-theme="dark"] .signup-form legend,
+html[data-theme="dark"] .signup-form .link-text,
+html[data-theme="dark"] .signup-form #wpmem_login label{ color:#e4ddce !important; }
+html[data-theme="dark"] .signup-form .link-text a,
+html[data-theme="dark"] .signup-form #wpmem_login a{ color:#8cc1e6 !important; }
 /* Browser autofill paints its own light fill; keep it dark with readable text. */
 html[data-theme="dark"] .signup-form input:-webkit-autofill{
   -webkit-text-fill-color:#e9e1d2; box-shadow:0 0 0 1000px #0c2338 inset; caret-color:#e9e1d2;
