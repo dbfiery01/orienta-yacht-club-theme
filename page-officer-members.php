@@ -178,7 +178,16 @@ if ( isset( $_POST['oyc_user_confirm_nonce'] ) &&
 		oyc_officer_notice( __( 'You do not have permission to manage that account.', 'orienta-yacht-club' ), 'error' );
 	} else {
 		$who = get_userdata( $cid );
-		update_user_meta( $cid, 'active', '1' );
+		// A signup awaiting approval goes through WP-Members' own activation, so it
+		// sends the "Registration is Moderated, User is Approved" email (and, when
+		// the signup form has no password field, the password to log in with).
+		// A long-standing account only gets the flag: it already has a password,
+		// which WP-Members would otherwise replace.
+		if ( function_exists( 'wpmem_activate_user' ) && 'pending' === oyc_user_approval_state( $cid ) ) {
+			wpmem_activate_user( $cid, true, false );
+		} else {
+			update_user_meta( $cid, 'active', '1' );
+		}
 		oyc_audit_log( 'user.confirm', sprintf( 'Confirmed membership for "%s"', $who->user_login ), $cid );
 		oyc_officer_notice( sprintf(
 			__( '%s is confirmed and can now reach the members\' area.', 'orienta-yacht-club' ),
