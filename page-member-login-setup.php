@@ -45,7 +45,7 @@ get_header();
 			</p>
 			<p class="signup-note">
 				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-				<span><?php esc_html_e( 'Requests are checked against the club roster, so your login will not work right away. You will get an email once it is approved — usually within a few days.', 'orienta-yacht-club' ); ?></span>
+				<span><?php esc_html_e( 'Requests are checked against the club roster, so your login will not work right away. You will get an email once it is approved — usually within a few days. If you don’t see our emails, check your spam or junk folder.', 'orienta-yacht-club' ); ?></span>
 			</p>
 		</div>
 
@@ -79,11 +79,12 @@ get_header();
 					$oyc_reg_form = substr_replace( $oyc_reg_form, oyc_signup_extra_fields_html(), $oyc_btn_at, 0 );
 				}
 				// Replace WP-Members' default success message (which wrongly tells the
-				// member to log in with an emailed password) with the moderated-approval
-				// flow: the account is pending until an officer approves it.
+				// member to log in with an emailed password) with the real flow: confirm
+				// the email address, then wait for an officer to approve the account.
+				// Yahoo and others file the confirm email as spam, so say where to look.
 				$oyc_reg_form = preg_replace(
 					'/Congratulations!.*?emailed to you\./s',
-					esc_html__( 'Your registration has been received. Once your account is approved — usually within a few days — you can log in with the password that was emailed to you.', 'orienta-yacht-club' ),
+					esc_html__( 'Your registration has been received. We have emailed you a link to confirm your email address — if it is not in your inbox, check your spam or junk folder. Once a club officer approves your account, usually within a few days, you will get a second email with your login details.', 'orienta-yacht-club' ),
 					$oyc_reg_form
 				);
 				echo $oyc_reg_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WP-Members markup + individually-escaped fields.
