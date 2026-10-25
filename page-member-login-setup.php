@@ -18,8 +18,11 @@
  * @package Orienta_Yacht_Club
  */
 
-// Already signed in? There's nothing to set up.
-if ( is_user_logged_in() ) {
+// Already signed in? There's nothing to set up — unless this is the email
+// confirmation link, whose result must still be shown (an officer testing a
+// signup is usually signed in).
+$oyc_confirm = function_exists( 'oyc_signup_confirmation_state' ) ? oyc_signup_confirmation_state() : '';
+if ( is_user_logged_in() && '' === $oyc_confirm ) {
 	wp_safe_redirect( home_url( '/members-area/' ) );
 	exit;
 }
@@ -48,7 +51,6 @@ get_header();
 
 		<div class="signup-form">
 			<?php
-			$oyc_confirm = function_exists( 'oyc_signup_confirmation_state' ) ? oyc_signup_confirmation_state() : '';
 			if ( 'confirmed' === $oyc_confirm ) {
 				// Arrived from the "confirm your email" link and WP-Members accepted it.
 				?>
