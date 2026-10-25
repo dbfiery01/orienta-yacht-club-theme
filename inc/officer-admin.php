@@ -463,25 +463,85 @@ add_action( 'wp_enqueue_scripts', function () {
 }, 20 );
 
 /**
- * Human-readable last-login string for a user, matching the "Last Login" column
+ * Unix timestamp of a user's last login, matching the "Last Login" column
  * already shown in wp-admin → Users. That column is populated by the site's
  * last-login plugin; we read the same user meta it writes (primary key
  * `last_login`, with a couple of fallbacks), accepting either a Unix timestamp
- * or a MySQL datetime string, and format it in the site's timezone. Returns an
- * em dash when nothing is recorded.
+ * or a MySQL datetime string. Returns 0 when nothing is recorded.
  *
  * @param int $user_id
- * @return string
+ * @return int
  */
-function oyc_last_login_display( $user_id ) {
+function oyc_last_login_timestamp( $user_id ) {
 	$raw = '';
 	foreach ( array( 'last_login', 'wp_last_login', 'wfls-last-login', '_last_login' ) as $key ) {
 		$v = get_user_meta( $user_id, $key, true );
 		if ( '' !== $v && null !== $v ) { $raw = $v; break; }
 	}
 	if ( '' === $raw ) {
-		return '—';
+		return 0;
 	}
 	$ts = is_numeric( $raw ) ? (int) $raw : strtotime( (string) $raw );
+	return $ts ? $ts : 0;
+}
+
+/**
+ * Human-readable last-login string in the site's timezone, or an em dash when
+ * nothing is recorded.
+ *
+ * @param int $user_id
+ * @return string
+ */
+function oyc_last_login_display( $user_id ) {
+	$ts = oyc_last_login_timestamp( $user_id );
 	return $ts ? wp_date( 'M j, Y g:i a', $ts ) : '—';
+}
+
+/**
+ * Last-login cell markup: a <time> element carrying the UTC instant, with the
+ * site-timezone string as its text. oyc_last_login_local_script() rewrites the
+ * text in the viewer's own timezone and locale; without JS the server string
+ * stays.
+ *
+ * @param int $user_id
+ * @return string
+ */
+function oyc_last_login_html( $user_id ) {
+	$ts = oyc_last_login_timestamp( $user_id );
+	if ( ! $ts ) {
+		return '—';
+	}
+	return sprintf(
+		'<time class="oyc-local-time" datetime="%s">%s</time>',
+		esc_attr( gmdate( 'c', $ts ) ),
+		esc_html( wp_date( 'M j, Y g:i a', $ts ) )
+	);
+}
+
+/**
+ * Inline script that formats every .oyc-local-time element in the browser's
+ * timezone and locale (e.g. "Oct 25, 2026, 11:07 AM"), and puts the timezone
+ * name in the tooltip.
+ */
+function oyc_last_login_local_script() {
+	?>
+	<script>
+	( function () {
+		if ( ! window.Intl || ! Intl.DateTimeFormat ) { return; }
+		var fmt = new Intl.DateTimeFormat( undefined, {
+			year: 'numeric', month: 'short', day: 'numeric',
+			hour: 'numeric', minute: '2-digit'
+		} );
+		var full = new Intl.DateTimeFormat( undefined, {
+			dateStyle: 'full', timeStyle: 'long'
+		} );
+		document.querySelectorAll( 'time.oyc-local-time[datetime]' ).forEach( function ( el ) {
+			var d = new Date( el.getAttribute( 'datetime' ) );
+			if ( isNaN( d.getTime() ) ) { return; }
+			el.textContent = fmt.format( d );
+			el.title = full.format( d );
+		} );
+	} )();
+	</script>
+	<?php
 }

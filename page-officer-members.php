@@ -433,7 +433,7 @@ get_header();
 										<?php echo esc_html( oyc_user_approval_label( $u_state ) ); ?>
 									</span>
 								</td>
-								<td><?php echo esc_html( oyc_last_login_display( $u->ID ) ); ?></td>
+								<td><?php echo oyc_last_login_html( $u->ID ); ?></td>
 								<td class="officer-table__actions">
 									<?php if ( $manageable && ! oyc_user_is_confirmed( $u->ID ) ) : ?>
 										<form method="post" style="display:inline">
@@ -456,6 +456,7 @@ get_header();
 						<?php endforeach; ?>
 					</tbody>
 				</table>
+				<?php oyc_last_login_local_script(); ?>
 
 				<?php if ( $oyc_total_pages > 1 ) : ?>
 					<div class="officer-pagination">
