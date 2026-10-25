@@ -69,12 +69,12 @@ get_header();
 				// Inject the optional profile fields (Country, Display Name, About Me,
 				// Emergency Contact) just before the Register button, so signup collects
 				// the same information as /edit-profile/.
-				if ( function_exists( 'oyc_signup_extra_fields_html' ) && false !== strpos( $oyc_reg_form, '<div class="button_div">' ) ) {
-					$oyc_reg_form = str_replace(
-						'<div class="button_div">',
-						oyc_signup_extra_fields_html() . '<div class="button_div">',
-						$oyc_reg_form
-					);
+				// Only the register form's button: after a signup WP-Members also renders
+				// its login form, which has the same button_div and must not get these.
+				$oyc_reg_at = preg_match( '/id=["\']wpmem_reg["\']/', $oyc_reg_form, $oyc_m, PREG_OFFSET_CAPTURE ) ? $oyc_m[0][1] : false;
+				$oyc_btn_at = false !== $oyc_reg_at ? strpos( $oyc_reg_form, '<div class="button_div">', $oyc_reg_at ) : false;
+				if ( function_exists( 'oyc_signup_extra_fields_html' ) && false !== $oyc_btn_at ) {
+					$oyc_reg_form = substr_replace( $oyc_reg_form, oyc_signup_extra_fields_html(), $oyc_btn_at, 0 );
 				}
 				// Replace WP-Members' default success message (which wrongly tells the
 				// member to log in with an emailed password) with the moderated-approval
