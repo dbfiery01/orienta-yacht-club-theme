@@ -150,6 +150,21 @@ add_filter( 'wpmem_validation_link_default_dialogs', function ( $dialogs ) {
 	return $dialogs;
 } );
 
+/* ── WP-Members approval email: working login link ───────────────────────────
+ * The "Registration is Moderated, User is Approved" email says "You may log in
+ * and change your password here: [user-profile]". WP-Members fills that from
+ * its User Profile Page setting, a members-only page that a new member with
+ * only the emailed temporary password can't open. Point it at the login
+ * screen instead, landing on Edit Profile where the password is changed. */
+add_filter( 'wpmem_email_shortcodes', function ( $shortcodes, $tag ) {
+	if ( 'appmod' === $tag ) {
+		$login = wp_login_url( home_url( '/edit-profile/' ) );
+		$shortcodes['user-profile'] = $login;
+		$shortcodes['members-area'] = $login;
+	}
+	return $shortcodes;
+}, 10, 2 );
+
 /* ── Lost password: explain the approval block ───────────────────────────────
  * With moderated registration WP-Members vetoes password resets for accounts
  * an officer has not approved, and WordPress then shows the bare "Password
