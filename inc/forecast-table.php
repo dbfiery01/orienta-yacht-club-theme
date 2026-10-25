@@ -304,6 +304,7 @@ function oyc_forecast_table_html() {
 .oyc-ft .navdays span{flex:1;text-align:center;border-left:1px solid #dfe7f0}
 .oyc-ft .navdays span:first-child{border-left:0}
 .oyc-ft .legend{display:flex;flex-wrap:wrap;gap:5px 13px;align-items:center;padding:10px 18px 4px;font-size:.72rem;color:#6b7280}
+.oyc-ft .legend .lk{color:#0b2a4a}
 .oyc-ft .legend .sw{display:inline-flex;align-items:center;gap:5px}
 .oyc-ft .legend .sw i{width:15px;height:12px;border-radius:3px;display:inline-block}
 .oyc-ft .foot{padding:8px 18px 16px;font-size:.72rem;color:#6b7280}
@@ -316,6 +317,8 @@ function oyc_forecast_table_html() {
 [data-theme="dark"] .oyc-ft .hd .loc,[data-theme="dark"] .oyc-ft .hd .upd{color:#aeb9c8}
 [data-theme="dark"] .oyc-ft .models button{background:rgba(255,255,255,.04);border-color:rgba(245,239,226,.18);color:#c7d2e0}
 [data-theme="dark"] .oyc-ft .models button:hover{border-color:#57a6d6}
+[data-theme="dark"] .oyc-ft .models button.on{background:#1583cf;border-color:#1583cf;color:#fff}
+[data-theme="dark"] .oyc-ft .models button.blend.on{background:#d4a851;border-color:#d4a851;color:#0b2a4a}
 [data-theme="dark"] .oyc-ft .obs{color:#dbe6f2}
 [data-theme="dark"] .oyc-ft table{background:#0b2238}
 [data-theme="dark"] .oyc-ft td{border-right-color:rgba(245,239,226,.10)}
@@ -329,6 +332,7 @@ function oyc_forecast_table_html() {
 [data-theme="dark"] .oyc-ft .navdays{color:#aeb9c8}
 [data-theme="dark"] .oyc-ft .navdays span{border-left-color:rgba(245,239,226,.12)}
 [data-theme="dark"] .oyc-ft .legend,[data-theme="dark"] .oyc-ft .foot,[data-theme="dark"] .oyc-ft .msg{color:#aeb9c8}
+[data-theme="dark"] .oyc-ft .legend .lk{color:#f5efe2}
 [data-theme="dark"] .oyc-ft td.divmid{box-shadow:inset 2px 0 0 #d4a851}
 </style>
 <script>
@@ -445,7 +449,7 @@ function oyc_forecast_table_html() {
 
   function buildModels(){var box=$('oycft-models');MODELS.forEach(function(m){var b=document.createElement('button');b.textContent=m.label;b.setAttribute('data-id',m.id);if(m.blend)b.className='blend';if(m.id===MODEL)b.className+=' on';b.onclick=function(){MODEL=m.id;[].forEach.call(box.children,function(c){c.classList.toggle('on',c.getAttribute('data-id')===MODEL);});render();};box.appendChild(b);});}
   function buildLegend(){var bins=[['<8','#c2ddec'],['8-11','#8fc0dd'],['11-14','#5aa6d0'],['14-17','#d9c07a'],['17-20','#e0a13f'],['20-24','#dd7f3a'],['24-28','#cf5638'],['28+','#b23a2a']];
-    $('oycft-legend').innerHTML='<b style="color:#0b2a4a">Wind kt</b>&nbsp;'+bins.map(function(x){return '<span class="sw"><i style="background:'+x[1]+'"></i>'+x[0]+'</span>';}).join('');}
+    $('oycft-legend').innerHTML='<b class="lk">Wind kt</b>&nbsp;'+bins.map(function(x){return '<span class="sw"><i style="background:'+x[1]+'"></i>'+x[0]+'</span>';}).join('');}
 
   function render(){
     var c=cols(),s=NOW,e=c.time.length-1,idx=[],i;for(i=s;i<=e;i++)idx.push(i);
