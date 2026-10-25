@@ -106,6 +106,26 @@ add_action( 'template_redirect', function () {
 	}
 } );
 
+/* ── Member Login Setup: email-confirmation landing ──────────────────────────
+ * The link in WP-Members' "confirm your email" message comes back here as
+ * ?a=confirm&key=…&login=…. WP-Members validates the key itself, but announces
+ * the result through the_content — which this custom template never calls — so
+ * the member landed on a blank signup form with no word that it had worked.
+ *
+ * Returns 'confirmed', 'invalid', or '' when this is not a confirmation visit.
+ * Reads WP-Members' own record of a confirmed address (_wpmem_user_confirmed,
+ * a timestamp it stamps on a valid key), so the theme never re-checks the key. */
+function oyc_signup_confirmation_state() {
+	if ( empty( $_GET['a'] ) || 'confirm' !== $_GET['a'] || empty( $_GET['login'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- read-only; the emailed key is the credential and WP-Members checks it.
+		return '';
+	}
+	$user = get_user_by( 'login', sanitize_user( wp_unslash( $_GET['login'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+	if ( $user && get_user_meta( $user->ID, '_wpmem_user_confirmed', true ) ) {
+		return 'confirmed';
+	}
+	return 'invalid';
+}
+
 /* ── Member Login Setup: extra OPTIONAL profile fields on registration ──────
  * WP-Members' register form only carries its own configured fields. Add the
  * remaining /edit-profile/ fields — Country, Display Name, About Me and
