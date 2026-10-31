@@ -169,3 +169,7 @@ html[data-theme="dark"] .bb-page .bb-card__contact { background: rgba(108,182,23
   padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: .04em;
   background: var(--bb-wanted); color: #2b1d00;
 }
+
+/* Admin-only "Send test reminder" */
+.bb-page .bb-btn--admin { border-style: dashed !important; color: var(--bb-muted) !important; }
+.bb-page .bb-btn--admin:hover { color: var(--bb-sale) !important; }

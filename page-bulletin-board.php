@@ -53,6 +53,9 @@ $messages = array(
 	'closed'   => array( 'ok',  __( 'Marked as done. It stays on the board, labelled, until you delete it.', 'orienta-yacht-club' ) ),
 	'reopened' => array( 'ok',  __( 'Post is open again.', 'orienta-yacht-club' ) ),
 	'current'  => array( 'ok',  __( 'Thanks! Your post is marked as still current.', 'orienta-yacht-club' ) ),
+	/* translators: %s: admin's email address. */
+	'testsent' => array( 'ok',  sprintf( __( 'Test reminder sent to %s (not to the member). Check your inbox and spam folder.', 'orienta-yacht-club' ), $me->user_email ) ),
+	'testfail' => array( 'err', __( 'The test reminder could not be sent. Check WP Mail SMTP (Tools → Email Test).', 'orienta-yacht-club' ) ),
 	'missing'  => array( 'err', __( 'Please fill in a title, a description and how to contact you.', 'orienta-yacht-club' ) ),
 	'nophoto'  => array( 'err', __( 'For Sale posts need a photo of the item.', 'orienta-yacht-club' ) ),
 	'badphoto' => array( 'err', __( 'That photo didn’t upload. Please use a JPG, PNG, GIF or WebP image under 12 MB.', 'orienta-yacht-club' ) ),
