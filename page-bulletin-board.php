@@ -224,6 +224,30 @@ $messages = array(
 				priceIn.value = rest ? out + ' ' + rest : out;
 			});
 
+			// Editing: the post's card on the board updates as you type, so the
+			// change is visible straight away (the saved page shows the same).
+			var card = EDITING ? document.getElementById('post-<?php echo $edit ? (int) $edit->ID : 0; ?>') : null;
+			if (card) {
+				card.classList.add('is-editing');
+				var esc = function(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+				var setText = function(sel, html, isHtml){ var el = card.querySelector(sel); if (el) { if (isHtml) el.innerHTML = html; else el.textContent = html; } };
+				var live = function(){
+					var t = (form.querySelector('input[name="oyc_bb_type"]:checked') || {}).value || 'sale';
+					setText('.bb-card__title', form.querySelector('input[name="oyc_bb_title"]').value);
+					setText('.bb-card__desc', esc(form.querySelector('textarea[name="oyc_bb_desc"]').value).replace(/\n/g, '<br>'), true);
+					var cv = card.querySelector('.bb-card__contact');
+					if (cv) cv.innerHTML = '<span class="bb-card__label">' + esc(<?php echo wp_json_encode( __( 'Contact', 'orienta-yacht-club' ) ); ?>) + '</span>' + esc(form.querySelector('textarea[name="oyc_bb_contact"]').value).replace(/\n/g, '<br>');
+					var top = card.querySelector('.bb-card__top'), pr = card.querySelector('.bb-card__price');
+					if (priceIn.value.trim()) { if (!pr && top) { pr = document.createElement('span'); pr.className = 'bb-card__price'; top.appendChild(pr); } if (pr) pr.textContent = priceIn.value.trim(); } else if (pr) { pr.remove(); }
+					var tag = card.querySelector('.bb-tag--sale, .bb-tag--wanted');
+					if (tag) { tag.className = 'bb-tag bb-tag--' + t; tag.textContent = t === 'wanted' ? <?php echo wp_json_encode( __( 'Wanted', 'orienta-yacht-club' ) ); ?> : <?php echo wp_json_encode( __( 'For Sale', 'orienta-yacht-club' ) ); ?>; }
+					card.classList.toggle('bb-card--wanted', t === 'wanted'); card.classList.toggle('bb-card--sale', t !== 'wanted');
+				};
+				form.addEventListener('input', live);
+				form.addEventListener('change', live);
+				if (priceIn) priceIn.addEventListener('blur', live);
+			}
+
 			// Shrink big photos in the browser before upload (same as the Photo Gallery).
 			var btn = form.querySelector('button[type="submit"]');
 			var errEl = form.querySelector('.bb-upload-error');
