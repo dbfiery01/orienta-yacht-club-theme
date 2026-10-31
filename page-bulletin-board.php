@@ -202,6 +202,19 @@ $messages = array(
 			form.querySelectorAll('input[name="oyc_bb_type"]').forEach(function(r){ r.addEventListener('change', syncType); });
 			syncType();
 
+			// Show the price as currency as soon as the member leaves the field
+			// (the server applies the same formatting when it saves).
+			var priceIn = form.querySelector('input[name="oyc_bb_price"]');
+			if (priceIn) priceIn.addEventListener('blur', function(){
+				var m = priceIn.value.trim().match(/^\$?\s*([\d,]*\.?\d+)\s*(k)?\b(.*)$/i);
+				if (!m) return;
+				var n = parseFloat(m[1].replace(/,/g, '')) * (m[2] ? 1000 : 1);
+				var whole = Math.floor(n) === n;
+				var out = '$' + n.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
+				var rest = m[3].trim();
+				priceIn.value = rest ? out + ' ' + rest : out;
+			});
+
 			// Shrink big photos in the browser before upload (same as the Photo Gallery).
 			var btn = form.querySelector('button[type="submit"]');
 			var errEl = form.querySelector('.bb-upload-error');
