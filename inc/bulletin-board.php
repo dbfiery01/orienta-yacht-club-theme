@@ -201,6 +201,26 @@ function oyc_bb_is_stale( $post ) {
 	return ( time() - (int) get_post_modified_time( 'U', true, $post ) ) > OYC_BB_REMIND_DAYS * DAY_IN_SECONDS;
 }
 
+/**
+ * Format the price as currency when it starts with a number:
+ * "1000000" -> "$1,000,000", "1200 obo" -> "$1,200 obo", "$85.5" -> "$85.50".
+ * Text-only prices ("Free", "Make an offer") are left as typed.
+ */
+function oyc_bb_format_price( $price ) {
+	$price = trim( (string) $price );
+	if ( ! preg_match( '/^\$?\s*([\d,]*\.?\d+)\s*(k)?\b(.*)$/i', $price, $m ) ) {
+		return $price;
+	}
+	$num = (float) str_replace( ',', '', $m[1] );
+	if ( ! empty( $m[2] ) ) {
+		$num *= 1000;
+	}
+	$dec = ( floor( $num ) == $num ) ? 0 : 2; // phpcs:ignore Universal.Operators.StrictComparisons
+	$out = '$' . number_format( $num, $dec );
+	$rest = trim( $m[3] );
+	return '' !== $rest ? $out . ' ' . $rest : $out;
+}
+
 function oyc_bb_clip( $s, $max ) {
 	return function_exists( 'mb_substr' ) ? mb_substr( $s, 0, $max ) : substr( $s, 0, $max );
 }
@@ -299,7 +319,7 @@ function oyc_bb_handle_save() {
 
 	$type    = ( isset( $_POST['oyc_bb_type'] ) && 'wanted' === $_POST['oyc_bb_type'] ) ? 'wanted' : 'sale';
 	$title   = oyc_bb_clip( sanitize_text_field( wp_unslash( $_POST['oyc_bb_title'] ?? '' ) ), 80 );
-	$price   = oyc_bb_clip( sanitize_text_field( wp_unslash( $_POST['oyc_bb_price'] ?? '' ) ), 40 );
+	$price   = oyc_bb_clip( oyc_bb_format_price( sanitize_text_field( wp_unslash( $_POST['oyc_bb_price'] ?? '' ) ) ), 40 );
 	$desc    = oyc_bb_clip( sanitize_textarea_field( wp_unslash( $_POST['oyc_bb_desc'] ?? '' ) ), 1500 );
 	$contact = oyc_bb_clip( sanitize_textarea_field( wp_unslash( $_POST['oyc_bb_contact'] ?? '' ) ), 200 );
 
@@ -469,7 +489,7 @@ add_action( 'before_delete_post', function ( $id ) {
 function oyc_bb_card( $post ) {
 	$id       = $post->ID;
 	$type     = 'wanted' === get_post_meta( $id, '_oyc_bb_type', true ) ? 'wanted' : 'sale';
-	$price    = get_post_meta( $id, '_oyc_bb_price', true );
+	$price    = oyc_bb_format_price( get_post_meta( $id, '_oyc_bb_price', true ) );
 	$contact  = get_post_meta( $id, '_oyc_bb_contact', true );
 	$closed   = (bool) get_post_meta( $id, '_oyc_bb_closed', true );
 	$photo    = (int) get_post_meta( $id, '_oyc_bb_photo', true );
