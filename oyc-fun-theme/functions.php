@@ -108,6 +108,10 @@ add_action( 'wp_footer', function () {
 	if ( function_exists( 'oyc_officer_is_officer_page' ) && oyc_officer_is_officer_page() ) {
 		return;
 	}
+	// Members' Bulletin Board (served with or without a Page record).
+	if ( function_exists( 'oyc_bb_is_board' ) && oyc_bb_is_board() ) {
+		return;
+	}
 	// Collect home-* and header-* photos from the parent theme, plus any
 	// header-* in the child theme (e.g. header-racing.jpg). Keyed by filename.
 	$sets = array();
