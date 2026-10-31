@@ -135,7 +135,12 @@ html[data-theme="dark"] .bb-page .bb-card__contact { background: rgba(108,182,23
 .bb-page .bb-card__photo::after { content: none !important; display: none !important; }
 
 /* Sold / Found: faded */
-.bb-page .bb-card.is-closed .bb-card__photo img, .bb-page .bb-card.is-closed .bb-card__desc { opacity: 0.55; }
+/* The whole ad is dimmed; the owner's buttons (Relist, Edit, Delete) stay full strength. */
+.bb-page .bb-card.is-closed { border-top-color: #6b7782; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.bb-page .bb-card.is-closed .bb-card__photo,
+.bb-page .bb-card.is-closed .bb-card__body,
+.bb-page .bb-card.is-closed .bb-pin { opacity: 0.45; filter: grayscale(0.7); }
+.bb-page .bb-card.is-closed .bb-tag--closed { filter: none; }
 
 /* Buttons */
 .bb-page .bb-btn { background: var(--bb-card) !important; color: var(--bb-ink) !important; border: 1px solid var(--bb-line) !important; }
