@@ -42,6 +42,9 @@ $f = array(
 	'photo'   => $edit ? (int) get_post_meta( $edit->ID, '_oyc_bb_photo', true ) : 0,
 );
 $editing_other = $edit && (int) $edit->post_author !== $me->ID;
+// The form starts open when editing or after a form error; the "+ Post an item"
+// button is hidden whenever the form is open (it has its own Close).
+$compose_open  = $edit || in_array( $notice, array( 'missing', 'nophoto', 'badphoto' ), true );
 
 $messages = array(
 	'posted'   => array( 'ok',  __( 'Your post is up on the board.', 'orienta-yacht-club' ) ),
@@ -87,11 +90,11 @@ $messages = array(
 					<button type="button" class="bb-filter" data-filter="mine" aria-pressed="false"><?php esc_html_e( 'My posts', 'orienta-yacht-club' ); ?> <span class="bb-filter__n"><?php echo (int) $counts['mine']; ?></span></button>
 				<?php endif; ?>
 			</div>
-			<a class="btn btn-primary bb-new-btn" href="#bb-form"><?php esc_html_e( '+ Post an item', 'orienta-yacht-club' ); ?></a>
+			<a class="btn btn-primary bb-new-btn" href="#bb-form"<?php echo $compose_open ? ' hidden' : ''; ?>><?php esc_html_e( '+ Post an item', 'orienta-yacht-club' ); ?></a>
 		</div>
 
 		<!-- Post / edit form -->
-		<details class="bb-compose" id="bb-form"<?php echo ( $edit || in_array( $notice, array( 'missing', 'nophoto', 'badphoto' ), true ) ) ? ' open' : ''; ?>>
+		<details class="bb-compose" id="bb-form"<?php echo $compose_open ? ' open' : ''; ?>>
 			<summary class="bb-compose__summary"><?php echo esc_html( $edit ? __( 'Edit post', 'orienta-yacht-club' ) : __( 'Post an item', 'orienta-yacht-club' ) ); ?> <span class="bb-compose__close"><?php esc_html_e( 'Close', 'orienta-yacht-club' ); ?></span></summary>
 			<form class="bb-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="oyc_bb_save">
@@ -182,6 +185,12 @@ $messages = array(
 			// "+ Post an item" opens the form.
 			var compose = document.getElementById('bb-form');
 			var newBtn = document.querySelector('.bb-new-btn');
+			var EDITING = <?php echo $edit ? 'true' : 'false'; ?>, BOARD = <?php echo wp_json_encode( oyc_bb_url() ); ?>;
+			if (newBtn && compose) compose.addEventListener('toggle', function(){
+				// Closing an edit leaves edit mode, so "+ Post an item" starts a fresh post.
+				if (EDITING && !compose.open) { window.location.href = BOARD; return; }
+				newBtn.hidden = compose.open;
+			});
 			if (newBtn && compose) newBtn.addEventListener('click', function(e){
 				e.preventDefault();
 				compose.open = !compose.open;

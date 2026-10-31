@@ -153,3 +153,6 @@ html[data-theme="dark"] .bb-page .bb-card__contact { background: rgba(108,182,23
 #board .bb-card a:not(.btn) { color: var(--bb-link) !important; }
 .bb-page .bb-compose__summary { display: flex; align-items: center; }
 .bb-page .bb-compose__close { margin-left: auto; font-size: 0.85rem; font-weight: 600; color: var(--bb-muted); }
+
+/* "+ Post an item" is hidden while the post/edit form is open */
+.bb-page .bb-new-btn[hidden] { display: none !important; }
