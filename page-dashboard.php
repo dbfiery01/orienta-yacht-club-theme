@@ -152,6 +152,13 @@ get_header();
 			<?php oyc_photo_thumbs(); ?>
 		</div>
 
+		<!-- Bulletin Board (For Sale / Wanted) -->
+		<?php if ( function_exists( 'oyc_bb_thumbs' ) ) : ?>
+			<div class="dashboard-photos dashboard-bb">
+				<?php oyc_bb_thumbs(); ?>
+			</div>
+		<?php endif; ?>
+
 		<!-- Club Videos -->
 		<div class="dashboard-videos">
 			<?php oyc_video_thumbs(); ?>
