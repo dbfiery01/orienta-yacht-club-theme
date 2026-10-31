@@ -155,8 +155,14 @@ function oyc_bb_can_manage( $post ) {
 	return (int) $post->post_author === get_current_user_id() || oyc_bb_can_moderate();
 }
 
-function oyc_bb_redirect( $notice, $args = array() ) {
-	wp_safe_redirect( oyc_bb_url( array_merge( array( 'bb' => $notice ), $args ) ) . '#board' );
+/**
+ * Post/Redirect/Get back to the board. `t` makes every result URL unique so no
+ * browser or page cache can hand back the board as it was before the change;
+ * $post_id scrolls to (and highlights) the post that was just saved.
+ */
+function oyc_bb_redirect( $notice, $args = array(), $post_id = 0 ) {
+	$url = oyc_bb_url( array_merge( array( 'bb' => $notice, 't' => time() ), $args ) );
+	wp_safe_redirect( $url . ( $post_id ? '#post-' . (int) $post_id : '#board' ) );
 	exit;
 }
 
@@ -373,7 +379,7 @@ function oyc_bb_handle_save() {
 		oyc_bb_redirect( false === $new_photo ? 'badphoto' : 'nophoto', array( 'bb_edit' => $id ) );
 	}
 
-	oyc_bb_redirect( false === $new_photo ? 'badphoto' : ( $post ? 'updated' : 'posted' ) );
+	oyc_bb_redirect( false === $new_photo ? 'badphoto' : ( $post ? 'updated' : 'posted' ), array(), $id );
 }
 add_action( 'admin_post_oyc_bb_save', 'oyc_bb_handle_save' );
 
@@ -401,11 +407,11 @@ function oyc_bb_handle_action() {
 		case 'close':
 			$closed = get_post_meta( $id, '_oyc_bb_closed', true );
 			$closed ? delete_post_meta( $id, '_oyc_bb_closed' ) : update_post_meta( $id, '_oyc_bb_closed', '1' );
-			oyc_bb_redirect( $closed ? 'reopened' : 'closed' );
+			oyc_bb_redirect( $closed ? 'reopened' : 'closed', array(), $id );
 			break;
 		case 'current':
 			wp_update_post( array( 'ID' => $id ) ); // bumps post_modified.
-			oyc_bb_redirect( 'current' );
+			oyc_bb_redirect( 'current', array(), $id );
 			break;
 	}
 	oyc_bb_redirect( 'denied' );

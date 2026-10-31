@@ -161,3 +161,11 @@ html[data-theme="dark"] .bb-page .bb-card__contact { background: rgba(108,182,23
 
 /* "+ Post an item" is hidden while the post/edit form is open */
 .bb-page .bb-new-btn[hidden] { display: none !important; }
+
+/* The card being edited (live preview) */
+.bb-page .bb-card.is-editing { transform: none; outline: 3px dashed var(--bb-wanted); outline-offset: 3px; }
+.bb-page .bb-card.is-editing::after {
+  content: "Editing — preview"; position: absolute; top: -12px; right: 10px; z-index: 3;
+  padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: .04em;
+  background: var(--bb-wanted); color: #2b1d00;
+}
