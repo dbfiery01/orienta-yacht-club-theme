@@ -4,7 +4,7 @@ Theme URI: https://orientayc.org
 Author: Orienta Yacht Club
 Author URI: https://orientayc.org
 Description: Custom theme for the Orienta Yacht Club, Mamaroneck, NY. Founded 1907. Includes a fully editable single-page front page powered by the WordPress Customizer.
-Version: 1.7.336
+Version: 1.7.337
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 7.4
@@ -2548,6 +2548,12 @@ body.tribe-events-page-template { background: transparent; }
   background: linear-gradient(to top, rgba(0,0,0,0.72), transparent);
 }
 .video-thumbs__more { text-align: center; margin-top: 16px; }
+/* Bulletin Board strip on the dashboard: posts without a photo get a solid tile */
+.bb-thumb--text { background: linear-gradient(135deg, #1583cf, #0b2a4a); }
+.bb-thumb--text .video-thumb__title {
+  top: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: none; font-size: 0.95rem; padding: 14px;
+}
 @media (max-width: 760px) {
   .video-thumbs__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }

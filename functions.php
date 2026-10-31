@@ -216,6 +216,12 @@ require_once get_template_directory() . '/inc/photo-gallery.php';
 require_once get_template_directory() . '/inc/video-gallery.php';
 
 /**
+ * Members' Bulletin Board: For Sale and Wanted posts (members only, live at
+ * /bulletin-board/, 60-day "is this still current?" reminder email).
+ */
+require_once get_template_directory() . '/inc/bulletin-board.php';
+
+/**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
  * fetched, and old cached embeds lack the allow/referrerpolicy attributes the
  * player now requires (YouTube "Error 153").
@@ -466,7 +472,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'member-login-setup', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement', 'video-gallery', 'dock-and-dine' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'member-login-setup', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement', 'video-gallery', 'dock-and-dine', 'bulletin-board' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;
