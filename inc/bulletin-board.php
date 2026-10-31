@@ -514,9 +514,11 @@ function oyc_bb_card( $post ) {
 
 	echo '<div class="bb-card__body">';
 	echo '<div class="bb-card__top">';
-	echo '<span class="bb-tag bb-tag--' . esc_attr( $type ) . '">' . esc_html( 'wanted' === $type ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' ) ) . '</span>';
+	// Once Sold/Found, the card shows only that label (not For Sale / Wanted).
 	if ( $closed ) {
 		echo '<span class="bb-tag bb-tag--closed">' . esc_html( $closed_l ) . '</span>';
+	} else {
+		echo '<span class="bb-tag bb-tag--' . esc_attr( $type ) . '">' . esc_html( 'wanted' === $type ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' ) ) . '</span>';
 	}
 	if ( '' !== $price ) {
 		echo '<span class="bb-card__price">' . esc_html( $price ) . '</span>';
