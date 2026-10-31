@@ -413,6 +413,19 @@ function oyc_bb_handle_action() {
 			wp_update_post( array( 'ID' => $id ) ); // bumps post_modified.
 			oyc_bb_redirect( 'current', array(), $id );
 			break;
+		case 'testremind':
+			// Admins only: send this post's 60-day reminder to the ADMIN's own
+			// address (never to the member) so the email can be checked any time.
+			// Changes nothing on the post and does not count as a real reminder.
+			if ( ! current_user_can( 'manage_options' ) ) {
+				oyc_bb_redirect( 'denied' );
+			}
+			$me    = wp_get_current_user();
+			$owner = get_userdata( $post->post_author );
+			list( $subject, $body ) = oyc_bb_reminder_email( $post, $owner ? $owner : $me );
+			$sent = wp_mail( $me->user_email, '[TEST] ' . $subject, $body );
+			oyc_bb_redirect( $sent ? 'testsent' : 'testfail', array(), $id );
+			break;
 	}
 	oyc_bb_redirect( 'denied' );
 }
@@ -428,6 +441,29 @@ add_action( 'init', function () {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'oyc_bb_remind' );
 	}
 } );
+
+/**
+ * The "is your post still current?" email for one post.
+ *
+ * @param WP_Post $post Listing.
+ * @param WP_User $user The post's owner (greeting name).
+ * @return array{0:string,1:string} subject, body.
+ */
+function oyc_bb_reminder_email( $post, $user ) {
+	$name = $user->first_name ? $user->first_name : $user->display_name;
+	$type = 'wanted' === get_post_meta( $post->ID, '_oyc_bb_type', true ) ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' );
+	/* translators: %s: post title. */
+	$subject = sprintf( __( 'Is your Bulletin Board post still current? "%s"', 'orienta-yacht-club' ), $post->post_title );
+	$body    = sprintf(
+		/* translators: 1: first name, 2: For Sale/Wanted, 3: title, 4: board link. */
+		__( "Hi %1\$s,\n\nYour %2\$s post \"%3\$s\" on the Orienta Yacht Club Bulletin Board has been up for 60 days without an update.\n\nPlease take a moment to update it:\n- Still current? Press \"Still current\" or edit the post.\n- Sold or found? Press \"Mark Sold\" or \"Mark Found\".\n- No longer needed? Delete it.\n\n%4\$s\n\nThank you,\nOrienta Yacht Club", 'orienta-yacht-club' ),
+		$name,
+		$type,
+		$post->post_title,
+		oyc_bb_url() . '#post-' . $post->ID
+	);
+	return array( $subject, $body );
+}
 
 function oyc_bb_send_reminders() {
 	$cutoff = time() - OYC_BB_REMIND_DAYS * DAY_IN_SECONDS;
@@ -454,18 +490,7 @@ function oyc_bb_send_reminders() {
 		if ( ! $user || ! is_email( $user->user_email ) ) {
 			continue;
 		}
-		$name = $user->first_name ? $user->first_name : $user->display_name;
-		$type = 'wanted' === get_post_meta( $post->ID, '_oyc_bb_type', true ) ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' );
-		/* translators: %s: post title. */
-		$subject = sprintf( __( 'Is your Bulletin Board post still current? "%s"', 'orienta-yacht-club' ), $post->post_title );
-		$body    = sprintf(
-			/* translators: 1: first name, 2: For Sale/Wanted, 3: title, 4: board link. */
-			__( "Hi %1$s,\n\nYour %2$s post \"%3$s\" on the Orienta Yacht Club Bulletin Board has been up for 60 days without an update.\n\nPlease take a moment to update it:\n- Still current? Press \"Still current\" or edit the post.\n- Sold or found? Press \"Mark Sold\" or \"Mark Found\".\n- No longer needed? Delete it.\n\n%4$s\n\nThank you,\nOrienta Yacht Club", 'orienta-yacht-club' ),
-			$name,
-			$type,
-			$post->post_title,
-			oyc_bb_url() . '#post-' . $post->ID
-		);
+		list( $subject, $body ) = oyc_bb_reminder_email( $post, $user );
 		if ( wp_mail( $user->user_email, $subject, $body ) ) {
 			update_post_meta( $post->ID, '_oyc_bb_reminded', time() );
 		}
@@ -546,6 +571,9 @@ function oyc_bb_card( $post ) {
 		/* translators: %s: "Sold" or "Found". */
 		oyc_bb_action_button( $id, 'close', $closed ? __( 'Relist', 'orienta-yacht-club' ) : sprintf( __( 'Mark %s', 'orienta-yacht-club' ), $closed_l ), 'bb-btn' );
 		oyc_bb_action_button( $id, 'delete', __( 'Delete', 'orienta-yacht-club' ), 'bb-btn bb-btn--danger', __( 'Delete this post? This cannot be undone.', 'orienta-yacht-club' ) );
+		if ( current_user_can( 'manage_options' ) ) {
+			oyc_bb_action_button( $id, 'testremind', __( 'Send test reminder', 'orienta-yacht-club' ), 'bb-btn bb-btn--admin' );
+		}
 		echo '</div>';
 	}
 	echo '</article>';
