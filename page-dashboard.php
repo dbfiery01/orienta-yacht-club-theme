@@ -89,6 +89,9 @@ get_header();
 				?>
 				<div class="dashboard-grid dash-qrow dash-qrow--5"><?php $oyc_render_dash( $dash_links ); ?></div>
 
+				<!-- Bulletin Board: newest For Sale / Wanted posts; the whole panel links to the board -->
+				<?php if ( function_exists( 'oyc_bb_dashboard_panel' ) ) { oyc_bb_dashboard_panel(); } ?>
+
 			</div><!-- .dashboard-main -->
 
 			<aside class="dashboard-side">
@@ -151,13 +154,6 @@ get_header();
 		<div class="dashboard-photos">
 			<?php oyc_photo_thumbs(); ?>
 		</div>
-
-		<!-- Bulletin Board (For Sale / Wanted) -->
-		<?php if ( function_exists( 'oyc_bb_thumbs' ) ) : ?>
-			<div class="dashboard-photos dashboard-bb">
-				<?php oyc_bb_thumbs(); ?>
-			</div>
-		<?php endif; ?>
 
 		<!-- Club Videos -->
 		<div class="dashboard-videos">

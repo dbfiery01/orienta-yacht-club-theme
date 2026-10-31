@@ -562,33 +562,44 @@ function oyc_bb_action_button( $id, $do, $label, $class, $confirm = '' ) {
 }
 
 /**
- * Dashboard strip: the newest posts, in the same .video-thumbs markup as
- * Member Photos so it sits naturally on the Member Dashboard.
+ * Member Dashboard panel: the newest open posts as mini pinned cards. The whole
+ * panel is ONE link to the board (no separate "more" link), so a click
+ * anywhere in it opens the Bulletin Board.
  */
-function oyc_bb_thumbs( $heading = 'Bulletin Board', $limit = 4 ) {
-	$url   = oyc_bb_url();
-	$posts = array_slice( array_filter( oyc_bb_listings( 12 ), function ( $p ) {
+function oyc_bb_dashboard_panel( $limit = 4 ) {
+	$posts = array_slice( array_filter( oyc_bb_listings( 20 ), function ( $p ) {
 		return ! get_post_meta( $p->ID, '_oyc_bb_closed', true );
 	} ), 0, $limit );
 
-	echo '<div class="video-thumbs photo-thumbs bb-thumbs">';
-	echo '<h3 class="video-thumbs__heading">' . esc_html( $heading ) . '</h3>';
-	echo '<div class="video-thumbs__grid">';
-	foreach ( $posts as $p ) {
-		$photo = (int) get_post_meta( $p->ID, '_oyc_bb_photo', true );
-		$img   = $photo ? wp_get_attachment_image_url( $photo, 'medium_large' ) : '';
-		$type  = 'wanted' === get_post_meta( $p->ID, '_oyc_bb_type', true ) ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' );
-		echo '<a class="video-thumb bb-thumb' . ( $img ? '' : ' bb-thumb--text' ) . '" href="' . esc_url( $url . '#post-' . $p->ID ) . '">';
-		if ( $img ) {
-			echo '<img src="' . esc_url( $img ) . '" alt="" loading="lazy" />';
+	echo '<a class="dash-bb" href="' . esc_url( oyc_bb_url() ) . '" aria-label="' . esc_attr__( 'Open the Bulletin Board', 'orienta-yacht-club' ) . '">';
+	echo '<span class="dash-bb__head"><span class="dash-bb__title">' . esc_html__( 'Bulletin Board', 'orienta-yacht-club' ) . '</span>';
+	echo '<span class="dash-bb__sub">' . esc_html__( 'For Sale & Wanted', 'orienta-yacht-club' ) . '</span></span>';
+
+	if ( $posts ) {
+		echo '<span class="dash-bb__grid">';
+		foreach ( $posts as $p ) {
+			$type  = 'wanted' === get_post_meta( $p->ID, '_oyc_bb_type', true ) ? 'wanted' : 'sale';
+			$price = oyc_bb_format_price( get_post_meta( $p->ID, '_oyc_bb_price', true ) );
+			$photo = (int) get_post_meta( $p->ID, '_oyc_bb_photo', true );
+			$img   = $photo ? wp_get_attachment_image_url( $photo, 'medium' ) : '';
+			echo '<span class="dash-bb__card dash-bb__card--' . esc_attr( $type ) . '">';
+			echo '<span class="dash-bb__pin" aria-hidden="true"></span>';
+			if ( $img ) {
+				echo '<span class="dash-bb__img" style="background-image:url(' . esc_url( $img ) . ')"></span>';
+			} else {
+				echo '<span class="dash-bb__img dash-bb__img--none" aria-hidden="true">' . esc_html( 'wanted' === $type ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' ) ) . '</span>';
+			}
+			echo '<span class="dash-bb__body">';
+			echo '<span class="dash-bb__tag dash-bb__tag--' . esc_attr( $type ) . '">' . esc_html( 'wanted' === $type ? __( 'Wanted', 'orienta-yacht-club' ) : __( 'For Sale', 'orienta-yacht-club' ) ) . '</span>';
+			echo '<span class="dash-bb__name">' . esc_html( $p->post_title ) . '</span>';
+			if ( '' !== $price ) {
+				echo '<span class="dash-bb__price">' . esc_html( $price ) . '</span>';
+			}
+			echo '</span></span>';
 		}
-		echo '<span class="video-thumb__title">' . esc_html( $type . ': ' . $p->post_title ) . '</span>';
-		echo '</a>';
+		echo '</span>';
+	} else {
+		echo '<span class="dash-bb__empty">' . esc_html__( 'Nothing posted yet. Selling something, or looking for something? Tap here to post it.', 'orienta-yacht-club' ) . '</span>';
 	}
-	if ( ! $posts ) {
-		echo '<a class="video-thumb bb-thumb bb-thumb--text" href="' . esc_url( $url ) . '"><span class="video-thumb__title">' . esc_html__( 'Nothing posted yet. Selling or looking for something?', 'orienta-yacht-club' ) . '</span></a>';
-	}
-	echo '</div>';
-	echo '<p class="video-thumbs__more"><a href="' . esc_url( $url ) . '">' . esc_html__( 'Post an item for sale or wanted →', 'orienta-yacht-club' ) . '</a></p>';
-	echo '</div>';
+	echo '</a>';
 }
