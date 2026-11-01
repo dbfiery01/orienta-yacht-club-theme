@@ -13,8 +13,14 @@ html[data-theme="dark"] .rc-page { --rc-ink: #f4eddd; --rc-text: #d6dfe9; --rc-m
   --rc-red: #e07a7a; --rc-green: #4cc38a; --rc-input: #0b2236; --rc-input-line: rgba(245,239,226,0.22); }
 
 .rc-page { color: var(--rc-text); }
-.rc-page .rc-h2 { font-size: 1.25rem; font-weight: 800; color: var(--rc-ink); margin: 2rem 0 0.8rem; }
-.rc-page .rc-h3 { font-size: 1.1rem; font-weight: 800; color: var(--rc-ink); margin: 0 0 0.5rem; }
+/* Headings use the site's own .page-content h2/h3 style (same as Boating,
+   About, etc.); only spacing is set here. */
+#racing .rc-h2 { font-size: 1.35rem; font-weight: 300; letter-spacing: 1px; text-transform: none; color: var(--rc-ink) !important;
+  margin: 2.2rem 0 0.9rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--rc-blue); }
+#racing .rc-h3 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0; color: var(--rc-ink) !important; border: 0; padding: 0; }
+.rc-page .rc-h2:first-of-type { margin-top: 0.5rem; }
+#racing .rc-h3 { margin: 0 0 0.5rem; }
+html[data-theme="dark"] #racing .rc-h2, html[data-theme="dark"] #racing .rc-h3 { color: var(--rc-ink) !important; }
 #racing .rc-p { color: var(--rc-text) !important; margin: 0 0 1rem; }
 .rc-page .rc-muted { color: var(--rc-muted); font-size: 0.9rem; }
 .rc-page .rc-small { font-size: 0.85rem; }
@@ -203,9 +209,14 @@ html[data-theme="dark"] .rc-page input[type="date"], html[data-theme="dark"] .rc
 }
 
 /* The Racing Page's own editor content (regattas, links, results) as cards */
-.rc-page .rc-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-items: start; }
-.rc-page .rc-link-card { background: var(--rc-card); border: 1px solid var(--rc-line); border-left: 4px solid var(--rc-blue); border-radius: 12px; padding: 16px 18px; }
-.rc-page .rc-link-card__title { font-weight: 800; font-size: 1.05rem; color: var(--rc-ink); margin: 0 0 8px; }
+/* Laid out like the Boating page: two plain columns, a heading per section,
+   dashed rules between sections, no boxes. */
+.rc-page .rc-links { display: block; columns: 2; column-gap: 44px; }
+.rc-page .rc-link-card { break-inside: avoid; display: inline-block; width: 100%; }
+.rc-page .rc-link-card { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0 0 1rem; margin: 0 0 1rem; border-bottom: 1px dashed rgba(11,46,74,0.22); }
+html[data-theme="dark"] .rc-page .rc-link-card { border-bottom-color: rgba(245,239,226,0.22); }
+#racing .rc-link-card__title { margin: 0 0 0.4rem; font-size: 1.15rem; font-weight: 600; letter-spacing: 0; border: 0; padding: 0; color: var(--rc-ink) !important; }
+@media (max-width: 700px) { .rc-page .rc-links { columns: 1; } }
 #racing .rc-legacy, #racing .rc-legacy p, #racing .rc-legacy li { color: var(--rc-text) !important; font-size: 0.95rem; line-height: 1.55; }
 #racing .rc-legacy p { margin: 0 0 0.6rem; }
 #racing .rc-legacy p:last-child { margin-bottom: 0; }
