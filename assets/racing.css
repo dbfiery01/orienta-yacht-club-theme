@@ -1,0 +1,203 @@
+/* =========================================================================
+   Racing hub (page-racing.php) — loaded only on /racing/.
+   Same approach as the Bulletin Board: text in div/span (not p/h3) where the
+   theme's broad ".section p { color … !important }" rules would fight the
+   colours, and dark mode via html[data-theme="dark"].
+   ========================================================================= */
+
+.rc-page { --rc-ink: #16324a; --rc-text: #2a2a2a; --rc-muted: #5a6b78; --rc-card: #ffffff;
+  --rc-line: rgba(11,46,74,0.12); --rc-soft: #f3f6f9; --rc-blue: #1583cf; --rc-gold: #d69e2e;
+  --rc-red: #b23a3a; --rc-green: #23845a; --rc-input: #ffffff; --rc-input-line: rgba(11,46,74,0.22); }
+html[data-theme="dark"] .rc-page { --rc-ink: #f4eddd; --rc-text: #d6dfe9; --rc-muted: #9db0c3; --rc-card: #102b47;
+  --rc-line: rgba(245,239,226,0.14); --rc-soft: #0b2236; --rc-blue: #3d9be0; --rc-gold: #e0b04a;
+  --rc-red: #e07a7a; --rc-green: #4cc38a; --rc-input: #0b2236; --rc-input-line: rgba(245,239,226,0.22); }
+
+.rc-page { color: var(--rc-text); }
+.rc-page .rc-h2 { font-size: 1.25rem; font-weight: 800; color: var(--rc-ink); margin: 2rem 0 0.8rem; }
+.rc-page .rc-h3 { font-size: 1.1rem; font-weight: 800; color: var(--rc-ink); margin: 0 0 0.5rem; }
+#racing .rc-p { color: var(--rc-text) !important; margin: 0 0 1rem; }
+.rc-page .rc-muted { color: var(--rc-muted); font-size: 0.9rem; }
+.rc-page .rc-small { font-size: 0.85rem; }
+#racing .rc-note { font-size: 0.85rem; color: var(--rc-muted) !important; margin: 0.5rem 0; }
+#racing .rc-empty { color: var(--rc-muted) !important; font-style: italic; }
+.rc-page .rc-back a { color: var(--rc-blue); font-weight: 600; text-decoration: none; }
+.rc-page a:not(.btn) { color: var(--rc-blue); }
+
+/* Notices */
+.rc-page .rc-notice { border-radius: 10px; padding: 12px 16px; margin: 0 0 1.25rem; font-weight: 600; border: 1px solid transparent; }
+.rc-page .rc-notice--ok  { background: rgba(21,131,207,0.10); border-color: rgba(21,131,207,0.30); color: var(--rc-blue); }
+.rc-page .rc-notice--err { background: rgba(193,57,57,0.08); border-color: rgba(193,57,57,0.30); color: var(--rc-red); }
+
+/* Tabs */
+.rc-page .rc-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 1.5rem; padding: 6px; border-radius: 14px; background: var(--rc-soft); border: 1px solid var(--rc-line); }
+.rc-page .rc-tab { padding: 9px 16px; border-radius: 10px; font-weight: 700; text-decoration: none; color: var(--rc-ink) !important; }
+.rc-page .rc-tab:hover { background: var(--rc-card); }
+.rc-page .rc-tab.is-active { background: var(--rc-blue); color: #fff !important; }
+
+/* Cards */
+.rc-page .rc-card { background: var(--rc-card); border: 1px solid var(--rc-line); border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 16px rgba(11,46,74,0.06); margin: 0 0 1rem; }
+.rc-page .rc-split { display: grid; grid-template-columns: 1fr 2fr; gap: 18px; margin-top: 2rem; align-items: start; }
+@media (max-width: 860px) { .rc-page .rc-split { grid-template-columns: 1fr; } }
+
+/* Race list */
+.rc-page .rc-races { display: flex; flex-direction: column; gap: 12px; }
+.rc-page .rc-race { display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center; background: var(--rc-card); border: 1px solid var(--rc-line); border-radius: 14px; padding: 14px 18px; }
+.rc-page .rc-race__date { text-align: center; border-radius: 10px; background: var(--rc-blue); color: #fff; padding: 6px 0; line-height: 1.05; }
+.rc-page .rc-race__mon { display: block; font-size: 0.75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.rc-page .rc-race__day { display: block; font-size: 1.6rem; font-weight: 800; }
+.rc-page .rc-race__title { font-weight: 800; font-size: 1.1rem; color: var(--rc-ink); }
+.rc-page .rc-race__meta { color: var(--rc-text); font-size: 0.95rem; margin-top: 2px; }
+.rc-page .rc-race__meta--sub { color: var(--rc-muted); font-size: 0.85rem; }
+.rc-page .rc-race__cta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+@media (max-width: 640px) {
+  .rc-page .rc-race { grid-template-columns: 54px 1fr; }
+  .rc-page .rc-race__cta { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* Badges & tags */
+.rc-page .rc-badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(11,46,74,0.08); color: var(--rc-ink); vertical-align: middle; }
+html[data-theme="dark"] .rc-page .rc-badge { background: rgba(245,239,226,0.10); }
+.rc-page .rc-badge--ok { background: rgba(35,132,90,0.14); color: var(--rc-green); }
+.rc-page .rc-badge--warn { background: rgba(214,158,46,0.18); color: #8a5a00; }
+html[data-theme="dark"] .rc-page .rc-badge--warn { color: var(--rc-gold); }
+.rc-page .rc-badge--bad { background: rgba(178,58,58,0.14); color: var(--rc-red); }
+.rc-page .rc-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--rc-blue); }
+.rc-page .rc-tag--boat { background: var(--rc-gold); color: #2b1d00; }
+
+/* Buttons */
+.rc-page .rc-btn { background: var(--rc-card); color: var(--rc-ink) !important; border: 1px solid var(--rc-line); }
+.rc-page .rc-btn:hover { border-color: var(--rc-blue); }
+.rc-page .rc-btn--danger { color: var(--rc-red) !important; }
+.rc-page .rc-inline { display: inline-block; margin: 0; }
+.rc-page .rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.rc-page .rc-head-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.rc-page .rc-row-actions { white-space: nowrap; }
+.rc-page .rc-row-actions .rc-inline + .rc-inline { margin-left: 6px; }
+
+/* Facts / details / docs */
+.rc-page .rc-facts { display: flex; flex-wrap: wrap; gap: 14px 32px; }
+.rc-page .rc-facts > div { font-weight: 600; color: var(--rc-ink); }
+.rc-page .rc-label { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--rc-muted); }
+.rc-page .rc-details { line-height: 1.6; color: var(--rc-text); }
+.rc-page .rc-docs { display: flex; flex-wrap: wrap; gap: 10px; }
+.rc-page .rc-doc { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--rc-card); border: 1px solid var(--rc-line); text-decoration: none; color: var(--rc-ink) !important; font-weight: 700; }
+.rc-page .rc-doc:hover { border-color: var(--rc-blue); }
+.rc-page .rc-doc__icon { font-size: 0.7rem; font-weight: 800; padding: 6px 7px; border-radius: 6px; background: var(--rc-red); color: #fff; }
+
+/* Tables */
+.rc-page .rc-table-wrap { overflow-x: auto; border: 1px solid var(--rc-line); border-radius: 14px; background: var(--rc-card); }
+.rc-page .rc-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.rc-page .rc-table th { text-align: left; font-size: 0.75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--rc-muted); padding: 10px 12px; border-bottom: 1px solid var(--rc-line); background: var(--rc-soft); }
+.rc-page .rc-table td { padding: 10px 12px; border-bottom: 1px solid var(--rc-line); color: var(--rc-text); vertical-align: top; }
+.rc-page .rc-table tr:last-child td { border-bottom: 0; }
+.rc-page .rc-table tr.is-pending td { opacity: 0.75; }
+
+/* Crew chips */
+.rc-page .rc-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.rc-page .rc-chip { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--rc-card); border: 1px solid var(--rc-line); min-width: 200px; }
+.rc-page .rc-chip--need { border-color: var(--rc-gold); box-shadow: inset 4px 0 0 var(--rc-gold); }
+.rc-page .rc-chip__name { font-weight: 800; color: var(--rc-ink); }
+.rc-page .rc-chip__sub { font-size: 0.85rem; color: var(--rc-muted); }
+
+/* Lists */
+.rc-page .rc-list { list-style: none; margin: 0; padding: 0; }
+#racing .rc-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0; border-bottom: 1px solid var(--rc-line); color: var(--rc-text) !important; }
+.rc-page .rc-list a:not(.btn) { font-weight: 700; text-decoration: none; }
+
+/* Forms */
+.rc-page .rc-form { margin: 0; }
+.rc-page .rc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 14px; margin: 12px 0; }
+.rc-page .rc-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.rc-page .rc-field--wide { grid-column: span 2; }
+.rc-page .rc-field--full { grid-column: 1 / -1; }
+.rc-page .rc-field > span, .rc-page .rc-field legend { font-weight: 600; font-size: 0.9rem; color: var(--rc-ink); }
+.rc-page .rc-field input[type="text"], .rc-page .rc-field input[type="email"], .rc-page .rc-field input[type="tel"],
+.rc-page .rc-field input[type="number"], .rc-page .rc-field input[type="date"], .rc-page .rc-field input[type="time"],
+.rc-page .rc-field select, .rc-page .rc-field textarea, .rc-page .rc-doc-row input[type="text"] {
+  padding: 10px 12px; border: 1px solid var(--rc-input-line); border-radius: 8px; font: inherit; color: var(--rc-text); background: var(--rc-input); width: 100%; box-sizing: border-box; resize: vertical;
+}
+html[data-theme="dark"] .rc-page input[type="date"], html[data-theme="dark"] .rc-page input[type="time"] { color-scheme: dark; }
+.rc-page input[type="file"] { color: var(--rc-text); font: inherit; font-size: 0.95rem; }
+.rc-page input[type="file"]::file-selector-button { font: inherit; font-weight: 700; margin-right: 12px; padding: 8px 14px; border: 0; border-radius: 8px; background: var(--rc-blue); color: #fff; cursor: pointer; }
+.rc-page .rc-check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: 600; color: var(--rc-ink); cursor: pointer; }
+.rc-page .rc-check[hidden], .rc-page [data-for][hidden] { display: none; }
+.rc-page .rc-pos { display: flex; flex-wrap: wrap; gap: 8px 16px; flex-direction: row; }
+.rc-page .rc-pos legend { width: 100%; margin-bottom: 6px; }
+.rc-page .rc-pos label { display: inline-flex; align-items: center; gap: 6px; color: var(--rc-text); cursor: pointer; }
+.rc-page .rc-doc-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; align-items: center; margin: 6px 0; }
+.rc-page .rc-docs-edit { margin: 8px 0 12px; }
+.rc-page .rc-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+@media (max-width: 720px) {
+  .rc-page .rc-grid { grid-template-columns: 1fr; }
+  .rc-page .rc-field--wide { grid-column: auto; }
+  .rc-page .rc-doc-row { grid-template-columns: 1fr; }
+}
+
+/* Segmented radio (skipper/crew, crew wanted/boat wanted) */
+.rc-page .rc-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rc-line); border-radius: 999px; overflow: hidden; margin: 4px 0 6px; }
+.rc-page .rc-seg label { cursor: pointer; }
+.rc-page .rc-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.rc-page .rc-seg span { display: inline-block; padding: 8px 18px; font-weight: 700; color: var(--rc-ink); }
+.rc-page .rc-seg input:checked + span { background: var(--rc-blue); color: #fff; }
+.rc-page .rc-seg input:focus-visible + span { outline: 2px solid var(--rc-blue); outline-offset: -2px; }
+
+/* Compose (crew board / yacht) */
+.rc-page .rc-compose { background: var(--rc-card); border: 1px solid var(--rc-line); border-radius: 14px; margin: 0 0 20px; }
+.rc-page .rc-compose:not([open]) { display: none; }
+.rc-page .rc-compose summary { cursor: pointer; list-style: none; padding: 14px 20px; font-weight: 800; color: var(--rc-ink); display: flex; justify-content: space-between; }
+.rc-page .rc-compose summary::-webkit-details-marker { display: none; }
+.rc-page .rc-close { font-weight: 600; font-size: 0.9rem; color: var(--rc-muted); }
+.rc-page .rc-compose .rc-form { padding: 0 20px 20px; }
+#yacht-form:not([open]) { display: block; }
+#yacht-form:not([open]) summary { color: var(--rc-blue); }
+#yacht-form:not([open]) .rc-close { display: none; }
+
+/* Crew board */
+.rc-page .rc-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.rc-page .rc-filters { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.rc-page .rc-filter { font: inherit; font-size: 0.92rem; font-weight: 600; cursor: pointer; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--rc-line); background: var(--rc-card); color: var(--rc-ink); }
+.rc-page .rc-filter span { display: inline-block; min-width: 1.6em; margin-left: 4px; padding: 0 6px; border-radius: 999px; font-size: 0.78rem; background: rgba(11,46,74,0.08); }
+.rc-page .rc-filter.is-active { background: var(--rc-blue); border-color: var(--rc-blue); color: #fff; }
+.rc-page .rc-filter.is-active span { background: rgba(255,255,255,0.25); }
+.rc-page .rc-ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.rc-page .rc-ad { background: var(--rc-card); border: 1px solid var(--rc-line); border-top: 4px solid var(--rc-blue); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.rc-page .rc-ad[hidden] { display: none; }
+.rc-page .rc-ad--boat { border-top-color: var(--rc-gold); }
+.rc-page .rc-ad.is-closed { opacity: 0.6; }
+.rc-page .rc-ad__top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.rc-page .rc-ad__title { font-weight: 800; font-size: 1.05rem; color: var(--rc-ink); }
+.rc-page .rc-ad__pos { font-size: 0.85rem; font-weight: 700; color: var(--rc-blue); }
+.rc-page .rc-ad__desc { color: var(--rc-text); font-size: 0.95rem; line-height: 1.5; }
+.rc-page .rc-ad__meta { color: var(--rc-muted); font-size: 0.85rem; }
+.rc-page .rc-ad__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+
+/* Profile cards */
+.rc-page .rc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.rc-page .rc-pcard { background: var(--rc-card); border: 1px solid var(--rc-line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.rc-page .rc-pcard__img { height: 160px; background-size: cover; background-position: center; }
+.rc-page .rc-pcard__body { padding: 14px 16px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; flex: 1; }
+.rc-page .rc-pcard__name { font-weight: 800; font-size: 1.1rem; color: var(--rc-ink); }
+.rc-page .rc-pcard__facts { font-weight: 700; font-size: 0.9rem; color: var(--rc-blue); }
+.rc-page .rc-pcard__sub { font-size: 0.88rem; color: var(--rc-muted); }
+.rc-page .rc-pcard__about { font-size: 0.92rem; color: var(--rc-text); line-height: 1.5; margin-bottom: 6px; }
+.rc-page .rc-pcard .rc-msg { margin-top: auto; }
+.rc-page .rc-pcard--crew { border-left: 4px solid var(--rc-blue); }
+
+/* Message dialog */
+.rc-page .rc-dialog { border: 1px solid var(--rc-line); border-radius: 16px; padding: 20px; width: min(520px, 92vw); background: var(--rc-card); color: var(--rc-text); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.rc-page .rc-dialog::backdrop { background: rgba(5,20,35,0.55); }
+.rc-page .rc-dialog__title { font-weight: 800; font-size: 1.1rem; color: var(--rc-ink); margin-bottom: 10px; }
+.rc-page .rc-dialog textarea { padding: 10px 12px; border: 1px solid var(--rc-input-line); border-radius: 8px; font: inherit; color: var(--rc-text); background: var(--rc-input); width: 100%; box-sizing: border-box; }
+.rc-page .rc-log { margin-top: 14px; }
+.rc-page .rc-log summary { cursor: pointer; font-weight: 700; color: var(--rc-ink); }
+
+/* Theme overrides: buttons stay their natural width; tab links lose the theme's link underline. */
+#racing .btn { width: auto; display: inline-flex; align-items: center; justify-content: center; }
+#racing .rc-tab { border-bottom: 0 !important; text-decoration: none !important; box-shadow: none; }
+#racing .rc-tab.is-active, #racing .rc-tab.is-active:hover { background: var(--rc-blue); color: #fff !important; }
+.rc-page .rc-badge { white-space: nowrap; }
+@media (max-width: 520px) {
+  .rc-page .rc-seg { display: flex; border-radius: 12px; }
+  .rc-page .rc-seg label { flex: 1 1 100%; }
+  .rc-page .rc-seg span { display: block; text-align: center; }
+}

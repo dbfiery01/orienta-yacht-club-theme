@@ -222,6 +222,12 @@ require_once get_template_directory() . '/inc/video-gallery.php';
 require_once get_template_directory() . '/inc/bulletin-board.php';
 
 /**
+ * Racing: race RSVP, the racers-only hub at /racing/, Crew Wanted / Boat
+ * Wanted board, crew and yacht profiles, and emailing racers (Race Committee).
+ */
+require_once get_template_directory() . '/inc/racing.php';
+
+/**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
  * fetched, and old cached embeds lack the allow/referrerpolicy attributes the
  * player now requires (YouTube "Error 153").
