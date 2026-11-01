@@ -632,6 +632,8 @@ function oyc_wind_map_html( $embed = false ) {
 		<div class="foot" id="foot">Wind, pressure &amp; temp from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (GFS-based). Radar close-up = HRRR precipitation (Open-Meteo); national view = NEXRAD mosaic + HRRR reflectivity (Iowa State IEM).</div>
 	</div>
 
+	<?php echo function_exists( 'oyc_race_tools_markup' ) ? oyc_race_tools_markup() : ''; // racers only: polars, target speed, race log ?>
+
 	<p class="disclaimer">Forecasts are best treated as an opinion. Poseidon always has the final word.</p>
 </div>
 
@@ -706,6 +708,7 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	if(headsUp){try{map.setView([lat,lon],map.getZoom(),{animate:false});}catch(e){}} /* keep you centred so the chart turns around you */
 	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
 	rerenderCallouts();updateBoatInfo();
+	if(window.OYCWM&&OYCWM._fix)OYCWM._fix(); /* race tools (racers only) listen for each GPS fix */
 }
 function locFail(msg){
 	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
@@ -2616,6 +2619,28 @@ map.on('zoomend',function(){
 	sync();
 })();
 
+/* Small read-only API for the racers' race tools (assets/race-tools.js):
+   live boat state, model wind at any point/time, and the Leaflet map. */
+window.OYCWM={
+	map:map,
+	magvar:MAGVAR,
+	boat:function(){return myLoc?{lat:myLoc.lat,lon:myLoc.lon,sog:mySpeedKt,cog:myHeading}:null;},
+	/* model wind (kt, direction FROM °T) at lat/lon for epoch ms, interpolated
+	   between the 3-hourly frames; null until the grids load */
+	wind:function(lat,lon,epoch){
+		if(!TIMES.length)return null;epoch=epoch||Date.now();
+		var e0=new Date(TIMES[0]).getTime(),step=TIMES.length>1?(new Date(TIMES[1]).getTime()-e0):1;
+		var f=(epoch-e0)/step;if(f<0)f=0;if(f>TIMES.length-1)f=TIMES.length-1;
+		var i0=Math.floor(f),i1=Math.min(i0+1,TIMES.length-1),fr=f-i0,a,b;
+		try{a=sampleBest(lat,lon,i0);b=sampleBest(lat,lon,i1);}catch(e){return null;}
+		if(!a||!b){a=a||b;return a?{tws:a.kt,twd:a.dir}:null;}
+		var dd=((b.dir-a.dir+540)%360)-180;
+		return {tws:a.kt+(b.kt-a.kt)*fr,twd:(a.dir+dd*fr+360)%360};
+	},
+	locOn:function(){return !!locWatch;},
+	startLoc:function(){var t=document.getElementById('tgLoc');if(!locWatch){if(t)t.checked=true;startLoc();}},
+	_fix:null
+};
 loadLocal();
 map.whenReady(function(){setTimeout(drawGraticule,400);});
 })();

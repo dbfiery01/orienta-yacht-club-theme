@@ -1,0 +1,89 @@
+/* Race tools on the wind map (racers only) — inc/race-tools.php + assets/race-tools.js.
+   Scoped under #oycwm like the rest of the wind map. */
+#oycwm .rt-panel{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 22px rgba(11,42,74,.08);padding:14px 16px;font-size:.88rem;color:var(--ink)}
+#oycwm .rt-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;margin-bottom:10px}
+#oycwm .rt-head h3{margin:0;font-size:1.05rem;color:var(--navy);font-weight:700}
+#oycwm .rt-tag{display:inline-block;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--brass);color:#fff;border-radius:6px;padding:2px 6px;vertical-align:middle;margin-left:4px}
+#oycwm .rt-tabs{display:flex;gap:4px;flex-wrap:wrap}
+#oycwm .rt-panel .rt-tab{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;font-weight:600;cursor:pointer}
+#oycwm .rt-panel .rt-tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+#oycwm .rt-pane{display:none}
+#oycwm .rt-pane.on{display:block}
+#oycwm .rt-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px 0}
+#oycwm .rt-panel label{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.82rem}
+#oycwm .rt-panel label.rt-chk{font-weight:500}
+#oycwm .rt-panel input[type=text],#oycwm .rt-panel input[type=number],#oycwm .rt-panel select,#oycwm .rt-panel textarea{font:inherit;font-size:.85rem;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#16324a;min-width:0}
+#oycwm .rt-panel input[type=number]{width:5.5em}
+#oycwm .rt-panel textarea{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem}
+#oycwm .rt-form label:not(.rt-chk){display:flex;flex-direction:column;align-items:stretch;margin:6px 0}
+#oycwm .rt-form .rt-row label{flex-direction:row;align-items:center;margin:0}
+#oycwm .rt-panel button{font:inherit;font-size:.82rem;font-weight:600;border-radius:8px;padding:7px 12px;cursor:pointer;border:1px solid var(--navy);background:var(--navy);color:#fff}
+#oycwm .rt-panel button.rt-sec{background:transparent;color:var(--ink);border-color:var(--line)}
+#oycwm .rt-panel button.rt-go{background:#1f7a4d;border-color:#1f7a4d}
+#oycwm .rt-panel button.rt-stop{background:#b23a2a;border-color:#b23a2a}
+#oycwm .rt-panel button.rt-link{background:none;border:0;padding:2px 4px;color:var(--harbor);text-decoration:underline;font-weight:600}
+#oycwm .rt-panel button:disabled{opacity:.5;cursor:default}
+#oycwm .rt-note{color:var(--mute);font-size:.78rem;line-height:1.45;margin:6px 0}
+#oycwm .rt-adm{margin-top:10px;font-style:italic}
+#oycwm .rt-msg{font-size:.8rem;color:var(--mute)}
+#oycwm .rt-msg.err{color:#b23a2a}
+#oycwm .rt-msg.ok{color:#1f7a4d}
+#oycwm .rt-wind{border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin:8px 0;background:var(--panel)}
+#oycwm .rt-wind summary{cursor:pointer;font-weight:600;font-size:.82rem}
+#oycwm .rt-rec{border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
+#oycwm .rt-recstat{font-size:.82rem;font-variant-numeric:tabular-nums}
+#oycwm .rt-recstat .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#d23b2a;margin-right:5px;animation:rtblink 1.2s infinite}
+@keyframes rtblink{50%{opacity:.25}}
+#oycwm .rt-pending{background:#fff6e0;border:1px solid #e8cf8a;color:#5b4613;border-radius:10px;padding:8px 10px;font-size:.82rem;margin-top:8px}
+#oycwm .rt-list{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
+#oycwm .rt-item{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel)}
+#oycwm .rt-item .nm{font-weight:700;color:var(--ink)}
+#oycwm .rt-item .meta{color:var(--mute);font-size:.78rem;flex:1 1 180px}
+#oycwm .rt-item.on{border-color:var(--harbor);box-shadow:0 0 0 2px rgba(21,131,207,.2)}
+#oycwm .rt-prev{overflow-x:auto}
+#oycwm .rt-prev table{border-collapse:collapse;font-size:.72rem;font-variant-numeric:tabular-nums;margin:6px 0}
+#oycwm .rt-prev th,#oycwm .rt-prev td{border:1px solid var(--line);padding:2px 5px;text-align:right}
+#oycwm .rt-prev th{background:var(--panel)}
+#oycwm .rt-prev svg{display:block;max-width:260px;margin:4px 0}
+#oycwm .rt-replay{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+#oycwm .rt-rhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#oycwm .rt-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin:8px 0}
+#oycwm .rt-stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+#oycwm .rt-stat b{display:block;font-size:1rem;color:var(--ink);font-variant-numeric:tabular-nums}
+#oycwm .rt-stat span{font-size:.7rem;color:var(--mute);text-transform:uppercase;letter-spacing:.03em}
+#oycwm .rt-scrub input[type=range]{flex:1 1 160px}
+#oycwm .rt-rnow{font-size:.8rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+#oycwm .rt-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.75rem;color:var(--mute)}
+#oycwm .rt-legend i{display:inline-block;width:14px;height:5px;border-radius:2px;margin-right:4px;vertical-align:middle}
+#oycwm .rt-events{max-height:220px;overflow:auto;margin-top:8px;font-size:.78rem}
+#oycwm .rt-ev{display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+#oycwm .rt-ev:hover{background:var(--panel)}
+#oycwm .rt-ev .k{font-weight:700;min-width:5.2em}
+#oycwm .rt-ev .t{font-variant-numeric:tabular-nums;color:var(--mute);min-width:4.2em}
+
+/* on-map target-speed badge (sits under the race bar; also visible heads-up) */
+#oycwm .rt-badge{position:absolute;z-index:597;right:10px;top:10px;display:none;min-width:118px;text-align:center;background:rgba(11,42,74,.92);color:#fff;border-radius:12px;padding:6px 10px 7px;box-shadow:0 2px 10px rgba(0,0,0,.3);pointer-events:none;line-height:1.15}
+#oycwm .rt-badge.on{display:block}
+#oycwm .rt-badge .pct{font-size:1.9rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+#oycwm .rt-badge .lab{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;opacity:.85}
+#oycwm .rt-badge .sub{font-size:.72rem;opacity:.9;font-variant-numeric:tabular-nums;margin-top:2px}
+#oycwm .rt-badge .rec{display:none;font-size:.66rem;font-weight:700;color:#ffb3a8;margin-top:3px}
+#oycwm .rt-badge.recording .rec{display:block}
+#oycwm .rt-badge.b-low{background:rgba(160,44,30,.94)}
+#oycwm .rt-badge.b-mid{background:rgba(176,122,22,.94)}
+#oycwm .rt-badge.b-ok{background:rgba(31,122,77,.94)}
+#oycwm .rt-badge.b-hi{background:rgba(25,96,170,.94)}
+#oycwm .rt-mk{background:none;border:0}
+#oycwm .rt-mk span{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font:700 10px/1 system-ui,sans-serif;color:#fff;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+
+[data-theme="dark"] #oycwm .rt-panel{background:#0e2238;border-color:rgba(245,239,226,.15)}
+[data-theme="dark"] #oycwm .rt-head h3{color:#f0eadd}
+[data-theme="dark"] #oycwm .rt-panel .rt-tab.on{background:#1583cf;border-color:#1583cf}
+[data-theme="dark"] #oycwm .rt-pending{background:#3a2f12;border-color:#7a6326;color:#f3e2b0}
+[data-theme="dark"] #oycwm .rt-panel button.rt-link{color:#7cc0f0}
+@media (max-width:600px){
+	#oycwm .rt-panel{padding:12px}
+	#oycwm .rt-badge{top:auto;bottom:96px;right:8px}
+	#oycwm .rt-badge .pct{font-size:1.6rem}
+}
+#oycwm .rt-panel [hidden]{display:none !important}
