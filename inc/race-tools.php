@@ -60,7 +60,7 @@ function oyc_race_tools_is_committee( $user_id = 0 ) {
 	if ( user_can( $user_id, 'manage_options' ) ) {
 		return true;
 	}
-	return function_exists( 'oyc_race_can_manage' ) && $user_id === get_current_user_id() && oyc_race_can_manage();
+	return function_exists( 'oyc_race_can_manage' ) && oyc_race_can_manage( $user_id );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

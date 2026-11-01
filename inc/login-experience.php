@@ -376,6 +376,11 @@ function oyc_user_may_view_members_content() {
 		return false;
 	}
 
+	// Visiting racers (inc/racing.php) have a login for the racing hub only.
+	if ( function_exists( 'oyc_is_guest_racer' ) && oyc_is_guest_racer() ) {
+		return false;
+	}
+
 	return in_array(
 		oyc_user_approval_state( get_current_user_id() ),
 		array( 'approved', 'legacy' ),
@@ -683,7 +688,9 @@ add_filter( 'show_admin_bar', function ( $show ) {
 
 // Redirect non-admins away from wp-admin entirely (AJAX still allowed).
 add_action( 'admin_init', function () {
-	if ( current_user_can( 'manage_options' ) || wp_doing_ajax() ) {
+	// admin-post.php also fires admin_init: let members' front-end forms
+	// (Bulletin Board, Photo Gallery, Racing) reach their handlers.
+	if ( current_user_can( 'manage_options' ) || wp_doing_ajax() || 'admin-post.php' === ( $GLOBALS['pagenow'] ?? '' ) ) {
 		return;
 	}
 	wp_safe_redirect( home_url( '/members-area/' ) );
