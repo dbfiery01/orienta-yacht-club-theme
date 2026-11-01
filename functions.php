@@ -164,6 +164,12 @@ require_once get_template_directory() . '/inc/grib-endpoint.php';
 require_once get_template_directory() . '/inc/wind-map.php';
 
 /*
+ * Racers' race tools on the wind map: Polars & Target Speed overlay, GPS race
+ * log, shared team archive + replay (racers only; admins until the hub ships).
+ */
+require_once get_template_directory() . '/inc/race-tools.php';
+
+/*
  * Nav weather glyph + its cached conditions proxy. Loaded here (not just from
  * header.php) so the wp_ajax_oyc_header_wx handler is registered on admin-ajax
  * requests too — header.php doesn't run for those, so registering it only there
