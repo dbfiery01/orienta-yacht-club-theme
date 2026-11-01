@@ -223,6 +223,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt .n{width:24px;padding-left:10px}
 /* drag a row by its number to change the route order */
 #oycwm .wpt td.n{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+#oycwm .wpt tbody tr{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #oycwm .wpt td.n span{position:relative}
 #oycwm .wpt td.n span::after{content:'⋮⋮';position:absolute;left:-11px;top:1px;font-size:9px;letter-spacing:-2px;color:var(--faint);line-height:16px}
 #oycwm .wpt tr.wp-drag{position:relative;z-index:2;background:#eaf3fb;box-shadow:0 6px 16px rgba(11,42,74,.28);cursor:grabbing}
@@ -640,7 +641,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row by its number to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
+				<div class="tiphelp" id="tipHelp">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row up or down to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
 			</div>
 		</div>
 		<aside class="wptab collapsed" id="wpTab" aria-label="Passage waypoints"><?php /* starts hidden: only the summary bar + buttons show until "Show table" */ ?>
@@ -1355,7 +1356,7 @@ function wpRow(pin,i,ti){
 		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag the row to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 var wpDrag=null;   /* a row being dragged to a new place in the route (see below) */
@@ -1401,24 +1402,43 @@ window.addEventListener('resize',wpFit);
 		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){map.panTo([pins[i].lat,pins[i].lon]);break;}}}
 	});
 })();
-/* Reorder: press a row's number and drag it up or down; the other rows slide
-   aside, and on release the point moves to that place in the route (legs,
-   totals, wind angles and the map numbering all follow). */
+/* Reorder: grab a waypoint row (anywhere but its ✕) and drag it up or down; the
+   other rows slide aside, and on release the point moves to that place in the
+   route (legs, totals, wind angles and the map numbering all follow).
+   Mouse/pen: the drag starts once you move 5 px (a plain click still centres the
+   map on the point). Touch: press the row's number and drag, or press and hold
+   anywhere on the row for a moment, so a normal swipe still scrolls the list. */
 (function(){
 	var body=document.getElementById('wptBody');if(!body)return;
+	var pend=null,holdT=null,lastEnd=0;
 	function rowsOf(){return [].slice.call(body.querySelectorAll('tr[data-wp]'));}
-	body.addEventListener('pointerdown',function(e){
-		if(e.button>0)return;
-		var h=e.target.closest?e.target.closest('td.n'):null,tr=h&&h.closest('tr[data-wp]');if(!tr)return;
-		var rows=rowsOf();if(rows.length<2)return;
-		e.preventDefault();
+	function start(tr,y,id){
+		var rows=rowsOf();if(rows.length<2||rows.indexOf(tr)<0)return false;
 		var wrap=body.closest('.wpt-wrap');
-		wpDrag={tr:tr,rows:rows,rects:rows.map(function(r){return r.getBoundingClientRect();}),from:rows.indexOf(tr),to:rows.indexOf(tr),y0:e.clientY,id:e.pointerId,wrap:wrap,s0:wrap?wrap.scrollTop:0,
+		wpDrag={tr:tr,rows:rows,rects:rows.map(function(r){return r.getBoundingClientRect();}),from:rows.indexOf(tr),to:rows.indexOf(tr),y0:y,id:id,wrap:wrap,s0:wrap?wrap.scrollTop:0,
 			smax:wrap?wrap.scrollHeight-wrap.clientHeight:0};   /* measured before the dragged row's transform adds overflow */
 		tr.classList.add('wp-drag');rows.forEach(function(r){if(r!==tr)r.classList.add('wp-shift');});
-		try{h.setPointerCapture(e.pointerId);}catch(_){}
+		try{tr.setPointerCapture(id);}catch(_){}
+		if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}
+		return true;
+	}
+	function clearPend(){pend=null;if(holdT){clearTimeout(holdT);holdT=null;}}
+	body.addEventListener('pointerdown',function(e){
+		if(e.button>0||wpDrag)return;
+		if(e.target.closest&&e.target.closest('button,[data-wpx]'))return;   /* the ✕ stays a remove button */
+		var tr=e.target.closest?e.target.closest('tr[data-wp]'):null;if(!tr)return;
+		var onNum=!!e.target.closest('td.n');
+		clearPend();
+		if(e.pointerType==='touch'&&onNum){e.preventDefault();start(tr,e.clientY,e.pointerId);return;}
+		pend={tr:tr,x:e.clientX,y:e.clientY,id:e.pointerId,touch:e.pointerType==='touch'};
+		if(pend.touch)holdT=setTimeout(function(){if(pend){var q=pend;clearPend();start(q.tr,q.y,q.id);}},350);   /* press and hold */
 	});
 	body.addEventListener('pointermove',function(e){
+		if(pend&&e.pointerId===pend.id){
+			var mv=Math.hypot(e.clientX-pend.x,e.clientY-pend.y);
+			if(pend.touch){if(mv>8)clearPend();return;}           /* moved before the hold: it's a scroll */
+			if(mv>5){var q=pend;clearPend();start(q.tr,q.y,q.id);}else return;
+		}
 		var d=wpDrag;if(!d||e.pointerId!==d.id)return;e.preventDefault();
 		/* phones show two rows and scroll the rest: holding near the list's top or
 		   bottom edge scrolls it, and positions are measured in list coordinates */
@@ -1432,14 +1452,21 @@ window.addEventListener('resize',wpFit);
 			if(d.from<to&&i>d.from&&i<=to)sh=-R0.height;else if(d.from>to&&i>=to&&i<d.from)sh=R0.height;
 			d.rows[i].style.transform=sh?'translateY('+sh+'px)':'';}
 	});
+	/* once a touch drag is live, stop the browser from scrolling the list/page */
+	body.addEventListener('touchmove',function(e){if(wpDrag)e.preventDefault();},{passive:false});
 	function end(e){
+		if(pend&&(!e||e.pointerId===pend.id))clearPend();
 		var d=wpDrag;if(!d||(e&&e.pointerId!==d.id))return;wpDrag=null;
 		d.rows.forEach(function(r){r.style.transform='';r.classList.remove('wp-drag','wp-shift');});
+		lastEnd=Date.now();
 		if(d.to!==d.from){var p=pins.splice(d.from,1)[0];pins.splice(d.to,0,p);nextWp=0;refreshRoute();}
 		else renderWpTable();
 	}
 	body.addEventListener('pointerup',end);body.addEventListener('pointercancel',end);
 	body.addEventListener('lostpointercapture',end);
+	/* the click that ends a drag shouldn't also pan the map; nor the long-press menu */
+	body.addEventListener('click',function(e){if(Date.now()-lastEnd<400)e.stopPropagation();},true);
+	body.addEventListener('contextmenu',function(e){if(wpDrag||pend)e.preventDefault();});
 })();
 map.on('click',function(e){if(mode==='radar'||headsUp)return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
@@ -2880,8 +2907,17 @@ function pollAis(){
 	fetchT(AJAX+'?action=oyc_ais&_='+Date.now(),25000).then(function(r){return r.json();}).then(function(res){
 		if(!res||!res.ok)return;
 		if(!res.enabled){aisNote('AIS ships aren’t set up on this site yet (an admin adds the aisstream.io key under Settings → AIS ships).');AIS.list=[];drawAis();return;}
-		AIS.list=res.vessels||[];aisNote(AIS.list.length?'':'No AIS vessels heard in the western Sound in the last 15 minutes.');drawAis();
+		AIS.list=res.vessels||[];drawAis();aisViewNote();
 	}).catch(function(){});
+}
+/* say so when the vessels heard are all outside the current view (the feed
+   covers the western Sound down to New York Harbor) */
+function aisViewNote(){
+	if(!aisOn())return;
+	if(!AIS.list.length){aisNote('No AIS vessels heard between New York Harbor and the western Sound in the last 15 minutes.');return;}
+	var b=map.getBounds(),c=map.getCenter(),inView=0,near=null,nd=1e9;
+	AIS.list.forEach(function(v){if(b.contains([v.lat,v.lon]))inView++;var d=distNM(c.lat,c.lng,v.lat,v.lon);if(d<nd){nd=d;near=v;}});
+	aisNote(inView?'':(AIS.list.length+' AIS vessel'+(AIS.list.length>1?'s':'')+' heard, none in this view. Nearest: '+(near.n||('MMSI '+near.m))+', '+nd.toFixed(0)+' nm from the map centre. Zoom out to see them.'));
 }
 function setAis(on){
 	var t=document.getElementById('tgAis');if(t)t.checked=on;lsSet('oyc_ais_view',on?'1':null);
@@ -2890,7 +2926,7 @@ function setAis(on){
 }
 (function(){
 	var t=document.getElementById('tgAis');if(t)t.addEventListener('change',function(){setAis(this.checked);});
-	map.on('zoomend',aisZoomCls);
+	map.on('zoomend',aisZoomCls);map.on('moveend',aisViewNote);
 	var v=document.getElementById('vecMin');if(v)v.addEventListener('change',drawAis);
 	if(lsGet('oyc_ais_view')==='1')setAis(true);
 	document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')pollAis();});
