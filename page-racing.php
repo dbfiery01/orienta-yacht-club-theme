@@ -68,6 +68,10 @@ $messages = array(
 	'mailpartial'    => array( 'err', sprintf( __( 'Only %d racers could be emailed. Check WP Mail SMTP (Tools → Email Test).', 'orienta-yacht-club' ), (int) ( $_GET['n'] ?? 0 ) ) ),
 	'mailmissing'    => array( 'err', __( 'Please write a subject and a message.', 'orienta-yacht-club' ) ),
 	'mailnobody'     => array( 'err', __( 'Nobody is on that list yet.', 'orienta-yacht-club' ) ),
+	'linksaved'      => array( 'ok', __( 'Section saved.', 'orienta-yacht-club' ) ),
+	'linkdeleted'    => array( 'ok', __( 'Section removed.', 'orienta-yacht-club' ) ),
+	'linkmoved'      => array( 'ok', __( 'Section moved.', 'orienta-yacht-club' ) ),
+	'linkmissing'    => array( 'err', __( 'A section needs a heading. If you were editing, someone may have just removed it.', 'orienta-yacht-club' ) ),
 	'profilesaved'   => array( 'ok', __( 'Your profile is saved.', 'orienta-yacht-club' ) ),
 	'yachtsaved'     => array( 'ok', __( 'Yacht saved.', 'orienta-yacht-club' ) ),
 	'yachtdeleted'   => array( 'ok', __( 'Yacht removed.', 'orienta-yacht-club' ) ),
@@ -284,17 +288,82 @@ get_header();
 			<?php endif; ?>
 
 			<?php
-			// The Racing Page's own content from the WordPress editor (regattas,
-			// associations, results), one card per section.
-			$legacy = oyc_race_page_sections();
-			if ( $legacy['sections'] || '' !== $legacy['intro'] ) : ?>
-				<h2 class="rc-h2"><?php esc_html_e( 'Regattas, results & links', 'orienta-yacht-club' ); ?></h2>
+			// "Regattas, results & links": from the Racing Page's content until
+			// the Race Committee edits them here (see oyc_race_link_sections()).
+			$legacy    = oyc_race_page_sections();
+			$links     = oyc_race_link_sections();
+			$link_edit = $can_rc && isset( $_GET['linkedit'] ) ? sanitize_key( wp_unslash( $_GET['linkedit'] ) ) : '';
+			$link_form = function ( $sec ) use ( $post_url ) {
+				$body = $sec ? $sec['body'] : '';
+				?>
+				<form class="rc-form rc-link-form" id="links-form" method="post" action="<?php echo $post_url; // phpcs:ignore WordPress.Security.EscapeOutput ?>">
+					<input type="hidden" name="action" value="oyc_race_links">
+					<?php if ( $sec ) : ?><input type="hidden" name="link_id" value="<?php echo esc_attr( $sec['id'] ); ?>"><?php endif; ?>
+					<?php wp_nonce_field( 'oyc_race_links' ); ?>
+					<label class="rc-field"><span><?php esc_html_e( 'Heading', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_title" maxlength="100" required value="<?php echo esc_attr( $sec ? $sec['title'] : '' ); ?>" placeholder="<?php esc_attr_e( 'e.g. 2027 Regatta Calendar', 'orienta-yacht-club' ); ?>"></label>
+					<div class="rc-field"><span><?php esc_html_e( 'Text and links', 'orienta-yacht-club' ); ?></span>
+						<?php
+						if ( function_exists( 'wp_editor' ) ) {
+							wp_editor( $body, 'oyc_link_body_' . ( $sec ? $sec['id'] : 'new' ), array( 'textarea_name' => 'oyc_body', 'teeny' => true, 'media_buttons' => false, 'textarea_rows' => 8, 'quicktags' => true ) );
+						} else {
+							echo '<textarea name="oyc_body" rows="8">' . esc_textarea( $body ) . '</textarea>';
+						}
+						?>
+						<small class="rc-muted"><?php esc_html_e( 'Use the link button to add a web address, or paste one on its own line.', 'orienta-yacht-club' ); ?></small>
+					</div>
+					<div class="rc-actions">
+						<button type="submit" class="btn btn-primary"><?php echo esc_html( $sec ? __( 'Save section', 'orienta-yacht-club' ) : __( 'Add section', 'orienta-yacht-club' ) ); ?></button>
+						<a class="btn rc-btn" href="<?php echo esc_url( oyc_race_url( array(), 'links' ) ); ?>"><?php esc_html_e( 'Cancel', 'orienta-yacht-club' ); ?></a>
+					</div>
+				</form>
+				<?php
+			};
+			if ( $links || '' !== $legacy['intro'] || $can_rc ) : ?>
+				<h2 class="rc-h2" id="links"><?php esc_html_e( 'Regattas, results & links', 'orienta-yacht-club' ); ?></h2>
 				<?php if ( '' !== $legacy['intro'] ) : ?><div class="rc-card rc-legacy"><?php echo wp_kses_post( $legacy['intro'] ); ?></div><?php endif; ?>
+				<?php if ( $can_rc ) : ?>
+					<div class="rc-links-bar">
+						<span class="rc-muted"><?php esc_html_e( 'Race Committee: add, edit, reorder or remove these sections.', 'orienta-yacht-club' ); ?></span>
+						<?php if ( 'new' !== $link_edit ) : ?><a class="btn btn-sm btn-primary" href="<?php echo esc_url( oyc_race_url( array( 'linkedit' => 'new' ), 'links-form' ) ); ?>"><?php esc_html_e( '+ Add a section', 'orienta-yacht-club' ); ?></a><?php endif; ?>
+					</div>
+					<?php
+					if ( 'new' === $link_edit ) {
+						$link_form( null );
+					} elseif ( $link_edit ) {
+						foreach ( $links as $sec ) {
+							if ( $sec['id'] === $link_edit ) {
+								$link_form( $sec );
+							}
+						}
+					}
+					?>
+				<?php endif; ?>
 				<div class="rc-links">
-					<?php foreach ( $legacy['sections'] as $sec ) : ?>
+					<?php
+					$n = count( $links );
+					foreach ( $links as $i => $sec ) :
+						if ( $link_edit === $sec['id'] ) {
+							continue; // Being edited in the form above.
+						}
+						?>
 						<section class="rc-link-card">
 							<h3 class="rc-link-card__title"><?php echo esc_html( $sec['title'] ); ?></h3>
 							<div class="rc-legacy"><?php echo wp_kses_post( $sec['body'] ); ?></div>
+							<?php if ( $can_rc ) : ?>
+								<div class="rc-link-card__tools">
+									<a class="btn btn-sm rc-btn" href="<?php echo esc_url( oyc_race_url( array( 'linkedit' => $sec['id'] ), 'links-form' ) ); ?>"><?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?></a>
+									<?php
+									if ( $i > 0 ) {
+										oyc_race_post_button( 'oyc_race_links', array( 'link_id' => $sec['id'], 'do' => 'up' ), __( 'Move up', 'orienta-yacht-club' ) );
+									}
+									if ( $i < $n - 1 ) {
+										oyc_race_post_button( 'oyc_race_links', array( 'link_id' => $sec['id'], 'do' => 'down' ), __( 'Move down', 'orienta-yacht-club' ) );
+									}
+									/* translators: %s: section heading. */
+									oyc_race_post_button( 'oyc_race_links', array( 'link_id' => $sec['id'], 'do' => 'delete' ), __( 'Remove', 'orienta-yacht-club' ), 'rc-btn rc-btn--danger', sprintf( __( 'Remove the “%s” section?', 'orienta-yacht-club' ), $sec['title'] ) );
+									?>
+								</div>
+							<?php endif; ?>
 						</section>
 					<?php endforeach; ?>
 				</div>
