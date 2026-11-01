@@ -75,19 +75,49 @@ function oyc_officer_render_notices() {
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Roles the current user is allowed to assign. Administrator is withheld from
- * everyone who is not already an administrator, which blocks escalation.
+ * Roles the current user is allowed to assign. Administrators may assign any
+ * role. Everyone else (Club Officers) gets only the club roles below, so an
+ * officer can't hand out Editor, Author, Shop Manager or any plugin role that
+ * carries publishing or unfiltered-HTML rights.
  *
  * @return array role slug => display name
  */
 function oyc_officer_assignable_roles() {
 	$roles = wp_roles()->get_names();
 
-	if ( ! current_user_can( 'administrator' ) ) {
-		unset( $roles['administrator'] );
+	if ( current_user_can( 'administrator' ) ) {
+		return $roles;
 	}
 
-	return $roles;
+	$club = apply_filters( 'oyc_officer_assignable_role_slugs', array(
+		'subscriber',
+		'oyc_officer',
+		'oyc_race_committee',
+		'oyc_guest_racer',
+	) );
+
+	return array_intersect_key( $roles, array_flip( $club ) );
+}
+
+/**
+ * Whether the current user may change the target's role at all. An officer
+ * can't change the role of someone who holds a role outside the club list
+ * (e.g. an Editor), since they couldn't put it back.
+ *
+ * @param WP_User $user Target account.
+ * @return bool
+ */
+function oyc_officer_can_change_role_of( $user ) {
+	if ( current_user_can( 'administrator' ) ) {
+		return true;
+	}
+	$allowed = oyc_officer_assignable_roles();
+	foreach ( (array) $user->roles as $r ) {
+		if ( ! isset( $allowed[ $r ] ) ) {
+			return false;
+		}
+	}
+	return true;
 }
 
 /**
