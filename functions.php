@@ -170,6 +170,12 @@ require_once get_template_directory() . '/inc/wind-map.php';
 require_once get_template_directory() . '/inc/race-tools.php';
 
 /*
+ * Chart plotter fleet positions: members share their live GPS fix, anyone on
+ * the wind map can see the boats sharing now (short-lived, nothing stored).
+ */
+require_once get_template_directory() . '/inc/fleet-share.php';
+
+/*
  * Nav weather glyph + its cached conditions proxy. Loaded here (not just from
  * header.php) so the wp_ajax_oyc_header_wx handler is registered on admin-ajax
  * requests too — header.php doesn't run for those, so registering it only there
