@@ -293,7 +293,7 @@ get_header();
 				<div class="rc-links">
 					<?php foreach ( $legacy['sections'] as $sec ) : ?>
 						<section class="rc-link-card">
-							<div class="rc-link-card__title"><?php echo esc_html( $sec['title'] ); ?></div>
+							<h3 class="rc-link-card__title"><?php echo esc_html( $sec['title'] ); ?></h3>
 							<div class="rc-legacy"><?php echo wp_kses_post( $sec['body'] ); ?></div>
 						</section>
 					<?php endforeach; ?>
