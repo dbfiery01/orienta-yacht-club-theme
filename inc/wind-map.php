@@ -221,6 +221,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wpt tbody tr{cursor:pointer}
 #oycwm .wpt tbody tr:hover{background:rgba(21,131,207,.09)}
 #oycwm .wpt .n{width:24px;padding-left:10px}
+/* drag a row by its number to change the route order */
+#oycwm .wpt td.n{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+#oycwm .wpt td.n span{position:relative}
+#oycwm .wpt td.n span::after{content:'⋮⋮';position:absolute;left:-11px;top:1px;font-size:9px;letter-spacing:-2px;color:var(--faint);line-height:16px}
+#oycwm .wpt tr.wp-drag{position:relative;z-index:2;background:#eaf3fb;box-shadow:0 6px 16px rgba(11,42,74,.28);cursor:grabbing}
+#oycwm .wpt tr.wp-shift{transition:transform .12s ease}
+[data-theme="dark"] #oycwm .wpt tr.wp-drag{background:#1b4268}
 #oycwm .wpt .n span{display:inline-block;min-width:20px;height:20px;padding:0 3px;border-radius:11px;background:#1583cf;border:2px solid #0b2a4a;color:#fff;font-size:11px;font-weight:800;line-height:16px;text-align:center;box-sizing:border-box}
 #oycwm .wpt .v{display:block;font-weight:800;white-space:nowrap}
 #oycwm .wpt .s{display:block;color:var(--mute);font-size:.68rem;white-space:nowrap}
@@ -633,7 +640,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast. Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
+				<div class="tiphelp" id="tipHelp">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row by its number to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
 			</div>
 		</div>
 		<aside class="wptab collapsed" id="wpTab" aria-label="Passage waypoints"><?php /* starts hidden: only the summary bar + buttons show until "Show table" */ ?>
@@ -1348,11 +1355,13 @@ function wpRow(pin,i,ti){
 		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
-	return '<tr data-wp="'+pin.id+'"><td class="n"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
+	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
+var wpDrag=null;   /* a row being dragged to a new place in the route (see below) */
 function renderWpTable(){
 	var grid=document.getElementById('mapGrid'),body=document.getElementById('wptBody');if(!grid||!body)return;
+	if(wpDrag)return;   /* don't rebuild the rows mid-drag (GPS fixes re-render the table) */
 	var on=pins.length>0,ti=curTi,h='';
 	for(var i=0;i<pins.length;i++)h+=wpRow(pins[i],i,ti);
 	body.innerHTML=h;
@@ -1391,6 +1400,46 @@ window.addEventListener('resize',wpFit);
 		var tr=e.target.closest?e.target.closest('tr[data-wp]'):null;
 		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){map.panTo([pins[i].lat,pins[i].lon]);break;}}}
 	});
+})();
+/* Reorder: press a row's number and drag it up or down; the other rows slide
+   aside, and on release the point moves to that place in the route (legs,
+   totals, wind angles and the map numbering all follow). */
+(function(){
+	var body=document.getElementById('wptBody');if(!body)return;
+	function rowsOf(){return [].slice.call(body.querySelectorAll('tr[data-wp]'));}
+	body.addEventListener('pointerdown',function(e){
+		if(e.button>0)return;
+		var h=e.target.closest?e.target.closest('td.n'):null,tr=h&&h.closest('tr[data-wp]');if(!tr)return;
+		var rows=rowsOf();if(rows.length<2)return;
+		e.preventDefault();
+		var wrap=body.closest('.wpt-wrap');
+		wpDrag={tr:tr,rows:rows,rects:rows.map(function(r){return r.getBoundingClientRect();}),from:rows.indexOf(tr),to:rows.indexOf(tr),y0:e.clientY,id:e.pointerId,wrap:wrap,s0:wrap?wrap.scrollTop:0,
+			smax:wrap?wrap.scrollHeight-wrap.clientHeight:0};   /* measured before the dragged row's transform adds overflow */
+		tr.classList.add('wp-drag');rows.forEach(function(r){if(r!==tr)r.classList.add('wp-shift');});
+		try{h.setPointerCapture(e.pointerId);}catch(_){}
+	});
+	body.addEventListener('pointermove',function(e){
+		var d=wpDrag;if(!d||e.pointerId!==d.id)return;e.preventDefault();
+		/* phones show two rows and scroll the rest: holding near the list's top or
+		   bottom edge scrolls it, and positions are measured in list coordinates */
+		if(d.wrap&&d.smax>2){var wr=d.wrap.getBoundingClientRect();
+			if(e.clientY>wr.bottom-24)d.wrap.scrollTop=Math.min(d.smax,d.wrap.scrollTop+10);else if(e.clientY<wr.top+24)d.wrap.scrollTop=Math.max(0,d.wrap.scrollTop-10);}
+		var ds=d.wrap?d.wrap.scrollTop-d.s0:0,dy=e.clientY-d.y0+ds,R0=d.rects[d.from],cy=R0.top+R0.height/2+dy,to=0;
+		d.tr.style.transform='translateY('+dy+'px)';
+		for(var i=0;i<d.rects.length;i++){if(i!==d.from&&cy>d.rects[i].top+d.rects[i].height/2)to++;}
+		d.to=to;
+		for(i=0;i<d.rows.length;i++){if(i===d.from)continue;var sh=0;
+			if(d.from<to&&i>d.from&&i<=to)sh=-R0.height;else if(d.from>to&&i>=to&&i<d.from)sh=R0.height;
+			d.rows[i].style.transform=sh?'translateY('+sh+'px)':'';}
+	});
+	function end(e){
+		var d=wpDrag;if(!d||(e&&e.pointerId!==d.id))return;wpDrag=null;
+		d.rows.forEach(function(r){r.style.transform='';r.classList.remove('wp-drag','wp-shift');});
+		if(d.to!==d.from){var p=pins.splice(d.from,1)[0];pins.splice(d.to,0,p);nextWp=0;refreshRoute();}
+		else renderWpTable();
+	}
+	body.addEventListener('pointerup',end);body.addEventListener('pointercancel',end);
+	body.addEventListener('lostpointercapture',end);
 })();
 map.on('click',function(e){if(mode==='radar'||headsUp)return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
