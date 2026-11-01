@@ -1265,7 +1265,17 @@ function oyc_race_require_racer( $nonce ) {
 
 function oyc_race_handle_profile() {
 	oyc_race_require_racer( 'oyc_race_profile' );
-	$uid = get_current_user_id();
+	$uid  = get_current_user_id();
+	$back = array( 'view' => 'me' );
+	// The Race Committee may edit anyone's racing profile.
+	$for = (int) ( $_POST['user_id'] ?? 0 );
+	if ( $for && $for !== $uid ) {
+		if ( ! oyc_race_can_manage() || ! get_userdata( $for ) ) {
+			oyc_race_redirect( 'denied', $back );
+		}
+		$uid         = $for;
+		$back['uid'] = $for;
+	}
 	oyc_race_save_contact( $uid );
 	$pos = oyc_race_posted_positions( 'oyc_positions' );
 	if ( $pos ) {
@@ -1281,7 +1291,7 @@ function oyc_race_handle_profile() {
 	} else {
 		delete_user_meta( $uid, 'oyc_crew_hidden' );
 	}
-	oyc_race_redirect( 'profilesaved', array( 'view' => 'me' ), 'profile' );
+	oyc_race_redirect( 'profilesaved', $back, 'profile' );
 }
 add_action( 'admin_post_oyc_race_profile', 'oyc_race_handle_profile' );
 
@@ -1296,6 +1306,9 @@ function oyc_race_handle_yacht() {
 	$back  = array( 'view' => 'me' );
 	if ( $id && ! oyc_race_can_edit_post( $post, 'oyc_yacht' ) ) {
 		oyc_race_redirect( 'denied', $back );
+	}
+	if ( $post && (int) $post->post_author !== get_current_user_id() ) {
+		$back['uid'] = (int) $post->post_author; // Race Committee edit: back to the owner's profile.
 	}
 	if ( ! empty( $_POST['oyc_delete'] ) && $post ) {
 		$photo = (int) get_post_meta( $id, '_oyc_bb_photo', true );

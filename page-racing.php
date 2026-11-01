@@ -607,7 +607,12 @@ get_header();
 								<?php if ( $facts ) : ?><div class="rc-pcard__facts"><?php echo esc_html( implode( ' · ', $facts ) ); ?></div><?php endif; ?>
 								<div class="rc-pcard__sub"><?php /* translators: %s: name */ echo esc_html( sprintf( __( 'Skipper: %s', 'orienta-yacht-club' ), oyc_race_name( $y->post_author ) ) . ( get_post_meta( $y->ID, '_club', true ) ? ' · ' . get_post_meta( $y->ID, '_club', true ) : '' ) ); ?></div>
 								<?php if ( $y->post_content ) : ?><div class="rc-pcard__about"><?php echo nl2br( esc_html( $y->post_content ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div><?php endif; ?>
-								<?php oyc_race_msg_button( $y->post_author, __( 'Message skipper', 'orienta-yacht-club' ), $y->ID ); ?>
+								<div class="rc-pcard__actions">
+									<?php oyc_race_msg_button( $y->post_author, __( 'Message skipper', 'orienta-yacht-club' ), $y->ID ); ?>
+									<?php if ( (int) $y->post_author === $me->ID || $can_rc ) : ?>
+										<a class="btn btn-sm rc-btn" href="<?php echo esc_url( $tab_url( 'me', (int) $y->post_author === $me->ID ? array( 'yedit' => $y->ID ) : array( 'yedit' => $y->ID, 'uid' => $y->post_author ) ) . '#yacht-form' ); ?>"><?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?></a>
+									<?php endif; ?>
+								</div>
 								<?php do_action( 'oyc_race_yacht_profile_extra', $y ); ?>
 							</div>
 						</article>
@@ -630,7 +635,12 @@ get_header();
 								<div class="rc-pcard__facts"><?php echo esc_html( implode( ' · ', array_filter( array( $club, $levels[ $lv ] ?? '' ) ) ) ); ?></div>
 								<div class="rc-pcard__sub"><?php echo esc_html( oyc_race_positions_label( get_user_meta( $u->ID, 'oyc_crew_positions', true ) ) ); ?></div>
 								<?php if ( get_user_meta( $u->ID, 'oyc_crew_about', true ) ) : ?><div class="rc-pcard__about"><?php echo nl2br( esc_html( get_user_meta( $u->ID, 'oyc_crew_about', true ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div><?php endif; ?>
-								<?php oyc_race_msg_button( $u->ID ); ?>
+								<div class="rc-pcard__actions">
+									<?php oyc_race_msg_button( $u->ID ); ?>
+									<?php if ( $u->ID === $me->ID || $can_rc ) : ?>
+										<a class="btn btn-sm rc-btn" href="<?php echo esc_url( $tab_url( 'me', $u->ID === $me->ID ? array() : array( 'uid' => $u->ID ) ) . '#profile' ); ?>"><?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?></a>
+									<?php endif; ?>
+								</div>
 							</div>
 						</article>
 					<?php endforeach; ?>
@@ -644,15 +654,29 @@ get_header();
 		 * MY PROFILE
 		 * ══════════════════════════════════════════════════════════════════════ */
 		elseif ( 'me' === $view ) :
-			$my_pos   = (array) get_user_meta( $me->ID, 'oyc_crew_positions', true );
-			$my_level = (string) get_user_meta( $me->ID, 'oyc_crew_level', true );
+			// The Race Committee can open anyone's profile with &uid=.
+			$who_id = $me->ID;
+			if ( $can_rc && ! empty( $_GET['uid'] ) && get_userdata( (int) $_GET['uid'] ) ) {
+				$who_id = (int) $_GET['uid'];
+			}
+			$other       = $who_id !== $me->ID;
+			$who_contact = array();
+			foreach ( array_keys( $my_contact ) as $k ) {
+				$who_contact[ $k ] = (string) get_user_meta( $who_id, $k, true );
+			}
+			$who_yachts = $other ? oyc_race_yachts( $who_id ) : $my_yachts;
+			$my_pos   = (array) get_user_meta( $who_id, 'oyc_crew_positions', true );
+			$my_level = (string) get_user_meta( $who_id, 'oyc_crew_level', true );
 			$y_edit   = isset( $_GET['yedit'] ) ? get_post( (int) $_GET['yedit'] ) : null;
 			if ( $y_edit && ! oyc_race_can_edit_post( $y_edit, 'oyc_yacht' ) ) {
 				$y_edit = null;
 			}
-			$my_entries = oyc_race_user_entries( $me->ID );
+			$my_entries = oyc_race_user_entries( $who_id );
 			?>
-			<h2 class="rc-h2"><?php esc_html_e( 'My races', 'orienta-yacht-club' ); ?></h2>
+			<?php if ( $other ) : ?>
+				<div class="rc-notice rc-notice--ok"><?php /* translators: %s: name */ echo esc_html( sprintf( __( 'You are editing %s’s racing profile (Race Committee).', 'orienta-yacht-club' ), oyc_race_name( $who_id ) ) ); ?> <a href="<?php echo esc_url( $tab_url( 'sailors' ) ); ?>"><?php esc_html_e( 'Back to Sailors & yachts', 'orienta-yacht-club' ); ?></a></div>
+			<?php endif; ?>
+			<h2 class="rc-h2"><?php echo esc_html( $other ? __( 'Races', 'orienta-yacht-club' ) : __( 'My races', 'orienta-yacht-club' ) ); ?></h2>
 			<?php if ( $my_entries ) : ?>
 				<ul class="rc-list">
 					<?php foreach ( $my_entries as $e ) : $er = get_post( $e->post_parent ); if ( ! $er ) { continue; } $m = oyc_race_entry_meta( $e ); ?>
@@ -663,7 +687,7 @@ get_header();
 			<?php else : ?>
 				<p class="rc-empty"><?php esc_html_e( 'You haven’t entered any races yet.', 'orienta-yacht-club' ); ?></p>
 			<?php endif; ?>
-			<?php $until = (string) get_user_meta( $me->ID, 'oyc_racer_until', true ); if ( $until ) : ?>
+			<?php $until = (string) get_user_meta( $who_id, 'oyc_racer_until', true ); if ( $until ) : ?>
 				<p class="rc-note"><?php /* translators: %s: date */ echo esc_html( sprintf( __( 'Your racers’ area access runs through %s.', 'orienta-yacht-club' ), oyc_race_fmt_date( $until ) ) ); ?></p>
 			<?php endif; ?>
 
@@ -671,6 +695,7 @@ get_header();
 			<div class="rc-card">
 				<form class="rc-form" method="post" action="<?php echo $post_url; // phpcs:ignore WordPress.Security.EscapeOutput ?>">
 					<input type="hidden" name="action" value="oyc_race_profile">
+					<?php if ( $other ) : ?><input type="hidden" name="user_id" value="<?php echo (int) $who_id; ?>"><?php endif; ?>
 					<?php wp_nonce_field( 'oyc_race_profile' ); ?>
 					<fieldset class="rc-field rc-pos"><legend><?php esc_html_e( 'Positions I sail', 'orienta-yacht-club' ); ?></legend>
 						<?php foreach ( oyc_race_positions() as $k => $label ) : ?>
@@ -682,32 +707,33 @@ get_header();
 							<select name="oyc_level"><option value=""><?php esc_html_e( '—', 'orienta-yacht-club' ); ?></option>
 								<?php foreach ( oyc_race_levels() as $k => $label ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $my_level, $k ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?>
 							</select></label>
-						<?php if ( oyc_is_guest_racer() ) : ?>
-							<label class="rc-field"><span><?php esc_html_e( 'Your club', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_racer_club" maxlength="80" value="<?php echo esc_attr( $my_contact['oyc_racer_club'] ); ?>"></label>
+						<?php if ( oyc_is_guest_racer( $who_id ) ) : ?>
+							<label class="rc-field"><span><?php esc_html_e( 'Your club', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_racer_club" maxlength="80" value="<?php echo esc_attr( $who_contact['oyc_racer_club'] ); ?>"></label>
 						<?php endif; ?>
 						<label class="rc-field rc-field--full"><span><?php esc_html_e( 'About me as a sailor', 'orienta-yacht-club' ); ?></span>
-							<textarea name="oyc_about" rows="3" maxlength="1000" placeholder="<?php esc_attr_e( 'Boats you’ve sailed, regattas, what you’d like to learn…', 'orienta-yacht-club' ); ?>"><?php echo esc_textarea( get_user_meta( $me->ID, 'oyc_crew_about', true ) ); ?></textarea></label>
-						<label class="rc-field"><span><?php esc_html_e( 'Mobile phone', 'orienta-yacht-club' ); ?></span><input type="tel" name="oyc_phone" maxlength="30" value="<?php echo esc_attr( $my_contact['oyc_phone'] ); ?>"></label>
-						<label class="rc-field"><span><?php esc_html_e( 'Emergency contact', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_emergency_name" maxlength="80" value="<?php echo esc_attr( $my_contact['oyc_emergency_name'] ); ?>"></label>
-						<label class="rc-field"><span><?php esc_html_e( 'Emergency phone', 'orienta-yacht-club' ); ?></span><input type="tel" name="oyc_emergency_phone" maxlength="30" value="<?php echo esc_attr( $my_contact['oyc_emergency_phone'] ); ?>"></label>
-						<label class="rc-field"><span><?php esc_html_e( 'Relationship', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_emergency_relationship" maxlength="40" value="<?php echo esc_attr( $my_contact['oyc_emergency_relationship'] ); ?>"></label>
+							<textarea name="oyc_about" rows="3" maxlength="1000" placeholder="<?php esc_attr_e( 'Boats you’ve sailed, regattas, what you’d like to learn…', 'orienta-yacht-club' ); ?>"><?php echo esc_textarea( get_user_meta( $who_id, 'oyc_crew_about', true ) ); ?></textarea></label>
+						<label class="rc-field"><span><?php esc_html_e( 'Mobile phone', 'orienta-yacht-club' ); ?></span><input type="tel" name="oyc_phone" maxlength="30" value="<?php echo esc_attr( $who_contact['oyc_phone'] ); ?>"></label>
+						<label class="rc-field"><span><?php esc_html_e( 'Emergency contact', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_emergency_name" maxlength="80" value="<?php echo esc_attr( $who_contact['oyc_emergency_name'] ); ?>"></label>
+						<label class="rc-field"><span><?php esc_html_e( 'Emergency phone', 'orienta-yacht-club' ); ?></span><input type="tel" name="oyc_emergency_phone" maxlength="30" value="<?php echo esc_attr( $who_contact['oyc_emergency_phone'] ); ?>"></label>
+						<label class="rc-field"><span><?php esc_html_e( 'Relationship', 'orienta-yacht-club' ); ?></span><input type="text" name="oyc_emergency_relationship" maxlength="40" value="<?php echo esc_attr( $who_contact['oyc_emergency_relationship'] ); ?>"></label>
 					</div>
-					<label class="rc-check"><input type="checkbox" name="oyc_hidden" value="1" <?php checked( (bool) get_user_meta( $me->ID, 'oyc_crew_hidden', true ) ); ?>> <?php esc_html_e( 'Hide my crew profile from other racers', 'orienta-yacht-club' ); ?></label>
+					<label class="rc-check"><input type="checkbox" name="oyc_hidden" value="1" <?php checked( (bool) get_user_meta( $who_id, 'oyc_crew_hidden', true ) ); ?>> <?php esc_html_e( 'Hide my crew profile from other racers', 'orienta-yacht-club' ); ?></label>
 					<p class="rc-note"><?php esc_html_e( 'Racers see your name, positions, experience and “about me”. Your phone and emergency contact are seen only by the Race Committee. Your profile stays up until you hide it.', 'orienta-yacht-club' ); ?></p>
 					<div class="rc-actions"><button type="submit" class="btn btn-primary"><?php esc_html_e( 'Save profile', 'orienta-yacht-club' ); ?></button></div>
 				</form>
 			</div>
 
 			<h2 class="rc-h2" id="yachts"><?php esc_html_e( 'My yachts', 'orienta-yacht-club' ); ?></h2>
-			<?php if ( $my_yachts ) : ?>
+			<?php if ( $who_yachts ) : ?>
 				<ul class="rc-list">
-					<?php foreach ( $my_yachts as $y ) : ?>
+					<?php foreach ( $who_yachts as $y ) : ?>
 						<li><strong><?php echo esc_html( $y->post_title ); ?></strong> <span class="rc-muted"><?php echo esc_html( implode( ' · ', array_filter( array( get_post_meta( $y->ID, '_class', true ), get_post_meta( $y->ID, '_sail', true ) ) ) ) ); ?></span>
-							<a class="btn btn-sm rc-btn" href="<?php echo esc_url( $tab_url( 'me', array( 'yedit' => $y->ID ) ) . '#yacht-form' ); ?>"><?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?></a></li>
+							<a class="btn btn-sm rc-btn" href="<?php echo esc_url( $tab_url( 'me', $other ? array( 'yedit' => $y->ID, 'uid' => $who_id ) : array( 'yedit' => $y->ID ) ) . '#yacht-form' ); ?>"><?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?></a></li>
 					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
-			<details class="rc-compose" id="yacht-form"<?php echo ( $y_edit || ! $my_yachts ) ? ' open' : ''; ?>>
+			<?php if ( ! $other || $y_edit ) : ?>
+			<details class="rc-compose" id="yacht-form"<?php echo ( $y_edit || ! $who_yachts ) ? ' open' : ''; ?>>
 				<summary><?php echo esc_html( $y_edit ? __( 'Edit yacht', 'orienta-yacht-club' ) : __( 'Add a yacht', 'orienta-yacht-club' ) ); ?> <span class="rc-close"><?php esc_html_e( 'Close', 'orienta-yacht-club' ); ?></span></summary>
 				<form class="rc-form" method="post" enctype="multipart/form-data" action="<?php echo $post_url; // phpcs:ignore WordPress.Security.EscapeOutput ?>">
 					<input type="hidden" name="action" value="oyc_race_yacht">
@@ -733,6 +759,7 @@ get_header();
 					</div>
 				</form>
 			</details>
+			<?php endif; ?>
 
 		<?php
 		/* ══════════════════════════════════════════════════════════════════════

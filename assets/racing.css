@@ -224,3 +224,4 @@ html[data-theme="dark"] .rc-page .rc-link-card { border-bottom-color: rgba(245,2
 #racing .rc-legacy strong { color: var(--rc-ink); }
 #racing .rc-legacy figure { margin: 10px 0 0; }
 #racing .rc-legacy img { display: block; max-width: 100%; height: auto; max-height: 420px; width: auto; border-radius: 8px; }
+.rc-page .rc-pcard__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
