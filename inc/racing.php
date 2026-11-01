@@ -119,6 +119,46 @@ function oyc_race_url( $args = array(), $hash = '' ) {
 	return $hash ? $url . '#' . $hash : $url;
 }
 
+/**
+ * The existing Racing Page's own editor content (regattas, links, results),
+ * split into one card per <h3> section so it sits in the hub's look. The
+ * leading "Racing" heading (the hero already says it), empty paragraphs and
+ * sections repeated word for word are dropped. Brad keeps editing this
+ * content in WordPress as before.
+ *
+ * @return array{intro:string,sections:array<int,array{title:string,body:string}>}
+ */
+function oyc_race_page_sections() {
+	$page = get_page_by_path( OYC_RACE_SLUG );
+	$out  = array( 'intro' => '', 'sections' => array() );
+	if ( ! $page || '' === trim( (string) $page->post_content ) ) {
+		return $out;
+	}
+	$html = apply_filters( 'the_content', $page->post_content );
+	$html = preg_replace( '#^\s*<h2[^>]*>\s*Racing\s*</h2>#i', '', trim( $html ) );
+	$html = preg_replace( '#<p>(\s|&nbsp;|<a\b[^>]*>\s*</a>|<br\s*/?>)*</p>#i', '', $html );
+	$parts = preg_split( '#(?=<h3\b)#i', $html );
+	$seen  = array();
+	foreach ( $parts as $i => $chunk ) {
+		$chunk = trim( $chunk );
+		if ( '' === $chunk ) {
+			continue;
+		}
+		if ( ! preg_match( '#^<h3\b[^>]*>(.*?)</h3>(.*)$#is', $chunk, $m ) ) {
+			$out['intro'] .= $chunk;
+			continue;
+		}
+		$title = trim( html_entity_decode( wp_strip_all_tags( $m[1] ), ENT_QUOTES, 'UTF-8' ) );
+		$key   = md5( strtolower( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $chunk ) ) ) );
+		if ( isset( $seen[ $key ] ) ) {
+			continue;
+		}
+		$seen[ $key ]      = true;
+		$out['sections'][] = array( 'title' => $title, 'body' => trim( $m[2] ) );
+	}
+	return $out;
+}
+
 function oyc_race_is_hub() {
 	global $oyc_race_fallback;
 	return ! empty( $oyc_race_fallback ) || is_page( OYC_RACE_SLUG );
@@ -154,8 +194,10 @@ add_action( 'template_redirect', function () {
 	}
 }, 1 );
 
+// The public race list stays indexable (it replaces the old public Racing
+// page); racer views, forms results and race pages are not indexed.
 add_filter( 'wp_robots', function ( $robots ) {
-	if ( oyc_race_is_hub() ) {
+	if ( oyc_race_is_hub() && ( ! empty( $_GET['view'] ) || ! empty( $_GET['rs'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 		$robots['noindex']  = true;
 		$robots['nofollow'] = true;
 		unset( $robots['index'], $robots['follow'] );
