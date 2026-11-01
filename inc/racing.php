@@ -123,8 +123,8 @@ function oyc_race_url( $args = array(), $hash = '' ) {
  * The existing Racing Page's own editor content (regattas, links, results),
  * split into one card per <h3> section so it sits in the hub's look. The
  * leading "Racing" heading (the hero already says it), empty paragraphs and
- * sections repeated word for word are dropped. Brad keeps editing this
- * content in WordPress as before.
+ * sections repeated word for word are dropped. Once the Race Committee
+ * edits the sections on the hub, oyc_race_link_sections() uses its own copy.
  *
  * @return array{intro:string,sections:array<int,array{title:string,body:string}>}
  */
@@ -158,6 +158,78 @@ function oyc_race_page_sections() {
 	}
 	return $out;
 }
+
+/**
+ * The "Regattas, results & links" cards. Until the Race Committee first edits
+ * them they come from the Racing Page's content; the first add, edit, move or
+ * delete copies them into the oyc_race_links option, which is the source from
+ * then on (so the committee needs no wp-admin access).
+ *
+ * @return array[] Each: id, title, body (HTML).
+ */
+function oyc_race_link_sections() {
+	$saved = get_option( 'oyc_race_links', null );
+	if ( is_array( $saved ) ) {
+		return array_values( array_filter( $saved, 'is_array' ) );
+	}
+	$out = array();
+	foreach ( oyc_race_page_sections()['sections'] as $i => $sec ) {
+		$out[] = array( 'id' => 'p' . $i, 'title' => $sec['title'], 'body' => $sec['body'] );
+	}
+	return $out;
+}
+
+function oyc_race_handle_links() {
+	oyc_race_require_manage( 'oyc_race_links' );
+	$list = oyc_race_link_sections();
+	$id   = sanitize_key( wp_unslash( $_POST['link_id'] ?? '' ) );
+	$do   = sanitize_key( wp_unslash( $_POST['do'] ?? 'save' ) );
+	$at   = null;
+	foreach ( $list as $i => $sec ) {
+		if ( $id && $sec['id'] === $id ) {
+			$at = $i;
+			break;
+		}
+	}
+	if ( ( $id || 'save' !== $do ) && null === $at ) {
+		oyc_race_redirect( 'linkmissing', array(), 'links' );
+	}
+	if ( 'delete' === $do ) {
+		array_splice( $list, $at, 1 );
+		$notice = 'linkdeleted';
+	} elseif ( 'up' === $do || 'down' === $do ) {
+		$to = 'up' === $do ? $at - 1 : $at + 1;
+		if ( $to >= 0 && $to < count( $list ) ) {
+			$tmp         = $list[ $to ];
+			$list[ $to ] = $list[ $at ];
+			$list[ $at ] = $tmp;
+		}
+		$notice = 'linkmoved';
+	} else {
+		$title = oyc_race_text( 'oyc_title', 100 );
+		$body  = trim( wp_kses_post( wp_unslash( $_POST['oyc_body'] ?? '' ) ) );
+		if ( '' === $title ) {
+			oyc_race_redirect( 'linkmissing', $id ? array( 'linkedit' => $id ) : array( 'linkedit' => 'new' ), 'links-form' );
+		}
+		if ( strlen( $body ) > 30000 ) {
+			$body = substr( $body, 0, 30000 );
+		}
+		// Plain typed text (no tags): keep line breaks and turn web addresses into links.
+		if ( $body === wp_strip_all_tags( $body ) ) {
+			$body = make_clickable( wpautop( esc_html( $body ) ) );
+		}
+		$sec = array( 'id' => $id ? $id : 'l' . strtolower( wp_generate_password( 8, false, false ) ), 'title' => $title, 'body' => $body );
+		if ( null === $at ) {
+			$list[] = $sec;
+		} else {
+			$list[ $at ] = $sec;
+		}
+		$notice = 'linksaved';
+	}
+	update_option( 'oyc_race_links', array_values( $list ), false );
+	oyc_race_redirect( $notice, array(), 'links' );
+}
+add_action( 'admin_post_oyc_race_links', 'oyc_race_handle_links' );
 
 function oyc_race_is_hub() {
 	global $oyc_race_fallback;

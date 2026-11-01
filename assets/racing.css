@@ -225,3 +225,12 @@ html[data-theme="dark"] .rc-page .rc-link-card { border-bottom-color: rgba(245,2
 #racing .rc-legacy figure { margin: 10px 0 0; }
 #racing .rc-legacy img { display: block; max-width: 100%; height: auto; max-height: 420px; width: auto; border-radius: 8px; }
 .rc-page .rc-pcard__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+
+/* Race Committee tools for "Regattas, results & links" */
+.rc-page .rc-links-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 1rem; }
+.rc-page .rc-link-card__tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.6rem; }
+.rc-page .rc-link-card__tools .rc-inline { margin: 0; }
+.rc-page .rc-link-form { background: var(--rc-card, #fff); border: 1px solid rgba(11,46,74,0.18); border-radius: 10px; padding: 16px; margin: 0 0 1.2rem; }
+.rc-page .rc-link-form .wp-editor-wrap { margin-top: 4px; }
+.rc-page .rc-link-form textarea { width: 100%; min-height: 180px; }
+html[data-theme="dark"] .rc-page .rc-link-form { border-color: rgba(245,239,226,0.22); }
