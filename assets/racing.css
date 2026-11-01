@@ -201,3 +201,15 @@ html[data-theme="dark"] .rc-page input[type="date"], html[data-theme="dark"] .rc
   .rc-page .rc-seg label { flex: 1 1 100%; }
   .rc-page .rc-seg span { display: block; text-align: center; }
 }
+
+/* The Racing Page's own editor content (regattas, links, results) as cards */
+.rc-page .rc-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+.rc-page .rc-link-card { background: var(--rc-card); border: 1px solid var(--rc-line); border-left: 4px solid var(--rc-blue); border-radius: 12px; padding: 16px 18px; }
+.rc-page .rc-link-card__title { font-weight: 800; font-size: 1.05rem; color: var(--rc-ink); margin: 0 0 8px; }
+#racing .rc-legacy, #racing .rc-legacy p, #racing .rc-legacy li { color: var(--rc-text) !important; font-size: 0.95rem; line-height: 1.55; }
+#racing .rc-legacy p { margin: 0 0 0.6rem; }
+#racing .rc-legacy p:last-child { margin-bottom: 0; }
+#racing .rc-legacy a { color: var(--rc-blue) !important; font-weight: 700; }
+#racing .rc-legacy strong { color: var(--rc-ink); }
+#racing .rc-legacy figure { margin: 10px 0 0; }
+#racing .rc-legacy img { display: block; max-width: 100%; height: auto; max-height: 420px; width: auto; border-radius: 8px; }

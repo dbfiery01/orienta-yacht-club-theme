@@ -283,6 +283,23 @@ get_header();
 				<p class="rc-note"><?php esc_html_e( 'RSVP to a race to open the racers’ area: race details, charts, the crew board, and crew and yacht profiles.', 'orienta-yacht-club' ); ?></p>
 			<?php endif; ?>
 
+			<?php
+			// The Racing Page's own content from the WordPress editor (regattas,
+			// associations, results), one card per section.
+			$legacy = oyc_race_page_sections();
+			if ( $legacy['sections'] || '' !== $legacy['intro'] ) : ?>
+				<h2 class="rc-h2"><?php esc_html_e( 'Regattas, results & links', 'orienta-yacht-club' ); ?></h2>
+				<?php if ( '' !== $legacy['intro'] ) : ?><div class="rc-card rc-legacy"><?php echo wp_kses_post( $legacy['intro'] ); ?></div><?php endif; ?>
+				<div class="rc-links">
+					<?php foreach ( $legacy['sections'] as $sec ) : ?>
+						<section class="rc-link-card">
+							<div class="rc-link-card__title"><?php echo esc_html( $sec['title'] ); ?></div>
+							<div class="rc-legacy"><?php echo wp_kses_post( $sec['body'] ); ?></div>
+						</section>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
 			<?php if ( $is_racer ) :
 				$past = oyc_race_races( 'past', 10 );
 				if ( $past ) : ?>
