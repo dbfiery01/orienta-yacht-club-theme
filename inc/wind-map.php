@@ -386,6 +386,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .fl-lbl{position:absolute;left:20px;top:20px;font-size:10.5px;font-weight:800;color:#7a3000;background:rgba(255,255,255,.9);border-radius:5px;padding:1px 6px;white-space:nowrap;line-height:1.25;box-shadow:0 0 0 1px rgba(11,42,74,.14)}
 #oycwm .fl-lbl small{display:block;font-size:9.5px;font-weight:700;color:#5a6b7d}
 #oycwm .fl-stale .fl-lbl{color:#5a6b7d}
+/* AIS vessels: small arrowheads coloured by type, name label from zoom 12 */
+#oycwm .ais-mk{background:none;border:none}
+#oycwm .ais-ic{position:relative;transform:translate(-50%,-50%);width:18px;height:18px}
+#oycwm .ais-ic svg{position:relative;z-index:1;display:block;overflow:visible;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
+#oycwm .ais-lbl{position:absolute;left:14px;top:12px;font-size:9.5px;font-weight:700;color:#24394d;background:rgba(255,255,255,.82);border-radius:4px;padding:0 4px;white-space:nowrap;line-height:1.3}
+#oycwm.ais-far .ais-lbl{display:none}
+#oycwm .ais-note{display:none;font-size:.74rem;color:var(--mute);padding:0 18px 6px}
+#oycwm .ais-note.on{display:block}
 #oycwm .layers select{font:inherit;font-size:.74rem;border:1px solid var(--line);border-radius:6px;padding:1px 4px;background:#fff;color:var(--ink)}
 #oycwm .leg-lbl b{font-size:10.5px;font-weight:800;color:#0b2a4a;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,42,74,.14);text-shadow:0 0 2px #fff}
 /* western-Sound tidal-current arrows (NOAA current predictions) — light map
@@ -514,10 +522,12 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgLoc"> My location</label>
 			<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
 			<label><input type="checkbox" id="tgFleet"> Other boats</label>
+			<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
 			<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 			<label><input type="checkbox" id="tgRace"> Race</label>
-			<span class="hint">Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<span class="hint">AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
+		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
 			<span class="hint">Past hour &rarr; +18&nbsp;h forecast (NOAA HRRR) &middot; zoom out for the national radar</span>
@@ -2788,6 +2798,53 @@ function stopShare(msg){
 	if(lsGet('oyc_fleet_view')==='1')setFleet(true);
 	document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){pollFleet();if(FLEET.share)postFix(true);}});
 	window.addEventListener('pagehide',function(){if(FLEET.share)stopShare();});
+})();
+
+/* ---------- Chart plotter: AIS ships (inc/ais.php, aisstream.io) ----------
+   Polls every 30 s while the toggle is on; the server keeps the vessels heard in
+   the western Sound for 15 min after their last report. */
+var AIS={layer:L.layerGroup(),timer:null,list:[]};
+function aisOn(){var t=document.getElementById('tgAis');return !!(t&&t.checked);}
+function aisColor(tc){if(tc===36||tc===37)return '#7b3fb0';if(tc>=60&&tc<=69)return '#1f6fd1';if(tc>=70&&tc<=79)return '#2e8b57';if(tc>=80&&tc<=89)return '#c0392b';if(tc===31||tc===32||tc===52||tc===50||tc===33)return '#b9770e';if(tc===35||tc===55||tc===51)return '#34495e';return '#5d6d7e';}
+function aisNote(t){var n=document.getElementById('aisNote');if(!n)return;n.textContent=t||'';n.classList.toggle('on',!!t);}
+function aisZoomCls(){var w=document.getElementById('oycwm');if(w)w.classList.toggle('ais-far',map.getZoom()<12);}
+function drawAis(){
+	AIS.layer.clearLayers();if(!aisOn())return;
+	var vm=vecMin();
+	AIS.list.forEach(function(v){
+		var col=aisColor(v.tc),dir=(v.hdg!=null)?v.hdg:v.cog,stale=v.age>600;
+		var shape=dir!=null?'<path d="M0,-9 L5.5,7 L0,4 L-5.5,7 Z" fill="'+col+'" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>':'<circle r="4.5" fill="'+col+'" stroke="#fff" stroke-width="1.3"/>';
+		var svg='<svg width="18" height="18" viewBox="-10 -10 20 20" style="opacity:'+(stale?.55:1)+';transform:rotate('+(dir||0)+'deg)">'+shape+'</svg>';
+		var nm=v.n||('MMSI '+v.m);
+		var m=L.marker([v.lat,v.lon],{icon:L.divIcon({className:'ais-mk',html:'<div class="ais-ic">'+svg+'<span class="ais-lbl">'+xmlEsc(nm)+'</span></div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:850}).addTo(AIS.layer);
+		m.bindPopup(function(){
+			var h='<b>'+xmlEsc(nm)+'</b>'+(v.ty?'<br>'+xmlEsc(v.ty):'')
+				+'<br>'+(v.sog!=null?v.sog.toFixed(1)+' kt':'speed —')+(v.cog!=null?' · COG '+pad3(v.cog+MAGVAR)+'°M':'')
+				+'<br>Last report '+fleetAge(v.age)+' ago · MMSI '+xmlEsc(v.m);
+			if(myLoc)h+='<br>From you '+magBrg(myLoc.lat,myLoc.lon,v.lat,v.lon)+'°M · '+distNM(myLoc.lat,myLoc.lon,v.lat,v.lon).toFixed(1)+' nm';
+			return h;},{className:'pin-pop'});
+		if(vm&&!stale)drawVector(AIS.layer,v.lat,v.lon,v.sog,v.cog,col);
+	});
+}
+function pollAis(){
+	if(!aisOn()||document.visibilityState==='hidden')return;
+	fetchT(AJAX+'?action=oyc_ais&_='+Date.now(),25000).then(function(r){return r.json();}).then(function(res){
+		if(!res||!res.ok)return;
+		if(!res.enabled){aisNote('AIS ships aren’t set up on this site yet (an admin adds the aisstream.io key under Settings → AIS ships).');AIS.list=[];drawAis();return;}
+		AIS.list=res.vessels||[];aisNote(AIS.list.length?'':'No AIS vessels heard in the western Sound in the last 15 minutes.');drawAis();
+	}).catch(function(){});
+}
+function setAis(on){
+	var t=document.getElementById('tgAis');if(t)t.checked=on;lsSet('oyc_ais_view',on?'1':null);
+	if(on){AIS.layer.addTo(map);aisZoomCls();pollAis();if(!AIS.timer)AIS.timer=setInterval(pollAis,30000);}
+	else{if(AIS.timer){clearInterval(AIS.timer);AIS.timer=null;}AIS.layer.clearLayers();map.removeLayer(AIS.layer);aisNote('');}
+}
+(function(){
+	var t=document.getElementById('tgAis');if(t)t.addEventListener('change',function(){setAis(this.checked);});
+	map.on('zoomend',aisZoomCls);
+	var v=document.getElementById('vecMin');if(v)v.addEventListener('change',drawAis);
+	if(lsGet('oyc_ais_view')==='1')setAis(true);
+	document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')pollAis();});
 })();
 
 /* Small read-only API for the racers' race tools (assets/race-tools.js):
