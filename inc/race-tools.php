@@ -445,6 +445,18 @@ add_action( 'wp_ajax_oyc_rt_track_update', function () {
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /** HTML appended inside #oycwm by oyc_wind_map_html(); '' for non-racers. */
+/**
+ * Built-in class polars (assets/polar-library.json): ORC certificate VPP data
+ * for common Long Island Sound boats, one certificate per class. Racers pick
+ * one from a dropdown and use it as is, or load it into the Polars form to
+ * adjust and save as their own boat's.
+ */
+function oyc_rt_polar_library() {
+	$f = get_template_directory() . '/assets/polar-library.json';
+	$j = file_exists( $f ) ? json_decode( (string) file_get_contents( $f ), true ) : null;
+	return ( is_array( $j ) && ! empty( $j['boats'] ) ) ? $j : array( 'source' => '', 'boats' => array() );
+}
+
 function oyc_race_tools_markup() {
 	if ( ! oyc_race_tools_can_use() ) {
 		return '';
@@ -458,6 +470,7 @@ function oyc_race_tools_markup() {
 		'ajax'      => admin_url( 'admin-ajax.php' ),
 		'nonce'     => wp_create_nonce( 'oyc_race_tools' ),
 		'yachts'    => oyc_rt_my_yachts(),
+		'lib'       => oyc_rt_polar_library(),
 		'races'     => oyc_rt_recent_races(),
 		'hub'       => function_exists( 'oyc_is_racer' ),
 		'adminOnly' => ! function_exists( 'oyc_is_racer' ),
@@ -478,6 +491,7 @@ function oyc_race_tools_markup() {
 	<div class="rt-pane on" data-pane="live">
 		<div class="rt-row">
 			<label>Boat polars <select id="rtPolarSel"><option value="">— none —</option></select></label>
+			<span class="rt-note rt-libnote" id="rtLibNote" hidden></span>
 			<label class="rt-chk"><input type="checkbox" id="rtShowPct"> Show target speed on the map</label>
 		</div>
 		<details class="rt-wind">
@@ -508,6 +522,12 @@ function oyc_race_tools_markup() {
 		<div class="rt-list" id="rtPolarList"></div>
 		<form class="rt-form" id="rtPolarForm">
 			<h4 id="rtPolarFormH">Add your boat’s polars</h4>
+			<div class="rt-row">
+				<label>Start from a class <select id="rtPLib"><option value="">— pick a boat class —</option></select></label>
+				<label>Scale speeds <input type="number" id="rtPScale" min="70" max="120" step="1" value="100" inputmode="numeric" style="width:5em"> %</label>
+				<button type="button" class="rt-sec" id="rtPScaleGo">Apply</button>
+			</div>
+			<p class="rt-note">Class polars are one ORC certificate per class (source: ORC VPP data via jieter/orc-data). Load one, then refine it: scale the speeds to suit your sails, bottom and crew (e.g. 95%), edit any cell in the table below, or replace it with your own file. Save it under your boat’s name.</p>
 			<div class="rt-row">
 				<label>Boat name <input type="text" id="rtPName" maxlength="60" required></label>
 				<label id="rtPYachtWrap" hidden>Yacht profile <select id="rtPYacht"><option value="">—</option></select></label>
