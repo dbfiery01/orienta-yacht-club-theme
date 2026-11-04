@@ -143,7 +143,7 @@ function init(){
 	$('rtShowPct').checked=ls('oyc_rt_show')!==false;
 	$('rtShowPct').addEventListener('change',function(){ls('oyc_rt_show',this.checked);if(this.checked)OYCWM.startLoc();live();});
 	$('rtPolarSel').addEventListener('change',function(){selPolar=findPolar(this.value);ls('oyc_rt_polar',this.value||null);
-		if(selPolar&&!selPolar.lib&&!$('rtBoat').value)$('rtBoat').value=selPolar.name;libNote();sogEma=null;live();});
+		if(selPolar&&!selPolar.lib&&!$('rtBoat').value)$('rtBoat').value=selPolar.name;libNote();exposePolar();sogEma=null;live();});
 	$('rtBoat').addEventListener('change',function(){ls('oyc_rt_boat',this.value.trim());});
 	/* wind override */
 	$('rtWindSet').addEventListener('click',function(){var s=parseFloat($('rtTws').value),d=parseFloat($('rtTwd').value);
@@ -190,6 +190,12 @@ function init(){
 function libBoats(){return (CFG.lib&&CFG.lib.boats)||[];}
 function libPolar(slug){var L=libBoats();for(var i=0;i<L.length;i++)if(L[i].id===slug)return {id:'lib:'+slug,name:L[i].name+' (class)',polar:L[i].polar,lib:true,cert:L[i].cert};return null;}
 function findPolar(id){if(id==null||id==='')return null;id=String(id);if(id.indexOf('lib:')===0)return libPolar(id.slice(4));var n=+id;for(var i=0;i<POLARS.length;i++)if(POLARS[i].id===n)return POLARS[i];return null;}
+/* hand the wind map's Layline angles ("My polars") the best-VMG angles of the chosen polars */
+function exposePolar(){
+	var P=selPolar&&selPolar.polar;
+	OYCWM.polarAngles=P?function(tws){var u=vmgTarget(P,tws,true),d=vmgTarget(P,tws,false);return (u&&d&&isFinite(u.vmg)&&isFinite(d.vmg))?{up:u.twa,gybe:d.twa}:null;}:null;
+	if(typeof OYCWM.layRefresh==='function')OYCWM.layRefresh();
+}
 function libNote(){var n=$('rtLibNote');if(!n)return;if(selPolar&&selPolar.lib){n.hidden=false;n.textContent='Class polars from one ORC certificate ('+(selPolar.cert?'sail no. '+selPolar.cert:'ORC')+'). Your boat will differ with sails, bottom and trim: to refine, open Polars → Start from a class, scale or edit the table, and save it as your boat.';}else{n.hidden=true;n.textContent='';}}
 function windLabel(){$('rtWindSrc').textContent=windOv?('your instruments: '+windOv.tws+' kt from '+Math.round(windOv.twdM)+'°M'):'forecast model at the boat';}
 
@@ -203,7 +209,7 @@ function renderPolars(){
 		+(POLARS.length?'<optgroup label="Saved boats">'+POLARS.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('')+'</optgroup>':'')
 		+(LB.length?'<optgroup label="Class polars (ORC)">'+LB.map(function(b){return '<option value="lib:'+esc(b.id)+'">'+esc(b.name)+'</option>';}).join('')+'</optgroup>':'');
 	if(findPolar(keep))sel.value=keep;else if(POLARS.length===1)sel.value=POLARS[0].id;
-	selPolar=findPolar(sel.value);libNote();
+	selPolar=findPolar(sel.value);libNote();exposePolar();
 	var L=$('rtPolarList');
 	if(!POLARS.length){L.innerHTML='<p class="rt-note">No polars yet. Add your boat’s below: your sail maker, designer or ORC certificate (orc.org → your boat → “Polar data”) will have them.</p>';return;}
 	L.innerHTML=POLARS.map(function(p){var P=p.polar||{tws:[],twa:[]};return '<div class="rt-item" data-id="'+p.id+'"><span class="nm">'+esc(p.name)+'</span><span class="meta">'+P.tws.length+' wind speeds ('+(P.tws[0]||0)+'–'+(P.tws[P.tws.length-1]||0)+' kt) × '+P.twa.length+' angles · added by '+esc(p.owner)+'</span>'
