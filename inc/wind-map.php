@@ -141,12 +141,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .wdial{background:none;border:none;pointer-events:none}
 #oycwm .wdial .wd{display:flex;flex-direction:column;align-items:center;gap:1px;width:64px}
 #oycwm .wdial svg{width:34px;height:34px;display:block;overflow:visible}
-#oycwm .wdial .wd-face{fill:rgba(255,255,255,.92);stroke:rgba(11,42,74,.30)}
+#oycwm .wdial .wd-face{fill:none;stroke:rgba(11,42,74,.55)}
 #oycwm .wdial .wd-arrow{stroke:#1a73e8;fill:#1a73e8}
-#oycwm .wdial .wd-txt{font-size:9.5px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.88);border-radius:4px;padding:0 4px;white-space:nowrap;font-variant-numeric:tabular-nums}
-[data-theme="dark"] #oycwm .wdial .wd-face{fill:rgba(14,42,71,.92);stroke:rgba(245,239,226,.35)}
-[data-theme="dark"] #oycwm .wdial .wd-arrow{stroke:#6fb1ec;fill:#6fb1ec}
-[data-theme="dark"] #oycwm .wdial .wd-txt{color:#f0eadd;background:rgba(14,42,71,.88)}
+#oycwm .wdial .wd-txt{font-size:9.5px;font-weight:800;color:#0b2a4a;white-space:nowrap;font-variant-numeric:tabular-nums;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff}
+[data-theme="dark"] #oycwm .wdial .wd-face{fill:none;stroke:rgba(11,42,74,.55)}
+
 #oycwm .racebar .rc-lab{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#bfe4f5}
 #oycwm .racebar input{width:116px;font:inherit;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:7px;background:#fff;color:#0b2a4a}
 #oycwm .racebar button{font:inherit;font-size:.74rem;font-weight:700;padding:6px 11px;border-radius:999px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer}
