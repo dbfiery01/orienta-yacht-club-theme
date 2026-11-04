@@ -405,6 +405,31 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .ais-note{display:none;font-size:.74rem;color:var(--mute);padding:0 18px 6px}
 #oycwm .ais-note.on{display:block}
 #oycwm .layers select{font:inherit;font-size:.74rem;border:1px solid var(--line);border-radius:6px;padding:1px 4px;background:#fff;color:var(--ink)}
+#oycwm .lay-btn{font:inherit;font-size:.74rem;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:#fff;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
+#oycwm .lay-btn::after{content:" \25BE";font-weight:400}
+#oycwm .lay-pop{flex-basis:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px;font-size:.8rem;color:var(--ink)}
+#oycwm .lay-pop[hidden]{display:none}
+#oycwm .lp-h{display:flex;justify-content:space-between;align-items:center}
+#oycwm .lp-x{border:0;background:none;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink);padding:0 4px}
+#oycwm .lp-seg{display:inline-flex;align-self:flex-start;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+#oycwm .lp-seg button{border:0;background:none;font:inherit;font-weight:600;padding:6px 12px;cursor:pointer;color:var(--ink)}
+#oycwm .lp-seg button[aria-pressed="true"]{background:var(--harbor);color:#fff}
+#oycwm .lp-pane{display:flex;flex-direction:column;gap:8px}
+#oycwm .lp-pane[hidden]{display:none}
+#oycwm .lp-chips{display:flex;flex-wrap:wrap;gap:6px}
+#oycwm .lp-chips button{border:1px solid var(--line);background:none;font:inherit;border-radius:999px;padding:4px 11px;cursor:pointer;color:var(--ink)}
+#oycwm .lp-chips button[aria-pressed="true"]{background:var(--harbor);border-color:var(--harbor);color:#fff}
+#oycwm .lp-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+#oycwm .lp-lbl{font-weight:600}
+#oycwm .lp-pair{display:inline-flex;align-items:center;gap:6px}
+#oycwm .lp-step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#oycwm .lp-step button{width:38px;height:34px;border:0;background:none;font-size:1.15rem;cursor:pointer;color:var(--ink);touch-action:manipulation}
+#oycwm .lp-step button:active{background:rgba(87,166,214,.18)}
+#oycwm .lp-step output{min-width:3.2em;text-align:center;font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums}
+#oycwm .lp-sec{border:1px solid var(--line);background:none;font:inherit;border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink)}
+#oycwm .lp-note{color:var(--faint);font-size:.74rem}
+#oycwm .lp-now{margin:0;font-weight:600}
+#oycwm .lay-pop .lp-note+.lp-note{margin:0}
 #oycwm .leg-lbl b{font-size:10.5px;font-weight:800;color:#0b2a4a;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 6px;white-space:nowrap;box-shadow:0 0 0 1px rgba(11,42,74,.14);text-shadow:0 0 2px #fff}
 /* western-Sound tidal-current arrows (NOAA current predictions) — light map
    tiles in both themes, so no dark variant */
@@ -462,6 +487,10 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .layers label:has(input:checked){background:rgba(87,166,214,.20);border-color:rgba(87,166,214,.6)}
 [data-theme="dark"] #oycwm .layers .hint{color:#c3cedb}
 [data-theme="dark"] #oycwm .layers select{background:#0e2a47;color:#f0eadd;border-color:rgba(245,239,226,.30)}
+[data-theme="dark"] #oycwm .lay-btn{background:#0e2a47;color:#f0eadd;border-color:rgba(245,239,226,.30)}
+[data-theme="dark"] #oycwm .lay-pop{background:#0b2240;color:#f0eadd;border-color:rgba(245,239,226,.25)}
+[data-theme="dark"] #oycwm .lay-pop .lp-note{color:#c3cedb}
+[data-theme="dark"] #oycwm .lp-seg,[data-theme="dark"] #oycwm .lp-step,[data-theme="dark"] #oycwm .lp-chips button,[data-theme="dark"] #oycwm .lp-sec{border-color:rgba(245,239,226,.30)}
 /* Route-help tip (over the light map) + wind-barb legend were light text on a
    white/transparent background → nearly invisible in dark mode. Make them dark
    panels with light text. */
@@ -531,12 +560,35 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
 			<label><input type="checkbox" id="tgLoc"> My location</label>
 			<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
-			<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <select id="layTack" aria-label="Tack angle off the wind"><option value="40">40°</option><option value="45" selected>45°</option><option value="50">50°</option></select></label>
+			<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <button type="button" class="lay-btn" id="layBtn" aria-expanded="false" aria-controls="layPop" title="Layline angles">45°</button></label>
+			<div class="lay-pop" id="layPop" hidden role="group" aria-label="Layline angles">
+				<div class="lp-h"><b>Layline angles</b><button type="button" class="lp-x" id="lpClose" aria-label="Close">&times;</button></div>
+				<div class="lp-seg" role="group" aria-label="How to set the angle">
+					<button type="button" data-lm="type" aria-pressed="true">Boat type</button><button type="button" data-lm="polar" aria-pressed="false">My polars</button><button type="button" data-lm="tacks" aria-pressed="false">My tacks</button>
+				</div>
+				<div class="lp-pane" data-lp="type">
+					<div class="lp-chips" id="lpTypes"></div>
+					<div class="lp-row">
+						<span class="lp-pair"><span class="lp-lbl">Upwind</span><span class="lp-step"><button type="button" data-ls="up" data-d="-1" aria-label="Point higher, 1 degree">&minus;</button><output id="lpUp">45°</output><button type="button" data-ls="up" data-d="1" aria-label="Point lower, 1 degree">+</button></span></span>
+						<span class="lp-pair"><span class="lp-lbl">Gybe at</span><span class="lp-step"><button type="button" data-ls="gybe" data-d="-1" aria-label="Gybe higher, 1 degree">&minus;</button><output id="lpGybe">145°</output><button type="button" data-ls="gybe" data-d="1" aria-label="Gybe deeper, 1 degree">+</button></span></span>
+					</div>
+				</div>
+				<div class="lp-pane" data-lp="polar" hidden>
+					<div class="lp-row"><span class="lp-lbl">Offset</span><span class="lp-step"><button type="button" data-ls="off" data-d="-1" aria-label="Offset down, 1 degree">&minus;</button><output id="lpOff">+0°</output><button type="button" data-ls="off" data-d="1" aria-label="Offset up, 1 degree">+</button></span>
+						<span class="lp-note">+2° if you point 2° lower (and gybe 2° higher) than your polars.</span></div>
+				</div>
+				<div class="lp-pane" data-lp="tacks" hidden>
+					<div class="lp-row"><span class="lp-note" id="lpMeas"></span><button type="button" class="lp-sec" id="lpReset">Clear measurements</button></div>
+					<span class="lp-note">With My location on, each clean tack or gybe is measured from your course over ground: half the change in course. The last three are averaged.</span>
+				</div>
+				<p class="lp-now" id="lpNow"></p>
+				<p class="lp-note">Angles are true wind angles. Close-hauled at 45° true is roughly 30&ndash;35° apparent on your instruments.</p>
+			</div>
 			<label><input type="checkbox" id="tgFleet"> Other boats</label>
 			<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
 			<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 			<label><input type="checkbox" id="tgRace"> Race</label>
-			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race, at the tack angle you pick &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -746,6 +798,7 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	var hd=(devHd!=null)?devHd:dCrs;
 	if(hd!=null)myHeading=hd; /* direction of travel; keep the last good one when stopped */
 	mySpeedKt=(devSpd!=null)?devSpd:dSpd; /* knots — device value, or computed from the track */
+	try{if(hd!=null)detectTack(hd,mySpeedKt,lat,lon);}catch(e){}
 	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
@@ -785,7 +838,7 @@ function drawVector(layer,lat,lon,sog,cog,col){
 /* ---------- laylines ----------
    Through a mark, the two lines you could sail straight to it on: close-hauled
    on starboard (green) and port (red) for a mark upwind, or on each gybe for a
-   mark downwind, using the tack angle (RACE_TACK, set in the Laylines menu) and
+   mark downwind, using the angles from layAng() (Layline angles panel) and
    the forecast wind at the mark. Drawn for the waypoint you're sailing to (with
    My location on), otherwise for every upwind or downwind leg of the route and
    of a plotted race course. */
@@ -796,11 +849,11 @@ function layWind(lat,lon,live){var w=live?modelWind(lat,lon,Date.now()):null;if(
 /* geometry for a mark M approached from F: {up, stbd:{brg,heading}, port:{..}, twa} */
 function layGeom(F,M,live){
 	var w=layWind(M[0],M[1],live);if(!w)return null;
-	var crs=brgTrue(F[0],F[1],M[0],M[1]),tw=twaFrom(w.twd,crs,w.tws),A=RACE_TACK,up=tw.twa<90;
+	var crs=brgTrue(F[0],F[1],M[0],M[1]),tw=twaFrom(w.twd,crs,w.tws),LA=layAng(w.tws),up=tw.twa<90,A=up?LA.up:LA.dn;
 	var sH=up?w.twd-A:w.twd+180+A,pH=up?w.twd+A:w.twd+180-A;   /* close-hauled / gybing headings on each tack */
 	function n(x){return ((x%360)+360)%360;}
 	return {up:up,twa:tw.twa,twd:w.twd,stbd:{heading:n(sH),back:n(sH+180)},port:{heading:n(pH),back:n(pH+180)},
-		lays:up?tw.twa>=A-2:tw.twa<=182-A,  /* can sail straight there without tacking/gybing */
+		lays:up?tw.twa>=A-2:tw.twa<=182-A,up_a:LA.up,dn_a:LA.dn,  /* can sail straight there without tacking/gybing */
 		d:distNM(F[0],F[1],M[0],M[1])};
 }
 function drawLayFor(F,M,live,force){
@@ -820,7 +873,7 @@ function drawLaylines(){
 }
 /* true wind angle on a leg a→b, from the forecast wind at the leg's midpoint at
    the slider's hour: {twa 0..180, side 'stbd'|'port'|'', pos point of sail} */
-function pointOfSail(t){return t<45?'beat':t<60?'close-hauled':t<80?'close reach':t<110?'beam reach':t<150?'broad reach':t<165?'run':'dead run';}
+function pointOfSail(t,kt){var u=45;try{if(LAY)u=layAng(kt).up;}catch(e){}return t<u?'beat':t<60?'close-hauled':t<80?'close reach':t<110?'beam reach':t<150?'broad reach':t<165?'run':'dead run';}
 function legTWA(a,b){
 	var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2],r=null;
 	try{r=readPoint(mid[0],mid[1],curTi);}catch(e){}
@@ -828,7 +881,7 @@ function legTWA(a,b){
 	return twaFrom(r.dir,brgTrue(a[0],a[1],b[0],b[1]),r.kt);
 }
 function twaFrom(twd,crs,kt){var rel=((twd-crs+540)%360)-180,t=Math.abs(rel);
-	return {twa:t,side:(t<2||t>178)?'':(rel>=0?'stbd':'port'),pos:pointOfSail(t),kt:kt};}
+	return {twa:t,side:(t<2||t>178)?'':(rel>=0?'stbd':'port'),pos:pointOfSail(t,kt),kt:kt};}
 function twaText(o){return o?('TWA '+Math.round(o.twa)+'°'+(o.side?' '+o.side:'')+' &middot; '+o.pos):'';}
 function locFail(msg){
 	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
@@ -1665,8 +1718,84 @@ function makeLegDraggable(m,i,mid){
 	}
 	wrap.addEventListener('pointerup',end);wrap.addEventListener('pointercancel',end);
 }
-var RACE_TACK=45;   /* assumed best upwind/downwind angle off the wind (deg) — a
-                       typical close-hauled / deep-run angle; tune per fleet. */
+/* ---------- layline angles ----------
+   How close the boat points (upwind, degrees off the true wind) and how deep it
+   runs (the true wind angle it gybes at), from one of three methods the user
+   picks in the Layline angles panel:
+     type   boat type preset, fine-tuned ±1° (default Racer-cruiser 45° / 145°)
+     polar  best-VMG angles from the racer's selected polars at the wind speed
+            (race-tools.js sets OYCWM.polarAngles), plus an offset
+     tacks  measured from the user's own tacks/gybes (half the change in COG)
+   polar/tacks fall back to the boat type when they have nothing to go on.
+   layAng(tws) -> {up, dn (off dead downwind), gybe (TWA), src}. */
+var LAY_TYPES=[{k:'cruiser',n:'Cruiser',up:50,gybe:140},{k:'rc',n:'Racer-cruiser',up:45,gybe:145},{k:'perf',n:'Performance',up:42,gybe:150},{k:'sport',n:'Sport boat',up:40,gybe:155}];
+var LAY={mode:'type',type:'rc',up:45,gybe:145,off:0,tk:[],gy:[]};
+(function(){try{var j=JSON.parse(localStorage.getItem('oyc_lay')||'null');if(j&&typeof j==='object'){for(var k in LAY)if(j[k]!=null)LAY[k]=j[k];}
+	else{var o=+localStorage.getItem('oyc_lay_tack');if(o>=30&&o<=60)LAY.up=o;}}catch(e){}})();
+function laySave(){try{localStorage.setItem('oyc_lay',JSON.stringify(LAY));}catch(e){}}
+function layMed(a){a=(a||[]).slice(-3).slice().sort(function(x,y){return x-y;});return a.length?a[Math.floor(a.length/2)]:null;}
+function layPolarFn(){return (window.OYCWM&&typeof OYCWM.polarAngles==='function')?OYCWM.polarAngles:null;}
+function layAng(tws){
+	var up=LAY.up,gybe=LAY.gybe,src='boat type';
+	if(LAY.mode==='polar'){var f=layPolarFn(),pa=f?f(tws!=null?tws:10):null;
+		if(pa&&pa.up&&pa.gybe){up=pa.up+LAY.off;gybe=pa.gybe-LAY.off;src='polars';}else src='boat type (no polars chosen)';}
+	else if(LAY.mode==='tacks'){var mu=layMed(LAY.tk),md=layMed(LAY.gy);
+		if(mu!=null)up=mu;if(md!=null)gybe=180-md;
+		src=(mu!=null||md!=null)?'your tacks'+(mu==null||md==null?' + boat type':''):'boat type (no tacks measured yet)';}
+	up=Math.max(25,Math.min(65,up));gybe=Math.max(110,Math.min(180,gybe));
+	return {up:up,dn:180-gybe,gybe:gybe,src:src};
+}
+/* tack/gybe detector: a steady course, then a steady course 50–150° away ~1 min
+   later (the 30 s COG window smooths the turn), while moving at 1.5 kt or more */
+var cogHist=[],lastTackT=0;
+function cmean(a){var x=0,y=0;a.forEach(function(e){x+=Math.sin(e.c*Math.PI/180);y+=Math.cos(e.c*Math.PI/180);});var r=Math.sqrt(x*x+y*y)/a.length;return {m:((Math.atan2(x,y)*180/Math.PI)+360)%360,steady:r>0.99};}
+function detectTack(cog,sog,lat,lon){
+	var t=Date.now();if(cog==null||sog==null||sog<1.5){return;}
+	cogHist.push({t:t,c:cog});while(cogHist.length&&t-cogHist[0].t>100000)cogHist.shift();
+	if(t-lastTackT<60000)return;
+	var bef=cogHist.filter(function(e){return t-e.t>=65000&&t-e.t<=95000;}),aft=cogHist.filter(function(e){return t-e.t<=15000;});
+	if(bef.length<4||aft.length<4)return;
+	var B=cmean(bef),A=cmean(aft);if(!B.steady||!A.steady)return;
+	var diff=Math.abs(((A.m-B.m+540)%360)-180);if(diff<50||diff>150)return;
+	var w=modelWind(lat,lon,t);if(!w)return;
+	var twaB=twaFrom(w.twd,B.m,w.tws).twa,half=Math.round(diff/2*2)/2;
+	if(twaB<90){if(half<25||half>65)return;LAY.tk.push(half);LAY.tk=LAY.tk.slice(-5);}
+	else{if(half>60)return;LAY.gy.push(half);LAY.gy=LAY.gy.slice(-5);}
+	lastTackT=t;laySave();layUI();if(LAY.mode==='tacks'){drawLaylines();replotRace();}
+}
+function layUI(){
+	var b=document.getElementById('layBtn');if(!b)return;
+	var w=(typeof map!=='undefined')?(function(){try{var c=map.getCenter();return modelWind(c.lat,c.lng,Date.now());}catch(e){return null;}})():null;
+	var A=layAng(w?w.tws:null);
+	b.textContent=Math.round(A.up)+'°';b.title='Layline angles: upwind '+Math.round(A.up)+'°, gybe at '+Math.round(A.gybe)+'° ('+A.src+')';
+	document.querySelectorAll('#layPop [data-lm]').forEach(function(x){var on=x.getAttribute('data-lm')===LAY.mode;x.setAttribute('aria-pressed',on?'true':'false');});
+	document.querySelectorAll('#layPop [data-lp]').forEach(function(x){x.hidden=x.getAttribute('data-lp')!==LAY.mode;});
+	document.querySelectorAll('#lpTypes button').forEach(function(x){x.setAttribute('aria-pressed',x.getAttribute('data-k')===LAY.type?'true':'false');});
+	document.getElementById('lpUp').textContent=LAY.up+'°';document.getElementById('lpGybe').textContent=LAY.gybe+'°';
+	document.getElementById('lpOff').textContent=(LAY.off>=0?'+':'')+LAY.off+'°';
+	var mu=layMed(LAY.tk),md=layMed(LAY.gy);
+	document.getElementById('lpMeas').textContent=(mu!=null?'Upwind '+mu+'° from '+Math.min(3,LAY.tk.length)+' tack'+(LAY.tk.length>1?'s':''):'No tacks measured yet')+' · '+(md!=null?'gybe at '+(180-md)+'° from '+Math.min(3,LAY.gy.length)+' gybe'+(LAY.gy.length>1?'s':''):'no gybes yet');
+	document.getElementById('lpNow').textContent='Using '+A.src+': upwind '+Math.round(A.up)+'°, gybe at '+Math.round(A.gybe)+'°'+(LAY.mode==='polar'&&A.src==='polars'&&w?' at '+Math.round(w.tws)+' kt':'');
+}
+function layChanged(){laySave();layUI();drawLaylines();replotRace();updateBoatInfo();}
+function layInit(){
+	var b=document.getElementById('layBtn'),P=document.getElementById('layPop');if(!b||!P)return;
+	document.getElementById('lpTypes').innerHTML=LAY_TYPES.map(function(t){return '<button type="button" data-k="'+t.k+'" aria-pressed="false">'+t.n+' '+t.up+'°</button>';}).join('');
+	function open(on){P.hidden=!on;b.setAttribute('aria-expanded',on?'true':'false');if(on)layUI();}
+	b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();open(P.hidden);});
+	document.getElementById('lpClose').addEventListener('click',function(){open(false);});
+	P.addEventListener('click',function(e){e.stopPropagation();});
+	P.querySelectorAll('[data-lm]').forEach(function(x){x.addEventListener('click',function(){LAY.mode=x.getAttribute('data-lm');layChanged();});});
+	P.querySelectorAll('#lpTypes button').forEach(function(x){x.addEventListener('click',function(){var t=LAY_TYPES.filter(function(y){return y.k===x.getAttribute('data-k');})[0];if(!t)return;LAY.type=t.k;LAY.up=t.up;LAY.gybe=t.gybe;layChanged();});});
+	P.querySelectorAll('[data-ls]').forEach(function(x){var t1,t2,k=x.getAttribute('data-ls'),d=+x.getAttribute('data-d');
+		function step(){if(k==='up')LAY.up=Math.max(30,Math.min(60,LAY.up+d));else if(k==='gybe')LAY.gybe=Math.max(120,Math.min(180,LAY.gybe+d));else LAY.off=Math.max(-8,Math.min(8,LAY.off+d));layChanged();}
+		function stop(){clearTimeout(t1);clearInterval(t2);}
+		x.addEventListener('pointerdown',function(e){e.preventDefault();step();t1=setTimeout(function(){t2=setInterval(step,110);},400);});
+		['pointerup','pointerleave','pointercancel'].forEach(function(ev){x.addEventListener(ev,stop);});
+		x.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();step();}});});
+	document.getElementById('lpReset').addEventListener('click',function(){LAY.tk=[];LAY.gy=[];layChanged();});
+	layUI();
+}
 function pad3(n){n=((Math.round(n)%360)+360)%360;return (n<10?'00':n<100?'0':'')+n;}
 /* Nearest NOAA tidal-current station's set (true — the way it flows TO) and drift
    (kt) at the given epoch, or null (data not loaded, or no prediction within 3 h).
@@ -1692,14 +1821,14 @@ function legLabelHTML(a,b,d,mid){
 	var l1='<b>'+magBrg(a[0],a[1],b[0],b[1])+'°M &middot; '+d.toFixed(1)+' nm',l2='',l3='';
 	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
 	if(r&&r.dir!=null){
-		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
-		if(twa<RACE_TACK){            /* can't lay the rhumb line — beat */
-			l1+=' &middot; beat '+(d*Math.cos(twa*RAD)/Math.cos(RACE_TACK*RAD)).toFixed(1);
-			l2='<i>TWA '+Math.round(twa)+'° &middot; tacks '+pad3(r.dir+RACE_TACK+MAGVAR)+'/'+pad3(r.dir-RACE_TACK+MAGVAR)+'°M</i>';
-		}else if(twa>180-RACE_TACK){  /* dead run — gybe downwind */
+		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P'),LA=layAng(r.kt);
+		if(twa<LA.up){            /* can't lay the rhumb line — beat */
+			l1+=' &middot; beat '+(d*Math.cos(twa*RAD)/Math.cos(LA.up*RAD)).toFixed(1);
+			l2='<i>TWA '+Math.round(twa)+'° &middot; tacks '+pad3(r.dir+LA.up+MAGVAR)+'/'+pad3(r.dir-LA.up+MAGVAR)+'°M</i>';
+		}else if(twa>180-LA.dn){  /* dead run — gybe downwind */
 			var dw=r.dir+180;
-			l1+=' &middot; run '+(d*Math.cos((180-twa)*RAD)/Math.cos(RACE_TACK*RAD)).toFixed(1);
-			l2='<i>TWA '+Math.round(twa)+'° &middot; gybes '+pad3(dw+RACE_TACK+MAGVAR)+'/'+pad3(dw-RACE_TACK+MAGVAR)+'°M</i>';
+			l1+=' &middot; run '+(d*Math.cos((180-twa)*RAD)/Math.cos(LA.dn*RAD)).toFixed(1);
+			l2='<i>TWA '+Math.round(twa)+'° &middot; gybes '+pad3(dw+LA.dn+MAGVAR)+'/'+pad3(dw-LA.dn+MAGVAR)+'°M</i>';
 		}else{
 			var pos=twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad';
 			l2='<i>TWA '+Math.round(twa)+'°'+side+' &middot; '+pos+'</i>';
@@ -1740,7 +1869,7 @@ function raceLegLine(a,b){
 	var r=(typeof readPoint==='function')?readPoint(mid[0],mid[1],curTi):null;
 	if(r&&r.dir!=null){
 		var rel=((r.dir-course+540)%360)-180,twa=Math.abs(rel),side=(twa<2||twa>178)?'':(rel>=0?'S':'P');
-		var pos=twa<RACE_TACK?'beat':(twa>180-RACE_TACK?'run':(twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad'));
+		var LA=layAng(r.kt),pos=twa<LA.up?'beat':(twa>180-LA.dn?'run':(twa<55?'close-hauled':twa<80?'reach':twa<110?'beam':'broad'));
 		s+=' &middot; TWA '+Math.round(twa)+'°'+side+' '+pos;
 	}
 	return s;
@@ -2984,10 +3113,8 @@ function setAis(on){
 }
 (function(){
 	var t=document.getElementById('tgAis');if(t)t.addEventListener('change',function(){setAis(this.checked);});
-	var ly=document.getElementById('tgLay'),lt=document.getElementById('layTack');
-	if(lt){var sv=lsGet('oyc_lay_tack');if(sv&&lt.querySelector('option[value="'+sv+'"]'))lt.value=sv;RACE_TACK=+lt.value||45;
-		lt.addEventListener('click',function(e){e.stopPropagation();});
-		lt.addEventListener('change',function(){RACE_TACK=+this.value||45;lsSet('oyc_lay_tack',this.value);drawLaylines();replotRace();updateBoatInfo();});}
+	var ly=document.getElementById('tgLay');
+	layInit();
 	if(ly){ly.addEventListener('change',function(){lsSet('oyc_lay_view',this.checked?'1':null);if(this.checked)layLayer.addTo(map);else map.removeLayer(layLayer);drawLaylines();updateBoatInfo();});
 		if(lsGet('oyc_lay_view')==='1'){ly.checked=true;layLayer.addTo(map);drawLaylines();}}
 	map.on('zoomend',aisZoomCls);map.on('moveend',aisViewNote);
@@ -3000,6 +3127,9 @@ function setAis(on){
    live boat state, model wind at any point/time, and the Leaflet map. */
 window.OYCWM={
 	map:map,
+	/* race-tools.js sets polarAngles(tws)->{up,gybe} for the chosen polars, then calls this */
+	polarAngles:null,
+	layRefresh:function(){layUI();if(LAY.mode==='polar'){drawLaylines();replotRace();updateBoatInfo();}},
 	magvar:MAGVAR,
 	boat:function(){return myLoc?{lat:myLoc.lat,lon:myLoc.lon,sog:mySpeedKt,cog:myHeading}:null;},
 	/* model wind (kt, direction FROM °T) at lat/lon for epoch ms, interpolated
