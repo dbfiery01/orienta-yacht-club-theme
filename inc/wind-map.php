@@ -389,6 +389,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .route-btns .rb-tog[aria-pressed="true"]{background:#1a73e8;border-color:#1a73e8;color:#fff}
 /* other boats sharing their position (light map tiles in both themes) */
 #oycwm .fl-mk{background:none;border:none}
+#oycwm .lay-lbl{background:none;border:none;pointer-events:none}
+#oycwm .lay-lbl b{position:absolute;transform:translate(-50%,-50%);font-size:9.5px;font-weight:800;background:rgba(255,255,255,.88);border-radius:4px;padding:0 4px;white-space:nowrap}
 #oycwm .fl-ic{position:relative;transform:translate(-50%,-50%);width:26px;height:26px}
 #oycwm .fl-ic svg{position:relative;z-index:1;display:block;overflow:visible;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff)}
 #oycwm .fl-lbl{position:absolute;left:20px;top:20px;font-size:10.5px;font-weight:800;color:#7a3000;background:rgba(255,255,255,.9);border-radius:5px;padding:1px 6px;white-space:nowrap;line-height:1.25;box-shadow:0 0 0 1px rgba(11,42,74,.14)}
@@ -529,11 +531,12 @@ function oyc_wind_map_html( $embed = false ) {
 			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
 			<label><input type="checkbox" id="tgLoc"> My location</label>
 			<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
+			<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <select id="layTack" aria-label="Tack angle off the wind"><option value="40">40°</option><option value="45" selected>45°</option><option value="50">50°</option></select></label>
 			<label><input type="checkbox" id="tgFleet"> Other boats</label>
 			<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
 			<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 			<label><input type="checkbox" id="tgRace"> Race</label>
-			<span class="hint">AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race, at the tack angle you pick &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -710,7 +713,7 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	var y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
-var myLoc=null, myHeading=null, mySpeedKt=null, prevFix=null, locLayer=null, locWatch=null, locFirst=false;
+var myTrack=[], myLoc=null, myHeading=null, mySpeedKt=null, prevFix=null, locLayer=null, locWatch=null, locFirst=false;
 var headsUp=false, mapwrapEl=null;
 function mwEl(){if(!mapwrapEl)mapwrapEl=document.querySelector('#oycwm .mapwrap');return mapwrapEl;}
 function applyHdg(){mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
@@ -726,14 +729,23 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	   fix for phones that report null speed (many Androids; iOS when stationary).
 	   Only count real movement — displacement must exceed the GPS accuracy, else
 	   it's just jitter and we read 0 kt. */
-	var nowT=Date.now(),dSpd=null,dCrs=null;
-	if(prevFix){var dt=(nowT-prevFix.t)/3600000,dnm=distNM(prevFix.lat,prevFix.lon,lat,lon);
-		if(dt>0&&dt<0.05){ if(dnm*1852>Math.max(acc||20,10)){dSpd=dnm/dt;dCrs=brgTrue(prevFix.lat,prevFix.lon,lat,lon);} else {dSpd=0;} }}
+	/* Course made good from the last ~30 s of fixes: the bearing from the oldest
+	   fix that is clearly further away than the GPS error. One-second deltas
+	   (the old method) are smaller than the error at sailing speeds, so the
+	   course froze on a stale value and the boat's line pointed the wrong way. */
+	var nowT=Date.now(),dSpd=null,dCrs=null,need=Math.max(acc||15,8)*1.5;
+	myTrack.push({lat:lat,lon:lon,t:nowT});
+	while(myTrack.length&&nowT-myTrack[0].t>30000)myTrack.shift();
+	for(var k=0;k<myTrack.length-1;k++){var f=myTrack[k],dm=distNM(f.lat,f.lon,lat,lon)*1852,dt=(nowT-f.t)/3600000;
+		if(dt>0&&dm>need){dSpd=(dm/1852)/dt;dCrs=brgTrue(f.lat,f.lon,lat,lon);break;}}
+	if(dSpd==null&&myTrack.length>1&&nowT-myTrack[0].t>8000)dSpd=0;   /* 8 s+ without real movement: stopped */
 	prevFix={lat:lat,lon:lon,t:nowT};
 	myLoc={lat:lat,lon:lon};
-	var hd=(heading!=null&&isFinite(heading)&&heading>=0)?heading:dCrs;
-	if(hd!=null)myHeading=hd; /* GPS heading when moving, else course made good; keep the last good one when stopped */
-	mySpeedKt=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:dSpd; /* knots — device value, or computed from position */
+	var devSpd=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:null,
+		devHd=(heading!=null&&isFinite(heading)&&heading>=0&&devSpd!=null&&devSpd>=0.5)?heading:null; /* the device's heading is its course over ground, valid only while moving */
+	var hd=(devHd!=null)?devHd:dCrs;
+	if(hd!=null)myHeading=hd; /* direction of travel; keep the last good one when stopped */
+	mySpeedKt=(devSpd!=null)?devSpd:dSpd; /* knots — device value, or computed from the track */
 	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
 	locLayer.clearLayers();
@@ -745,6 +757,7 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
 	advanceNextWp();
 	if(routeFromBoat&&pins.length){drawRouteLine();updateRouteBar();}
+	drawLaylines();
 	rerenderCallouts();updateBoatInfo();
 	if(typeof FLEET!=='undefined'&&FLEET&&FLEET.share)postFix(false); /* chart plotter: share this fix with other boats */
 	if(window.OYCWM&&OYCWM._fix)OYCWM._fix(); /* race tools (racers only) listen for each GPS fix */
@@ -758,11 +771,52 @@ function destPt(lat,lon,brg,d){var R=3440.065,k=Math.PI/180,a=d/R,p1=lat*k,l1=lo
 function vecMin(){var el=document.getElementById('vecMin');return el?(+el.value||0):10;}
 /* course vector: a line from the boat to where it will be in vecMin() minutes at
    its current SOG/COG, with a dot at the tip (only while it's moving) */
+/* ...and a thin dashed course line carrying on ahead in the direction of
+   travel, so the heading reads even when the boat is slow */
 function drawVector(layer,lat,lon,sog,cog,col){
-	var vm=vecMin();if(!vm||sog==null||sog<0.5||cog==null)return;
-	var e=destPt(lat,lon,cog,sog*vm/60);
-	L.polyline([[lat,lon],e],{color:col,weight:3,opacity:.85,interactive:false}).addTo(layer);
+	if(sog==null||sog<0.5||cog==null)return;
+	var vm=vecMin(),vd=vm?sog*vm/60:0,e=vd?destPt(lat,lon,cog,vd):[lat,lon];
+	var ext=destPt(lat,lon,cog,Math.max(vd*2,1.5));
+	L.polyline([e,ext],{color:col,weight:1.5,opacity:.6,dashArray:'4 5',interactive:false}).addTo(layer);
+	if(!vd)return;
+	L.polyline([[lat,lon],e],{color:col,weight:3,opacity:.9,interactive:false}).addTo(layer);
 	L.circleMarker(e,{radius:3.5,color:'#fff',weight:1.5,fillColor:col,fillOpacity:1,interactive:false}).addTo(layer);
+}
+/* ---------- laylines ----------
+   Through a mark, the two lines you could sail straight to it on: close-hauled
+   on starboard (green) and port (red) for a mark upwind, or on each gybe for a
+   mark downwind, using the tack angle (RACE_TACK, set in the Laylines menu) and
+   the forecast wind at the mark. Drawn for the waypoint you're sailing to (with
+   My location on), otherwise for every upwind or downwind leg of the route and
+   of a plotted race course. */
+var layLayer=L.layerGroup(),racePts=[];
+function layOn(){var t=document.getElementById('tgLay');return !!(t&&t.checked);}
+function layWind(lat,lon,live){var w=live?modelWind(lat,lon,Date.now()):null;if(w)return {twd:w.twd,tws:w.tws};
+	var r=null;try{r=readPoint(lat,lon,curTi);}catch(e){}return (r&&r.dir!=null)?{twd:r.dir,tws:r.kt}:null;}
+/* geometry for a mark M approached from F: {up, stbd:{brg,heading}, port:{..}, twa} */
+function layGeom(F,M,live){
+	var w=layWind(M[0],M[1],live);if(!w)return null;
+	var crs=brgTrue(F[0],F[1],M[0],M[1]),tw=twaFrom(w.twd,crs,w.tws),A=RACE_TACK,up=tw.twa<90;
+	var sH=up?w.twd-A:w.twd+180+A,pH=up?w.twd+A:w.twd+180-A;   /* close-hauled / gybing headings on each tack */
+	function n(x){return ((x%360)+360)%360;}
+	return {up:up,twa:tw.twa,twd:w.twd,stbd:{heading:n(sH),back:n(sH+180)},port:{heading:n(pH),back:n(pH+180)},
+		lays:up?tw.twa>=A-2:tw.twa<=182-A,  /* can sail straight there without tacking/gybing */
+		d:distNM(F[0],F[1],M[0],M[1])};
+}
+function drawLayFor(F,M,live,force){
+	var g=layGeom(F,M,live);if(!g)return;
+	if(!force&&g.lays)return;   /* planning view: only legs you can't sail straight */
+	var len=Math.min(Math.max(g.d*1.15,0.4),6);
+	[['stbd','#1e8e3e'],['port','#c0392b']].forEach(function(sc){var o=g[sc[0]],end=destPt(M[0],M[1],o.back,len);
+		L.polyline([M,end],{color:sc[1],weight:2,opacity:.85,dashArray:'8 6',interactive:false}).addTo(layLayer);
+		L.marker(end,{icon:L.divIcon({className:'lay-lbl',html:'<b style="color:'+sc[1]+'">'+(sc[0]==='stbd'?'Stbd':'Port')+' '+pad3(o.heading+MAGVAR)+'°M</b>',iconSize:[0,0]}),interactive:false,keyboard:false,zIndexOffset:390}).addTo(layLayer);});
+}
+function drawLaylines(){
+	layLayer.clearLayers();if(!layOn())return;
+	if(myLoc&&pins.length&&pins[nextWp]){drawLayFor([myLoc.lat,myLoc.lon],[pins[nextWp].lat,pins[nextWp].lon],true,true);return;}
+	var pts=routePts();for(var i=1;i<pts.length;i++)drawLayFor(pts[i-1],pts[i],false,false);
+	var rc=document.getElementById('tgRace');
+	if(rc&&rc.checked)for(i=1;i<racePts.length;i++)drawLayFor(racePts[i-1],racePts[i],false,false);
 }
 /* true wind angle on a leg a→b, from the forecast wind at the leg's midpoint at
    the slider's hour: {twa 0..180, side 'stbd'|'port'|'', pos point of sail} */
@@ -796,7 +850,7 @@ function startLoc(){
 }
 function stopLoc(){
 	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
-	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;prevFix=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();
+	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;prevFix=null;myTrack=[];if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();
 	if(typeof FLEET!=='undefined'&&FLEET&&FLEET.share)stopShare();
 	if(routeFromBoat)setFromBoat(false);
 	rerenderCallouts();updateBoatInfo();
@@ -1214,6 +1268,7 @@ function drawRouteLine(){
 	if(routeLine&&routeLayer.hasLayer(routeLine)){routeLine.setLatLngs(pts);}
 	else{routeLayer.clearLayers();routeLine=L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);}
 	drawLegLabels();
+	drawLaylines();
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
@@ -1332,7 +1387,7 @@ function wireCardDrag(pin){
 	p.on('contentupdate',function(){requestAnimationFrame(function(){coLead(pin);});});
 }
 function removePin(pin){if(pin._gone)return;pin._gone=true;pin._dragging=false;try{if(pin.marker.dragging&&pin.marker.dragging.disable)pin.marker.dragging.disable();}catch(e){}map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
-function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();drawLegLabels();updateBoatInfo();}
+function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();drawLegLabels();drawLaylines();updateBoatInfo();}
 
 /* ---------- waypoint table: the pins' cards as rows beside the map ----------
    Each row shows the same reading as that pin's card (pinReading at the slider's
@@ -1718,7 +1773,9 @@ function updateBoatInfo(){
 		rows+='<div class="bi-row"><span class="bi-v">'+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span><span class="bi-k">TWA · '+tw.pos+' · '+Math.round(w.tws)+' kt</span></div>';}
 	/* and the leg to the next waypoint of your route */
 	if(pins.length&&pins[nextWp]){var np=pins[nextWp],nb=brgTrue(myLoc.lat,myLoc.lon,np.lat,np.lon),nt=w?twaFrom(w.twd,nb,w.tws):null;
-		rows+='<div class="bi-row"><span class="bi-v">'+pad3(nb+MAGVAR)+'°M</span><span class="bi-k">to Pt '+(nextWp+1)+' · '+distNM(myLoc.lat,myLoc.lon,np.lat,np.lon).toFixed(1)+' nm'+(nt?' · TWA '+Math.round(nt.twa)+'°'+(nt.side?' '+nt.side:''):'')+'</span></div>';}
+		rows+='<div class="bi-row"><span class="bi-v">'+pad3(nb+MAGVAR)+'°M</span><span class="bi-k">to Pt '+(nextWp+1)+' · '+distNM(myLoc.lat,myLoc.lon,np.lat,np.lon).toFixed(1)+' nm'+(nt?' · TWA '+Math.round(nt.twa)+'°'+(nt.side?' '+nt.side:''):'')+'</span></div>';
+		if(layOn()){var lg=layGeom([myLoc.lat,myLoc.lon],[np.lat,np.lon],true);
+			if(lg)rows+='<div class="bi-row"><span class="bi-v">'+(lg.lays?'Laying':(lg.up?'Beat':'Gybe'))+'</span><span class="bi-k">'+(lg.lays?'you can sail straight to Pt '+(nextWp+1):'tack on the laylines · stbd '+pad3(lg.stbd.heading+MAGVAR)+'° / port '+pad3(lg.port.heading+MAGVAR)+'°M')+'</span></div>';}}
 	el.innerHTML='<div class="rs-h"><span class="bi-title">'+(moving?'Underway':'My boat')+'</span>'+cardMinBtn(boatMin)+'</div><div class="rs-body">'+rows+'</div>';
 	el.classList.toggle('min',boatMin);el.classList.add('on');
 	layoutLeftStack();
@@ -1760,6 +1817,7 @@ function plotCourse(str){
 	var seq=(raceStr||'').toUpperCase().replace(/[^A-J]/g,'').split(''),pts=[],bad=[];
 	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};rsMin={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels + collapse state */
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
+	racePts=pts;if(typeof drawLaylines==='function')drawLaylines();
 	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';renderRaceSheet();return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
 	/* pull the tidal-current predictions so legs can show set/drift even when the
@@ -2888,7 +2946,7 @@ function drawAis(){
 	AIS.layer.clearLayers();if(!aisOn())return;
 	var vm=vecMin();
 	AIS.list.forEach(function(v){
-		var col=aisColor(v.tc),dir=(v.hdg!=null)?v.hdg:v.cog,stale=v.age>600;
+		var col=aisColor(v.tc),stale=v.age>600,dir=(v.cog!=null&&v.sog!=null&&v.sog>=1)?v.cog:((v.hdg!=null)?v.hdg:v.cog);  /* point along the direction of travel, like its vector */
 		var shape=dir!=null?'<path d="M0,-9 L5.5,7 L0,4 L-5.5,7 Z" fill="'+col+'" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>':'<circle r="4.5" fill="'+col+'" stroke="#fff" stroke-width="1.3"/>';
 		var svg='<svg width="18" height="18" viewBox="-10 -10 20 20" style="opacity:'+(stale?.55:1)+';transform:rotate('+(dir||0)+'deg)">'+shape+'</svg>';
 		var nm=v.n||('MMSI '+v.m);
@@ -2926,6 +2984,12 @@ function setAis(on){
 }
 (function(){
 	var t=document.getElementById('tgAis');if(t)t.addEventListener('change',function(){setAis(this.checked);});
+	var ly=document.getElementById('tgLay'),lt=document.getElementById('layTack');
+	if(lt){var sv=lsGet('oyc_lay_tack');if(sv&&lt.querySelector('option[value="'+sv+'"]'))lt.value=sv;RACE_TACK=+lt.value||45;
+		lt.addEventListener('click',function(e){e.stopPropagation();});
+		lt.addEventListener('change',function(){RACE_TACK=+this.value||45;lsSet('oyc_lay_tack',this.value);drawLaylines();replotRace();updateBoatInfo();});}
+	if(ly){ly.addEventListener('change',function(){lsSet('oyc_lay_view',this.checked?'1':null);if(this.checked)layLayer.addTo(map);else map.removeLayer(layLayer);drawLaylines();updateBoatInfo();});
+		if(lsGet('oyc_lay_view')==='1'){ly.checked=true;layLayer.addTo(map);drawLaylines();}}
 	map.on('zoomend',aisZoomCls);map.on('moveend',aisViewNote);
 	var v=document.getElementById('vecMin');if(v)v.addEventListener('change',drawAis);
 	if(lsGet('oyc_ais_view')==='1')setAis(true);
