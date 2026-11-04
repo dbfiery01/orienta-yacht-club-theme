@@ -137,6 +137,20 @@ function oyc_wind_map_html( $embed = false ) {
 /* ---- Race course builder ---- */
 #oycwm .racebar{position:absolute;z-index:596;left:10px;top:10px;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:calc(100% - 20px);background:rgba(11,42,74,.92);color:#fff;padding:7px 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
 #oycwm .racebar.on{display:flex}
+/* race wind dial: arrow the way the wind blows, speed + direction, at the course (or map centre) for the slider hour */
+#oycwm .winddial{position:absolute;z-index:596;right:8px;bottom:96px;width:84px;display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none}
+#oycwm .winddial[hidden]{display:none}
+#oycwm .winddial svg{width:66px;height:66px;display:block;filter:drop-shadow(0 2px 6px rgba(11,42,74,.28))}
+#oycwm .winddial .wd-face{fill:rgba(255,255,255,.94);stroke:rgba(11,42,74,.18)}
+#oycwm .winddial .wd-tick{stroke:rgba(11,42,74,.35)}
+#oycwm .winddial .wd-n{fill:#0b2a4a;font:700 9px system-ui,sans-serif}
+#oycwm .winddial .wd-arrow{stroke:#1a73e8;fill:#1a73e8}
+#oycwm .winddial .wd-txt{font-size:11px;font-weight:700;color:#0b2a4a;background:rgba(255,255,255,.9);border-radius:6px;padding:1px 6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+[data-theme="dark"] #oycwm .winddial .wd-face{fill:rgba(14,42,71,.94);stroke:rgba(245,239,226,.25)}
+[data-theme="dark"] #oycwm .winddial .wd-tick{stroke:rgba(245,239,226,.35)}
+[data-theme="dark"] #oycwm .winddial .wd-n{fill:#f0eadd}
+[data-theme="dark"] #oycwm .winddial .wd-arrow{stroke:#6fb1ec;fill:#6fb1ec}
+[data-theme="dark"] #oycwm .winddial .wd-txt{color:#f0eadd;background:rgba(14,42,71,.9)}
 #oycwm .racebar .rc-lab{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#bfe4f5}
 #oycwm .racebar input{width:116px;font:inherit;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:7px;background:#fff;color:#0b2a4a}
 #oycwm .racebar button{font:inherit;font-size:.74rem;font-weight:700;padding:6px 11px;border-radius:999px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer}
@@ -681,6 +695,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
 			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<div class="winddial" id="windDial" aria-live="polite" hidden></div>
 			<div class="racebar" id="raceBar">
 				<span class="rc-lab">Course</span>
 				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
@@ -1845,7 +1860,29 @@ function legLabelHTML(a,b,d,mid){
 }
 /* re-plot the active race course (e.g. when the time slider moves, so TWA tracks
    the forecast hour) */
-function replotRace(){var cb=document.getElementById('tgRace');if(cb&&cb.checked&&raceStr)plotCourse(raceStr);}
+function replotRace(){var cb=document.getElementById('tgRace');if(cb&&cb.checked&&raceStr)plotCourse(raceStr);drawWindDial();}
+/* Wind dial in the map corner while Race is on and Wind barbs are off: the
+   forecast wind at the plotted course's centre (else the map centre) for the
+   slider's hour. Arrow points the way the wind blows; the text is where it
+   blows FROM (°T, as forecasts give it). */
+function drawWindDial(){
+	var el=document.getElementById('windDial');if(!el)return;
+	var rc=document.getElementById('tgRace'),ba=document.getElementById('tgArrows');
+	if(!rc||!rc.checked||(ba&&ba.checked)||mode==='radar'){el.hidden=true;return;}
+	var la,lo;
+	if(racePts&&racePts.length){la=0;lo=0;racePts.forEach(function(q){la+=q[0];lo+=q[1];});la/=racePts.length;lo/=racePts.length;}
+	else{var c=map.getCenter();la=c.lat;lo=c.lng;}
+	var r=null;try{r=readPoint(la,lo,curTi);}catch(e){}
+	if(!r||r.dir==null||r.kt==null){el.hidden=true;return;}
+	var to=(r.dir+180)%360,tk='';
+	for(var a=0;a<360;a+=30)tk+='<line class="wd-tick" x1="0" y1="-29" x2="0" y2="'+(a%90?-26:-24)+'" stroke-width="1.2" transform="rotate('+a+')"/>';
+	el.innerHTML='<svg viewBox="-33 -33 66 66" aria-hidden="true"><circle class="wd-face" r="31" stroke-width="1"/>'+tk
+		+'<text class="wd-n" x="0" y="-15" text-anchor="middle">N</text>'
+		+'<g transform="rotate('+to.toFixed(0)+')"><line class="wd-arrow" x1="0" y1="17" x2="0" y2="-12" stroke-width="3.2" stroke-linecap="round"/><polygon class="wd-arrow" points="0,-20 -6.5,-9 6.5,-9"/></g></svg>'
+		+'<span class="wd-txt">'+Math.round(r.kt)+' kt '+pad3(r.dir)+'°T</span>';
+	el.title='Forecast wind '+Math.round(r.kt)+' kt from '+pad3(r.dir)+'°T ('+pad3(r.dir+MAGVAR)+'°M)'+(racePts&&racePts.length?' at the race course':' at the map centre');
+	el.hidden=false;
+}
 function drawRaceMarks(){
 	raceMarkLayer.clearLayers();
 	for(var k in MARKS){var m=MARKS[k];
@@ -1962,12 +1999,13 @@ function plotCourse(str){
 		makeLegDraggable(lm,i,mid);
 	}
 	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
-	renderRaceSheet();
+	renderRaceSheet();drawWindDial();
 }
 document.getElementById('tgRace').addEventListener('change',function(){
 	var bar=document.getElementById('raceBar');
 	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();replotRace();if(bar)bar.classList.add('on');}
 	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');renderRaceSheet();}
+	drawWindDial();
 });
 (function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
 	p.addEventListener('click',function(){plotCourse(inp.value);});
@@ -2619,7 +2657,7 @@ function loadChart(){var sel=document.getElementById('chartSel'),opt=sel.options
 	showFax(sel.value, (opt.text||'Chart').replace(/\s+/g,' ').trim()+' · NWS/OPC');}
 
 function setMode(m){
-	stop();mode=m;
+	stop();mode=m;setTimeout(drawWindDial,0);
 	[['wind','tabWind'],['radar','tabRadar'],['temp','tabTemp'],['precip','tabPrecip'],['wave','tabWave'],['sat','tabSat'],['charts','tabCharts']].forEach(function(x){var b=document.getElementById(x[1]);
 		if(b){b.classList.toggle('on',m===x[0]);b.setAttribute('aria-selected',m===x[0]);}});
 	document.getElementById('windLayers').style.display=m==='wind'?'flex':'none';
@@ -2777,7 +2815,7 @@ document.addEventListener('click',function(ev){
 document.getElementById('tgParticles').addEventListener('change',function(){if(mode!=='wind')return;setParticlesVisible(this.checked);});
 /* the "wind from" hint rides with the barbs — visible only while they're shown */
 function updateBarbHint(){var h=document.getElementById('barbHint');if(h)h.style.display=map.hasLayer(arrowsLayer)?'flex':'none';}
-document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);updateBarbHint();});
+document.getElementById('tgArrows').addEventListener('change',function(){if(this.checked){arrowsLayer.addTo(map);refreshOverlays();}else map.removeLayer(arrowsLayer);updateBarbHint();drawWindDial();});
 document.getElementById('tgIso').addEventListener('change',function(){isoTouched=true;if(this.checked){isoLayer.addTo(map);refreshOverlays();}else map.removeLayer(isoLayer);});
 document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
@@ -2834,7 +2872,7 @@ function drawGraticule(){
 	}
 	host.innerHTML=out;
 }
-map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();drawGraticule();drawLegLabels();});
+map.on('moveend',function(){if(mode==='radar'){if(document.getElementById('tgRadarWind').checked)drawBarbs();}else if(document.getElementById('tgArrows').checked)drawBarbs();drawGraticule();drawLegLabels();if(!racePts||!racePts.length)drawWindDial();});
 /* radar: switch between the local HRRR field and the national NEXRAD mosaic as
    the view zooms across the local-grid boundary (resets the slider to 'now') */
 map.on('zoomend',function(){
