@@ -598,7 +598,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
 			<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 			<label><input type="checkbox" id="tgRace"> Race</label>
-			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
 		</div>
 		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -875,11 +875,26 @@ function drawLayFor(F,M,live,force){
 		L.marker(end,{icon:L.divIcon({className:'lay-lbl',html:'<b style="color:'+sc[1]+'">'+(sc[0]==='stbd'?'Stbd':'Port')+' '+pad3(o.heading+MAGVAR)+'°M</b>',iconSize:[0,0]}),interactive:false,keyboard:false,zIndexOffset:390}).addTo(layLayer);});
 }
 function drawLaylines(){
-	layLayer.clearLayers();if(!layOn())return;
-	if(myLoc&&pins.length&&pins[nextWp]){drawLayFor([myLoc.lat,myLoc.lon],[pins[nextWp].lat,pins[nextWp].lon],true,true);return;}
-	var pts=routePts();for(var i=1;i<pts.length;i++)drawLayFor(pts[i-1],pts[i],false,false);
-	var rc=document.getElementById('tgRace');
-	if(rc&&rc.checked)for(i=1;i<racePts.length;i++)drawLayFor(racePts[i-1],racePts[i],false,false);
+	layLayer.clearLayers();
+	var rc=document.getElementById('tgRace'),race=!!(rc&&rc.checked&&typeof MARKS!=='undefined');
+	if(!layOn()&&!race){if(map.hasLayer(layLayer))map.removeLayer(layLayer);return;}
+	if(!map.hasLayer(layLayer))layLayer.addTo(map);
+	if(layOn()){
+		if(myLoc&&pins.length&&pins[nextWp])drawLayFor([myLoc.lat,myLoc.lon],[pins[nextWp].lat,pins[nextWp].lon],true,true);
+		else{var pts=routePts();for(var i=1;i<pts.length;i++)drawLayFor(pts[i-1],pts[i],false,false);}
+	}
+	/* Race on: laylines at every race mark, from the forecast at the slider hour
+	   (they move as you scrub). With a course plotted, each mark gets the
+	   laylines for the leg that rounds it (upwind or downwind); without one,
+	   every mark gets its upwind (windward-mark) laylines. */
+	if(race){
+		if(racePts.length>=2){var seen={};
+			for(var j=1;j<racePts.length;j++){var g=layGeom(racePts[j-1],racePts[j],false);if(!g)continue;
+				var key=racePts[j][0].toFixed(5)+','+racePts[j][1].toFixed(5)+(g.up?'u':'d');if(seen[key])continue;seen[key]=1;
+				drawLayFor(racePts[j-1],racePts[j],false,true);}
+		}else for(var k in MARKS){var m=MARKS[k],w=layWind(m.lat,m.lon,false);if(!w)continue;
+			drawLayFor(destPt(m.lat,m.lon,(w.twd+180)%360,1),[m.lat,m.lon],false,true);}
+	}
 }
 /* true wind angle on a leg a→b, from the forecast wind at the leg's midpoint at
    the slider's hour: {twa 0..180, side 'stbd'|'port'|'', pos point of sail} */
@@ -1855,7 +1870,7 @@ function legLabelHTML(a,b,d,mid){
 }
 /* re-plot the active race course (e.g. when the time slider moves, so TWA tracks
    the forecast hour) */
-function replotRace(){var cb=document.getElementById('tgRace');if(cb&&cb.checked&&raceStr)plotCourse(raceStr);drawWindDial();}
+function replotRace(){var cb=document.getElementById('tgRace');if(cb&&cb.checked&&raceStr)plotCourse(raceStr);else drawLaylines();drawWindDial();}
 /* Wind dials at the race marks while Race is on and Wind barbs are off: the
    forecast wind at each mark for the slider's hour, drawn up and to the right
    of the mark. Arrow points the way the wind blows; the text is where it blows
@@ -2000,7 +2015,7 @@ document.getElementById('tgRace').addEventListener('change',function(){
 	var bar=document.getElementById('raceBar');
 	if(this.checked){raceMarkLayer.addTo(map);raceCourseLayer.addTo(map);drawRaceMarks();replotRace();if(bar)bar.classList.add('on');}
 	else{map.removeLayer(raceMarkLayer);raceMarkLayer.clearLayers();map.removeLayer(raceCourseLayer);raceCourseLayer.clearLayers();if(bar)bar.classList.remove('on');renderRaceSheet();}
-	drawWindDial();
+	drawLaylines();drawWindDial();
 });
 (function(){var p=document.getElementById('racePlot'),c=document.getElementById('raceClear'),inp=document.getElementById('raceCourse');if(!p)return;
 	p.addEventListener('click',function(){plotCourse(inp.value);});
@@ -3148,8 +3163,8 @@ function setAis(on){
 	var t=document.getElementById('tgAis');if(t)t.addEventListener('change',function(){setAis(this.checked);});
 	var ly=document.getElementById('tgLay');
 	layInit();
-	if(ly){ly.addEventListener('change',function(){lsSet('oyc_lay_view',this.checked?'1':null);if(this.checked)layLayer.addTo(map);else map.removeLayer(layLayer);drawLaylines();updateBoatInfo();});
-		if(lsGet('oyc_lay_view')==='1'){ly.checked=true;layLayer.addTo(map);drawLaylines();}}
+	if(ly){ly.addEventListener('change',function(){lsSet('oyc_lay_view',this.checked?'1':null);drawLaylines();updateBoatInfo();});
+		if(lsGet('oyc_lay_view')==='1'){ly.checked=true;drawLaylines();}}
 	map.on('zoomend',aisZoomCls);map.on('moveend',aisViewNote);
 	var v=document.getElementById('vecMin');if(v)v.addEventListener('change',drawAis);
 	if(lsGet('oyc_ais_view')==='1')setAis(true);
