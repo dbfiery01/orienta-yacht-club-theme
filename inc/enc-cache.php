@@ -41,7 +41,31 @@ define( 'OYC_ENC_HOME_ZOOMS', '10,11,12,13,14' );
    inc/wind-map.php. Bump OYC_ENC_VER whenever the tile request changes, so old
    cached tiles are thrown away. */
 define( 'OYC_ENC_HIRES_MAX', 12 );
-define( 'OYC_ENC_VER', 2 );
+define( 'OYC_ENC_VER', 3 );
+/* Chart display settings sent to NOAA (S-52 "mariner settings"; Esri Maritime
+   Chart Service display_params). Depths in feet, four depth shades, contours in
+   metres: under 2 m (~6 ft) darkest blue, 2-5 m (~6-16 ft) blue, 5-10 m
+   (~16-33 ft) pale blue, deeper than 10 m white, like a paper chart, so the
+   Sound reads as chart rather than the street map's flat blue. Values: 1 = off,
+   2 = on; DisplayDepthUnits 1 m, 2 ft. If NOAA rejects these, tiles are fetched
+   with its defaults instead (see oyc_enc_fetch). Must match the map's request
+   (inc/wind-map.php reads this constant). */
+define( 'OYC_ENC_DISPLAY', wp_json_encode( array(
+	'ECDISParameters' => array(
+		'version'           => '10.9.1',
+		'DynamicParameters' => array(
+			'Parameter' => array(
+				array( 'name' => 'DisplayDepthUnits', 'value' => 2 ),
+				array( 'name' => 'TwoDepthShades', 'value' => 1 ),
+				array( 'name' => 'ShallowContour', 'value' => 2 ),
+				array( 'name' => 'SafetyContour', 'value' => 5 ),
+				array( 'name' => 'SafetyDepth', 'value' => 5 ),
+				array( 'name' => 'DeepContour', 'value' => 10 ),
+				array( 'name' => 'TextHalo', 'value' => 2 ),
+			),
+		),
+	),
+) ) );
 
 function oyc_enc_dir() {
 	$u = wp_upload_dir();
@@ -68,7 +92,7 @@ function oyc_enc_in_box( $z, $x, $y, $box ) {
 
 /* The WMS GetMap URL for one tile, exactly as the map's EncWMS layer builds it
    (EPSG:3857, 2x pixels at zoom OYC_ENC_HIRES_MAX and below). */
-function oyc_enc_wms_url( $z, $x, $y ) {
+function oyc_enc_wms_url( $z, $x, $y, $display = true ) {
 	$o    = 20037508.342789244;
 	$size = 2 * $o / ( 1 << $z );
 	$bbox = array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size );
@@ -85,21 +109,48 @@ function oyc_enc_wms_url( $z, $x, $y ) {
 		'width'       => $px,
 		'height'      => $px,
 		'bbox'        => implode( ',', $bbox ),
-	), OYC_ENC_WMS );
+	) + ( $display ? array( 'display_params' => rawurlencode( OYC_ENC_DISPLAY ) ) : array() ), OYC_ENC_WMS );
 }
 
 function oyc_enc_file( $z, $x, $y ) {
 	return oyc_enc_dir() . "/$z/$x/$y.png";
 }
 
-/** Fetch one tile from NOAA and store it. Returns the PNG bytes, or ''. */
-function oyc_enc_fetch( $z, $x, $y ) {
-	$r = wp_remote_get( oyc_enc_wms_url( $z, $x, $y ), array( 'timeout' => 25 ) );
-	if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
+/** One GetMap request. Returns the PNG bytes, '' on a failure, or 'XML' when
+    NOAA answered but with an error document instead of a picture. */
+function oyc_enc_get( $url ) {
+	$r = wp_remote_get( $url, array( 'timeout' => 25 ) );
+	if ( is_wp_error( $r ) ) {
 		return '';
 	}
 	$png = wp_remote_retrieve_body( $r );
-	if ( strlen( $png ) < 60 || "\x89PNG" !== substr( $png, 0, 4 ) ) {   // NOAA sends XML on errors
+	if ( 200 === (int) wp_remote_retrieve_response_code( $r ) && strlen( $png ) >= 60 && "\x89PNG" === substr( $png, 0, 4 ) ) {
+		return $png;
+	}
+	return ( '' !== $png && '<' === substr( ltrim( $png ), 0, 1 ) ) ? 'XML' : '';
+}
+
+/* Which request the last oyc_enc_fetch used: 'display' (our chart settings)
+   or 'default' (NOAA's own, because it rejected ours). Sent as a header. */
+$GLOBALS['oyc_enc_variant'] = '';
+
+/** Fetch one tile from NOAA and store it. Returns the PNG bytes, or ''. */
+function oyc_enc_fetch( $z, $x, $y ) {
+	$png = '';
+	if ( ! get_transient( 'oyc_enc_display_bad' ) ) {
+		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, true ) );
+		$GLOBALS['oyc_enc_variant'] = 'display';
+		if ( 'XML' === $png ) {
+			/* NOAA refused our display settings: use its defaults for a day */
+			set_transient( 'oyc_enc_display_bad', 1, DAY_IN_SECONDS );
+			$png = '';
+		}
+	}
+	if ( '' === $png && get_transient( 'oyc_enc_display_bad' ) ) {
+		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, false ) );
+		$GLOBALS['oyc_enc_variant'] = 'default';
+	}
+	if ( '' === $png || 'XML' === $png ) {
 		return '';
 	}
 	$bytes = (int) get_option( 'oyc_enc_bytes', 0 );
@@ -153,7 +204,7 @@ function oyc_enc_tile() {
 		$png = oyc_enc_fetch( $z, $x, $y );
 	} else {
 		/* outside our waters: send the map straight to NOAA */
-		wp_redirect( oyc_enc_wms_url( $z, $x, $y ), 302 );
+		wp_redirect( oyc_enc_wms_url( $z, $x, $y, ! get_transient( 'oyc_enc_display_bad' ) ), 302 );
 		exit;
 	}
 	if ( '' === $png ) {
@@ -166,6 +217,7 @@ function oyc_enc_tile() {
 	header( 'Content-Length: ' . strlen( $png ) );
 	header( 'Cache-Control: public, max-age=604800' );
 	header( 'X-Robots-Tag: noindex' );
+	header( 'X-OYC-ENC: ' . ( $GLOBALS['oyc_enc_variant'] ? $GLOBALS['oyc_enc_variant'] : 'cache' ) . ( get_transient( 'oyc_enc_display_bad' ) ? '; display-refused' : '' ) );
 	echo $png; // phpcs:ignore WordPress.Security.EscapeOutput
 	exit;
 }
