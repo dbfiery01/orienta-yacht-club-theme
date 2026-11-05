@@ -41,7 +41,7 @@ define( 'OYC_ENC_HOME_ZOOMS', '10,11,12,13,14' );
    inc/wind-map.php. Bump OYC_ENC_VER whenever the tile request changes, so old
    cached tiles are thrown away. */
 define( 'OYC_ENC_HIRES_MAX', 12 );
-define( 'OYC_ENC_VER', 3 );
+define( 'OYC_ENC_VER', 4 );
 /* Chart display settings sent to NOAA (S-52 "mariner settings"; Esri Maritime
    Chart Service display_params). Depths in feet, four depth shades, contours in
    metres: under 2 m (~6 ft) darkest blue, 2-5 m (~6-16 ft) blue, 5-10 m
@@ -50,7 +50,8 @@ define( 'OYC_ENC_VER', 3 );
    2 = on; DisplayDepthUnits 1 m, 2 ft. If NOAA rejects these, tiles are fetched
    with its defaults instead (see oyc_enc_fetch). Must match the map's request
    (inc/wind-map.php reads this constant). */
-define( 'OYC_ENC_DISPLAY', wp_json_encode( array(
+define( 'OYC_ENC_USE_DISPLAY', false );   // off: v1.7.367 test showed these made deep water blue; tune with oyc_enc_probe first
+define( 'OYC_ENC_DISPLAY', ! OYC_ENC_USE_DISPLAY ? '' : wp_json_encode( array(
 	'ECDISParameters' => array(
 		'version'           => '10.9.1',
 		'DynamicParameters' => array(
@@ -109,7 +110,7 @@ function oyc_enc_wms_url( $z, $x, $y, $display = true ) {
 		'width'       => $px,
 		'height'      => $px,
 		'bbox'        => implode( ',', $bbox ),
-	) + ( $display ? array( 'display_params' => rawurlencode( OYC_ENC_DISPLAY ) ) : array() ), OYC_ENC_WMS );
+	) + ( $display && OYC_ENC_DISPLAY ? array( 'display_params' => rawurlencode( OYC_ENC_DISPLAY ) ) : array() ), OYC_ENC_WMS );
 }
 
 function oyc_enc_file( $z, $x, $y ) {
@@ -231,62 +232,61 @@ function oyc_enc_tile() {
 	exit;
 }
 
-/* admin-ajax oyc_enc_probe: a read-only check of NOAA's display settings, used
-   to tune OYC_ENC_DISPLAY (NOAA's chart server can't be reached from the
-   developer's sandbox, but the web server can). Returns JSON: NOAA's own list
-   of display parameters, and for one home-waters tile whether each candidate
-   form of display_params gives a picture or an error (with NOAA's message).
-   At most once a minute; results are cached for 10 minutes. */
+/* admin-ajax oyc_enc_probe: a read-only test bench for NOAA's chart display
+   settings, used to tune OYC_ENC_DISPLAY (NOAA's chart server can't be reached
+   from the developer's sandbox, but this web server can). Fetches one tile
+   (z, x, y inside OYC_ENC_AREA; default: open water off Execution Rock) twice,
+   with NOAA's defaults and with the settings in p ("Name:value,Name:value",
+   names from a fixed list, simple values only), and returns both pictures as
+   base64 with NOAA's answers. Changes nothing; results cached 10 minutes; a
+   new request at most every 10 seconds. */
 add_action( 'wp_ajax_oyc_enc_probe', 'oyc_enc_probe' );
 add_action( 'wp_ajax_nopriv_oyc_enc_probe', 'oyc_enc_probe' );
 function oyc_enc_probe() {
-	$out = get_transient( 'oyc_enc_probe2' );
+	$z = isset( $_GET['z'] ) ? (int) $_GET['z'] : 13;
+	$x = isset( $_GET['x'] ) ? (int) $_GET['x'] : 2418;
+	$y = isset( $_GET['y'] ) ? (int) $_GET['y'] : 3074;
+	if ( $z < 9 || $z > 16 || ! oyc_enc_in_box( $z, $x, $y, OYC_ENC_AREA ) ) {
+		wp_send_json( array( 'error' => 'tile outside the cached area' ), 400 );
+	}
+	$names  = array( 'DisplayDepthUnits', 'TwoDepthShades', 'ShallowContour', 'SafetyContour', 'SafetyDepth', 'DeepContour', 'TextHalo', 'DisplayCategory', 'HonorScamin', 'IntendedUsage', 'ColorScheme', 'AreaSymbolizationType', 'PointSymbolizationType', 'DisplaySafeSoundings', 'OptionalDeepSoundings', 'LabelContours', 'LabelSafetyContours', 'DisplayNOBJNM', 'RemoveDuplicateText', 'DisplayLightSectors', 'DisplayFrames', 'DataQuality', 'IsolatedDangers' );
+	$params = array();
+	$raw    = isset( $_GET['p'] ) ? sanitize_text_field( wp_unslash( $_GET['p'] ) ) : '';
+	foreach ( array_filter( explode( ',', $raw ) ) as $pair ) {
+		$kv = explode( ':', $pair, 2 );
+		if ( 2 === count( $kv ) && in_array( $kv[0], $names, true ) && preg_match( '/^[0-9.;]{1,20}$/', $kv[1] ) ) {
+			$v        = str_replace( ';', ',', $kv[1] );
+			$params[] = array( 'name' => $kv[0], 'value' => is_numeric( $v ) ? $v + 0 : $v );
+		}
+	}
+	$key = 'oyc_enc_pr_' . md5( $z . '/' . $x . '/' . $y . '|' . wp_json_encode( $params ) . '|' . ( isset( $_GET['v'] ) ? '1' : '' ) );
+	$out = get_transient( $key );
 	if ( ! $out ) {
 		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
-			wp_send_json( array( 'wait' => 'try again in a minute' ), 429 );
+			wp_send_json( array( 'wait' => 'try again in 10 seconds' ), 429 );
 		}
-		set_transient( 'oyc_enc_probe_lock', 1, MINUTE_IN_SECONDS );
-		$base = substr( OYC_ENC_WMS, 0, strrpos( OYC_ENC_WMS, '/' ) );   // …/exts/MaritimeChartService
-		$out  = array( 'refused' => get_transient( 'oyc_enc_dp_refused' ) );
-		foreach ( array( 'parameters', 'MapServer/parameters' ) as $path ) {
-			$r = wp_remote_get( $base . '/' . $path . '?f=json', array( 'timeout' => 20 ) );
-			$out[ 'params:' . $path ] = is_wp_error( $r ) ? $r->get_error_message()
-				: wp_remote_retrieve_response_code( $r ) . ' ' . mb_substr( wp_remote_retrieve_body( $r ), 0, 6000 );
-		}
-		/* One open-water tile off Execution Rock, fetched several ways; each
-		   result has NOAA's answer and the picture (base64) to compare. */
-		list( $z, $x, $y ) = array( 13, 2418, 3074 );
-		$o    = 20037508.342789244;
-		$size = 2 * $o / ( 1 << $z );
-		$bbox = implode( ',', array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size ) );
-		$exp  = $base . '/MapServer/export?' . 'bbox=' . $bbox . '&bboxSR=3857&imageSR=3857&size=256,256&dpi=96&format=png32&transparent=true&layers=show:' . OYC_ENC_LAYERS . '&f=image';
-		$std  = substr( OYC_ENC_WMS, 0, strpos( OYC_ENC_WMS, '/exts/' ) ) . '/export?' . 'bbox=' . $bbox . '&bboxSR=3857&imageSR=3857&size=256,256&dpi=96&format=png32&transparent=true&layers=show:' . OYC_ENC_LAYERS . '&f=image';
-		$dp   = rawurlencode( OYC_ENC_DISPLAY );
+		set_transient( 'oyc_enc_probe_lock', 1, 10 );
+		$dp   = $params ? wp_json_encode( array( 'ECDISParameters' => array( 'version' => isset( $_GET['v'] ) ? '10.6.1 P5' : '10.9.1', 'DynamicParameters' => array( 'Parameter' => $params ) ) ) ) : '';
 		$wms  = oyc_enc_wms_url( $z, $x, $y, false );
-		$urls = array(
-			'wms'        => $wms,
-			'wms_dp'     => $wms . '&display_params=' . $dp,
-			'wms_DP'     => $wms . '&DISPLAY_PARAMS=' . $dp,
-			'mcs_export' => $exp,
-			'mcs_dp'     => $exp . '&display_params=' . $dp,
-			'std_export' => $std,
-		);
-		foreach ( $urls as $k => $url ) {
-			$r = wp_remote_get( $url, array( 'timeout' => 25 ) );
-			if ( is_wp_error( $r ) ) {
-				$out[ 'tile:' . $k ] = $r->get_error_message();
+		$out  = array( 'tile' => "$z/$x/$y", 'display_params' => $dp );
+		foreach ( array( 'default' => $wms, 'with_p' => $dp ? $wms . '&display_params=' . rawurlencode( $dp ) : '' ) as $k => $url ) {
+			if ( ! $url ) {
 				continue;
 			}
-			$b = wp_remote_retrieve_body( $r );
-			$isp = "\x89PNG" === substr( $b, 0, 4 );
-			$out[ 'tile:' . $k ] = array(
+			$r = wp_remote_get( $url, array( 'timeout' => 25 ) );
+			if ( is_wp_error( $r ) ) {
+				$out[ $k ] = $r->get_error_message();
+				continue;
+			}
+			$b         = wp_remote_retrieve_body( $r );
+			$isp       = "\x89PNG" === substr( $b, 0, 4 );
+			$out[ $k ] = array(
 				'code' => wp_remote_retrieve_response_code( $r ),
-				'type' => wp_remote_retrieve_header( $r, 'content-type' ),
 				'md5'  => md5( $b ),
 				'body' => $isp ? 'data:image/png;base64,' . base64_encode( $b ) : mb_substr( wp_strip_all_tags( $b ), 0, 600 ),
 			);
 		}
-		set_transient( 'oyc_enc_probe2', $out, 10 * MINUTE_IN_SECONDS );
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
 	}
 	header( 'X-Robots-Tag: noindex' );
 	wp_send_json( $out );
