@@ -1072,13 +1072,16 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    PNG in uploads/oyc-enc, else admin-ajax oyc_enc_tile (fetches from NOAA once
    and saves it), else NOAA directly. noaaUrl() is the direct WMS request. */
 var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_url' ) ? oyc_enc_url() : '' ) ); ?>,ENC_AJAX=AJAX;
+/* NOAA chart display settings (feet, four depth shades): same as the server
+   cache uses, left off if NOAA has been refusing them (inc/enc-cache.php). */
+var ENC_DISPLAY=<?php echo wp_json_encode( ( defined( 'OYC_ENC_DISPLAY' ) && ! get_transient( 'oyc_enc_display_bad' ) ) ? OYC_ENC_DISPLAY : '' ); ?>;
 var ENC_HIRES_MAX=12;/* must match OYC_ENC_HIRES_MAX in inc/enc-cache.php */
 var EncWMS=L.TileLayer.WMS.extend({
 	noaaUrl:function(c){var f=(c.z<=ENC_HIRES_MAX)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
 	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y;},
 	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
 var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
-	{layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,keepBuffer:4,attribution:'NOAA ENC chart &mdash; not for navigation'});
+	L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,keepBuffer:4,attribution:'NOAA ENC chart &mdash; not for navigation'},ENC_DISPLAY?{display_params:ENC_DISPLAY}:{}));
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water
