@@ -1061,15 +1061,20 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    2 depths & soundings, 3 rocks/wrecks/obstructions, 4 traffic routes, 5 special
    areas (cable, anchorage), 6 buoys/beacons/lights, 7 small-craft facilities.
    The service picks detail by map scale and shows little at the board's default
-   zoom 12, so tiles at zoom <= 13 are requested at 2x pixels (symbols draw
-   half-size, full detail; crisp on retina). Shown from zoom 9 in. The "NOAA chart"
+   zoom 12, so tiles at zoom <= ENC_HIRES_MAX (12) are requested at 2x pixels
+   (more detail, but text and symbols draw half-size). From zoom 13 in, 1x, so
+   soundings and labels are full size and readable. Shown from zoom 9 in.
+   Depths shallower than about 30 m are shaded light blue by NOAA (close to the
+   street map's water colour) and deeper water white; that is NOAA's standard
+   chart colouring, so most of Long Island Sound reads blue. The "NOAA chart"
    chip toggles it (wired with the POI chips below). Not for navigation. */
 /* Tiles come from our own server's cache first (inc/enc-cache.php): the static
    PNG in uploads/oyc-enc, else admin-ajax oyc_enc_tile (fetches from NOAA once
    and saves it), else NOAA directly. noaaUrl() is the direct WMS request. */
 var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_url' ) ? oyc_enc_url() : '' ) ); ?>,ENC_AJAX=AJAX;
+var ENC_HIRES_MAX=12;/* must match OYC_ENC_HIRES_MAX in inc/enc-cache.php */
 var EncWMS=L.TileLayer.WMS.extend({
-	noaaUrl:function(c){var f=(c.z<=13)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
+	noaaUrl:function(c){var f=(c.z<=ENC_HIRES_MAX)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
 	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y;},
 	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
 var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
