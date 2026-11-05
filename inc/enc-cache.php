@@ -42,31 +42,15 @@ define( 'OYC_ENC_HOME_ZOOMS', '10,11,12,13,14' );
    cached tiles are thrown away. */
 define( 'OYC_ENC_HIRES_MAX', 12 );
 define( 'OYC_ENC_VER', 4 );
-/* Chart display settings sent to NOAA (S-52 "mariner settings"; Esri Maritime
-   Chart Service display_params). Depths in feet, four depth shades, contours in
-   metres: under 2 m (~6 ft) darkest blue, 2-5 m (~6-16 ft) blue, 5-10 m
-   (~16-33 ft) pale blue, deeper than 10 m white, like a paper chart, so the
-   Sound reads as chart rather than the street map's flat blue. Values: 1 = off,
-   2 = on; DisplayDepthUnits 1 m, 2 ft. If NOAA rejects these, tiles are fetched
-   with its defaults instead (see oyc_enc_fetch). Must match the map's request
-   (inc/wind-map.php reads this constant). */
-define( 'OYC_ENC_USE_DISPLAY', false );   // off: v1.7.367 test showed these made deep water blue; tune with oyc_enc_probe first
-define( 'OYC_ENC_DISPLAY', ! OYC_ENC_USE_DISPLAY ? '' : wp_json_encode( array(
-	'ECDISParameters' => array(
-		'version'           => '10.9.1',
-		'DynamicParameters' => array(
-			'Parameter' => array(
-				array( 'name' => 'DisplayDepthUnits', 'value' => 2 ),
-				array( 'name' => 'TwoDepthShades', 'value' => 1 ),
-				array( 'name' => 'ShallowContour', 'value' => 2 ),
-				array( 'name' => 'SafetyContour', 'value' => 5 ),
-				array( 'name' => 'SafetyDepth', 'value' => 5 ),
-				array( 'name' => 'DeepContour', 'value' => 10 ),
-				array( 'name' => 'TextHalo', 'value' => 2 ),
-			),
-		),
-	),
-) ) );
+/* The "detail" chart layer. Zoomed out (zoom 10-11) NOAA draws its small-scale
+   charts, where Long Island Sound is one flat light-blue area that looks just
+   like the street map. Asking for the approach-scale charts only (ENC usage
+   band 4, display_params IntendedUsage "4") gives white deep water, blue
+   shallows and soundings there. Those charts don't cover open ocean, so this is
+   a second layer over the normal one: where it is empty the normal chart shows
+   through. Cached under oyc-enc/d/. Must match encDetail in inc/wind-map.php. */
+define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
+define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
 
 function oyc_enc_dir() {
 	$u = wp_upload_dir();
@@ -93,7 +77,7 @@ function oyc_enc_in_box( $z, $x, $y, $box ) {
 
 /* The WMS GetMap URL for one tile, exactly as the map's EncWMS layer builds it
    (EPSG:3857, 2x pixels at zoom OYC_ENC_HIRES_MAX and below). */
-function oyc_enc_wms_url( $z, $x, $y, $display = true ) {
+function oyc_enc_wms_url( $z, $x, $y, $v = '' ) {
 	$o    = 20037508.342789244;
 	$size = 2 * $o / ( 1 << $z );
 	$bbox = array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size );
@@ -110,11 +94,16 @@ function oyc_enc_wms_url( $z, $x, $y, $display = true ) {
 		'width'       => $px,
 		'height'      => $px,
 		'bbox'        => implode( ',', $bbox ),
-	) + ( $display && OYC_ENC_DISPLAY ? array( 'display_params' => rawurlencode( OYC_ENC_DISPLAY ) ) : array() ), OYC_ENC_WMS );
+	) + ( 'd' === $v ? array( 'display_params' => rawurlencode( OYC_ENC_DETAIL ) ) : array() ), OYC_ENC_WMS );
 }
 
-function oyc_enc_file( $z, $x, $y ) {
-	return oyc_enc_dir() . "/$z/$x/$y.png";
+function oyc_enc_file( $z, $x, $y, $v = '' ) {
+	return oyc_enc_dir() . ( 'd' === $v ? '/d' : '' ) . "/$z/$x/$y.png";
+}
+
+/** Is (z, v) a layer/zoom we serve? */
+function oyc_enc_zoom_ok( $z, $v ) {
+	return 'd' === $v ? in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_DETAIL_ZOOMS ) ), true ) : ( $z >= 9 && $z <= 17 );
 }
 
 /** One GetMap request. Returns the PNG bytes, '' on a failure, or 'XML' when
@@ -135,37 +124,15 @@ function oyc_enc_get( $url ) {
 	return '';
 }
 
-/* Which request the last oyc_enc_fetch used: 'display' (our chart settings)
-   or 'default' (NOAA's own, because it rejected ours). Sent as a header. */
-$GLOBALS['oyc_enc_variant'] = '';
-
 /** Fetch one tile from NOAA and store it. Returns the PNG bytes, or ''. */
-function oyc_enc_fetch( $z, $x, $y ) {
-	$png = '';
-	if ( ! get_transient( 'oyc_enc_dp_refused' ) ) {
-		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, true ) );
-		$GLOBALS['oyc_enc_variant'] = 'display';
-		if ( 'XML' === $png ) {
-			/* NOAA answered with an error. If its default request works, our
-			   display settings are the problem: use its defaults for an hour.
-			   (If that fails too, NOAA is just having a bad moment.) */
-			$err = empty( $GLOBALS['oyc_enc_err'] ) ? 1 : $GLOBALS['oyc_enc_err'];
-			$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, false ) );
-			$GLOBALS['oyc_enc_variant'] = 'default';
-			if ( '' !== $png && 'XML' !== $png ) {
-				set_transient( 'oyc_enc_dp_refused', $err, HOUR_IN_SECONDS );
-			}
-		}
-	} else {
-		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, false ) );
-		$GLOBALS['oyc_enc_variant'] = 'default';
-	}
+function oyc_enc_fetch( $z, $x, $y, $v = '' ) {
+	$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, $v ) );
 	if ( '' === $png || 'XML' === $png ) {
 		return '';
 	}
 	$bytes = (int) get_option( 'oyc_enc_bytes', 0 );
 	if ( $bytes < OYC_ENC_MAX_BYTES ) {
-		$f = oyc_enc_file( $z, $x, $y );
+		$f = oyc_enc_file( $z, $x, $y, $v );
 		oyc_enc_htaccess();
 		if ( wp_mkdir_p( dirname( $f ) ) ) {
 			$tmp = $f . '.' . wp_generate_password( 6, false ) . '.tmp';
@@ -201,20 +168,21 @@ function oyc_enc_tile() {
 	$z = isset( $_GET['z'] ) ? (int) $_GET['z'] : -1;
 	$x = isset( $_GET['x'] ) ? (int) $_GET['x'] : -1;
 	$y = isset( $_GET['y'] ) ? (int) $_GET['y'] : -1;
+	$v = ( isset( $_GET['v'] ) && 'd' === $_GET['v'] ) ? 'd' : '';
 	$n = $z >= 0 && $z < 30 ? ( 1 << $z ) : 0;
-	if ( $z < 9 || $z > 17 || $x < 0 || $y < 0 || $x >= $n || $y >= $n ) {
+	if ( ! oyc_enc_zoom_ok( $z, $v ) || $x < 0 || $y < 0 || $x >= $n || $y >= $n ) {
 		status_header( 400 );
 		exit;
 	}
-	$f   = oyc_enc_file( $z, $x, $y );
+	$f   = oyc_enc_file( $z, $x, $y, $v );
 	$png = '';
 	if ( oyc_enc_fresh( $f ) ) {
 		$png = (string) file_get_contents( $f );
 	} elseif ( oyc_enc_in_box( $z, $x, $y, OYC_ENC_AREA ) ) {
-		$png = oyc_enc_fetch( $z, $x, $y );
+		$png = oyc_enc_fetch( $z, $x, $y, $v );
 	} else {
 		/* outside our waters: send the map straight to NOAA */
-		wp_redirect( oyc_enc_wms_url( $z, $x, $y, ! get_transient( 'oyc_enc_dp_refused' ) ), 302 );
+		wp_redirect( oyc_enc_wms_url( $z, $x, $y, $v ), 302 );
 		exit;
 	}
 	if ( '' === $png ) {
@@ -227,13 +195,12 @@ function oyc_enc_tile() {
 	header( 'Content-Length: ' . strlen( $png ) );
 	header( 'Cache-Control: public, max-age=604800' );
 	header( 'X-Robots-Tag: noindex' );
-	header( 'X-OYC-ENC: ' . ( $GLOBALS['oyc_enc_variant'] ? $GLOBALS['oyc_enc_variant'] : 'cache' ) . ( get_transient( 'oyc_enc_dp_refused' ) ? '; display-refused' : '' ) );
 	echo $png; // phpcs:ignore WordPress.Security.EscapeOutput
 	exit;
 }
 
 /* admin-ajax oyc_enc_probe: a read-only test bench for NOAA's chart display
-   settings, used to tune OYC_ENC_DISPLAY (NOAA's chart server can't be reached
+   settings, used to tune OYC_ENC_DETAIL (NOAA's chart server can't be reached
    from the developer's sandbox, but this web server can). Fetches one tile
    (z, x, y inside OYC_ENC_AREA; default: open water off Execution Rock) twice,
    with NOAA's defaults and with the settings in p ("Name:value,Name:value",
@@ -267,7 +234,7 @@ function oyc_enc_probe() {
 		}
 		set_transient( 'oyc_enc_probe_lock', 1, 10 );
 		$dp   = $params ? wp_json_encode( array( 'ECDISParameters' => array( 'version' => isset( $_GET['v'] ) ? '10.6.1 P5' : '10.9.1', 'DynamicParameters' => array( 'Parameter' => $params ) ) ) ) : '';
-		$wms  = oyc_enc_wms_url( $z, $x, $y, false );
+		$wms  = oyc_enc_wms_url( $z, $x, $y );
 		$out  = array( 'tile' => "$z/$x/$y", 'display_params' => $dp );
 		foreach ( array( 'default' => $wms, 'with_p' => $dp ? $wms . '&display_params=' . rawurlencode( $dp ) : '' ) as $k => $url ) {
 			if ( ! $url ) {
@@ -344,7 +311,10 @@ function oyc_enc_home_tiles() {
 	foreach ( array_map( 'intval', explode( ',', OYC_ENC_HOME_ZOOMS ) ) as $z ) {
 		for ( $x = oyc_enc_tile_x( $w, $z ); $x <= oyc_enc_tile_x( $e, $z ); $x++ ) {
 			for ( $y = oyc_enc_tile_y( $n, $z ); $y <= oyc_enc_tile_y( $s, $z ); $y++ ) {
-				$out[] = array( $z, $x, $y );
+				$out[] = array( $z, $x, $y, '' );
+				if ( oyc_enc_zoom_ok( $z, 'd' ) ) {
+					$out[] = array( $z, $x, $y, 'd' );
+				}
 			}
 		}
 	}
@@ -365,10 +335,10 @@ function oyc_enc_warm( $limit = 25 ) {
 		if ( $done >= $limit || $fails >= 3 ) {
 			break;
 		}
-		if ( oyc_enc_fresh( oyc_enc_file( $t[0], $t[1], $t[2] ) ) ) {
+		if ( oyc_enc_fresh( oyc_enc_file( $t[0], $t[1], $t[2], $t[3] ) ) ) {
 			continue;
 		}
-		if ( '' !== oyc_enc_fetch( $t[0], $t[1], $t[2] ) ) {
+		if ( '' !== oyc_enc_fetch( $t[0], $t[1], $t[2], $t[3] ) ) {
 			$done++;
 		} else {
 			$fails++;   // NOAA having a bad moment: try again next run

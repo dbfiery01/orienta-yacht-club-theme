@@ -1072,41 +1072,49 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    PNG in uploads/oyc-enc, else admin-ajax oyc_enc_tile (fetches from NOAA once
    and saves it), else NOAA directly. noaaUrl() is the direct WMS request. */
 var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_url' ) ? oyc_enc_url() : '' ) ); ?>,ENC_AJAX=AJAX;
-/* NOAA chart display settings (feet, four depth shades): same as the server
-   cache uses, left off if NOAA has been refusing them (inc/enc-cache.php). */
-var ENC_DISPLAY=<?php echo wp_json_encode( ( defined( 'OYC_ENC_DISPLAY' ) && ! get_transient( 'oyc_enc_dp_refused' ) ) ? OYC_ENC_DISPLAY : '' ); ?>;
+/* Zoomed out (10-11) NOAA draws Long Island Sound as one flat light-blue area,
+   indistinguishable from the street map. encDetail asks for the approach-scale
+   charts only (IntendedUsage "4": white deep water, blue shallows, soundings)
+   and sits over the normal chart; offshore, where those charts don't exist, it
+   is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
+var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
 var ENC_HIRES_MAX=12;/* must match OYC_ENC_HIRES_MAX in inc/enc-cache.php */
+var ENC_WMS='https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer';
 var EncWMS=L.TileLayer.WMS.extend({
+	options:{encVar:''},
 	noaaUrl:function(c){var f=(c.z<=ENC_HIRES_MAX)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
-	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y;},
-	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
-var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
-	L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,keepBuffer:4,attribution:'NOAA ENC chart &mdash; not for navigation'},ENC_DISPLAY?{display_params:ENC_DISPLAY}:{}));
+	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+(this.options.encVar?'&v='+this.options.encVar:'');},
+	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+(this.options.encVar?'/'+this.options.encVar:'')+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
+function encOpts(o){return L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',keepBuffer:4},o);}
+var encBase=new EncWMS(ENC_WMS,encOpts({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'}));
+var encLayer=L.layerGroup([encBase]);
+if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:11,zIndex:3,encVar:'d',display_params:ENC_DETAIL})));
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water
    showing through. Retry a failed tile up to 5 times with growing back-off,
    and keep the previous zoom's chart tiles on screen until the new level's
    have actually loaded, so a zoom never uncovers the street map. */
-encLayer.on('tileerror',function(e){
-	var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(encLayer._map)encLayer._pruneTiles();return;}
-	t.setAttribute('data-try',n+1);
-	/* not cached yet → our server fetches and caches it (straight away); then
-	   back off and retry; the last two tries go to NOAA directly */
-	var c=e.coords,url=!ENC_CACHE?encLayer.noaaUrl(c):(n<3?encLayer.ajaxUrl(c):encLayer.noaaUrl(c));
-	setTimeout(function(){if(!encLayer._map||!t.parentNode)return;
-		t.src=url+'&_retry='+(n+1);},(ENC_CACHE&&n===0)?0:700*Math.pow(2,n));
-});
-encLayer.on('tileload',function(e){e.tile.removeAttribute('data-try');});
-(function(){var prune=encLayer._pruneTiles;
+encLayer.eachLayer(function(lyr){
+	lyr.on('tileerror',function(e){
+		var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(lyr._map)lyr._pruneTiles();return;}
+		t.setAttribute('data-try',n+1);
+		/* not cached yet → our server fetches and caches it (straight away); then
+		   back off and retry; the last two tries go to NOAA directly */
+		var c=e.coords,url=!ENC_CACHE?lyr.noaaUrl(c):(n<3?lyr.ajaxUrl(c):lyr.noaaUrl(c));
+		setTimeout(function(){if(!lyr._map||!t.parentNode)return;
+			t.src=url+'&_retry='+(n+1);},(ENC_CACHE&&n===0)?0:700*Math.pow(2,n));
+	});
+	lyr.on('tileload',function(e){e.tile.removeAttribute('data-try');});
+	var prune=lyr._pruneTiles;
 	/* Leaflet drops the old zoom level as soon as every new tile has *finished*,
 	   including ones that failed; hold the old level while any new tile is
 	   still retrying (data-try set), then prune as normal. */
-	encLayer._pruneTiles=function(){
+	lyr._pruneTiles=function(){
 		for(var k in this._tiles){var tl=this._tiles[k];if(tl.current&&tl.el&&tl.el.getAttribute('data-try'))return;}
 		return prune.apply(this,arguments);};
-	encLayer.on('tileload',function(){if(encLayer._map)encLayer._pruneTiles();});
-})();
+	lyr.on('tileload',function(){if(lyr._map)lyr._pruneTiles();});
+});
 /* default view: Mamaroneck harbor / western Sound (set at map init above) */
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
