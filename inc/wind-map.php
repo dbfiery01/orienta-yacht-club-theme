@@ -1078,13 +1078,16 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
    and sits over the normal chart; offshore, where those charts don't exist, it
    is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
+/* cache version: changes whenever the cached tiles are thrown away, so browsers
+   don't keep showing tiles from an older chart style (they cache them a week) */
+var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
 var ENC_HIRES_MAX=12;/* must match OYC_ENC_HIRES_MAX in inc/enc-cache.php */
 var ENC_WMS='https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer';
 var EncWMS=L.TileLayer.WMS.extend({
 	options:{encVar:''},
 	noaaUrl:function(c){var f=(c.z<=ENC_HIRES_MAX)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
-	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+(this.options.encVar?'&v='+this.options.encVar:'');},
-	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+(this.options.encVar?'/'+this.options.encVar:'')+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
+	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+(this.options.encVar?'&v='+this.options.encVar:'')+'&cv='+ENC_VER;},
+	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+(this.options.encVar?'/'+this.options.encVar:'')+'/'+c.z+'/'+c.x+'/'+c.y+'.png?cv='+ENC_VER):this.noaaUrl(c);}});
 function encOpts(o){return L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',keepBuffer:4},o);}
 var encBase=new EncWMS(ENC_WMS,encOpts({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'}));
 var encLayer=L.layerGroup([encBase]);
