@@ -127,7 +127,11 @@ function oyc_enc_get( $url ) {
 	if ( 200 === (int) wp_remote_retrieve_response_code( $r ) && strlen( $png ) >= 60 && "\x89PNG" === substr( $png, 0, 4 ) ) {
 		return $png;
 	}
-	return ( '' !== $png && '<' === substr( ltrim( $png ), 0, 1 ) ) ? 'XML' : '';
+	if ( '' !== $png && '<' === substr( ltrim( $png ), 0, 1 ) ) {
+		$GLOBALS['oyc_enc_err'] = mb_substr( trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $png ) ) ), 0, 300 );
+		return 'XML';
+	}
+	return '';
 }
 
 /* Which request the last oyc_enc_fetch used: 'display' (our chart settings)
@@ -142,7 +146,7 @@ function oyc_enc_fetch( $z, $x, $y ) {
 		$GLOBALS['oyc_enc_variant'] = 'display';
 		if ( 'XML' === $png ) {
 			/* NOAA refused our display settings: use its defaults for a day */
-			set_transient( 'oyc_enc_display_bad', 1, DAY_IN_SECONDS );
+			set_transient( 'oyc_enc_display_bad', empty( $GLOBALS['oyc_enc_err'] ) ? 1 : $GLOBALS['oyc_enc_err'], DAY_IN_SECONDS );
 			$png = '';
 		}
 	}
@@ -220,6 +224,57 @@ function oyc_enc_tile() {
 	header( 'X-OYC-ENC: ' . ( $GLOBALS['oyc_enc_variant'] ? $GLOBALS['oyc_enc_variant'] : 'cache' ) . ( get_transient( 'oyc_enc_display_bad' ) ? '; display-refused' : '' ) );
 	echo $png; // phpcs:ignore WordPress.Security.EscapeOutput
 	exit;
+}
+
+/* admin-ajax oyc_enc_probe: a read-only check of NOAA's display settings, used
+   to tune OYC_ENC_DISPLAY (NOAA's chart server can't be reached from the
+   developer's sandbox, but the web server can). Returns JSON: NOAA's own list
+   of display parameters, and for one home-waters tile whether each candidate
+   form of display_params gives a picture or an error (with NOAA's message).
+   At most once a minute; results are cached for 10 minutes. */
+add_action( 'wp_ajax_oyc_enc_probe', 'oyc_enc_probe' );
+add_action( 'wp_ajax_nopriv_oyc_enc_probe', 'oyc_enc_probe' );
+function oyc_enc_probe() {
+	$out = get_transient( 'oyc_enc_probe' );
+	if ( ! $out ) {
+		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
+			wp_send_json( array( 'wait' => 'try again in a minute' ), 429 );
+		}
+		set_transient( 'oyc_enc_probe_lock', 1, MINUTE_IN_SECONDS );
+		$base = substr( OYC_ENC_WMS, 0, strrpos( OYC_ENC_WMS, '/' ) );   // …/exts/MaritimeChartService
+		$out  = array( 'refused' => get_transient( 'oyc_enc_display_bad' ) );
+		foreach ( array( 'parameters', 'MapServer/parameters' ) as $path ) {
+			$r = wp_remote_get( $base . '/' . $path . '?f=json', array( 'timeout' => 20 ) );
+			$out[ 'params:' . $path ] = is_wp_error( $r ) ? $r->get_error_message()
+				: wp_remote_retrieve_response_code( $r ) . ' ' . mb_substr( wp_remote_retrieve_body( $r ), 0, 6000 );
+		}
+		$p   = array(
+			array( 'name' => 'DisplayDepthUnits', 'value' => 2 ),
+			array( 'name' => 'TwoDepthShades', 'value' => 1 ),
+			array( 'name' => 'ShallowContour', 'value' => 2 ),
+			array( 'name' => 'SafetyContour', 'value' => 5 ),
+			array( 'name' => 'DeepContour', 'value' => 10 ),
+		);
+		$cands = array(
+			'current'    => OYC_ENC_DISPLAY,
+			'noversion'  => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => $p ) ) ) ),
+			'v1061'      => wp_json_encode( array( 'ECDISParameters' => array( 'version' => '10.6.1 P5', 'DynamicParameters' => array( 'Parameter' => $p ) ) ) ),
+			'feetonly'   => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => array( $p[0] ) ) ) ) ),
+			'strings'    => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => array_map( function ( $q ) { $q['value'] = (string) $q['value']; return $q; }, $p ) ) ) ) ),
+		);
+		$tile = array( 13, 2420, 3076 );
+		foreach ( $cands as $k => $json ) {
+			unset( $GLOBALS['oyc_enc_err'] );
+			$url = add_query_arg( 'display_params', rawurlencode( $json ), oyc_enc_wms_url( $tile[0], $tile[1], $tile[2], false ) );
+			$png = oyc_enc_get( $url );
+			$out[ 'tile:' . $k ] = '' === $png ? 'no answer' : ( 'XML' === $png ? 'error: ' . ( isset( $GLOBALS['oyc_enc_err'] ) ? $GLOBALS['oyc_enc_err'] : '' ) : 'png ' . strlen( $png ) . ' bytes, md5 ' . md5( $png ) );
+		}
+		$png = oyc_enc_get( oyc_enc_wms_url( $tile[0], $tile[1], $tile[2], false ) );
+		$out['tile:default'] = is_string( $png ) && strlen( $png ) > 60 ? 'png ' . strlen( $png ) . ' bytes, md5 ' . md5( $png ) : $png;
+		set_transient( 'oyc_enc_probe', $out, 10 * MINUTE_IN_SECONDS );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	wp_send_json( $out );
 }
 
 /* ── Background: pre-load home waters, prune old tiles ───────────────────── */
