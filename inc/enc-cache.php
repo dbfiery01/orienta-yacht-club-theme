@@ -141,16 +141,21 @@ $GLOBALS['oyc_enc_variant'] = '';
 /** Fetch one tile from NOAA and store it. Returns the PNG bytes, or ''. */
 function oyc_enc_fetch( $z, $x, $y ) {
 	$png = '';
-	if ( ! get_transient( 'oyc_enc_display_bad' ) ) {
+	if ( ! get_transient( 'oyc_enc_dp_refused' ) ) {
 		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, true ) );
 		$GLOBALS['oyc_enc_variant'] = 'display';
 		if ( 'XML' === $png ) {
-			/* NOAA refused our display settings: use its defaults for a day */
-			set_transient( 'oyc_enc_display_bad', empty( $GLOBALS['oyc_enc_err'] ) ? 1 : $GLOBALS['oyc_enc_err'], DAY_IN_SECONDS );
-			$png = '';
+			/* NOAA answered with an error. If its default request works, our
+			   display settings are the problem: use its defaults for an hour.
+			   (If that fails too, NOAA is just having a bad moment.) */
+			$err = empty( $GLOBALS['oyc_enc_err'] ) ? 1 : $GLOBALS['oyc_enc_err'];
+			$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, false ) );
+			$GLOBALS['oyc_enc_variant'] = 'default';
+			if ( '' !== $png && 'XML' !== $png ) {
+				set_transient( 'oyc_enc_dp_refused', $err, HOUR_IN_SECONDS );
+			}
 		}
-	}
-	if ( '' === $png && get_transient( 'oyc_enc_display_bad' ) ) {
+	} else {
 		$png = oyc_enc_get( oyc_enc_wms_url( $z, $x, $y, false ) );
 		$GLOBALS['oyc_enc_variant'] = 'default';
 	}
@@ -208,7 +213,7 @@ function oyc_enc_tile() {
 		$png = oyc_enc_fetch( $z, $x, $y );
 	} else {
 		/* outside our waters: send the map straight to NOAA */
-		wp_redirect( oyc_enc_wms_url( $z, $x, $y, ! get_transient( 'oyc_enc_display_bad' ) ), 302 );
+		wp_redirect( oyc_enc_wms_url( $z, $x, $y, ! get_transient( 'oyc_enc_dp_refused' ) ), 302 );
 		exit;
 	}
 	if ( '' === $png ) {
@@ -221,7 +226,7 @@ function oyc_enc_tile() {
 	header( 'Content-Length: ' . strlen( $png ) );
 	header( 'Cache-Control: public, max-age=604800' );
 	header( 'X-Robots-Tag: noindex' );
-	header( 'X-OYC-ENC: ' . ( $GLOBALS['oyc_enc_variant'] ? $GLOBALS['oyc_enc_variant'] : 'cache' ) . ( get_transient( 'oyc_enc_display_bad' ) ? '; display-refused' : '' ) );
+	header( 'X-OYC-ENC: ' . ( $GLOBALS['oyc_enc_variant'] ? $GLOBALS['oyc_enc_variant'] : 'cache' ) . ( get_transient( 'oyc_enc_dp_refused' ) ? '; display-refused' : '' ) );
 	echo $png; // phpcs:ignore WordPress.Security.EscapeOutput
 	exit;
 }
@@ -235,43 +240,53 @@ function oyc_enc_tile() {
 add_action( 'wp_ajax_oyc_enc_probe', 'oyc_enc_probe' );
 add_action( 'wp_ajax_nopriv_oyc_enc_probe', 'oyc_enc_probe' );
 function oyc_enc_probe() {
-	$out = get_transient( 'oyc_enc_probe' );
+	$out = get_transient( 'oyc_enc_probe2' );
 	if ( ! $out ) {
 		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
 			wp_send_json( array( 'wait' => 'try again in a minute' ), 429 );
 		}
 		set_transient( 'oyc_enc_probe_lock', 1, MINUTE_IN_SECONDS );
 		$base = substr( OYC_ENC_WMS, 0, strrpos( OYC_ENC_WMS, '/' ) );   // …/exts/MaritimeChartService
-		$out  = array( 'refused' => get_transient( 'oyc_enc_display_bad' ) );
+		$out  = array( 'refused' => get_transient( 'oyc_enc_dp_refused' ) );
 		foreach ( array( 'parameters', 'MapServer/parameters' ) as $path ) {
 			$r = wp_remote_get( $base . '/' . $path . '?f=json', array( 'timeout' => 20 ) );
 			$out[ 'params:' . $path ] = is_wp_error( $r ) ? $r->get_error_message()
 				: wp_remote_retrieve_response_code( $r ) . ' ' . mb_substr( wp_remote_retrieve_body( $r ), 0, 6000 );
 		}
-		$p   = array(
-			array( 'name' => 'DisplayDepthUnits', 'value' => 2 ),
-			array( 'name' => 'TwoDepthShades', 'value' => 1 ),
-			array( 'name' => 'ShallowContour', 'value' => 2 ),
-			array( 'name' => 'SafetyContour', 'value' => 5 ),
-			array( 'name' => 'DeepContour', 'value' => 10 ),
+		/* One open-water tile off Execution Rock, fetched several ways; each
+		   result has NOAA's answer and the picture (base64) to compare. */
+		list( $z, $x, $y ) = array( 13, 2418, 3074 );
+		$o    = 20037508.342789244;
+		$size = 2 * $o / ( 1 << $z );
+		$bbox = implode( ',', array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size ) );
+		$exp  = $base . '/MapServer/export?' . 'bbox=' . $bbox . '&bboxSR=3857&imageSR=3857&size=256,256&dpi=96&format=png32&transparent=true&layers=show:' . OYC_ENC_LAYERS . '&f=image';
+		$std  = substr( OYC_ENC_WMS, 0, strpos( OYC_ENC_WMS, '/exts/' ) ) . '/export?' . 'bbox=' . $bbox . '&bboxSR=3857&imageSR=3857&size=256,256&dpi=96&format=png32&transparent=true&layers=show:' . OYC_ENC_LAYERS . '&f=image';
+		$dp   = rawurlencode( OYC_ENC_DISPLAY );
+		$wms  = oyc_enc_wms_url( $z, $x, $y, false );
+		$urls = array(
+			'wms'        => $wms,
+			'wms_dp'     => $wms . '&display_params=' . $dp,
+			'wms_DP'     => $wms . '&DISPLAY_PARAMS=' . $dp,
+			'mcs_export' => $exp,
+			'mcs_dp'     => $exp . '&display_params=' . $dp,
+			'std_export' => $std,
 		);
-		$cands = array(
-			'current'    => OYC_ENC_DISPLAY,
-			'noversion'  => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => $p ) ) ) ),
-			'v1061'      => wp_json_encode( array( 'ECDISParameters' => array( 'version' => '10.6.1 P5', 'DynamicParameters' => array( 'Parameter' => $p ) ) ) ),
-			'feetonly'   => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => array( $p[0] ) ) ) ) ),
-			'strings'    => wp_json_encode( array( 'ECDISParameters' => array( 'DynamicParameters' => array( 'Parameter' => array_map( function ( $q ) { $q['value'] = (string) $q['value']; return $q; }, $p ) ) ) ) ),
-		);
-		$tile = array( 13, 2420, 3076 );
-		foreach ( $cands as $k => $json ) {
-			unset( $GLOBALS['oyc_enc_err'] );
-			$url = add_query_arg( 'display_params', rawurlencode( $json ), oyc_enc_wms_url( $tile[0], $tile[1], $tile[2], false ) );
-			$png = oyc_enc_get( $url );
-			$out[ 'tile:' . $k ] = '' === $png ? 'no answer' : ( 'XML' === $png ? 'error: ' . ( isset( $GLOBALS['oyc_enc_err'] ) ? $GLOBALS['oyc_enc_err'] : '' ) : 'png ' . strlen( $png ) . ' bytes, md5 ' . md5( $png ) );
+		foreach ( $urls as $k => $url ) {
+			$r = wp_remote_get( $url, array( 'timeout' => 25 ) );
+			if ( is_wp_error( $r ) ) {
+				$out[ 'tile:' . $k ] = $r->get_error_message();
+				continue;
+			}
+			$b = wp_remote_retrieve_body( $r );
+			$isp = "\x89PNG" === substr( $b, 0, 4 );
+			$out[ 'tile:' . $k ] = array(
+				'code' => wp_remote_retrieve_response_code( $r ),
+				'type' => wp_remote_retrieve_header( $r, 'content-type' ),
+				'md5'  => md5( $b ),
+				'body' => $isp ? 'data:image/png;base64,' . base64_encode( $b ) : mb_substr( wp_strip_all_tags( $b ), 0, 600 ),
+			);
 		}
-		$png = oyc_enc_get( oyc_enc_wms_url( $tile[0], $tile[1], $tile[2], false ) );
-		$out['tile:default'] = is_string( $png ) && strlen( $png ) > 60 ? 'png ' . strlen( $png ) . ' bytes, md5 ' . md5( $png ) : $png;
-		set_transient( 'oyc_enc_probe', $out, 10 * MINUTE_IN_SECONDS );
+		set_transient( 'oyc_enc_probe2', $out, 10 * MINUTE_IN_SECONDS );
 	}
 	header( 'X-Robots-Tag: noindex' );
 	wp_send_json( $out );
