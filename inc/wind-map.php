@@ -1064,7 +1064,14 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    zoom 12, so tiles at zoom <= 13 are requested at 2x pixels (symbols draw
    half-size, full detail; crisp on retina). Shown from zoom 9 in. The "NOAA chart"
    chip toggles it (wired with the POI chips below). Not for navigation. */
-var EncWMS=L.TileLayer.WMS.extend({getTileUrl:function(c){var f=(c.z<=13)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);}});
+/* Tiles come from our own server's cache first (inc/enc-cache.php): the static
+   PNG in uploads/oyc-enc, else admin-ajax oyc_enc_tile (fetches from NOAA once
+   and saves it), else NOAA directly. noaaUrl() is the direct WMS request. */
+var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_url' ) ? oyc_enc_url() : '' ) ); ?>,ENC_AJAX=AJAX;
+var EncWMS=L.TileLayer.WMS.extend({
+	noaaUrl:function(c){var f=(c.z<=13)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
+	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y;},
+	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+'/'+c.z+'/'+c.x+'/'+c.y+'.png'):this.noaaUrl(c);}});
 var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
 	{layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,keepBuffer:4,attribution:'NOAA ENC chart &mdash; not for navigation'});
 /* The chart takes priority over the street map: NOAA's chart server often drops
@@ -1076,8 +1083,11 @@ var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MC
 encLayer.on('tileerror',function(e){
 	var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(encLayer._map)encLayer._pruneTiles();return;}
 	t.setAttribute('data-try',n+1);
+	/* not cached yet → our server fetches and caches it (straight away); then
+	   back off and retry; the last two tries go to NOAA directly */
+	var c=e.coords,url=!ENC_CACHE?encLayer.noaaUrl(c):(n<3?encLayer.ajaxUrl(c):encLayer.noaaUrl(c));
 	setTimeout(function(){if(!encLayer._map||!t.parentNode)return;
-		t.src=encLayer.getTileUrl(e.coords)+'&_retry='+(n+1);},700*Math.pow(2,n));
+		t.src=url+'&_retry='+(n+1);},(ENC_CACHE&&n===0)?0:700*Math.pow(2,n));
 });
 encLayer.on('tileload',function(e){e.tile.removeAttribute('data-try');});
 (function(){var prune=encLayer._pruneTiles;

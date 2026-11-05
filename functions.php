@@ -271,6 +271,11 @@ require_once get_template_directory() . '/inc/seo.php';
 require_once get_template_directory() . '/inc/harbor-mini.php';
 
 /**
+ * NOAA chart tile cache for the Wind & Radar map (static PNGs in uploads/oyc-enc).
+ */
+require_once get_template_directory() . '/inc/enc-cache.php';
+
+/**
  * Inject Customizer-overridden section background images as inline CSS.
  * Only outputs rules when a Customizer image has been set (non-empty),
  * so the bundled CSS fallbacks stay in effect when nothing is configured.
