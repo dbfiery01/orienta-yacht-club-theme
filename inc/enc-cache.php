@@ -35,6 +35,13 @@ define( 'OYC_ENC_MAX_BYTES', 600 * 1024 * 1024 );     // 600 MB ceiling
 define( 'OYC_ENC_AREA', '38.0,-77.0,42.5,-69.5' );     // south,west,north,east
 define( 'OYC_ENC_HOME', '40.78,-73.84,41.08,-73.38' );
 define( 'OYC_ENC_HOME_ZOOMS', '10,11,12,13,14' );
+/* Tiles at this zoom and below are drawn at 2x pixels (more chart detail when
+   zoomed out, but text and symbols come out half size). From the next zoom in,
+   1x, so soundings and labels are readable. Must match ENC_HIRES_MAX in
+   inc/wind-map.php. Bump OYC_ENC_VER whenever the tile request changes, so old
+   cached tiles are thrown away. */
+define( 'OYC_ENC_HIRES_MAX', 12 );
+define( 'OYC_ENC_VER', 2 );
 
 function oyc_enc_dir() {
 	$u = wp_upload_dir();
@@ -60,12 +67,12 @@ function oyc_enc_in_box( $z, $x, $y, $box ) {
 }
 
 /* The WMS GetMap URL for one tile, exactly as the map's EncWMS layer builds it
-   (EPSG:3857, 2x pixels at zoom 13 and below). */
+   (EPSG:3857, 2x pixels at zoom OYC_ENC_HIRES_MAX and below). */
 function oyc_enc_wms_url( $z, $x, $y ) {
 	$o    = 20037508.342789244;
 	$size = 2 * $o / ( 1 << $z );
 	$bbox = array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size );
-	$px   = $z <= 13 ? 512 : 256;
+	$px   = $z <= OYC_ENC_HIRES_MAX ? 512 : 256;
 	return add_query_arg( array(
 		'service'     => 'WMS',
 		'request'     => 'GetMap',
@@ -179,6 +186,26 @@ add_action( 'init', function () {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'oyc_enc_prune' );
 	}
 } );
+/* Tile request changed (OYC_ENC_VER bumped): empty the cache once so every
+   tile is re-fetched the new way. */
+add_action( 'init', function () {
+	if ( (int) get_option( 'oyc_enc_ver', 1 ) >= OYC_ENC_VER ) {
+		return;
+	}
+	update_option( 'oyc_enc_ver', OYC_ENC_VER, true );
+	$dir = oyc_enc_dir();
+	if ( is_dir( $dir ) ) {
+		$it = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST );
+		foreach ( $it as $f ) {
+			if ( $f->isDir() ) {
+				@rmdir( $f->getPathname() );
+			} elseif ( '.htaccess' !== $f->getFilename() ) {
+				@unlink( $f->getPathname() );
+			}
+		}
+	}
+	update_option( 'oyc_enc_bytes', 0, false );
+}, 20 );
 add_action( 'switch_theme', function () {
 	foreach ( array( 'oyc_enc_warm', 'oyc_enc_prune' ) as $h ) {
 		$ts = wp_next_scheduled( $h );
