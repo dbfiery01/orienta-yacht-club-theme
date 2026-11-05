@@ -1066,7 +1066,29 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    chip toggles it (wired with the POI chips below). Not for navigation. */
 var EncWMS=L.TileLayer.WMS.extend({getTileUrl:function(c){var f=(c.z<=13)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);}});
 var encLayer=new EncWMS('https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer',
-	{layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'});
+	{layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',minZoom:9,maxZoom:19,zIndex:2,keepBuffer:4,attribution:'NOAA ENC chart &mdash; not for navigation'});
+/* The chart takes priority over the street map: NOAA's chart server often drops
+   or times out a tile (worst right after a zoom, when it gets a burst of
+   requests), and each lost tile left a square of the street map's blue water
+   showing through. Retry a failed tile up to 5 times with growing back-off,
+   and keep the previous zoom's chart tiles on screen until the new level's
+   have actually loaded, so a zoom never uncovers the street map. */
+encLayer.on('tileerror',function(e){
+	var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(encLayer._map)encLayer._pruneTiles();return;}
+	t.setAttribute('data-try',n+1);
+	setTimeout(function(){if(!encLayer._map||!t.parentNode)return;
+		t.src=encLayer.getTileUrl(e.coords)+'&_retry='+(n+1);},700*Math.pow(2,n));
+});
+encLayer.on('tileload',function(e){e.tile.removeAttribute('data-try');});
+(function(){var prune=encLayer._pruneTiles;
+	/* Leaflet drops the old zoom level as soon as every new tile has *finished*,
+	   including ones that failed; hold the old level while any new tile is
+	   still retrying (data-try set), then prune as normal. */
+	encLayer._pruneTiles=function(){
+		for(var k in this._tiles){var tl=this._tiles[k];if(tl.current&&tl.el&&tl.el.getAttribute('data-try'))return;}
+		return prune.apply(this,arguments);};
+	encLayer.on('tileload',function(){if(encLayer._map)encLayer._pruneTiles();});
+})();
 /* default view: Mamaroneck harbor / western Sound (set at map init above) */
 
 var arrowsLayer=L.layerGroup(),isoLayer=L.layerGroup(),hlLayer=L.layerGroup();
