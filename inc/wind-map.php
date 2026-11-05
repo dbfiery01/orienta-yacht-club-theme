@@ -1074,7 +1074,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
 var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_url' ) ? oyc_enc_url() : '' ) ); ?>,ENC_AJAX=AJAX;
 /* NOAA chart display settings (feet, four depth shades): same as the server
    cache uses, left off if NOAA has been refusing them (inc/enc-cache.php). */
-var ENC_DISPLAY=<?php echo wp_json_encode( ( defined( 'OYC_ENC_DISPLAY' ) && ! get_transient( 'oyc_enc_display_bad' ) ) ? OYC_ENC_DISPLAY : '' ); ?>;
+var ENC_DISPLAY=<?php echo wp_json_encode( ( defined( 'OYC_ENC_DISPLAY' ) && ! get_transient( 'oyc_enc_dp_refused' ) ) ? OYC_ENC_DISPLAY : '' ); ?>;
 var ENC_HIRES_MAX=12;/* must match OYC_ENC_HIRES_MAX in inc/enc-cache.php */
 var EncWMS=L.TileLayer.WMS.extend({
 	noaaUrl:function(c){var f=(c.z<=ENC_HIRES_MAX)?2:1,ts=this.getTileSize();this.wmsParams.width=ts.x*f;this.wmsParams.height=ts.y*f;return L.TileLayer.WMS.prototype.getTileUrl.call(this,c);},
