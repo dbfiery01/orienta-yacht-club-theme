@@ -791,7 +791,7 @@ function lockMap(lock){['dragging','doubleClickZoom','boxZoom','keyboard'].forEa
 	map.options.touchZoom=lock?'center':true;map.options.scrollWheelZoom=lock?'center':true;}
 /* Heads-up animation. HU.disp is the angle on screen (not wrapped to 0-360, so
    359°→1° turns 2°, not 358°); each frame it eases toward the target heading
-   with a ~0.6 s time constant, and the 1.5x zoom-in that hides the corners
+   with a ~0.35 s time constant, and the 1.5x zoom-in that hides the corners
    eases in and out the same way. The boat marker glides between GPS fixes. */
 var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0};
 function huTarget(){
@@ -804,7 +804,7 @@ function huTarget(){
 function headsUpTick(t){
 	HU.raf=0;
 	var dt=HU.last?Math.min(0.1,Math.max(0,(t-HU.last)/1000)):0.016;HU.last=t;
-	var tg=huTarget(),k=1-Math.exp(-dt/0.6);
+	var tg=huTarget(),k=1-Math.exp(-dt/0.35);
 	var diff=0;if(tg!=null){diff=((tg-HU.disp)%360+540)%360-180;HU.disp+=Math.abs(diff)<0.05?diff:diff*k;}
 	var sTg=HU.exiting?1:1.5;HU.scale+=(sTg-HU.scale)*k;
 	var w=mwEl();w.style.setProperty('--hdg',HU.disp.toFixed(2)+'deg');w.style.setProperty('--hus',HU.scale.toFixed(3));
@@ -863,11 +863,11 @@ function compassStart(){
 }
 function compassStop(){cmpOn=false;HU.cmp=null;try{window.removeEventListener('deviceorientation',onCompass);window.removeEventListener('deviceorientationabsolute',onCompass);}catch(e){}}
 /* velocity from a least-squares line through the fixes of the last win ms:
-   {kt, crs} or null (fewer than 4 fixes, or under 6 s of them) */
+   {kt, crs} or null (fewer than 3 fixes, or under 2 s of them) */
 function trackVel(tr,win){
-	if(!tr||tr.length<4)return null;
+	if(!tr||tr.length<3)return null;
 	var tEnd=tr[tr.length-1].t,pts=tr.filter(function(p){return tEnd-p.t<=win;});
-	if(pts.length<4||(tEnd-pts[0].t)<6000)return null;
+	if(pts.length<3||(tEnd-pts[0].t)<2000)return null;
 	var r=pts[pts.length-1],ky=111320,kx=111320*Math.cos(r.lat*Math.PI/180),n=pts.length,st=0,sx=0,sy=0,stt=0,stx=0,sty=0;
 	pts.forEach(function(p){var t=(p.t-tEnd)/1000,x=(p.lon-r.lon)*kx,y=(p.lat-r.lat)*ky;st+=t;sx+=x;sy+=y;stt+=t*t;stx+=t*x;sty+=t*y;});
 	var d=n*stt-st*st;if(!(d>0))return null;
@@ -898,15 +898,16 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	myLoc={lat:lat,lon:lon};
 	var devSpd=(speed!=null&&isFinite(speed)&&speed>=0)?speed*1.94384:null,
 		devHd=(heading!=null&&isFinite(heading)&&heading>=0&&devSpd!=null&&devSpd>=0.5)?heading:null; /* the device's heading is its course over ground, valid only while moving */
+	var tv=trackVel(myTrack,3000);
+	if(tv&&tv.kt>=1)dCrs=tv.crs;   /* course from the same 3 s fit once moving: quicker after a tack */
 	var hd=(devHd!=null)?devHd:dCrs;
 	if(hd!=null)myHeading=hd; /* direction of travel; keep the last good one when stopped */
 	/* SOG from the GPS positions themselves: a straight-line (least-squares) fit
-	   of the last ~12 s of fixes. The phone's own speed reading measures how fast
+	   of the last 3 s of fixes (Brad's choice: longer felt laggy). The phone's own speed reading measures how fast
 	   the phone moves, so on a rocking boat it adds the swing of the mast/cockpit
-	   and reads high; the swing goes back and forth, so over 12 s of positions
-	   it cancels out. Falls back to the device / track value until there are
-	   enough fixes (about 6 s). */
-	var tv=trackVel(myTrack,12000);
+	   and reads high; the swing goes back and forth, so over a few seconds of
+	   positions it largely cancels out. Falls back to the device / track value
+	   until there are 3 fixes over 2 s. */
 	mySpeedKt=(tv!=null)?tv.kt:((devSpd!=null)?devSpd:dSpd); /* knots */
 	try{if(hd!=null)detectTack(hd,mySpeedKt,lat,lon);}catch(e){}
 	applyHdg();
