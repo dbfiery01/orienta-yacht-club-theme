@@ -120,13 +120,19 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .maprot{position:relative}
 #oycwm #map{height:min(64vh,600px);width:100%;background:#dbe7f0}
 /* ---- Heads-up (course-up) navigation view ----
-   Tapping the compass rotates the chart so the GPS course is up. It's a LOCKED
-   view: interaction, the lat/long grid and open cards hide; flip back to
-   north-up to edit. The rose + boat + badges counter-rotate so they stay right. */
-#oycwm .navrose{position:absolute;z-index:596;right:10px;bottom:46px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(11,42,74,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent}
-#oycwm .navrose svg{display:block;transition:transform .2s ease}
+   Tapping the compass on the chart switches between north-up and heads-up
+   (it turns My location on if needed). In heads-up the chart turns so the
+   boat's heading is up (course over ground when moving, the phone's compass
+   when slow or stopped). The angle and
+   zoom are eased every animation frame in JS (headsUpTick), so it turns
+   smoothly instead of stepping with each GPS fix. Map dragging, the lat/long
+   grid, map buttons and open cards hide (they'd be rotated); pinch / wheel zoom
+   still works, around the boat. The north arrow + boat + badges counter-rotate
+   so they stay right. Tap the compass again (or turn My location off) for north-up. */
+#oycwm .navrose{position:absolute;z-index:596;right:10px;bottom:46px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(11,42,74,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#oycwm .navrose svg{display:block}
 #oycwm .mapwrap.headsup{overflow:hidden}
-#oycwm .mapwrap.headsup .maprot{transform:rotate(calc(-1 * var(--hdg,0deg))) scale(1.5);transform-origin:center;transition:transform .25s ease}
+#oycwm .mapwrap.headsup .maprot{transform:rotate(calc(-1 * var(--hdg,0deg))) scale(var(--hus,1.5));transform-origin:center;will-change:transform}
 #oycwm .mapwrap.headsup .grat,
 #oycwm .mapwrap.headsup .map-ll,
 #oycwm .mapwrap.headsup .leaflet-control-container,
@@ -689,7 +695,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div id="map"></div>
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
-			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
 			<div class="racebar" id="raceBar">
 				<span class="rc-lab">Course</span>
 				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
@@ -775,16 +781,87 @@ function brgTrue(lat1,lon1,lat2,lon2){var d=Math.PI/180,p1=lat1*d,p2=lat2*d,dl=(
 	return (Math.atan2(y,x)/d+360)%360;}
 function magBrg(lat1,lon1,lat2,lon2){return Math.round((brgTrue(lat1,lon1,lat2,lon2)+MAGVAR)%360);}
 var myTrack=[], myLoc=null, myHeading=null, mySpeedKt=null, prevFix=null, locLayer=null, locWatch=null, locFirst=false;
-var headsUp=false, mapwrapEl=null;
+var headsUp=false, mapwrapEl=null, myMk=null;
 function mwEl(){if(!mapwrapEl)mapwrapEl=document.querySelector('#oycwm .mapwrap');return mapwrapEl;}
-function applyHdg(){mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
-/* heads-up is a LOCKED view — disable map interaction so the (CSS-rotated) chart
-   can't be panned/clicked into the wrong place */
-function lockMap(lock){['dragging','touchZoom','scrollWheelZoom','doubleClickZoom','boxZoom','keyboard','tap'].forEach(function(k){try{if(map[k]){lock?map[k].disable():map[k].enable();}}catch(e){}});}
-function setHeadsUp(on){
-	headsUp=on;mwEl().classList.toggle('headsup',on);lockMap(on);
-	if(on&&myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
+function applyHdg(){if(!headsUp)mwEl().style.setProperty('--hdg',(myHeading!=null?myHeading:0)+'deg');}
+/* heads-up locks dragging, box zoom and the keyboard (they'd move the rotated
+   chart the wrong way); pinch and wheel zoom stay on but zoom around the centre
+   (the boat). Taps are un-rotated in mapPointFromEvent so they land right. */
+function lockMap(lock){['dragging','doubleClickZoom','boxZoom','keyboard'].forEach(function(k){try{if(map[k]){lock?map[k].disable():map[k].enable();}}catch(e){}});
+	map.options.touchZoom=lock?'center':true;map.options.scrollWheelZoom=lock?'center':true;}
+/* Heads-up animation. HU.disp is the angle on screen (not wrapped to 0-360, so
+   359°→1° turns 2°, not 358°); each frame it eases toward the target heading
+   with a ~0.6 s time constant, and the 1.5x zoom-in that hides the corners
+   eases in and out the same way. The boat marker glides between GPS fixes. */
+var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0};
+function huTarget(){
+	if(HU.exiting)return 0;
+	var moving=mySpeedKt!=null&&mySpeedKt>=1.5&&myHeading!=null;
+	if(moving)return myHeading;                                  /* course over ground */
+	if(HU.cmp!=null&&Date.now()-HU.cmpT<4000)return HU.cmp;       /* slow/stopped: phone compass */
+	return myHeading;                                            /* last known course (or hold) */
 }
+function headsUpTick(t){
+	HU.raf=0;
+	var dt=HU.last?Math.min(0.1,Math.max(0,(t-HU.last)/1000)):0.016;HU.last=t;
+	var tg=huTarget(),k=1-Math.exp(-dt/0.6);
+	var diff=0;if(tg!=null){diff=((tg-HU.disp)%360+540)%360-180;HU.disp+=Math.abs(diff)<0.05?diff:diff*k;}
+	var sTg=HU.exiting?1:1.5;HU.scale+=(sTg-HU.scale)*k;
+	var w=mwEl();w.style.setProperty('--hdg',HU.disp.toFixed(2)+'deg');w.style.setProperty('--hus',HU.scale.toFixed(3));
+	/* boat marker: glide from the previous fix to the new one over ~0.9 s */
+	var f=1;if(HU.mk&&HU.mkTo){f=Math.min(1,(Date.now()-HU.mkT0)/900);var a=HU.mkFrom||HU.mkTo;
+		HU.mk.setLatLng([a[0]+(HU.mkTo[0]-a[0])*f,a[1]+(HU.mkTo[1]-a[1])*f]);}
+	if(HU.exiting){var r=((HU.disp%360)+360)%360;if((r<0.5||r>359.5)&&HU.scale<1.01){HU.exiting=false;HU.disp=0;HU.scale=1;
+		w.classList.remove('headsup');w.style.removeProperty('--hus');applyHdg();HU.last=0;return;}}
+	/* settled (pointing at the target, zoom done, boat arrived): rest until the
+	   next GPS fix or compass reading wakes it, to save battery */
+	if(!HU.exiting&&Math.abs(diff)<0.05&&Math.abs(sTg-HU.scale)<0.002&&f>=1){HU.last=0;return;}
+	HU.raf=requestAnimationFrame(headsUpTick);
+}
+function huKick(){if(!HU.raf){HU.last=0;HU.raf=requestAnimationFrame(headsUpTick);}}
+function setHeadsUp(on){
+	if(on===headsUp&&!HU.exiting)return;
+	headsUp=on;lockMap(on);var w=mwEl();
+	if(on){HU.exiting=false;if(!w.classList.contains('headsup')){HU.disp=0;HU.scale=1;w.style.setProperty('--hdg','0deg');w.style.setProperty('--hus','1');w.classList.add('headsup');}
+		if(myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
+		compassStart();}
+	else{HU.exiting=true;compassStop();}   /* turn back to north and zoom out, then drop the class */
+	huKick();
+}
+/* map taps while rotated: Leaflet reads the tap against the un-rotated box, so
+   undo the rotation + scale about the map's centre first */
+function mapPointFromEvent(e){
+	var c=map.getContainer(),r=c.getBoundingClientRect(),ev=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e,
+		cx=r.left+r.width/2,cy=r.top+r.height/2,dx=(ev.clientX-cx)/HU.scale,dy=(ev.clientY-cy)/HU.scale,a=HU.disp*Math.PI/180;
+	return L.point(c.clientWidth/2+dx*Math.cos(a)-dy*Math.sin(a),c.clientHeight/2+dx*Math.sin(a)+dy*Math.cos(a));
+}
+/* phone compass, for when the boat is too slow for a GPS course: iOS gives
+   webkitCompassHeading (magnetic), Android deviceorientationabsolute (alpha,
+   counter-clockwise from north). Converted to true with MAGVAR and corrected
+   for a sideways (landscape) screen; lightly smoothed. */
+var cmpOn=false;
+function onCompass(e){
+	var h=null;
+	if(e.webkitCompassHeading!=null&&isFinite(e.webkitCompassHeading))h=e.webkitCompassHeading-MAGVAR;
+	else if(e.absolute&&e.alpha!=null&&isFinite(e.alpha))h=360-e.alpha-MAGVAR;
+	if(h==null)return;
+	var so=(screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(window.orientation||0);
+	h=((h+so)%360+360)%360;
+	if(HU.cmp==null)HU.cmp=h;else{var d=((h-HU.cmp)%360+540)%360-180;HU.cmp=((HU.cmp+d*0.3)%360+360)%360;}
+	HU.cmpT=Date.now();
+	if(headsUp)huKick();
+}
+function compassStart(){
+	if(cmpOn)return;cmpOn=true;
+	try{
+		var D=window.DeviceOrientationEvent;
+		if(D&&typeof D.requestPermission==='function'){   /* iOS 13+: must be asked from a tap */
+			D.requestPermission().then(function(st){if(st==='granted'&&cmpOn)window.addEventListener('deviceorientation',onCompass);}).catch(function(){});
+		}else if('ondeviceorientationabsolute' in window)window.addEventListener('deviceorientationabsolute',onCompass);
+		else if(D)window.addEventListener('deviceorientation',onCompass);
+	}catch(e){}
+}
+function compassStop(){cmpOn=false;HU.cmp=null;try{window.removeEventListener('deviceorientation',onCompass);window.removeEventListener('deviceorientationabsolute',onCompass);}catch(e){}}
 function setMyLoc(lat,lon,acc,heading,speed){
 	/* Prefer the device's own speed/heading; fall back to deltas from the previous
 	   fix for phones that report null speed (many Androids; iOS when stationary).
@@ -799,6 +876,11 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	while(myTrack.length&&nowT-myTrack[0].t>30000)myTrack.shift();
 	for(var k=0;k<myTrack.length-1;k++){var f=myTrack[k],dm=distNM(f.lat,f.lon,lat,lon)*1852,dt=(nowT-f.t)/3600000;
 		if(dt>0&&dm>need){dSpd=(dm/1852)/dt;dCrs=brgTrue(f.lat,f.lon,lat,lon);break;}}
+	/* ...but the course from the NEWEST fix that is still well clear of the GPS
+	   error (2x), so after a tack the course (and the heads-up chart) follows
+	   within seconds instead of averaging over the whole 30 s */
+	for(var k2=myTrack.length-2;k2>=0;k2--){var f2=myTrack[k2];
+		if(distNM(f2.lat,f2.lon,lat,lon)*1852>need*2){dCrs=brgTrue(f2.lat,f2.lon,lat,lon);break;}}
 	if(dSpd==null&&myTrack.length>1&&nowT-myTrack[0].t>8000)dSpd=0;   /* 8 s+ without real movement: stopped */
 	prevFix={lat:lat,lon:lon,t:nowT};
 	myLoc={lat:lat,lon:lon};
@@ -813,9 +895,17 @@ function setMyLoc(lat,lon,acc,heading,speed){
 	locLayer.clearLayers();
 	if(acc&&acc<4000)L.circle([lat,lon],{radius:acc,color:'#1a73e8',weight:1,opacity:.5,fillColor:'#1a73e8',fillOpacity:.1,interactive:false}).addTo(locLayer);
 	var boat='<svg width="30" height="30" viewBox="-15 -15 30 30" style="overflow:visible"><path d="M0,-12.5 C5.5,-9 6.5,-1 6,6 L4,9.5 L-4,9.5 L-6,6 C-6.5,-1 -5.5,-9 0,-12.5 Z" fill="none" stroke="#15293b" stroke-width="2" stroke-linejoin="round"/><circle cx="0" cy="0" r="3.2" fill="#1a73e8" stroke="#fff" stroke-width="1.2"/></svg>';
-	L.marker([lat,lon],{icon:L.divIcon({className:'me-mk',html:boat,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
+	var prevMk=HU.mk?HU.mk.getLatLng():null;
+	myMk=HU.mk=L.marker(prevMk&&headsUp?prevMk:[lat,lon],{icon:L.divIcon({className:'me-mk',html:boat,iconSize:[30,30],iconAnchor:[15,15]}),interactive:false,keyboard:false,zIndexOffset:950}).addTo(locLayer);
+	HU.mkFrom=prevMk&&headsUp?[prevMk.lat,prevMk.lng]:null;HU.mkTo=[lat,lon];HU.mkT0=Date.now();
 	drawVector(locLayer,lat,lon,mySpeedKt,myHeading,'#1a73e8');
-	if(headsUp){try{map.setView([lat,lon],map.getZoom(),{animate:false});}catch(e){}} /* keep you centred so the chart turns around you */
+	if(headsUp){
+		/* keep you centred so the chart turns around you: the first fix jumps
+		   there; after that a linear ~0.9 s pan per fix, so the chart glides */
+		if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:false});}catch(e){}}
+		else{try{map.panTo([lat,lon],{animate:true,duration:0.9,easeLinearity:1,noMoveStart:true});}catch(e){}}
+		huKick();
+	}
 	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
 	advanceNextWp();
 	if(routeFromBoat&&pins.length){drawRouteLine();updateRouteBar();}
@@ -927,17 +1017,20 @@ function startLoc(){
 }
 function stopLoc(){
 	if(locWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(locWatch);
-	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;prevFix=null;myTrack=[];if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();
+	locWatch=null;myLoc=null;myHeading=null;mySpeedKt=null;prevFix=null;myTrack=[];HU.mk=myMk=null;HU.mkTo=null;if(headsUp)setHeadsUp(false);applyHdg();if(locLayer)locLayer.clearLayers();
 	if(typeof FLEET!=='undefined'&&FLEET&&FLEET.share)stopShare();
 	if(routeFromBoat)setFromBoat(false);
 	rerenderCallouts();updateBoatInfo();
 }
-/* compass button: North-up ↔ Heads-up (needs a GPS heading, so turn on My
-   location if it isn't already) */
+
+/* the compass on the chart: North-up ↔ Heads-up (needs GPS, so it turns on My
+   location if it isn't already). Asking for the phone compass happens here,
+   inside the tap, because iPhones only allow it from a tap. */
 (function(){var b=document.getElementById('navRose');if(!b)return;
 	b.addEventListener('click',function(){
-		if(!headsUp){var t=document.getElementById('tgLoc');if(!myLoc&&t&&!t.checked){t.checked=true;startLoc();}setHeadsUp(true);}
+		if(!headsUp){var t=document.getElementById('tgLoc');if(!locWatch){if(t)t.checked=true;startLoc();}setHeadsUp(true);}
 		else setHeadsUp(false);
+		b.setAttribute('aria-pressed',headsUp?'true':'false');
 	});
 })();
 
@@ -1051,6 +1144,9 @@ function fmt(iso){var d=new Date(iso);return {big:(d.getHours()%12||12)+' '+(d.g
 
 /* ---------- map ---------- */
 var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
+/* heads-up: un-rotate map taps (mapPointFromEvent, with My location) */
+(function(){var orig=map.mouseEventToContainerPoint;
+	map.mouseEventToContainerPoint=function(e){return mwEl().classList.contains('headsup')?mapPointFromEvent(e):orig.call(map,e);};})();
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
@@ -1651,7 +1747,7 @@ window.addEventListener('resize',wpFit);
 	body.addEventListener('click',function(e){if(Date.now()-lastEnd<400)e.stopPropagation();},true);
 	body.addEventListener('contextmenu',function(e){if(wpDrag||pend)e.preventDefault();});
 })();
-map.on('click',function(e){if(mode==='radar'||headsUp)return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+map.on('click',function(e){if(mode==='radar')return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
 map.getContainer().addEventListener('click',function(e){
 	var btn=e.target.closest?e.target.closest('.co-x[data-wp]'):null;

@@ -34,7 +34,7 @@ define( 'OYC_ENC_MAX_BYTES', 600 * 1024 * 1024 );     // 600 MB ceiling
 /* Area we cache at all (Chesapeake to Cape Cod), and home waters we pre-load. */
 define( 'OYC_ENC_AREA', '38.0,-77.0,42.5,-69.5' );     // south,west,north,east
 define( 'OYC_ENC_HOME', '40.78,-73.84,41.08,-73.38' );
-define( 'OYC_ENC_HOME_ZOOMS', '10,11,12,13,14' );
+define( 'OYC_ENC_HOME_ZOOMS', '9,10,11,12,13,14,15,16' );   // every zoom the chart caches (~8,600 tiles, ~250 MB)
 /* Tiles at this zoom and below are drawn at 2x pixels (more chart detail when
    zoomed out, but text and symbols come out half size). From the next zoom in,
    1x, so soundings and labels are readable. Must match ENC_HIRES_MAX in
@@ -321,21 +321,24 @@ function oyc_enc_home_tiles() {
 	return $out;
 }
 
-/* Fetch up to 25 missing or stale home tiles per run (about a minute of work
-   at most); a full pass over home waters takes a few hours the first time. */
+/* Fetch up to 40 missing or ageing home tiles per run (about a minute of work).
+   A tile is refreshed once it is 25 days old, before the daily prune deletes it
+   at 30, so home waters never have gaps. */
 add_action( 'oyc_enc_warm', 'oyc_enc_warm' );
-function oyc_enc_warm( $limit = 25 ) {
+function oyc_enc_warm( $limit = 40 ) {
 	if ( get_transient( 'oyc_enc_warm_lock' ) ) {
 		return 0;
 	}
 	set_transient( 'oyc_enc_warm_lock', 1, 10 * MINUTE_IN_SECONDS );
+	@set_time_limit( 180 ); // phpcs:ignore
 	$done  = 0;
 	$fails = 0;
 	foreach ( oyc_enc_home_tiles() as $t ) {
 		if ( $done >= $limit || $fails >= 3 ) {
 			break;
 		}
-		if ( oyc_enc_fresh( oyc_enc_file( $t[0], $t[1], $t[2], $t[3] ) ) ) {
+		$f = oyc_enc_file( $t[0], $t[1], $t[2], $t[3] );
+		if ( file_exists( $f ) && ( time() - filemtime( $f ) ) < OYC_ENC_MAX_AGE - 5 * DAY_IN_SECONDS ) {
 			continue;
 		}
 		if ( '' !== oyc_enc_fetch( $t[0], $t[1], $t[2], $t[3] ) ) {
