@@ -862,6 +862,18 @@ function compassStart(){
 	}catch(e){}
 }
 function compassStop(){cmpOn=false;HU.cmp=null;try{window.removeEventListener('deviceorientation',onCompass);window.removeEventListener('deviceorientationabsolute',onCompass);}catch(e){}}
+/* velocity from a least-squares line through the fixes of the last win ms:
+   {kt, crs} or null (fewer than 4 fixes, or under 6 s of them) */
+function trackVel(tr,win){
+	if(!tr||tr.length<4)return null;
+	var tEnd=tr[tr.length-1].t,pts=tr.filter(function(p){return tEnd-p.t<=win;});
+	if(pts.length<4||(tEnd-pts[0].t)<6000)return null;
+	var r=pts[pts.length-1],ky=111320,kx=111320*Math.cos(r.lat*Math.PI/180),n=pts.length,st=0,sx=0,sy=0,stt=0,stx=0,sty=0;
+	pts.forEach(function(p){var t=(p.t-tEnd)/1000,x=(p.lon-r.lon)*kx,y=(p.lat-r.lat)*ky;st+=t;sx+=x;sy+=y;stt+=t*t;stx+=t*x;sty+=t*y;});
+	var d=n*stt-st*st;if(!(d>0))return null;
+	var vx=(n*stx-st*sx)/d,vy=(n*sty-st*sy)/d;   /* m/s east, north */
+	return {kt:Math.sqrt(vx*vx+vy*vy)*1.94384,crs:(Math.atan2(vx,vy)*180/Math.PI+360)%360};
+}
 function setMyLoc(lat,lon,acc,heading,speed){
 	/* Prefer the device's own speed/heading; fall back to deltas from the previous
 	   fix for phones that report null speed (many Androids; iOS when stationary).
@@ -888,7 +900,14 @@ function setMyLoc(lat,lon,acc,heading,speed){
 		devHd=(heading!=null&&isFinite(heading)&&heading>=0&&devSpd!=null&&devSpd>=0.5)?heading:null; /* the device's heading is its course over ground, valid only while moving */
 	var hd=(devHd!=null)?devHd:dCrs;
 	if(hd!=null)myHeading=hd; /* direction of travel; keep the last good one when stopped */
-	mySpeedKt=(devSpd!=null)?devSpd:dSpd; /* knots — device value, or computed from the track */
+	/* SOG from the GPS positions themselves: a straight-line (least-squares) fit
+	   of the last ~12 s of fixes. The phone's own speed reading measures how fast
+	   the phone moves, so on a rocking boat it adds the swing of the mast/cockpit
+	   and reads high; the swing goes back and forth, so over 12 s of positions
+	   it cancels out. Falls back to the device / track value until there are
+	   enough fixes (about 6 s). */
+	var tv=trackVel(myTrack,12000);
+	mySpeedKt=(tv!=null)?tv.kt:((devSpd!=null)?devSpd:dSpd); /* knots */
 	try{if(hd!=null)detectTack(hd,mySpeedKt,lat,lon);}catch(e){}
 	applyHdg();
 	if(!locLayer)locLayer=L.layerGroup().addTo(map);
