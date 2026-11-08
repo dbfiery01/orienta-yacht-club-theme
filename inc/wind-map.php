@@ -111,7 +111,7 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .mine-save{color:#d4a851}
 #oycwm .lyr-btn[aria-expanded="true"]{border-color:var(--navy);background:var(--navy);color:#fff}
 #oycwm .pre-b:focus-visible,#oycwm .lyr-btn:focus-visible,#oycwm .lyr-x:focus-visible{outline:3px solid var(--harbor);outline-offset:2px}
-#oycwm .lyr-drawer{position:absolute;z-index:700;top:10px;right:10px;width:262px;max-height:calc(100% - 104px);overflow:auto;overscroll-behavior:contain;
+#oycwm .lyr-drawer{position:absolute;z-index:1002;top:10px;right:10px;width:262px;max-height:calc(100% - 104px);overflow:auto;overscroll-behavior:contain;
 	background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(11,42,74,.22);padding:8px 12px 12px}
 #oycwm .lyr-drawer[hidden]{display:none}
 #oycwm .lyr-hd{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;
