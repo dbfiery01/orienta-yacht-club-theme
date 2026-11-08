@@ -476,7 +476,7 @@ function oyc_card_badge_list() {
 		'power' => __( 'Power Boater', 'orienta-yacht-club' ),
 		'sail'  => __( 'Sailor', 'orienta-yacht-club' ),
 		'fish'  => __( 'Fisherman', 'orienta-yacht-club' ),
-		'u42'   => __( '42 & Under', 'orienta-yacht-club' ),
+		'u42'   => __( '42 & You', 'orienta-yacht-club' ),
 	);
 }
 
