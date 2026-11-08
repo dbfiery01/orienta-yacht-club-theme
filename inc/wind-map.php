@@ -105,6 +105,10 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pre-b:hover{background:var(--panel)}
 #oycwm .pre-b[aria-pressed="true"]{background:var(--navy);color:#fff}
 #oycwm .lyr-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+#oycwm .pre-b.empty{color:var(--mute);font-style:italic}
+#oycwm .mine-save{border:0;background:none;color:var(--harbor);font:inherit;font-size:.78rem;font-weight:600;padding:4px 2px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;min-height:32px}
+#oycwm .mine-save.ok{color:#2e7d32;text-decoration:none}
+[data-theme="dark"] #oycwm .mine-save{color:#d4a851}
 #oycwm .lyr-btn[aria-expanded="true"]{border-color:var(--navy);background:var(--navy);color:#fff}
 #oycwm .pre-b:focus-visible,#oycwm .lyr-btn:focus-visible,#oycwm .lyr-x:focus-visible{outline:3px solid var(--harbor);outline-offset:2px}
 #oycwm .lyr-drawer{position:absolute;z-index:700;top:10px;right:10px;width:262px;max-height:calc(100% - 104px);overflow:auto;overscroll-behavior:contain;
@@ -508,7 +512,39 @@ function oyc_wind_map_html( $embed = false ) {
    the view tabs then lead the header row */
 #oycwm.embed .hd{padding:2px 18px 8px}
 #oycwm.embed .hd h2{display:none}
-#oycwm.embed #map{height:690px}
+#oycwm.embed #map{height:clamp(460px,calc(100vh - 230px),900px)}
+/* one toolbar row: view tabs, presets + Layers, status, full screen */
+#oycwm.embed .hd{gap:8px 10px;padding:4px 14px 10px}
+#oycwm.embed .tabs{gap:2px}
+#oycwm.embed .tabs button{padding:6px 11px}
+#oycwm.embed .hd .presetbar{padding:0;gap:8px;flex-wrap:nowrap}
+#oycwm.embed .hd .pre-b{padding:0 13px;min-height:36px}
+#oycwm.embed .hd .lyr-btn{min-height:36px}
+#oycwm.embed .hd .st{order:5;font-size:.72rem}
+#oycwm.embed .hd .fsbtn{order:6}
+/* Buoy 42 as one compact line at the end of the time-slider row */
+#oycwm .ctrl{flex-wrap:wrap;row-gap:6px}
+#oycwm .ctrl .erbar{margin:0;padding:4px 10px;border-radius:9px;gap:4px 10px;flex-wrap:nowrap;background:transparent}
+#oycwm .ctrl .erbar .er-name{font-size:.74rem;white-space:nowrap}
+#oycwm .ctrl .erbar .er-stats{gap:2px 12px;flex-wrap:nowrap;margin-left:0}
+#oycwm .ctrl .erbar .st-item{flex-direction:row-reverse;align-items:baseline;gap:4px;white-space:nowrap}
+#oycwm .ctrl .erbar .st-item .v{font-size:.84rem}
+#oycwm .ctrl .erbar .st-item .k{font-size:.6rem}
+@media (max-width:1100px){
+	#oycwm .ctrl .erbar{flex-basis:100%;overflow-x:auto;scrollbar-width:none}
+	#oycwm .ctrl .erbar::-webkit-scrollbar{display:none}
+}
+@media (max-width:760px){
+	#oycwm.embed .hd .presetbar{flex-wrap:wrap;width:100%}
+	#oycwm.embed .hd .presets{flex:1 1 100%}
+	#oycwm.embed .hd .pre-b{padding:0 4px;font-size:.78rem;white-space:nowrap}
+	#oycwm.embed .hd .mine-save{margin-right:auto}
+	#oycwm.embed .tabs{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-radius:12px}
+	#oycwm.embed .tabs::-webkit-scrollbar{display:none}
+	#oycwm.embed .tabs button{flex:none;padding:7px 12px}
+	#oycwm.embed #map{height:clamp(380px,calc(100vh - 300px),640px)}
+	#oycwm .ctrl .tlabel{min-width:0}
+}
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
 /* ── Dark theme (driven by the board's data-theme="dark"): dark chrome; the
@@ -587,33 +623,22 @@ function oyc_wind_map_html( $embed = false ) {
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
+			<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
+			<div class="presetbar" id="presetBar">
+				<div class="presets" role="group" aria-label="Layer presets">
+					<button type="button" class="pre-b" data-preset="sail" aria-pressed="false">Sail</button>
+					<button type="button" class="pre-b" data-preset="race" aria-pressed="false">Race</button>
+					<button type="button" class="pre-b" data-preset="fish" aria-pressed="false">Fish</button>
+					<button type="button" class="pre-b" data-preset="cruise" aria-pressed="false">Cruise</button>
+					<button type="button" class="pre-b pre-mine" data-preset="mine" aria-pressed="false" title="Your saved map setup">My chart</button>
+				</div>
+				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view and map position as My chart">Save as My chart</button>
+				<button type="button" class="lyr-btn" id="lyrBtn" aria-expanded="true" aria-controls="lyrDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>Layers</button>
+			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 			<button type="button" class="fsbtn" id="oycwmFs" title="Full screen" aria-label="Full screen"></button>
 		</div>
 
-		<div class="erbar" id="erBar">
-			<div class="er-name">&#9678; <span>Buoy 42</span></div>
-			<div class="er-stats" id="erStats">
-				<div class="st-item"><span class="v" id="erWind">&mdash;</span><span class="k">Wind</span></div>
-				<div class="st-item"><span class="v" id="erGust">&mdash;</span><span class="k">Gust</span></div>
-				<div class="st-item"><span class="v" id="erDir">&mdash;</span><span class="k">From</span></div>
-				<div class="st-item"><span class="v" id="erPres">&mdash;</span><span class="k">Pressure</span></div>
-				<div class="st-item"><span class="v" id="erTemp">&mdash;</span><span class="k">Temp</span></div>
-				<div class="st-item"><span class="v" id="erPrecip">&mdash;</span><span class="k">Precip</span></div>
-				<div class="st-item"><span class="v" id="erWave">&mdash;</span><span class="k">Waves</span></div>
-			</div>
-		</div>
-
-		<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
-		<div class="presetbar" id="presetBar">
-			<div class="presets" role="group" aria-label="Layer presets">
-				<button type="button" class="pre-b" data-preset="sail" aria-pressed="false">Sail</button>
-				<button type="button" class="pre-b" data-preset="race" aria-pressed="false">Race</button>
-				<button type="button" class="pre-b" data-preset="fish" aria-pressed="false">Fish</button>
-				<button type="button" class="pre-b" data-preset="cruise" aria-pressed="false">Cruise</button>
-			</div>
-			<button type="button" class="lyr-btn" id="lyrBtn" aria-expanded="true" aria-controls="lyrDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>Layers</button>
-		</div>
 		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
@@ -686,6 +711,18 @@ function oyc_wind_map_html( $embed = false ) {
 			<button id="play" title="Play/pause">&#9654;</button>
 			<input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Time">
 			<div class="tlabel" id="tlabel">&mdash;<small>&nbsp;</small></div>
+			<div class="erbar" id="erBar">
+				<div class="er-name">&#9678; <span>Buoy 42</span></div>
+				<div class="er-stats" id="erStats">
+					<div class="st-item"><span class="v" id="erWind">&mdash;</span><span class="k">Wind</span></div>
+					<div class="st-item"><span class="v" id="erGust">&mdash;</span><span class="k">Gust</span></div>
+					<div class="st-item"><span class="v" id="erDir">&mdash;</span><span class="k">From</span></div>
+					<div class="st-item"><span class="v" id="erPres">&mdash;</span><span class="k">Pressure</span></div>
+					<div class="st-item"><span class="v" id="erTemp">&mdash;</span><span class="k">Temp</span></div>
+					<div class="st-item"><span class="v" id="erPrecip">&mdash;</span><span class="k">Precip</span></div>
+					<div class="st-item"><span class="v" id="erWave">&mdash;</span><span class="k">Waves</span></div>
+				</div>
+			</div>
 		</div>
 
 		<div class="mapgrid" id="mapGrid">
@@ -3431,6 +3468,43 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 		fish:['tgChart','tgCur','tgFish','tgFuel'],
 		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
 	};
+	/* "My chart": the visitor's own saved setup (layers incl. Animated / Wind
+	   color, the view tab, and the map centre + zoom), kept in this browser. */
+	var EXTRA=['tgParticles','tgWindColor'],MINE_KEY='oyc_wm_mine',mine=null;
+	var VIEWS=['tabWind','tabRadar','tabTemp','tabPrecip','tabWave','tabSat','tabCharts'];
+	try{mine=JSON.parse(localStorage.getItem(MINE_KEY)||'null');}catch(e){mine=null;}
+	if(!mine||!mine.layers||!mine.layers.join)mine=null;
+	function syncMine(){
+		if(mine)PRESETS.mine=mine.layers.filter(function(id){return MANAGED.indexOf(id)>=0;});else delete PRESETS.mine;
+		var mb=bar.querySelector('.pre-mine');if(mb)mb.classList.toggle('empty',!mine);
+		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Update My chart':'Save as My chart';
+	}
+	function saveMine(){
+		var on=MANAGED.concat(EXTRA).filter(function(id){var cb=document.getElementById(id);return cb&&cb.checked;});
+		var view='tabWind';VIEWS.forEach(function(v){var b=document.getElementById(v);if(b&&b.getAttribute('aria-selected')==='true')view=v;});
+		var c=null,z=null,lm=window.OYCWM&&window.OYCWM.map;try{var ll=lm.getCenter();c=[+ll.lat.toFixed(4),+ll.lng.toFixed(4)];z=lm.getZoom();}catch(e){}
+		mine={layers:on,view:view,c:c,z:z};
+		try{localStorage.setItem(MINE_KEY,JSON.stringify(mine));localStorage.setItem('oyc_wm_preset','mine');}catch(e){}
+		syncMine();mark();
+		var sv=document.getElementById('mineSave');
+		if(sv){sv.textContent='Saved \u2713';sv.classList.add('ok');setTimeout(function(){sv.classList.remove('ok');syncMine();},1600);}
+	}
+	function applyMine(){
+		if(!mine)return;
+		applying=true;
+		EXTRA.forEach(function(id){var cb=document.getElementById(id);if(cb&&cb.checked!==(mine.layers.indexOf(id)>=0)){cb.checked=!cb.checked;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
+		applying=false;
+		var tb=document.getElementById(mine.view||'tabWind');
+		if(tb&&tb.getAttribute('aria-selected')!=='true')tb.click();
+		var lm=window.OYCWM&&window.OYCWM.map;if(!lm||!mine.c||!mine.z)return;
+		var c=mine.c,z=mine.z;
+		function go(){try{lm.setView(c,z,{animate:false});}catch(e){}}
+		/* the map may sit in a hidden tab (zero size); Leaflet would shift the
+		   centre when it is first shown, so wait for it to have a real size */
+		if(lm.getContainer().clientWidth)go();
+		else lm.once('resize',function(){setTimeout(go,0);});
+	}
+	syncMine();
 	var applying=false;
 	function matches(){
 		var hit=null;
@@ -3445,19 +3519,24 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 		[].forEach.call(bar.querySelectorAll('.pre-b'),function(b){b.setAttribute('aria-pressed',b.getAttribute('data-preset')===on?'true':'false');});
 	}
 	function apply(k){
+		if(k==='mine'&&!mine){saveMine();return;}   /* first tap on an empty My chart saves the current setup */
 		var want=PRESETS[k];if(!want)return;
 		var tw=document.getElementById('tabWind');
-		if(tw&&tw.getAttribute('aria-selected')!=='true')tw.click();   /* presets are map-view layers */
+		if(k!=='mine'&&tw&&tw.getAttribute('aria-selected')!=='true')tw.click();   /* presets are map-view layers */
 		applying=true;
 		/* switch layers off first, then on, so a layer that depends on another
 		   (Race needs the barbs/dials) ends up in its normal "on" state */
 		MANAGED.forEach(function(id){var cb=document.getElementById(id);if(cb&&cb.checked&&want.indexOf(id)<0){cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
 		want.forEach(function(id){var cb=document.getElementById(id);if(cb&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
 		applying=false;
+		if(k==='mine')applyMine();
 		try{localStorage.setItem('oyc_wm_preset',k);}catch(e){}
 		mark();
 	}
 	bar.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('.pre-b'):null;if(b)apply(b.getAttribute('data-preset'));});
+	var svb=document.getElementById('mineSave');if(svb)svb.addEventListener('click',saveMine);
+	/* a saved My chart is how the map opens */
+	if(mine)setTimeout(function(){apply('mine');},0);
 	drawer.addEventListener('change',function(){if(!applying)mark();});
 	/* Layers drawer: open by default on wide screens, closed on phones; the
 	   visitor's last choice wins */
