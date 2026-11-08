@@ -1,12 +1,12 @@
 <?php
 /**
- * Public desktop navigation (logged-out visitors, screens wider than 880px).
+ * Desktop navigation (all visitors, screens wider than 880px).
  *
  * Six top-level items with short dropdowns, then the weather glyph, the
  * light/dark toggle and the Member Login / Reservations buttons on the right.
- * The WordPress "Primary" menu still drives the mobile hamburger and the
- * logged-in header; on desktop its text links are hidden for logged-out
- * visitors and only its weather / Member Login / Reservations items are kept
+ * The WordPress "Primary" menu still drives the mobile hamburger; on desktop
+ * its text links are hidden and only its weather glyph and account buttons
+ * (Member Login / Reservations, or My Account / Logout when logged in) are kept
  * (see the "Public desktop navigation" block at the end of style.css).
  *
  * @package Orienta_Yacht_Club
@@ -24,7 +24,7 @@ define( 'OYC_DESK_NAV_DOCKWA_URL', 'https://dockwa.com/explore/destination/3gcrv
  * Whether the public desktop menu is shown on this request.
  */
 function oyc_desk_nav_enabled() {
-	return ! is_user_logged_in();
+	return true; // same desktop menu for visitors and logged-in members
 }
 
 /**

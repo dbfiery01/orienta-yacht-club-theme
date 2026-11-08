@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.94
+Version: 1.5.95
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -933,7 +933,7 @@ html[data-theme="dark"] .sail-docs-link a:hover { color: #9fd0f0 !important; }
 html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9 !important; }
 
 /* ── Public desktop navigation (v1.7.392) ─────────────────────────────────
-   Logged-out visitors on screens wider than 880px get six items with short
+   All visitors on screens wider than 880px get six items with short
    dropdowns (parent theme inc/desktop-nav.php). The WP menu's own text links are hidden
    there; its weather glyph, Member Login and Reservations items stay, and are
    re-ordered to the right with the light/dark toggle. #nav-menu becomes
@@ -950,8 +950,12 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9
   .site-header .primary-nav.has-desk-nav #nav-menu > li { display: none; }
   .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { display: flex; order: 2; margin-left: 14px; }
   .site-header .primary-nav.has-desk-nav .theme-btn { order: 3; margin: 0; }
-  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login { display: list-item; order: 4; margin-left: 8px; }
-  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--reservations { display: list-item; order: 5; }
+  /* Account buttons from the WP menu: Member Login + Reservations (logged out)
+     or My Account + Logout (logged in). */
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta { display: list-item; order: 4; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--reservations,
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--logout { order: 5; }
+  .site-header .primary-nav.has-desk-nav .theme-btn { margin-right: 8px !important; }
 
   .site-header .primary-nav.has-desk-nav .oyc-desk-nav {
     order: 1; display: flex; align-items: center; gap: 4px;
@@ -1018,7 +1022,7 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9
   .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top::after { left: 7px; right: 7px; }
   .site-header .oyc-desk-item.has-dd > a.oyc-desk-top::after { right: 22px; }
   .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { margin-left: 4px; }
-  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login { margin-left: 2px; }
+  .site-header .primary-nav.has-desk-nav .theme-btn { margin-right: 2px !important; }
   .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--reservations { display: none; }
 }
 /* 881–1023px: smaller type, the login button without its icon. */
@@ -1028,6 +1032,16 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9
   .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top { padding: 12px 5px; font-size: 0.82rem; gap: 3px; }
   .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top::after { left: 5px; right: 5px; }
   .site-header .oyc-desk-item.has-dd > a.oyc-desk-top::after { right: 18px; }
-  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login svg { display: none; }
-  .site-header .primary-nav.has-desk-nav #nav-menu li.cta.cta--member-login > a { font-size: 0.85rem !important; padding: 7px 10px !important; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta svg { display: none; }
+  .site-header .primary-nav.has-desk-nav #nav-menu li.cta > a { font-size: 0.85rem !important; padding: 7px 10px !important; }
+}
+/* Logged in there are two account buttons that both stay (My Account + Logout),
+   so compact them below 1280px, and below 1024px drop the weather glyph
+   (still on the Harbor Guide page and the phone header). */
+@media (min-width: 881px) and (max-width: 1279px) {
+  body.logged-in .site-header .primary-nav.has-desk-nav #nav-menu > li.cta svg { display: none; }
+  body.logged-in .site-header .primary-nav.has-desk-nav #nav-menu li.cta > a { font-size: 0.85rem !important; padding: 7px 10px !important; }
+}
+@media (min-width: 881px) and (max-width: 1023px) {
+  body.logged-in .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { display: none; }
 }
