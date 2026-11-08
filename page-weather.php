@@ -585,7 +585,7 @@ if ( ! $oyc_weather_menu ) {
 				<div class="card" data-card="forecast">
 					<h2>Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
 					<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
-					<div class="nh" id="nextHours" aria-label="Next six hours: wind, gusts and seas"></div>
+					<div class="nh" id="nextHours" aria-label="Next 12 hours in 2-hour blocks: wind, gusts and seas"></div>
 					<div class="now-go"><button type="button" class="go-btn" data-go="forecast">Full 7-day forecast</button></div>
 				</div>
 				<div class="card graph-card" data-card="graph">
@@ -1991,23 +1991,35 @@ if ( ! $oyc_weather_menu ) {
 			if(n){ mo.observe(n, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title','class'] }); }
 		});
 	}
-	function nhIndex(H){
-		var now = Date.now() - 30*60000;
-		for(var i = 0; i < H.time.length; i++){ if(new Date(H.time[i]).getTime() >= now){ return i; } }
-		return -1;
-	}
+	// Next 12 hours in 2-hour blocks on even hours (e.g. 10–12, 12–2, 2–4 …),
+	// starting with the block we're in now. Each block shows the wind range
+	// over its two hours, the average direction, the top gust and the top seas.
 	function renderNextHours(){
 		var box = $('nextHours'); if(!box || !nhWind) return;
-		var i0 = nhIndex(nhWind); if(i0 < 0) return;
+		var start = new Date(); start.setMinutes(0, 0, 0); start.setHours(start.getHours() - start.getHours() % 2);
 		var wv = {};
 		if(nhWave && nhWave.time){ nhWave.time.forEach(function(t, k){ wv[t] = nhWave.wave_height[k]; }); }
+		function ap(h){ return (h % 12 || 12) + (h % 24 >= 12 ? 'p' : 'a'); }
 		var out = [];
-		for(var i = i0; i < Math.min(i0 + 6, nhWind.time.length); i++){
-			var d = new Date(nhWind.time[i]), h = d.getHours(), lbl = (h % 12 || 12) + (h >= 12 ? 'p' : 'a');
-			var sp = nhWind.wind_speed_10m[i], g = nhWind.wind_gusts_10m[i], dir = nhWind.wind_direction_10m[i], ht = wv[nhWind.time[i]];
+		for(var b = 0; b < 6; b++){
+			var t0 = start.getTime() + b*2*3600000, t1 = t0 + 2*3600000;
+			var sp = [], gs = [], hts = [], u = 0, v = 0;
+			nhWind.time.forEach(function(t, k){
+				var ms = new Date(t).getTime(); if(ms < t0 || ms >= t1) return;
+				var s1 = nhWind.wind_speed_10m[k], g1 = nhWind.wind_gusts_10m[k], d1 = nhWind.wind_direction_10m[k];
+				if(s1 != null){ sp.push(s1); if(d1 != null){ u += s1*Math.sin(d1*Math.PI/180); v += s1*Math.cos(d1*Math.PI/180); } }
+				if(g1 != null) gs.push(g1);
+				if(wv[t] != null) hts.push(wv[t]);
+			});
+			if(!sp.length) continue;
+			var lo = Math.round(Math.min.apply(null, sp)), hi = Math.round(Math.max.apply(null, sp));
+			var dir = (u || v) ? (Math.atan2(u, v)*180/Math.PI + 360) % 360 : null;
+			var h0 = new Date(t0).getHours(), h1 = new Date(t1).getHours();
+			var lbl = (h1 !== 0 && (h0 < 12) === (h1 < 12)) ? ap(h0).slice(0, -1) + '–' + ap(h1) : ap(h0) + '–' + ap(h1);
 			out.push('<div class="nh-h"><div class="nh-t">' + lbl + '</div>'
-				+ '<div class="nh-w">' + (sp != null ? Math.round(sp) : '—') + '<small> kt' + (dir != null ? ' ' + dirCardinal(dir) : '') + '</small></div>'
-				+ '<div class="nh-g">' + (g != null ? 'g' + Math.round(g) : '') + (ht != null ? ' · ' + (Math.round(ht*10)/10) + ' ft' : '') + '</div></div>');
+				+ '<div class="nh-w">' + (lo === hi ? lo : lo + '–' + hi) + '<small> kt' + (dir != null ? ' ' + dirCardinal(dir) : '') + '</small></div>'
+				+ '<div class="nh-g">' + (gs.length ? 'g' + Math.round(Math.max.apply(null, gs)) : '')
+				+ (hts.length ? ' · ' + (Math.round(Math.max.apply(null, hts)*10)/10) + ' ft' : '') + '</div></div>');
 		}
 		box.innerHTML = out.join('');
 	}
