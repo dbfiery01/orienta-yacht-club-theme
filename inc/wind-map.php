@@ -1794,8 +1794,33 @@ window.addEventListener('resize',wpFit);
 		var x=e.target.closest?e.target.closest('[data-wpx]'):null,i;
 		if(x){e.preventDefault();var id=+x.getAttribute('data-wpx');for(i=0;i<pins.length;i++){if(pins[i].id===id){removePin(pins[i]);break;}}return;}
 		var tr=e.target.closest?e.target.closest('tr[data-wp]'):null;
-		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){map.panTo([pins[i].lat,pins[i].lon]);break;}}}
+		if(tr){var id2=+tr.getAttribute('data-wp');for(i=0;i<pins.length;i++){if(pins[i].id===id2){focusPin(pins[i]);break;}}}
 	});
+	/* centre on the tapped waypoint and zoom in to harbour scale (zoom 11) if the
+	   map is further out — never zoom out, never all the way in. Where the table
+	   floats over the map (phones, full screen), centre in the uncovered part. */
+	function focusPin(p){
+		var z=Math.min(Math.max(map.getZoom(),11),map.getMaxZoom()||18),dx=0,dy=0;
+		try{
+			var mr=map.getContainer().getBoundingClientRect(),tr=tab.getBoundingClientRect();
+			/* table floating over the map's right side: centre in the larger free
+			   area, either the strip to its left or the strip below it */
+			/* only the part of the map actually on screen counts (page scroll, the
+			   phone's fixed bottom tab bar) */
+			var top=Math.max(mr.top,0),bot=Math.min(mr.bottom,window.innerHeight),
+			    bar=document.querySelector('.wx-tabs');
+			if(bar&&getComputedStyle(bar).position==='fixed')bot=Math.min(bot,bar.getBoundingClientRect().top);
+			var cy=(mr.top+mr.bottom)/2,fx=(mr.left+mr.right)/2,fy=(top+bot)/2;
+			if(tr.width&&tr.left>mr.left&&tr.left<mr.right&&tr.top<bot&&tr.bottom>top){
+				var leftW=tr.left-mr.left,belowH=Math.max(0,bot-tr.bottom);
+				if(leftW*(bot-top)>=belowH*mr.width)fx=(mr.left+tr.left)/2;
+				else fy=(tr.bottom+bot)/2;
+			}
+			dx=mr.left+mr.width/2-fx;dy=cy-fy;
+		}catch(e){}
+		var pt=map.project([p.lat,p.lon],z).add([dx,dy]);
+		map.setView(map.unproject(pt,z),z,{animate:true});
+	}
 })();
 /* Reorder: grab a waypoint row (anywhere but its ✕) and drag it up or down; the
    other rows slide aside, and on release the point moves to that place in the
