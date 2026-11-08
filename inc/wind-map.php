@@ -130,7 +130,8 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .presetbar{padding:2px 12px 10px}
 	#oycwm .presets{flex:1}
 	#oycwm .pre-b{flex:1;padding:0 6px}
-	#oycwm .lyr-drawer{position:static;width:auto;max-height:none;margin:0 10px 10px;box-shadow:none}
+	/* phones: the drawer floats over the map (it used to sit above it and push the map off screen) */
+	#oycwm .lyr-drawer{top:8px;left:52px;right:8px;width:auto;max-height:calc(100% - 16px)}
 	#oycwm .lyr-drawer .lyr-sec{display:block}
 	#oycwm .lyr-drawer .lyr-g{display:grid;grid-template-columns:1fr 1fr;column-gap:6px}
 	#oycwm .lyr-drawer .lyr-g h3,#oycwm .lyr-drawer .lyr-g .lay-pop{grid-column:1/-1}
@@ -535,14 +536,18 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .ctrl .erbar::-webkit-scrollbar{display:none}
 }
 @media (max-width:760px){
-	#oycwm.embed .hd .presetbar{flex-wrap:wrap;width:100%}
+	#oycwm.embed .hd .presetbar{display:contents}
 	#oycwm.embed .hd .presets{flex:1 1 100%}
 	#oycwm.embed .hd .pre-b{padding:0 4px;font-size:.78rem;white-space:nowrap}
 	#oycwm.embed .hd .mine-save{margin-right:auto}
 	#oycwm.embed .tabs{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-radius:12px}
 	#oycwm.embed .tabs::-webkit-scrollbar{display:none}
 	#oycwm.embed .tabs button{flex:none;padding:7px 12px}
-	#oycwm.embed #map{height:clamp(380px,calc(100vh - 300px),640px)}
+	#oycwm.embed #map{height:clamp(340px,calc(100vh - 330px),640px);height:clamp(340px,calc(100svh - 330px),640px)}
+	#oycwm.embed .hd{padding:2px 10px 8px;gap:6px}
+	#oycwm.embed .hd .st{display:none}
+	#oycwm.embed .hd .pre-b,#oycwm.embed .hd .lyr-btn,#oycwm.embed .hd .fsbtn{min-height:34px}
+	#oycwm .ctrl{padding:6px 10px;gap:8px}
 	#oycwm .ctrl .tlabel{min-width:0}
 }
 
