@@ -56,6 +56,9 @@ if ( ! $oyc_weather_menu ) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
 <style>
 	:root{
 		/* OYC DARK palette (default) — the July "signage" look: navy ground, cream
@@ -465,6 +468,63 @@ if ( ! $oyc_weather_menu ) {
 	   0 minimum caps the track at the viewport; the marquee then clips normally. */
 	@media (max-width:1100px){ .grid{grid-template-columns:minmax(0,1fr)}}
 	@media (max-width:560px){ .topbar{padding:12px 14px} .card{padding:14px} }
+
+	/* ===================== REDESIGN LOOK (step 4) =====================
+	   Inter for text, Source Serif 4 for the big headings, the mockup's
+	   flat harbor-grey ground and navy ink in light mode; dark mode keeps
+	   its navy palette. On phones the view tabs become a bottom tab bar. */
+	body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+	:root[data-theme="light"]{
+		--bg1:#F2F5F8; --bg2:#F2F5F8; --edge:#DCE3EA; --edge2:#C4D0DC;
+		--ink:#10263F; --muted:#56677A; --faint:#687889;
+		--teal:#B0842F; --teal2:#8A6420; --amber:#0F68A6;
+	}
+	:root[data-theme="light"] body{background:#F2F5F8}
+	.wx-title h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:clamp(24px,2.6vw,30px);letter-spacing:0}
+	.wx-tab{display:inline-flex;align-items:center;gap:6px;font-size:16px;min-height:48px;padding:0 20px}
+	.wx-ico{display:none;width:24px;height:24px;flex:none}
+	:root[data-theme="light"] .wx-tab[aria-selected="true"]{color:#10263F;border-bottom-color:#B0842F}
+
+	/* headline tiles: one joined strip, like the mockup */
+	.now-stats{gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:14px;overflow:hidden;
+		grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+	.ns{border:0;border-radius:0;padding:16px 20px;background:var(--panel)}
+	:root[data-theme="dark"] .ns{background:#0d2c4c}
+	.ns-k{text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--muted)}
+	.ns-v{font-size:clamp(28px,3vw,42px);font-weight:600;letter-spacing:-.5px;margin-top:2px}
+	.ns-s{font-size:14px}
+
+	/* cards: sentence-style headings, softer corners */
+	.wx-panel .card{border-radius:14px;padding:18px 22px}
+	.wx-panel .card > h2{font-size:16px;letter-spacing:0;text-transform:none;font-weight:600;margin-bottom:6px}
+	.wx-panel .card > h2 .sta{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;font-weight:500;letter-spacing:.06em}
+	.now-main .card > h2,.fc-full-card > h2{font-family:"Source Serif 4",Georgia,serif;font-size:21px}
+	.fc-alert > h2{text-transform:none!important;letter-spacing:0!important;font-size:18px!important}
+	.go-btn{border-radius:8px}
+	.windmap-embed{margin-left:-22px;margin-right:-22px}
+
+	/* ---- phones: bottom tab bar + slimmer top bar ---- */
+	@media (max-width:700px){
+		body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+		.wx-head{border-bottom:0;padding-bottom:0}
+		.wx-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1500;width:auto;margin:0;gap:0;
+			display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+			padding-bottom:env(safe-area-inset-bottom,0px);background:#FFFFFF;border-top:1px solid var(--edge);
+			box-shadow:0 -2px 10px rgba(16,38,63,.06)}
+		:root[data-theme="dark"] .wx-tabs{background:#071d35;border-top-color:rgba(245,239,226,.16)}
+		.wx-tab{flex-direction:column;justify-content:center;gap:2px;min-height:64px;padding:0;border:0;
+			font-size:13px;color:var(--muted)}
+		.wx-tab[aria-selected="true"],:root[data-theme="light"] .wx-tab[aria-selected="true"]{color:#8A6420;border:0}
+		:root[data-theme="dark"] .wx-tab[aria-selected="true"]{color:var(--teal)}
+		.wx-ico{display:block}
+		.tb-title,.clockwrap{display:none}
+		.wx-panel .card{padding:14px}
+		.windmap-embed{margin-left:-14px;margin-right:-14px}
+		.now-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+		.ns{padding:10px 12px}
+		.ns-v{font-size:30px}
+		.ns-k,.ns-s{font-size:13px}
+	}
 </style>
 </head>
 <body>
@@ -503,10 +563,10 @@ if ( ! $oyc_weather_menu ) {
 			<p class="wx-sub" id="wxSub">Live conditions</p>
 		</div>
 		<div class="wx-tabs" role="tablist" aria-label="Weather views">
-			<button type="button" role="tab" class="wx-tab" id="tab-now" data-tab="now" aria-controls="panel-now" aria-selected="true">Now</button>
-			<button type="button" role="tab" class="wx-tab" id="tab-forecast" data-tab="forecast" aria-controls="panel-forecast" aria-selected="false" tabindex="-1">Forecast</button>
-			<button type="button" role="tab" class="wx-tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1">Chart</button>
-			<button type="button" role="tab" class="wx-tab" id="tab-fishing" data-tab="fishing" aria-controls="panel-fishing" aria-selected="false" tabindex="-1">Fishing</button>
+			<button type="button" role="tab" class="wx-tab" id="tab-now" data-tab="now" aria-controls="panel-now" aria-selected="true"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7.5V12l3 2"/></svg><span>Now</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-forecast" data-tab="forecast" aria-controls="panel-forecast" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></svg><span>Forecast</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Chart</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-fishing" data-tab="fishing" aria-controls="panel-fishing" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2.6-4 6-6 9.5-6 3.5 0 6.2 2 8 6-1.8 4-4.5 6-8 6-3.5 0-6.9-2-9.5-6ZM3 12 1 8.5M3 12l-2 3.5M16.5 10.5h.01"/></svg><span>Fishing</span></button>
 		</div>
 	</div>
 
@@ -750,7 +810,7 @@ if ( ! $oyc_weather_menu ) {
 		if(bar){
 			bar.addEventListener('click', function(e){
 				var b = e.target.closest ? e.target.closest('.wx-tab') : null;
-				if(b){ showTab(b.getAttribute('data-tab')); }
+				if(b){ showTab(b.getAttribute('data-tab'), { scroll:true }); }
 			});
 			bar.addEventListener('keydown', function(e){
 				var i = WX_TABS.indexOf(wxTab), n = null;
