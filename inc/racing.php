@@ -359,7 +359,7 @@ function oyc_race_grant( $user_id, $race_id ) {
  */
 function oyc_race_member_templates() {
 	return array(
-		'page-bulletin-board.php', 'page-dashboard.php', 'page-edit-profile.php', 'page-fleet-roster.php',
+		'page-bulletin-board.php', 'page-dashboard.php', 'page-member-card.php', 'page-edit-profile.php', 'page-fleet-roster.php',
 		'page-members-only.php', 'page-oyc-resources.php', 'page-photo-gallery.php', 'page-video-gallery.php',
 		'page-video-streaming.php', 'page-officers.php', 'page-officer-applications.php', 'page-officer-events.php',
 		'page-officer-members.php', 'page-officer-messages.php',

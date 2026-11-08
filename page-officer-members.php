@@ -134,6 +134,21 @@ if ( isset( $_POST['oyc_user_update_nonce'] ) &&
 				update_user_meta( $uid, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ?? '' ) ) );
 			}
 
+			// Membership card fields (inc/member-card.php).
+			foreach ( array_keys( oyc_card_fields() ) as $key ) {
+				update_user_meta( $uid, $key, oyc_card_clean_field( $key, wp_unslash( $_POST[ $key ] ?? '' ) ) );
+			}
+			$oyc_num  = (string) get_user_meta( $uid, 'oyc_member_number', true );
+			$oyc_dupe = oyc_card_number_taken_by( $oyc_num, $uid );
+			if ( $oyc_dupe ) {
+				oyc_officer_notice( sprintf(
+					/* translators: 1: member number, 2: other member's name. */
+					__( 'Member number %1$s is also on %2$s\'s account. Please check which is right.', 'orienta-yacht-club' ),
+					$oyc_num,
+					$oyc_dupe[0]->display_name
+				), 'error' );
+			}
+
 			$who = get_userdata( $uid );
 			oyc_audit_log( 'user.update', sprintf( 'Updated account "%s"', $who ? $who->user_login : $uid ), $uid );
 			oyc_officer_notice( __( 'Account updated.', 'orienta-yacht-club' ) );
@@ -200,6 +215,66 @@ if ( isset( $_POST['oyc_user_confirm_nonce'] ) &&
 	}
 }
 
+/* ── Reissue membership card ──────────────────────────────────────────────────
+ * New card key: every existing QR for this member (screenshots, printouts, a
+ * lost phone) now reads NOT VALID. The member just reopens /member-card/.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+if ( isset( $_POST['oyc_card_reissue_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_card_reissue_nonce'] ) ), 'oyc_card_reissue' ) ) {
+
+	$rid = (int) ( $_POST['user_id'] ?? 0 );
+
+	if ( ! oyc_officer_can_manage_user( $rid ) ) {
+		oyc_officer_notice( __( 'You do not have permission to manage that account.', 'orienta-yacht-club' ), 'error' );
+	} else {
+		$who = get_userdata( $rid );
+		oyc_card_reissue( $rid );
+		oyc_audit_log( 'user.card_reissue', sprintf( 'Reissued membership card for "%s"', $who->user_login ), $rid );
+		oyc_officer_notice( sprintf(
+			__( '%s has a new card. Old QR codes for this member now show NOT VALID.', 'orienta-yacht-club' ),
+			$who->display_name
+		) );
+	}
+}
+
+/* ── Import member numbers (CSV) ─────────────────────────────────────────── */
+
+$oyc_import = null;
+
+if ( isset( $_POST['oyc_card_import_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_card_import_nonce'] ) ), 'oyc_card_import' ) ) {
+
+	$file    = $_FILES['oyc_card_csv'] ?? null;
+	$dry_run = ! empty( $_POST['oyc_card_dry_run'] );
+
+	if ( ! $file || UPLOAD_ERR_OK !== (int) $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) {
+		oyc_officer_notice( __( 'Please choose a CSV file to import.', 'orienta-yacht-club' ), 'error' );
+	} elseif ( (int) $file['size'] > 2 * 1024 * 1024 ) {
+		oyc_officer_notice( __( 'That file is too large (2 MB limit).', 'orienta-yacht-club' ), 'error' );
+	} elseif ( ! preg_match( '/\.(csv|txt)$/i', (string) $file['name'] ) ) {
+		oyc_officer_notice( __( 'Please save the roster as a .csv file (in Excel: File → Save As → CSV).', 'orienta-yacht-club' ), 'error' );
+	} else {
+		$oyc_import            = oyc_card_import_csv( $file['tmp_name'], $dry_run );
+		$oyc_import['dry_run'] = $dry_run;
+		if ( $oyc_import['error'] ) {
+			oyc_officer_notice( $oyc_import['error'], 'error' );
+			$oyc_import = null;
+		} else {
+			oyc_officer_notice( sprintf(
+				$dry_run
+					/* translators: 1: rows that would change, 2: unchanged rows, 3: unmatched rows. */
+					? __( 'Test run, nothing saved: %1$d members would be updated, %2$d already match, %3$d rows did not match an account.', 'orienta-yacht-club' )
+					/* translators: 1: rows changed, 2: unchanged rows, 3: unmatched rows. */
+					: __( 'Import done: %1$d members updated, %2$d already matched, %3$d rows did not match an account.', 'orienta-yacht-club' ),
+				$oyc_import['updated'],
+				$oyc_import['unchanged'],
+				count( $oyc_import['unmatched'] )
+			), $oyc_import['unmatched'] ? 'error' : 'success' );
+		}
+	}
+}
+
 /* ── Delete ───────────────────────────────────────────────────────────────── */
 
 if ( isset( $_POST['oyc_user_delete_nonce'] ) &&
@@ -241,7 +316,18 @@ $oyc_search   = sanitize_text_field( wp_unslash( $_GET['muser'] ?? '' ) );
 $oyc_upaged   = max( 1, (int) ( $_GET['upage'] ?? 1 ) );
 $oyc_per_page = 25;
 
-$oyc_user_query = new WP_User_Query( array(
+// A search that is exactly a member number finds that member.
+$oyc_num_hit = ( '' !== $oyc_search && preg_match( '/^#?\w{1,20}$/', $oyc_search ) )
+	? get_users( array( 'meta_key' => 'oyc_member_number', 'meta_value' => ltrim( $oyc_search, '#' ), 'fields' => 'ID', 'number' => 50 ) )
+	: array();
+
+$oyc_user_query = new WP_User_Query( $oyc_num_hit ? array(
+	'include'        => $oyc_num_hit,
+	'number'         => $oyc_per_page,
+	'paged'          => $oyc_upaged,
+	'orderby'        => 'display_name',
+	'order'          => 'ASC',
+) : array(
 	'search'         => $oyc_search ? '*' . $oyc_search . '*' : '',
 	'search_columns' => array( 'user_login', 'user_email', 'display_name' ),
 	'number'         => $oyc_per_page,
@@ -344,6 +430,28 @@ get_header();
 						<?php endforeach; ?>
 					</div>
 
+					<h3 class="officer-form__subhead"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></h3>
+					<div class="officer-form__grid">
+						<?php foreach ( oyc_card_fields() as $key => $label ) : ?>
+							<div class="officer-form__row">
+								<label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label>
+								<input type="text" id="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>"
+								       value="<?php echo esc_attr( get_user_meta( $oyc_edit->ID, $key, true ) ); ?>"
+								       <?php echo 'oyc_membership_type' === $key ? 'list="oyc-membership-types"' : ''; ?>
+								       <?php echo 'oyc_dues_paid_through' === $key ? 'inputmode="numeric" placeholder="' . esc_attr( current_time( 'Y' ) ) . '"' : ''; ?> />
+							</div>
+						<?php endforeach; ?>
+					</div>
+					<datalist id="oyc-membership-types">
+						<?php foreach ( oyc_card_membership_types() as $t ) : ?>
+							<option value="<?php echo esc_attr( $t ); ?>"></option>
+						<?php endforeach; ?>
+					</datalist>
+					<p class="officer-form__hint">
+						<?php esc_html_e( 'Shown on the member\'s digital card. Leave Dues Paid Through blank if the club does not track it here; when it is set, the card reads NOT VALID after that year ends.', 'orienta-yacht-club' ); ?>
+						<a href="<?php echo esc_url( oyc_card_url( array( 'uid' => $oyc_edit->ID ) ) ); ?>"><?php esc_html_e( 'Preview their card', 'orienta-yacht-club' ); ?></a>
+					</p>
+
 					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Save Changes', 'orienta-yacht-club' ); ?></button>
 					<a class="officer-btn" href="<?php echo esc_url( get_permalink() ); ?>"><?php esc_html_e( 'Cancel', 'orienta-yacht-club' ); ?></a>
 				</form>
@@ -357,6 +465,14 @@ get_header();
 					<input type="hidden" name="user_id" value="<?php echo esc_attr( $oyc_edit->ID ); ?>" />
 					<button type="submit" class="officer-btn"><?php esc_html_e( 'Send password reset email', 'orienta-yacht-club' ); ?></button>
 					<span class="officer-form__hint"><?php esc_html_e( 'Emails a secure link. You never see or set their password.', 'orienta-yacht-club' ); ?></span>
+				</form>
+
+				<form method="post" class="officer-form officer-form--inline"
+				      onsubmit="return confirm('<?php echo esc_js( __( 'Reissue this card? Any saved screenshot or printout of the old QR code will stop working.', 'orienta-yacht-club' ) ); ?>');">
+					<?php wp_nonce_field( 'oyc_card_reissue', 'oyc_card_reissue_nonce' ); ?>
+					<input type="hidden" name="user_id" value="<?php echo esc_attr( $oyc_edit->ID ); ?>" />
+					<button type="submit" class="officer-btn"><?php esc_html_e( 'Reissue membership card', 'orienta-yacht-club' ); ?></button>
+					<span class="officer-form__hint"><?php esc_html_e( 'For a lost phone or a shared screenshot. Old QR codes show NOT VALID; the member just reopens their card.', 'orienta-yacht-club' ); ?></span>
 				</form>
 			</div>
 
@@ -394,7 +510,7 @@ get_header();
 				<form method="get" class="officer-search">
 					<label class="screen-reader-text" for="muser"><?php esc_html_e( 'Search members', 'orienta-yacht-club' ); ?></label>
 					<input type="search" id="muser" name="muser" value="<?php echo esc_attr( $oyc_search ); ?>"
-					       placeholder="<?php esc_attr_e( 'Search by name, username or email', 'orienta-yacht-club' ); ?>" />
+					       placeholder="<?php esc_attr_e( 'Search by name, username, email or member #', 'orienta-yacht-club' ); ?>" />
 					<button type="submit" class="officer-btn"><?php esc_html_e( 'Search', 'orienta-yacht-club' ); ?></button>
 					<?php if ( $oyc_search ) : ?>
 						<a class="officer-btn" href="<?php echo esc_url( get_permalink() ); ?>"><?php esc_html_e( 'Clear', 'orienta-yacht-club' ); ?></a>
@@ -412,6 +528,7 @@ get_header();
 					<thead>
 						<tr>
 							<th scope="col"><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Member #', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Username', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
@@ -433,6 +550,7 @@ get_header();
 						?>
 							<tr>
 								<td><?php echo esc_html( $u_name ); ?></td>
+								<td><?php $u_num = (string) get_user_meta( $u->ID, 'oyc_member_number', true ); echo '' !== $u_num ? esc_html( $u_num ) : '—'; ?></td>
 								<td><?php echo esc_html( $u->user_login ); ?></td>
 								<td><a href="mailto:<?php echo esc_attr( $u->user_email ); ?>"><?php echo esc_html( $u->user_email ); ?></a></td>
 								<td><?php echo esc_html( $u_role ? translate_user_role( wp_roles()->get_names()[ $u_role ] ?? $u_role ) : '—' ); ?></td>
@@ -522,6 +640,47 @@ get_header();
 
 					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Create Account', 'orienta-yacht-club' ); ?></button>
 				</form>
+			</details>
+
+			<details class="officer-panel officer-panel--collapsible"<?php echo $oyc_import ? ' open' : ''; ?>>
+				<summary class="officer-panel__title"><?php esc_html_e( 'Import Member Numbers (CSV)', 'orienta-yacht-club' ); ?></summary>
+				<div class="officer-import">
+
+				<p><?php esc_html_e( 'Load the club roster to fill in member numbers for the digital membership card. The first row must be column headings. Each row is matched to a website account by Email, then Username, then First + Last Name.', 'orienta-yacht-club' ); ?></p>
+				<p class="officer-form__hint"><?php esc_html_e( 'Columns used: Email, Username, First Name, Last Name (or one Name column), Member Number, Membership Type, Dues Paid Through, Member Since. Other columns are ignored, and blank cells never erase what is already saved.', 'orienta-yacht-club' ); ?></p>
+
+				<form method="post" enctype="multipart/form-data" class="officer-form">
+					<?php wp_nonce_field( 'oyc_card_import', 'oyc_card_import_nonce' ); ?>
+					<div class="officer-form__row">
+						<label for="oyc_card_csv"><?php esc_html_e( 'Roster file (.csv)', 'orienta-yacht-club' ); ?></label>
+						<input type="file" id="oyc_card_csv" name="oyc_card_csv" accept=".csv,text/csv" required />
+					</div>
+					<div class="officer-form__row">
+						<label><input type="checkbox" name="oyc_card_dry_run" value="1" checked /> <?php esc_html_e( 'Test run first (shows what would change, saves nothing)', 'orienta-yacht-club' ); ?></label>
+					</div>
+					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Import', 'orienta-yacht-club' ); ?></button>
+				</form>
+
+				<?php if ( $oyc_import && ( $oyc_import['unmatched'] || $oyc_import['duplicates'] ) ) : ?>
+					<?php if ( $oyc_import['unmatched'] ) : ?>
+						<h3 class="officer-form__subhead"><?php esc_html_e( 'Rows with no matching account', 'orienta-yacht-club' ); ?></h3>
+						<p class="officer-form__hint"><?php esc_html_e( 'Add an email column, or fix the name on the website account, then import again.', 'orienta-yacht-club' ); ?></p>
+						<ul class="officer-import-list">
+							<?php foreach ( array_slice( $oyc_import['unmatched'], 0, 100 ) as $line ) : ?>
+								<li><?php echo esc_html( $line ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+					<?php if ( $oyc_import['duplicates'] ) : ?>
+						<h3 class="officer-form__subhead"><?php esc_html_e( 'Repeated member numbers', 'orienta-yacht-club' ); ?></h3>
+						<ul class="officer-import-list">
+							<?php foreach ( array_slice( $oyc_import['duplicates'], 0, 100 ) as $line ) : ?>
+								<li><?php echo esc_html( $line ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+				<?php endif; ?>
+				</div>
 			</details>
 
 		<?php endif; ?>
