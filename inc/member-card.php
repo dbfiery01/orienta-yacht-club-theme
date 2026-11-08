@@ -257,8 +257,17 @@ add_filter( 'template_include', function ( $template ) {
 	$wp_query->is_404 = false;
 	status_header( 200 );
 	add_filter( 'pre_get_document_title', fn() => $title . ' — ' . get_bloginfo( 'name' ) );
-	add_filter( 'body_class', fn( $c ) => array_merge( array_diff( $c, array( 'error404' ) ), array( 'page', 'oyc-page-' . $req, 'oyc-card-page' ) ) );
+	add_filter( 'body_class', fn( $c ) => array_merge( array_diff( $c, array( 'error404' ) ), array( 'page', 'has-hero-header', 'oyc-page-' . $req, 'oyc-immersive', 'oyc-card-page' ) ) );
 	return $file;
+}, 20 );
+
+// Same light "immersive" page style as the Members Area and Bulletin Board,
+// also when a WP Page record serves the route.
+add_filter( 'body_class', function ( $classes ) {
+	if ( '' !== oyc_card_current_route() ) {
+		$classes = array_unique( array_merge( $classes, array( 'has-hero-header', 'oyc-immersive', 'oyc-card-page' ) ) );
+	}
+	return $classes;
 }, 20 );
 
 add_action( 'template_redirect', function () {
