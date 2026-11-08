@@ -480,6 +480,10 @@ if ( ! $oyc_weather_menu ) {
 		--teal:#B0842F; --teal2:#8A6420; --amber:#0F68A6;
 	}
 	:root[data-theme="light"] body{background:#F2F5F8}
+	/* one flat ground in dark mode too: the old radial gradient was sized to the
+	   first screen, so lower down the page showed a second, different navy */
+	:root[data-theme="dark"],:root[data-theme="dark"] body{background:#0a2440}
+	:root[data-theme="light"]{background:#F2F5F8}
 	.wx-title h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:clamp(24px,2.6vw,30px);letter-spacing:0}
 	.wx-tab{display:inline-flex;align-items:center;gap:6px;font-size:16px;min-height:48px;padding:0 20px}
 	.wx-ico{display:none;width:24px;height:24px;flex:none}
