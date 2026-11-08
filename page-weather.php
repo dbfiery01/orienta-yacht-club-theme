@@ -529,6 +529,10 @@ if ( ! $oyc_weather_menu ) {
 		.ns-v{font-size:30px}
 		.ns-k,.ns-s{font-size:13px}
 	}
+	/* Chart tab: the map is the page — no card heading, map starts at the card top */
+	.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+	#panel-chart .windmap-card{padding-top:10px}
+	#panel-chart .windmap-embed{margin-top:0}
 </style>
 </head>
 <body>
@@ -689,7 +693,7 @@ if ( ! $oyc_weather_menu ) {
 	<section class="wx-panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" hidden>
 		<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
 		<div class="card windmap-card">
-			<h2>Wind &amp; Radar Map <span class="sta">allow a few secs for the data to populate</span></h2>
+			<h2 class="sr-only">Wind &amp; Radar Map</h2>
 			<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
 		</div>
 	</section>
