@@ -142,8 +142,14 @@ get_header();
 							}
 							?>
 							<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_since_txt ); ?></p>
+							<?php $oyc_num = (string) get_user_meta( $user->ID, 'oyc_member_number', true ); if ( '' !== $oyc_num ) : ?>
+								<p><strong><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_num ); ?></p>
+							<?php endif; ?>
 						</div>
 						<div class="dashboard-account-actions">
+							<?php if ( function_exists( 'oyc_card_url' ) ) : ?>
+								<a class="btn btn-primary" href="<?php echo esc_url( oyc_card_url() ); ?>"><?php esc_html_e( 'My Membership Card', 'orienta-yacht-club' ); ?></a>
+							<?php endif; ?>
 							<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
 							<a class="btn btn-ghost" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?></a>
 						</div>

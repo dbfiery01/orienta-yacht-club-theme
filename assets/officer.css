@@ -495,6 +495,9 @@
 }
 
 .officer-panel--collapsible > .officer-form { padding: 0 1.25rem 1.25rem; }
+.officer-panel--collapsible > .officer-import { padding: 1rem 1.25rem 1.25rem; }
+.officer-import > .officer-form { padding: 0; }
+.officer-import-list { margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.92rem; }
 
 .dashboard-officer__cta {
   display: block;

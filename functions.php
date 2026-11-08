@@ -245,6 +245,13 @@ require_once get_template_directory() . '/inc/bulletin-board.php';
 require_once get_template_directory() . '/inc/racing.php';
 
 /**
+ * Digital membership card: /member-card/ (members) with a QR code that opens
+ * /verify-member/ (public, for club staff). Officers set member numbers on the
+ * Members page or by CSV import.
+ */
+require_once get_template_directory() . '/inc/member-card.php';
+
+/**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
  * fetched, and old cached embeds lack the allow/referrerpolicy attributes the
  * player now requires (YouTube "Error 153").
