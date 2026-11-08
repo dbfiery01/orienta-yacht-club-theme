@@ -28,15 +28,16 @@ $oyc_reasons = array(
 get_header();
 ?>
 
-<div class="page-hero page-hero--card">
+<div class="page-hero">
 	<div class="container">
 		<p class="page-hero-eyebrow"><?php esc_html_e( 'Club staff', 'orienta-yacht-club' ); ?></p>
 		<h1 class="page-hero-title"><?php esc_html_e( 'Verify Membership', 'orienta-yacht-club' ); ?></h1>
+		<p class="page-hero-sub"><?php esc_html_e( 'Scan a member\'s digital card to check it is current.', 'orienta-yacht-club' ); ?></p>
 	</div>
 </div>
 
 <section class="section mcard-section">
-	<div class="container mcard-wrap">
+	<div class="container page-content mcard-page">
 
 		<?php if ( 'none' === $oyc_lookup['reason'] ) : ?>
 
