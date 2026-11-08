@@ -38,15 +38,16 @@ $oyc_season  = $oyc_card['through'] ? $oyc_card['through'] : '';
 get_header();
 ?>
 
-<div class="page-hero page-hero--card">
+<div class="page-hero">
 	<div class="container">
-		<p class="page-hero-eyebrow"><?php echo $oyc_preview ? esc_html__( 'Officer preview', 'orienta-yacht-club' ) : esc_html__( 'Members', 'orienta-yacht-club' ); ?></p>
+		<p class="page-hero-eyebrow"><?php echo $oyc_preview ? esc_html__( 'Officer preview', 'orienta-yacht-club' ) : esc_html__( 'Members only', 'orienta-yacht-club' ); ?></p>
 		<h1 class="page-hero-title"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></h1>
+		<p class="page-hero-sub"><?php esc_html_e( 'Show it at the club. Tap the card to flip it to the QR code staff scan.', 'orienta-yacht-club' ); ?></p>
 	</div>
 </div>
 
 <section class="section mcard-section">
-	<div class="container mcard-wrap">
+	<div class="container page-content mcard-page">
 
 		<?php if ( ! $oyc_allowed ) : ?>
 
@@ -55,6 +56,8 @@ get_header();
 			</div>
 
 		<?php else : ?>
+			<div class="mcard-layout">
+			<div class="mcard-stage">
 
 			<?php if ( $oyc_preview ) : ?>
 				<div class="mcard-note">
@@ -143,6 +146,9 @@ get_header();
 				</button>
 			</div>
 			<p class="mcard-fliphint"><?php esc_html_e( 'Tap the card to flip it. The QR code is on the back.', 'orienta-yacht-club' ); ?></p>
+			</div><!-- .mcard-stage -->
+
+			<div class="mcard-aside">
 
 			<?php if ( isset( $_GET['badges'] ) ) : ?>
 				<div class="mcard-note"><p><?php esc_html_e( 'Card updated.', 'orienta-yacht-club' ); ?></p></div>
@@ -215,6 +221,9 @@ get_header();
 					<a href="<?php echo esc_url( home_url( '/members-area/' ) ); ?>">&larr; <?php esc_html_e( 'Member Dashboard', 'orienta-yacht-club' ); ?></a>
 				<?php endif; ?>
 			</p>
+
+			</div><!-- .mcard-aside -->
+			</div><!-- .mcard-layout -->
 
 		<?php endif; ?>
 
