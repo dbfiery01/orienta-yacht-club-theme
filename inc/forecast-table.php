@@ -181,8 +181,8 @@ function oyc_marine_fc_build( $force = false ) {
 /* ── Point forecast at an arbitrary lat/lon (for the map's passage pins) ──
    Same exact-point / hourly / BLEND method as the ER board, so a pin reads
    accurate forecast values at that spot (a pin on Execution Rock equals the
-   headline). Cached per rounded point so repeat pins are free. Single-point
-   BLEND uses the plain (unsuffixed) hourly keys.
+   headline). Cached per rounded point so repeat pins are free. Fetches the four
+   global models; the map averages them into BLEND (wind-map.php fcBlend).
    Endpoint: admin-ajax.php?action=oyc_point_fc&lat=..&lon=.. ── */
 add_action( 'wp_ajax_oyc_point_fc',        'oyc_point_fc_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_point_fc', 'oyc_point_fc_proxy' );
@@ -192,7 +192,7 @@ function oyc_point_fc_proxy() {
 	// Only within the map's data extent (Atlantic basin box) — bounds the fetch & cache.
 	if ( $lat > 63 || $lat < -27 || $lon > 18 || $lon < -102 ) { oyc_send_raw_json( '{"ok":false}' ); }
 	$rlat = round( $lat, 2 ); $rlon = round( $lon, 2 ); // ~1 km cache granularity
-	$key  = 'oyc_ptfcp_' . md5( $rlat . '_' . $rlon ); // …p = includes wave_period (bump key on schema change)
+	$key  = 'oyc_ptfcb_' . md5( $rlat . '_' . $rlon ); // …b = 4-model feed for BLEND (bump key on schema change)
 	$cached = get_transient( $key );
 	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
 	if ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) { oyc_send_raw_json( '{"ok":false}' ); } // client goes browser-direct
@@ -200,6 +200,7 @@ function oyc_point_fc_proxy() {
 	$args   = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $rlat . '&longitude=' . $rlon
 		. '&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
+		. '&models=gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless' // client averages these into BLEND
 		. '&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	$mar_url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' . $rlat . '&longitude=' . $rlon
 		. '&hourly=wave_height,wave_period&length_unit=imperial&forecast_days=7&timezone=America%2FNew_York';
@@ -353,10 +354,15 @@ function oyc_forecast_table_html() {
     }).catch(function(){ return fetch(AJAX+'?action='+ajaxAction); });
   }
   var LAT=40.92465, LON=-73.70251; // Buoy 42, NOAA ENC charted position
-  var MODELS=[{id:'best_match',label:'BLEND',blend:1},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
+  /* BLEND = our own consensus of the four global models. Open-Meteo's
+     "best_match" is NOT a blend: over the US it just serves NCEP (HRRR/GFS), so
+     it was identical to the GFS button. blendModels() builds *_blend keys as the
+     hourly mean of GFS/ECMWF/ICON/GEM (wind direction vector-averaged). */
+  var BLEND_OF=['gfs_seamless','ecmwf_ifs025','icon_seamless','gem_seamless'];
+  var MODELS=[{id:'blend',label:'BLEND',blend:1,tip:'Average of GFS, ECMWF, ICON and GEM'},{id:'gfs_seamless',label:'GFS'},{id:'ecmwf_ifs025',label:'ECMWF'},{id:'icon_seamless',label:'ICON'},{id:'gem_seamless',label:'GEM'}];
   var DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   var card=function(d){return DIRS[Math.round((d%360)/22.5)%16];};
-  var MODEL='best_match', DATA=null, WAVE={}, NOW=0, BUOY=null;
+  var MODEL='blend', DATA=null, WAVE={}, NOW=0, BUOY=null;
   var $=function(id){return document.getElementById(id);};
 
   function windCell(kt){var b=[[5,'#e9f1f7','#0b2a4a'],[8,'#c2ddec','#0b2a4a'],[11,'#8fc0dd','#0b2a4a'],[14,'#5aa6d0','#0b2a4a'],[17,'#d9c07a','#0b2a4a'],[20,'#e0a13f','#3a2600'],[24,'#dd7f3a','#fff'],[28,'#cf5638','#fff'],[34,'#b23a2a','#fff'],[999,'#8f2d20','#fff']];for(var i=0;i<b.length;i++)if(kt<b[i][0])return{bg:b[i][1],fg:b[i][2]};}
@@ -385,6 +391,23 @@ function oyc_forecast_table_html() {
     if(t==='wave')return w+'<path d="M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>';
     if(t==='pres')return w+'<circle cx="12" cy="12" r="8"/><path d="M12 12l4-2"/></svg>';return '';}
 
+  function blendModels(h){
+    var n=(h.time||[]).length,avg=function(base,round){
+      var arrs=BLEND_OF.map(function(m){return h[base+'_'+m];}).filter(Boolean);
+      if(!arrs.length){var fb=h[base+'_best_match']||h[base];if(fb)h[base+'_blend']=fb;return;}
+      var out=new Array(n);for(var i=0;i<n;i++){var sum=0,c=0;arrs.forEach(function(a){var v=a[i];if(v!=null&&!isNaN(v)){sum+=v;c++;}});
+        out[i]=c?(round?Math.round(sum/c):Math.round(sum/c*10)/10):null;}
+      h[base+'_blend']=out;};
+    ['wind_speed_10m','wind_gusts_10m','temperature_2m','pressure_msl'].forEach(function(b){avg(b,false);});
+    ['precipitation_probability','cloud_cover'].forEach(function(b){avg(b,true);});
+    // direction: mean of unit vectors from each model (avoids 350°+10° → 180°)
+    var dirs=BLEND_OF.map(function(m){return h['wind_direction_10m_'+m];}).filter(Boolean);
+    if(dirs.length){var od=new Array(n);for(var i=0;i<n;i++){var x=0,y=0,c=0;dirs.forEach(function(a){var v=a[i];if(v!=null&&!isNaN(v)){var r=v*Math.PI/180;x+=Math.sin(r);y+=Math.cos(r);c++;}});
+      od[i]=c?Math.round((Math.atan2(x,y)*180/Math.PI+360)%360):null;}h['wind_direction_10m_blend']=od;}
+    else{var fd=h['wind_direction_10m_best_match']||h['wind_direction_10m'];if(fd)h['wind_direction_10m_blend']=fd;}
+    // weather code is categorical — keep best_match's (sky icon is driven by precip/cloud anyway)
+    var wc=h['weather_code_best_match']||h['weather_code'];if(wc)h['weather_code_blend']=wc;
+  }
   function k(base,m){var kk=base+'_'+m;return DATA.hourly[kk]!==undefined?kk:base;}
   function cols(){var h=DATA.hourly,m=MODEL;return{
     time:h.time, ws:h[k('wind_speed_10m',m)], wg:h[k('wind_gusts_10m',m)], wd:h[k('wind_direction_10m',m)],
@@ -417,7 +440,7 @@ function oyc_forecast_table_html() {
   }
 
   function boot(d,mar){
-    DATA=d;
+    DATA=d;blendModels(d.hourly);
     if(mar&&mar.hourly&&mar.hourly.wave_height){var mh=mar.hourly;mh.time.forEach(function(t,i){WAVE[t]={h:mh.wave_height[i],p:(mh.wave_period||[])[i],dir:(mh.wave_direction||[])[i]};});}
     var off=(d.utc_offset_seconds||0)*1000,now=Date.now(),bi=0,bd=1e15;
     d.hourly.time.forEach(function(t,i){var u=Date.parse(t+':00Z')-off;if(Math.abs(u-now)<bd){bd=Math.abs(u-now);bi=i;}});NOW=bi;
@@ -447,7 +470,7 @@ function oyc_forecast_table_html() {
     else { clientWx().then(function(wx){boot(wx,null);}).catch(fail); }
   }).catch(function(){ clientWx().then(function(wx){boot(wx,null);}).catch(fail); });
 
-  function buildModels(){var box=$('oycft-models');MODELS.forEach(function(m){var b=document.createElement('button');b.textContent=m.label;b.setAttribute('data-id',m.id);if(m.blend)b.className='blend';if(m.id===MODEL)b.className+=' on';b.onclick=function(){MODEL=m.id;[].forEach.call(box.children,function(c){c.classList.toggle('on',c.getAttribute('data-id')===MODEL);});render();};box.appendChild(b);});}
+  function buildModels(){var box=$('oycft-models');MODELS.forEach(function(m){var b=document.createElement('button');b.textContent=m.label;b.setAttribute('data-id',m.id);if(m.blend)b.className='blend';if(m.tip)b.title=m.tip;if(m.id===MODEL)b.className+=' on';b.onclick=function(){MODEL=m.id;[].forEach.call(box.children,function(c){c.classList.toggle('on',c.getAttribute('data-id')===MODEL);});render();};box.appendChild(b);});}
   function buildLegend(){var bins=[['<8','#c2ddec'],['8-11','#8fc0dd'],['11-14','#5aa6d0'],['14-17','#d9c07a'],['17-20','#e0a13f'],['20-24','#dd7f3a'],['24-28','#cf5638'],['28+','#b23a2a']];
     $('oycft-legend').innerHTML='<b class="lk">Wind kt</b>&nbsp;'+bins.map(function(x){return '<span class="sw"><i style="background:'+x[1]+'"></i>'+x[0]+'</span>';}).join('');}
 
