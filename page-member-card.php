@@ -82,8 +82,9 @@ get_header();
 				        aria-label="<?php esc_attr_e( 'Membership card. Tap to flip between the front and the QR code on the back.', 'orienta-yacht-club' ); ?>" aria-pressed="false">
 
 					<!-- FRONT -->
-					<span class="mcard mcard--front">
+					<span class="mcard mcard--front<?php echo OYC_CARD_NOT_LIVE ? ' has-notlive' : ''; ?>">
 						<span class="mcard__shine" aria-hidden="true"></span>
+						<?php echo oyc_card_not_live_band(); // phpcs:ignore -- escaped in helper ?>
 						<span class="mcard__row">
 							<img class="mcard__logo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/oyc-logo-dark.png' ); ?>"
 							     alt="<?php esc_attr_e( 'Orienta Yacht Club', 'orienta-yacht-club' ); ?>" loading="eager" decoding="async" />
@@ -119,8 +120,9 @@ get_header();
 					</span>
 
 					<!-- BACK -->
-					<span class="mcard mcard--back">
+					<span class="mcard mcard--back<?php echo OYC_CARD_NOT_LIVE ? ' has-notlive' : ''; ?>">
 						<span class="mcard__shine" aria-hidden="true"></span>
+						<?php echo oyc_card_not_live_band(); // phpcs:ignore -- escaped in helper ?>
 						<span class="mcard__stripe" aria-hidden="true"></span>
 						<span class="mcard__back-body">
 							<span class="mcard__qr" data-oyc-qr="<?php echo esc_attr( oyc_card_verify_url( $oyc_card_u->ID ) ); ?>" role="img"
