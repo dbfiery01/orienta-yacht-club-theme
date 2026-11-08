@@ -75,51 +75,120 @@ get_header();
 				</div>
 			<?php endif; ?>
 
-			<article class="mcard <?php echo $oyc_status['valid'] ? '' : 'mcard--invalid'; ?>" aria-label="<?php esc_attr_e( 'Orienta Yacht Club membership card', 'orienta-yacht-club' ); ?>">
-				<div class="mcard__shine" aria-hidden="true"></div>
+			<?php $oyc_badges = oyc_card_get_badges( $oyc_card_u->ID ); $oyc_badge_names = oyc_card_badge_list(); $oyc_certs = oyc_card_get_certs( $oyc_card_u->ID ); ?>
 
-				<header class="mcard__top">
-					<span class="mcard__brand">
-						<img class="mcard__logo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/oyc-logo-dark.png' ); ?>"
-						     alt="<?php esc_attr_e( 'Orienta Yacht Club', 'orienta-yacht-club' ); ?>" loading="eager" decoding="async" />
-						<span class="mcard__club-sub"><?php esc_html_e( 'Membership Card · Mamaroneck, NY', 'orienta-yacht-club' ); ?></span>
+			<div class="mcard-flip" data-oyc-flip>
+				<button type="button" class="mcard-flip__inner <?php echo $oyc_status['valid'] ? '' : 'mcard--invalid'; ?>"
+				        aria-label="<?php esc_attr_e( 'Membership card. Tap to flip between the front and the QR code on the back.', 'orienta-yacht-club' ); ?>" aria-pressed="false">
+
+					<!-- FRONT -->
+					<span class="mcard mcard--front">
+						<span class="mcard__shine" aria-hidden="true"></span>
+						<span class="mcard__row">
+							<img class="mcard__logo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/oyc-logo-dark.png' ); ?>"
+							     alt="<?php esc_attr_e( 'Orienta Yacht Club', 'orienta-yacht-club' ); ?>" loading="eager" decoding="async" />
+							<?php if ( $oyc_season ) : ?>
+								<span class="mcard__season"><?php echo esc_html( $oyc_season ); ?></span>
+							<?php endif; ?>
+						</span>
+						<span class="mcard__club-sub"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></span>
+
+						<?php if ( $oyc_badges ) : ?>
+							<span class="mcard__badges">
+								<?php foreach ( $oyc_badges as $b ) : ?>
+									<span class="mcard__badge mcard__badge--<?php echo esc_attr( $b ); ?>" title="<?php echo esc_attr( $oyc_badge_names[ $b ] ); ?>">
+										<span class="mcard__badge-icon"><?php echo oyc_card_badge_svg( $b ); // phpcs:ignore -- static SVG ?></span>
+										<span class="mcard__badge-label"><?php echo esc_html( $oyc_badge_names[ $b ] ); ?></span>
+									</span>
+								<?php endforeach; ?>
+							</span>
+						<?php endif; ?>
+
+						<span class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+						<span class="mcard__facts">
+							<span><span class="mcard__k"><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?></span>
+								<span class="mcard__v mcard__number"><?php echo $oyc_card['number'] ? esc_html( $oyc_card['number'] ) : '<span class="mcard__pending">' . esc_html__( 'Pending', 'orienta-yacht-club' ) . '</span>'; ?></span></span>
+							<?php if ( $oyc_card['type'] ) : ?>
+								<span><span class="mcard__k"><?php esc_html_e( 'Membership', 'orienta-yacht-club' ); ?></span><span class="mcard__v"><?php echo esc_html( $oyc_card['type'] ); ?></span></span>
+							<?php endif; ?>
+							<?php if ( $oyc_card['since'] ) : ?>
+								<span><span class="mcard__k"><?php esc_html_e( 'Since', 'orienta-yacht-club' ); ?></span><span class="mcard__v"><?php echo esc_html( $oyc_card['since'] ); ?></span></span>
+							<?php endif; ?>
+						</span>
+						<span class="mcard__corner" aria-hidden="true"><?php esc_html_e( 'Tap for QR', 'orienta-yacht-club' ); ?> &#x21bb;</span>
 					</span>
-					<?php if ( $oyc_season ) : ?>
-						<span class="mcard__season"><?php echo esc_html( $oyc_season ); ?></span>
-					<?php endif; ?>
-				</header>
 
-				<div class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></div>
+					<!-- BACK -->
+					<span class="mcard mcard--back">
+						<span class="mcard__shine" aria-hidden="true"></span>
+						<span class="mcard__stripe" aria-hidden="true"></span>
+						<span class="mcard__back-body">
+							<span class="mcard__qr" data-oyc-qr="<?php echo esc_attr( oyc_card_verify_url( $oyc_card_u->ID ) ); ?>" role="img"
+							      aria-label="<?php esc_attr_e( 'QR code for staff to verify this membership', 'orienta-yacht-club' ); ?>"></span>
+							<span class="mcard__back-info">
+								<span class="mcard__back-name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+								<?php if ( $oyc_card['number'] ) : ?>
+									<span class="mcard__back-num">#<?php echo esc_html( $oyc_card['number'] ); ?></span>
+								<?php endif; ?>
+								<?php echo oyc_card_certs_html( $oyc_certs ); // phpcs:ignore -- escaped in helper ?>
+								<span class="mcard__live"><span class="mcard__live-dot" aria-hidden="true"></span><time class="mcard__clock" data-oyc-clock></time></span>
+								<span class="mcard__scan"><?php esc_html_e( 'Staff: scan to verify', 'orienta-yacht-club' ); ?></span>
+								<span class="mcard__club-line"><?php esc_html_e( 'Orienta Yacht Club · Mamaroneck, NY', 'orienta-yacht-club' ); ?></span>
+							</span>
+						</span>
+						<span class="mcard__corner" aria-hidden="true">&#x21bb; <?php esc_html_e( 'Front', 'orienta-yacht-club' ); ?></span>
+					</span>
+				</button>
+			</div>
+			<p class="mcard-fliphint"><?php esc_html_e( 'Tap the card to flip it. The QR code is on the back.', 'orienta-yacht-club' ); ?></p>
 
-				<dl class="mcard__facts">
-					<div>
-						<dt><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?></dt>
-						<dd class="mcard__number"><?php echo $oyc_card['number'] ? esc_html( $oyc_card['number'] ) : '<span class="mcard__pending">' . esc_html__( 'Pending', 'orienta-yacht-club' ) . '</span>'; ?></dd>
+			<?php if ( isset( $_GET['badges'] ) ) : ?>
+				<div class="mcard-note"><p><?php esc_html_e( 'Card updated.', 'orienta-yacht-club' ); ?></p></div>
+			<?php endif; ?>
+
+			<details class="mcard-tips mcard-badges-form"<?php echo ( $oyc_badges || $oyc_certs ) ? '' : ' open'; ?>>
+				<summary><?php echo $oyc_preview ? esc_html__( 'Badges, licenses & certifications', 'orienta-yacht-club' ) : esc_html__( 'Your badges, licenses & certifications', 'orienta-yacht-club' ); ?></summary>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="oyc_card_badges" />
+					<input type="hidden" name="user_id" value="<?php echo esc_attr( $oyc_card_u->ID ); ?>" />
+					<?php wp_nonce_field( 'oyc_card_badges', 'oyc_card_badges_nonce' ); ?>
+					<p class="mcard-form-label"><?php esc_html_e( 'Badges on the front', 'orienta-yacht-club' ); ?></p>
+					<div class="mcard-badge-picks">
+						<?php foreach ( $oyc_badge_names as $slug => $label ) : ?>
+							<label class="mcard-badge-pick">
+								<input type="checkbox" name="badges[]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $oyc_badges, true ) ); ?> />
+								<span class="mcard__badge-icon"><?php echo oyc_card_badge_svg( $slug ); // phpcs:ignore -- static SVG ?></span>
+								<span><?php echo esc_html( $label ); ?></span>
+							</label>
+						<?php endforeach; ?>
 					</div>
-					<?php if ( $oyc_card['type'] ) : ?>
-						<div>
-							<dt><?php esc_html_e( 'Membership', 'orienta-yacht-club' ); ?></dt>
-							<dd><?php echo esc_html( $oyc_card['type'] ); ?></dd>
-						</div>
-					<?php endif; ?>
-					<?php if ( $oyc_card['since'] ) : ?>
-						<div>
-							<dt><?php esc_html_e( 'Member Since', 'orienta-yacht-club' ); ?></dt>
-							<dd><?php echo esc_html( $oyc_card['since'] ); ?></dd>
-						</div>
-					<?php endif; ?>
-				</dl>
-
-				<div class="mcard__qr-row">
-					<div class="mcard__qr" data-oyc-qr="<?php echo esc_attr( oyc_card_verify_url( $oyc_card_u->ID ) ); ?>" role="img"
-					     aria-label="<?php esc_attr_e( 'QR code for staff to verify this membership', 'orienta-yacht-club' ); ?>"></div>
-					<div class="mcard__live">
-						<span class="mcard__live-label"><span class="mcard__live-dot" aria-hidden="true"></span><?php esc_html_e( 'Live card', 'orienta-yacht-club' ); ?></span>
-						<time class="mcard__clock" data-oyc-clock></time>
-						<span class="mcard__live-hint"><?php esc_html_e( 'Staff: scan the code to verify.', 'orienta-yacht-club' ); ?></span>
+					<p class="mcard-form-label"><?php esc_html_e( 'Licenses & certifications', 'orienta-yacht-club' ); ?></p>
+					<p class="mcard-form-hint"><?php esc_html_e( 'Shown on the back of the card and to staff when they scan it. Leave the year blank if it does not expire.', 'orienta-yacht-club' ); ?></p>
+					<div class="mcard-certs-edit">
+						<?php
+						$oyc_cert_rows = $oyc_certs;
+						$oyc_cert_target = min( 6, max( 4, count( $oyc_certs ) + 1 ) );
+						while ( count( $oyc_cert_rows ) < $oyc_cert_target ) {
+							$oyc_cert_rows[] = array( 'name' => '', 'expires' => '' );
+						}
+						foreach ( $oyc_cert_rows as $i => $c ) :
+						?>
+							<div class="mcard-cert-row">
+								<input type="text" name="cert_name[]" list="oyc-cert-list" maxlength="60" value="<?php echo esc_attr( $c['name'] ); ?>"
+								       placeholder="<?php esc_attr_e( 'e.g. NY Boater Safety Certificate', 'orienta-yacht-club' ); ?>" aria-label="<?php esc_attr_e( 'License or certification', 'orienta-yacht-club' ); ?>" />
+								<input type="text" name="cert_expires[]" inputmode="numeric" maxlength="4" value="<?php echo esc_attr( $c['expires'] ); ?>"
+								       placeholder="<?php esc_attr_e( 'Expires', 'orienta-yacht-club' ); ?>" aria-label="<?php esc_attr_e( 'Expiry year', 'orienta-yacht-club' ); ?>" />
+							</div>
+						<?php endforeach; ?>
+						<datalist id="oyc-cert-list">
+							<?php foreach ( oyc_card_cert_suggestions() as $sug ) : ?>
+								<option value="<?php echo esc_attr( $sug ); ?>"></option>
+							<?php endforeach; ?>
+						</datalist>
 					</div>
-				</div>
-			</article>
+					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Save', 'orienta-yacht-club' ); ?></button>
+				</form>
+			</details>
 
 			<?php if ( ! $oyc_card['number'] && ! $oyc_preview ) : ?>
 				<p class="mcard-help"><?php esc_html_e( 'Your member number has not been added to the website yet. The club will add it; your card still verifies in the meantime.', 'orienta-yacht-club' ); ?></p>
