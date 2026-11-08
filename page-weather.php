@@ -208,7 +208,11 @@ if ( ! $oyc_weather_menu ) {
 		transition:border-color .15s,color .15s}
 	.go-btn:hover{border-color:var(--teal);color:var(--teal)}
 	.now-teaser p{color:var(--muted);font-size:14px;line-height:1.45;margin:8px 0 14px}
-	.nt-big{font-size:26px;font-weight:700;margin-top:10px;color:var(--ink)}
+	.nt-big{font-size:26px;font-weight:700;color:var(--ink)}
+	.nf-score{display:flex;align-items:center;gap:12px;margin-top:10px}
+	.nf-score .fish-dots{margin-top:0}
+	.nf-vis{margin:0 0 16px}
+	.now-teaser .nf-vis .fish-k{margin-top:0}
 	.nh{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:14px}
 	.nh:empty{display:none}
 	.nh-h{border:1px solid var(--edge);border-radius:10px;padding:8px 6px;text-align:center}
@@ -547,8 +551,15 @@ if ( ! $oyc_weather_menu ) {
 				</div>
 				<div class="card now-teaser" data-card="fishteaser">
 					<h2>Fishing today</h2>
-					<div class="nt-big" id="nowFishWord">&mdash;</div>
+					<div class="nf-score"><span class="nt-big" id="nowFishWord">&mdash;</span><span class="fish-dots" id="nowFishDots" aria-hidden="true"></span></div>
 					<p id="nowFishWhy">Working out the day&rsquo;s outlook&hellip;</p>
+					<div class="nf-vis">
+						<div class="fish-k">Best windows</div>
+						<div class="fish-tl" id="nowFishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
+						<div class="fish-ticks tide" id="nowFishTide" aria-hidden="true"></div>
+						<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
+						<div class="fish-wins" id="nowFishWins"></div>
+					</div>
 					<button type="button" class="go-btn" data-go="fishing">See fishing details</button>
 				</div>
 				<div class="card now-teaser" data-card="chartteaser">
@@ -1255,13 +1266,24 @@ if ( ! $oyc_weather_menu ) {
 		// The 48-Hour Outlook card was replaced by the full-width forecast table
 		// (inc/forecast-table.php). This light fetch now only feeds the Conditions
 		// card's today Hi/Lo from the Execution Rock daily forecast.
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&daily=temperature_2m_max,temperature_2m_min&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=2')
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&daily=temperature_2m_max,temperature_2m_min&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=2')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
 				var D = j && j.daily;
 				if(j && j.hourly && j.hourly.time){ nhWind = j.hourly; renderNextHours(); }
 				if(D && D.temperature_2m_max && D.temperature_2m_max.length && D.temperature_2m_min && D.temperature_2m_min.length){
-					nowHiLo = [Math.round(D.temperature_2m_max[0]), Math.round(D.temperature_2m_min[0])];
+					nowHiLo = [Math.round(D.temperature_2m_max[0]), Math.round(D.temperature_2m_min[0]), null, null];
+					// when today's high and low happen, from the hourly temperatures
+					var H = j.hourly, day = (D.time && D.time[0]) || '';
+					if(H && H.temperature_2m && day){
+						var hi = null, lo = null;
+						H.time.forEach(function(t, k){
+							var v = H.temperature_2m[k]; if(v == null || t.slice(0, 10) !== day) return;
+							if(hi === null || v > H.temperature_2m[hi]) hi = k;
+							if(lo === null || v < H.temperature_2m[lo]) lo = k;
+						});
+						if(hi !== null){ nowHiLo[2] = new Date(H.time[hi]); nowHiLo[3] = new Date(H.time[lo]); }
+					}
 					$('hiLoTemp').innerHTML = '<span style="color:#ef9a5a">'+Math.round(D.temperature_2m_max[0])+'&deg;</span>'
 						+ '<span style="color:var(--faint)"> / </span>'
 						+ '<span style="color:#57a6d6">'+Math.round(D.temperature_2m_min[0])+'&deg;</span>';
@@ -1884,18 +1906,28 @@ if ( ! $oyc_weather_menu ) {
 		var pr = txt('pressure').replace(/\s*mb$/, ''), pt = $('pressureTrend'), ptt = pt ? (pt.getAttribute('title') || '') : '';
 		setNs('nsPres', pr, ptt ? ptt.replace(' mb / 3h', ' mb in 3 h') : (pr ? 'mb' : ''));
 		var air = txt('airTemp'), hum = txt('humidity');
-		setNs('nsAir', air, nowHiLo ? 'High ' + nowHiLo[0] + '°, low ' + nowHiLo[1] + '°' : (hum ? 'Humidity ' + hum : ''));
+		function hr(d){ var h = d.getHours(); return (h % 12 || 12) + (h >= 12 ? ' PM' : ' AM'); }
+		setNs('nsAir', air, nowHiLo
+			? 'Hi ' + nowHiLo[0] + '°' + (nowHiLo[2] ? ' ' + hr(nowHiLo[2]) : '') + ' · Lo ' + nowHiLo[1] + '°' + (nowHiLo[3] ? ' ' + hr(nowHiLo[3]) : '')
+			: (hum ? 'Humidity ' + hum : ''));
 		var wt = txt('waterTemp'), vis = txt('visibility');
 		setNs('nsWater', wt, vis ? 'Visibility ' + vis : '');
 		var fw = txt('fishWord'), fy = txt('fishWhy');
 		if($('nowFishWord')){ $('nowFishWord').textContent = fw || '—'; }
 		if($('nowFishWhy') && fy){ $('nowFishWhy').textContent = fy; }
+		// the Fishing tab's visuals, copied as-is: score dots, the 5 AM-9 PM
+		// windows timeline with its tide marks, and the window list
+		[['fishDots','nowFishDots'],['fishTl','nowFishTl'],['fishTide','nowFishTide'],['fishWins','nowFishWins']].forEach(function(p){
+			var a = $(p[0]), b = $(p[1]);
+			if(a && b && b.innerHTML !== a.innerHTML){ b.innerHTML = a.innerHTML; }
+		});
+		if($('fishTl') && $('nowFishTl')){ $('nowFishTl').setAttribute('aria-label', $('fishTl').getAttribute('aria-label') || ''); }
 	}
 	var syncT = null;
 	function syncSoon(){ clearTimeout(syncT); syncT = setTimeout(syncNow, 60); }
 	if(window.MutationObserver){
 		var mo = new MutationObserver(syncSoon);
-		[document.querySelector('.now-src'), $('fishWord'), $('fishWhy')].forEach(function(n){
+		[document.querySelector('.now-src'), $('fishWord'), $('fishWhy'), $('fishDots'), $('fishTl'), $('fishTide'), $('fishWins')].forEach(function(n){
 			if(n){ mo.observe(n, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title','class'] }); }
 		});
 	}

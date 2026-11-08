@@ -97,6 +97,47 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .layers label:hover{border-color:var(--harbor)}
 #oycwm .layers input{accent-color:var(--harbor)}
 #oycwm .layers .hint{color:var(--faint);font-size:.74rem;align-self:center}
+/* ---- layer presets + Layers drawer (weather page Chart tab) ---- */
+#oycwm .presetbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:2px 18px 10px}
+#oycwm .presets{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+#oycwm .pre-b{border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.85rem;font-weight:600;padding:0 18px;min-height:40px;cursor:pointer}
+#oycwm .pre-b:last-child{border-right:0}
+#oycwm .pre-b:hover{background:var(--panel)}
+#oycwm .pre-b[aria-pressed="true"]{background:var(--navy);color:#fff}
+#oycwm .lyr-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+#oycwm .lyr-btn[aria-expanded="true"]{border-color:var(--navy);background:var(--navy);color:#fff}
+#oycwm .pre-b:focus-visible,#oycwm .lyr-btn:focus-visible,#oycwm .lyr-x:focus-visible{outline:3px solid var(--harbor);outline-offset:2px}
+#oycwm .lyr-drawer{position:absolute;z-index:700;top:10px;right:10px;width:262px;max-height:calc(100% - 104px);overflow:auto;overscroll-behavior:contain;
+	background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(11,42,74,.22);padding:8px 12px 12px}
+#oycwm .lyr-drawer[hidden]{display:none}
+#oycwm .lyr-hd{display:flex;justify-content:space-between;align-items:center;font-size:.9rem}
+#oycwm .lyr-x{border:0;background:none;font-size:22px;line-height:1;width:36px;height:36px;margin-right:-8px;cursor:pointer;color:var(--mute);border-radius:8px}
+#oycwm .lyr-drawer .layers{flex-direction:column;flex-wrap:nowrap;gap:8px;padding:0;background:transparent}
+#oycwm .lyr-sec + .lyr-sec{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+#oycwm .lyr-g{display:flex;flex-direction:column}
+#oycwm .lyr-g h3{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700;margin:4px 0 2px}
+#oycwm .lyr-drawer .layers label{border:0;border-radius:6px;padding:4px 6px;min-height:32px;font-weight:500;font-size:.84rem}
+#oycwm .lyr-drawer .layers label:hover{background:var(--panel)}
+#oycwm .lyr-drawer .lay-pop{margin:2px 0 6px}
+#oycwm .lyr-help summary{font-size:.74rem;color:var(--mute);cursor:pointer;padding:4px 0;min-height:28px}
+#oycwm .lyr-help .hint{display:block;margin-top:4px;line-height:1.45}
+#oycwm .card.hasburger .lyr-drawer,#oycwm .card.hasburger .lyr-btn{display:none}
+@media (max-width:760px){
+	#oycwm .presetbar{padding:2px 12px 10px}
+	#oycwm .presets{flex:1}
+	#oycwm .pre-b{flex:1;padding:0 6px}
+	#oycwm .lyr-drawer{position:static;width:auto;max-height:none;margin:0 10px 10px;box-shadow:none}
+	#oycwm .lyr-drawer .lyr-sec{display:block}
+	#oycwm .lyr-drawer .lyr-g{display:grid;grid-template-columns:1fr 1fr;column-gap:6px}
+	#oycwm .lyr-drawer .lyr-g h3,#oycwm .lyr-drawer .lyr-g .lay-pop{grid-column:1/-1}
+}
+[data-theme="dark"] #oycwm .presets,[data-theme="dark"] #oycwm .lyr-btn{background:#0e2a47;border-color:rgba(245,239,226,.30);color:#f0eadd}
+[data-theme="dark"] #oycwm .pre-b{color:#f0eadd;border-color:rgba(245,239,226,.30)}
+[data-theme="dark"] #oycwm .pre-b:hover,[data-theme="dark"] #oycwm .lyr-drawer .layers label:hover{background:rgba(245,239,226,.08)}
+[data-theme="dark"] #oycwm .pre-b[aria-pressed="true"],[data-theme="dark"] #oycwm .lyr-btn[aria-expanded="true"]{background:#d4a851;color:#0b2a4a;border-color:#d4a851}
+[data-theme="dark"] #oycwm .lyr-drawer{background:#0b2240;border-color:rgba(245,239,226,.25);color:#f0eadd}
+[data-theme="dark"] #oycwm .lyr-g h3,[data-theme="dark"] #oycwm .lyr-help summary,[data-theme="dark"] #oycwm .lyr-x{color:#c3cedb}
+[data-theme="dark"] #oycwm .lyr-sec + .lyr-sec{border-color:rgba(245,239,226,.2)}
 #oycwm .legend{display:flex;align-items:center;gap:2px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);flex-wrap:wrap}
 #oycwm .barbhint{display:flex;align-items:center;gap:9px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);line-height:1.35}
 #oycwm .barbhint svg{flex:none}
@@ -563,47 +604,15 @@ function oyc_wind_map_html( $embed = false ) {
 			</div>
 		</div>
 
-		<div class="layers" id="windLayers">
-			<label><input type="checkbox" id="tgParticles"> Animated</label>
-			<label><input type="checkbox" id="tgWindColor"> Wind color</label>
-			<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
-			<label><input type="checkbox" id="tgIso"> Isobars</label>
-			<label><input type="checkbox" id="tgTemp"> Temp</label>
-			<label><input type="checkbox" id="tgPrecip"> Precip</label>
-			<label><input type="checkbox" id="tgWave"> Waves</label>
-			<label><input type="checkbox" id="tgCur"> Current</label>
-			<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
-			<label><input type="checkbox" id="tgLoc"> My location</label>
-			<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
-			<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <button type="button" class="lay-btn" id="layBtn" aria-expanded="false" aria-controls="layPop" title="Layline angles">45°</button></label>
-			<div class="lay-pop" id="layPop" hidden role="group" aria-label="Layline angles">
-				<div class="lp-h"><b>Layline angles</b><button type="button" class="lp-x" id="lpClose" aria-label="Close">&times;</button></div>
-				<div class="lp-seg" role="group" aria-label="How to set the angle">
-					<button type="button" data-lm="type" aria-pressed="true">Boat type</button><button type="button" data-lm="polar" aria-pressed="false">My polars</button><button type="button" data-lm="tacks" aria-pressed="false">My tacks</button>
-				</div>
-				<div class="lp-pane" data-lp="type">
-					<div class="lp-chips" id="lpTypes"></div>
-					<div class="lp-row">
-						<span class="lp-pair"><span class="lp-lbl">Upwind</span><span class="lp-step"><button type="button" data-ls="up" data-d="-1" aria-label="Point higher, 1 degree">&minus;</button><output id="lpUp">45°</output><button type="button" data-ls="up" data-d="1" aria-label="Point lower, 1 degree">+</button></span></span>
-						<span class="lp-pair"><span class="lp-lbl">Gybe at</span><span class="lp-step"><button type="button" data-ls="gybe" data-d="-1" aria-label="Gybe higher, 1 degree">&minus;</button><output id="lpGybe">145°</output><button type="button" data-ls="gybe" data-d="1" aria-label="Gybe deeper, 1 degree">+</button></span></span>
-					</div>
-				</div>
-				<div class="lp-pane" data-lp="polar" hidden>
-					<div class="lp-row"><span class="lp-lbl">Offset</span><span class="lp-step"><button type="button" data-ls="off" data-d="-1" aria-label="Offset down, 1 degree">&minus;</button><output id="lpOff">+0°</output><button type="button" data-ls="off" data-d="1" aria-label="Offset up, 1 degree">+</button></span>
-						<span class="lp-note">+2° if you point 2° lower (and gybe 2° higher) than your polars.</span></div>
-				</div>
-				<div class="lp-pane" data-lp="tacks" hidden>
-					<div class="lp-row"><span class="lp-note" id="lpMeas"></span><button type="button" class="lp-sec" id="lpReset">Clear measurements</button></div>
-					<span class="lp-note">With My location on, each clean tack or gybe is measured from your course over ground: half the change in course. The last three are averaged.</span>
-				</div>
-				<p class="lp-now" id="lpNow"></p>
-				<p class="lp-note">Angles are true wind angles. Close-hauled at 45° true is roughly 30&ndash;35° apparent on your instruments.</p>
+		<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
+		<div class="presetbar" id="presetBar">
+			<div class="presets" role="group" aria-label="Layer presets">
+				<button type="button" class="pre-b" data-preset="sail" aria-pressed="false">Sail</button>
+				<button type="button" class="pre-b" data-preset="race" aria-pressed="false">Race</button>
+				<button type="button" class="pre-b" data-preset="fish" aria-pressed="false">Fish</button>
+				<button type="button" class="pre-b" data-preset="cruise" aria-pressed="false">Cruise</button>
 			</div>
-			<label><input type="checkbox" id="tgFleet"> Other boats</label>
-			<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
-			<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
-			<label><input type="checkbox" id="tgRace"> Race</label>
-			<span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span>
+			<button type="button" class="lyr-btn" id="lyrBtn" aria-expanded="true" aria-controls="lyrDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>Layers</button>
 		</div>
 		<div class="ais-note" id="aisNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
@@ -617,16 +626,6 @@ function oyc_wind_map_html( $embed = false ) {
 			<button class="sat-t" data-sat="06">06Z</button>
 			<button class="sat-t" data-sat="00">00Z</button>
 			<span class="hint">NOAA GOES-East Ch.13 infrared &middot; North Atlantic (NWS/OPC radiofax)</span>
-		</div>
-		<!-- POI layers: always visible, independent of the view tabs -->
-		<div class="layers" id="poiLayers">
-			<label><input type="checkbox" id="tgChart" checked> NOAA chart</label>
-			<label><input type="checkbox" id="tgClubs" checked> Reciprocal clubs</label>
-			<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
-			<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
-			<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
-			<label><input type="checkbox" id="tgFish" checked> Fishing spots</label>
-			<span class="hint">NOAA chart = official electronic chart data (depths, buoys, lights, rocks), not for navigation &middot; tap a pin for distance from OYC &amp; links &middot; fuel, anchorage and fishing notes are local knowledge — verify on the chart and call ahead</span>
 		</div>
 		<div class="layers" id="chartLayers" style="display:none">
 			<select id="chartSel" class="chart-sel" aria-label="Chart">
@@ -691,6 +690,66 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="mapgrid" id="mapGrid">
 		<div class="mapwrap">
+			<aside class="lyr-drawer" id="lyrDrawer" aria-label="Map layers">
+				<div class="lyr-hd"><b>Layers</b><button type="button" class="lyr-x" id="lyrClose" aria-label="Close layers">&times;</button></div>
+				<div class="layers lyr-sec" id="windLayers">
+					<div class="lyr-g" role="group" aria-labelledby="lyrGW"><h3 id="lyrGW">Weather</h3>
+						<label><input type="checkbox" id="tgParticles"> Animated</label>
+						<label><input type="checkbox" id="tgWindColor"> Wind color</label>
+						<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
+						<label><input type="checkbox" id="tgIso"> Isobars</label>
+						<label><input type="checkbox" id="tgTemp"> Temp</label>
+						<label><input type="checkbox" id="tgPrecip"> Precip</label>
+						<label><input type="checkbox" id="tgWave"> Waves</label>
+						<label><input type="checkbox" id="tgCur"> Current</label>
+						<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
+					</div>
+					<div class="lyr-g" role="group" aria-labelledby="lyrGN"><h3 id="lyrGN">Navigation</h3>
+						<label><input type="checkbox" id="tgLoc"> My location</label>
+						<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
+						<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <button type="button" class="lay-btn" id="layBtn" aria-expanded="false" aria-controls="layPop" title="Layline angles">45°</button></label>
+						<div class="lay-pop" id="layPop" hidden role="group" aria-label="Layline angles">
+								<div class="lp-h"><b>Layline angles</b><button type="button" class="lp-x" id="lpClose" aria-label="Close">&times;</button></div>
+								<div class="lp-seg" role="group" aria-label="How to set the angle">
+									<button type="button" data-lm="type" aria-pressed="true">Boat type</button><button type="button" data-lm="polar" aria-pressed="false">My polars</button><button type="button" data-lm="tacks" aria-pressed="false">My tacks</button>
+								</div>
+								<div class="lp-pane" data-lp="type">
+									<div class="lp-chips" id="lpTypes"></div>
+									<div class="lp-row">
+										<span class="lp-pair"><span class="lp-lbl">Upwind</span><span class="lp-step"><button type="button" data-ls="up" data-d="-1" aria-label="Point higher, 1 degree">&minus;</button><output id="lpUp">45°</output><button type="button" data-ls="up" data-d="1" aria-label="Point lower, 1 degree">+</button></span></span>
+										<span class="lp-pair"><span class="lp-lbl">Gybe at</span><span class="lp-step"><button type="button" data-ls="gybe" data-d="-1" aria-label="Gybe higher, 1 degree">&minus;</button><output id="lpGybe">145°</output><button type="button" data-ls="gybe" data-d="1" aria-label="Gybe deeper, 1 degree">+</button></span></span>
+									</div>
+								</div>
+								<div class="lp-pane" data-lp="polar" hidden>
+									<div class="lp-row"><span class="lp-lbl">Offset</span><span class="lp-step"><button type="button" data-ls="off" data-d="-1" aria-label="Offset down, 1 degree">&minus;</button><output id="lpOff">+0°</output><button type="button" data-ls="off" data-d="1" aria-label="Offset up, 1 degree">+</button></span>
+										<span class="lp-note">+2° if you point 2° lower (and gybe 2° higher) than your polars.</span></div>
+								</div>
+								<div class="lp-pane" data-lp="tacks" hidden>
+									<div class="lp-row"><span class="lp-note" id="lpMeas"></span><button type="button" class="lp-sec" id="lpReset">Clear measurements</button></div>
+									<span class="lp-note">With My location on, each clean tack or gybe is measured from your course over ground: half the change in course. The last three are averaged.</span>
+								</div>
+								<p class="lp-now" id="lpNow"></p>
+								<p class="lp-note">Angles are true wind angles. Close-hauled at 45° true is roughly 30&ndash;35° apparent on your instruments.</p>
+						</div>
+						<label><input type="checkbox" id="tgFleet"> Other boats</label>
+						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
+						<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
+						<label><input type="checkbox" id="tgRace"> Race</label>
+					</div>
+					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
+				</div>
+				<div class="layers lyr-sec" id="poiLayers">
+					<div class="lyr-g" role="group" aria-labelledby="lyrGP"><h3 id="lyrGP">Chart &amp; places</h3>
+						<label><input type="checkbox" id="tgChart" checked> NOAA chart</label>
+						<label><input type="checkbox" id="tgClubs" checked> Reciprocal clubs</label>
+						<label><input type="checkbox" id="tgDine" checked> Dock &amp; dine</label>
+						<label><input type="checkbox" id="tgFuel" checked> Fuel docks</label>
+						<label><input type="checkbox" id="tgAnch" checked> Anchorages</label>
+						<label><input type="checkbox" id="tgFish" checked> Fishing spots</label>
+					</div>
+					<details class="lyr-help"><summary>About the chart and places</summary><span class="hint">NOAA chart = official electronic chart data (depths, buoys, lights, rocks), not for navigation &middot; tap a pin for distance from OYC &amp; links &middot; fuel, anchorage and fishing notes are local knowledge — verify on the chart and call ahead</span></details>
+				</div>
+			</aside>
 			<div class="maprot" id="mapRot">
 				<div id="map"></div>
 				<div class="grat" id="gratic" aria-hidden="true"></div>
@@ -3355,6 +3414,64 @@ window.OYCWM={
 };
 loadLocal();
 map.whenReady(function(){setTimeout(drawGraticule,400);});
+})();
+
+/* ---------- layer presets (Sail / Race / Fish / Cruise) + Layers drawer ----------
+   A preset sets the main layer switches in one tap by ticking/unticking the real
+   checkboxes (and firing their change events), so every layer's own wiring and
+   saved state work exactly as if the user had clicked. My location, Share my
+   position, Animated, Wind color and the vector length are left as they are. */
+(function(){
+	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
+	if(!bar||!drawer||!btn)return;
+	var MANAGED=['tgArrows','tgIso','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var PRESETS={
+		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
+		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
+		fish:['tgChart','tgCur','tgFish','tgFuel'],
+		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
+	};
+	var applying=false;
+	function matches(){
+		var hit=null;
+		Object.keys(PRESETS).forEach(function(k){
+			var want=PRESETS[k],ok=MANAGED.every(function(id){var cb=document.getElementById(id);return !cb||cb.checked===(want.indexOf(id)>=0);});
+			if(ok)hit=k;
+		});
+		return hit;
+	}
+	function mark(){
+		var on=matches();
+		[].forEach.call(bar.querySelectorAll('.pre-b'),function(b){b.setAttribute('aria-pressed',b.getAttribute('data-preset')===on?'true':'false');});
+	}
+	function apply(k){
+		var want=PRESETS[k];if(!want)return;
+		var tw=document.getElementById('tabWind');
+		if(tw&&tw.getAttribute('aria-selected')!=='true')tw.click();   /* presets are map-view layers */
+		applying=true;
+		/* switch layers off first, then on, so a layer that depends on another
+		   (Race needs the barbs/dials) ends up in its normal "on" state */
+		MANAGED.forEach(function(id){var cb=document.getElementById(id);if(cb&&cb.checked&&want.indexOf(id)<0){cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
+		want.forEach(function(id){var cb=document.getElementById(id);if(cb&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
+		applying=false;
+		try{localStorage.setItem('oyc_wm_preset',k);}catch(e){}
+		mark();
+	}
+	bar.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('.pre-b'):null;if(b)apply(b.getAttribute('data-preset'));});
+	drawer.addEventListener('change',function(){if(!applying)mark();});
+	/* Layers drawer: open by default on wide screens, closed on phones; the
+	   visitor's last choice wins */
+	function setOpen(o,save){
+		drawer.hidden=!o;btn.setAttribute('aria-expanded',o?'true':'false');
+		if(save){try{localStorage.setItem('oyc_wm_drawer',o?'1':'0');}catch(e){}}
+	}
+	var saved=null;try{saved=localStorage.getItem('oyc_wm_drawer');}catch(e){}
+	setOpen(saved===null?!window.matchMedia('(max-width:760px)').matches:saved==='1',false);
+	btn.addEventListener('click',function(){setOpen(drawer.hidden,true);});
+	document.getElementById('lyrClose').addEventListener('click',function(){setOpen(false,true);btn.focus();});
+	drawer.addEventListener('keydown',function(e){if(e.key==='Escape'){setOpen(false,true);btn.focus();}});
+	setTimeout(mark,0);
+	window.addEventListener('load',mark);
 })();
 </script>
 </div>
