@@ -421,17 +421,38 @@ if ( ! $oyc_weather_menu ) {
 	.windmap-embed{width:auto;margin:12px -18px -16px;overflow:hidden}
 	.windmap-embed #oycwm.embed{width:100%}
 	@media (max-width:560px){ .windmap-embed{margin:12px -14px -14px} }
-	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
-		border:1px solid rgba(192,57,43,.45);background:rgba(192,57,43,.10)}
-	.alertbar.hidden{display:none}
-	.alertbar--card{border-radius:6px;margin:0 0 8px;flex-shrink:0}
-	.alert-tag{background:var(--red);color:#fff;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
-	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
-	.marquee span{display:inline-block;white-space:nowrap;color:#ffd9d4;font-size:14px;
-		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
-	:root[data-theme="light"] .marquee span{color:#8f2d20} /* dark maroon on the light board; light pink (above) stays for dark */
-	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+	/* ---- marine alert banner: one row per active NWS alert, colored by type ---- */
+	.alerts[hidden]{display:none}
+	.alerts{display:flex;flex-direction:column;gap:6px}
+	.al{border-radius:12px;color:#fff;background:#44586C}
+	.al.al-warn{background:#A3261B}
+	.al.al-adv{background:#8A4B00}
+	.al-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 12px 10px 16px}
+	.al-ico{flex:none;width:22px;height:22px}
+	.al-head{font-weight:700;font-size:15px}
+	.al-area{font-size:14px;opacity:.88;flex:1 1 200px;min-width:0}
+	.al-btns{display:flex;gap:8px;margin-left:auto}
+	.al-btn{min-height:40px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.55);background:transparent;
+		color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+	.al-btn:hover{background:rgba(255,255,255,.14)}
+	.al-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+	.al-more{display:none}
+	.alerts.many .al-more{display:inline-flex;align-items:center}
+	.alerts:not(.open) .al + .al{display:none}
+	.al-txt{padding:0 16px 14px 52px;font-size:14px;line-height:1.5;max-width:900px}
+	.al-txt p + p{margin-top:8px}
+	.al-txt[hidden]{display:none}
+	.fc-alert{border-left:0}
+	.fc-alert h2{color:#A3261B}
+	:root[data-theme="dark"] .fc-alert h2{color:#ff9f8f}
+	.fc-alert .al-body{margin-top:10px;font-size:14px;line-height:1.55;color:var(--ink)}
+	.fc-alert .al-body p + p{margin-top:8px}
+	@media (max-width:560px){
+		.al-row{padding:10px 10px 10px 12px}
+		.al-txt{padding:0 12px 12px}
+		.al-btns{margin-left:0;width:100%}
+		.al-btn{flex:1}
+	}
 
 	.miss{color:var(--faint)}
 	/* Mobile: minmax(0,1fr), NOT bare 1fr. A bare 1fr track is minmax(auto,1fr) —
@@ -469,10 +490,7 @@ if ( ! $oyc_weather_menu ) {
 	</script>
 
 	<!-- ALERT (prominent, at the top) -->
-	<div class="alertbar hidden" id="alertBar">
-		<div class="alert-tag">&#9888; Marine Alert</div>
-		<div class="marquee"><span id="alertText"></span></div>
-	</div>
+	<section class="alerts" id="alertBox" aria-label="Marine alerts" hidden></section>
 
 	<!-- TITLE + VIEW TABS (Now · Forecast · Chart · Fishing) -->
 	<div class="wx-head">
@@ -589,6 +607,7 @@ if ( ! $oyc_weather_menu ) {
 
 	<!-- ===== FORECAST ===== -->
 	<section class="wx-panel" id="panel-forecast" role="tabpanel" aria-labelledby="tab-forecast" hidden>
+		<div class="card fc-alert" id="fcAlert" hidden></div>
 	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table ?>
 		<div class="card fc-full-card">
 			<h2>NWS Forecast &middot; Western Long Island Sound</h2>
@@ -1347,22 +1366,89 @@ if ( ! $oyc_weather_menu ) {
 	}
 
 	// ---------- ALERTS ----------
+	// One row per active alert at the club (NWS), newest-most-serious first:
+	// warnings red, watches/advisories amber, statements slate. The first row
+	// shows "+N more" when there are others; "Details" opens the NWS text.
+	// The Forecast tab repeats the top alert in full.
+	var ALERT_ICO = '<svg class="al-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5"/><path d="M12 17.5h.01"/></svg>';
+	function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+	function alertKind(ev){ return /warning/i.test(ev) ? 'warn' : (/watch|advisory/i.test(ev) ? 'adv' : 'st'); }
+	function alertUntil(pr){
+		var e = pr.ends || pr.expires; if(!e) return '';
+		var d = new Date(e); if(isNaN(d)) return '';
+		var now = new Date(), same = d.toDateString() === now.toDateString();
+		var tm = new Date(now.getTime() + 86400000).toDateString() === d.toDateString();
+		return ' until ' + hmt(d) + (same ? '' : (tm ? ' tomorrow' : ' ' + DOW[d.getDay()]));
+	}
+	function alertParas(pr){
+		var t = [pr.description, pr.instruction].filter(Boolean).join('\n\n');
+		return t.split(/\n\s*\n/).map(function(x){ return x.replace(/\s+/g, ' ').trim(); }).filter(Boolean)
+			.map(function(x){ return '<p>' + esc(x) + '</p>'; }).join('');
+	}
+	var ALERT_RANK = { warn:0, adv:1, st:2 };
+	function renderAlerts(list){
+		var box = $('alertBox'), fc = $('fcAlert');
+		if(!list.length){
+			box.hidden = true; box.innerHTML = ''; box.removeAttribute('data-sig');
+			if(fc){ fc.hidden = true; fc.innerHTML = ''; }
+			return;
+		}
+		list.sort(function(a, b){ return ALERT_RANK[a.kind] - ALERT_RANK[b.kind]; });
+		var sig = JSON.stringify(list);
+		if(box.getAttribute('data-sig') === sig && !box.hidden){ return; }   // unchanged: keep open details as they are
+		box.setAttribute('data-sig', sig);
+		var openNow = box.classList.contains('open');
+		box.classList.toggle('many', list.length > 1);
+		box.innerHTML = list.map(function(a, i){
+			var more = (i === 0 && list.length > 1)
+				? '<button type="button" class="al-btn al-more" data-al-more aria-expanded="' + (openNow ? 'true' : 'false') + '">' + (openNow ? 'Show less' : '+' + (list.length - 1) + ' more') + '</button>' : '';
+			return '<div class="al al-' + a.kind + '">'
+				+ '<div class="al-row">' + ALERT_ICO
+				+ '<strong class="al-head">' + esc(a.head) + '</strong>'
+				+ (a.area ? '<span class="al-area">' + esc(a.area) + '</span>' : '')
+				+ '<span class="al-btns">' + more
+				+ (a.body ? '<button type="button" class="al-btn" data-al-det="' + i + '" aria-expanded="false" aria-controls="alTxt' + i + '">Details</button>' : '')
+				+ '</span></div>'
+				+ (a.body ? '<div class="al-txt" id="alTxt' + i + '" hidden>' + a.body + '</div>' : '')
+				+ '</div>';
+		}).join('');
+		box.hidden = false;
+		if(fc){
+			var t = list[0];
+			fc.innerHTML = '<h2>' + esc(t.head) + '</h2>' + (t.area ? '<p class="wx-sub">' + esc(t.area) + '</p>' : '')
+				+ '<div class="al-body">' + (t.body || '') + '</div>';
+			fc.hidden = false;
+		}
+	}
+	(function(){
+		var box = $('alertBox'); if(!box) return;
+		box.addEventListener('click', function(e){
+			var m = e.target.closest ? e.target.closest('[data-al-more]') : null;
+			if(m){
+				var o = box.classList.toggle('open'), n = box.querySelectorAll('.al').length - 1;
+				m.setAttribute('aria-expanded', o ? 'true' : 'false');
+				m.textContent = o ? 'Show less' : '+' + n + ' more';
+				return;
+			}
+			var d = e.target.closest ? e.target.closest('[data-al-det]') : null;
+			if(d){
+				var p = $('alTxt' + d.getAttribute('data-al-det')); if(!p) return;
+				p.hidden = !p.hidden;
+				d.setAttribute('aria-expanded', p.hidden ? 'false' : 'true');
+				d.textContent = p.hidden ? 'Details' : 'Hide details';
+			}
+		});
+	})();
 	function loadAlerts(){
 		nws('alerts/active?point='+CFG.LAT+'%2C'+CFG.LON).then(function(j){
 			var f = (j && j.features) || [];
-			if(!f.length){
-				$('alertBar').classList.add('hidden');
-				return;
-			}
-			var parts = f.map(function(a){
-				var pr=a.properties||{};
-				var txt = (pr.event||'Alert') + ' — ' + (pr.headline || pr.event || '');
-				if(pr.areaDesc){ txt += '    |    Coverage: ' + pr.areaDesc; }
-				return txt;
-			});
-			var txt = parts.join('    •    ');
-			$('alertText').textContent = txt;
-			$('alertBar').classList.remove('hidden');
+			renderAlerts(f.map(function(a){
+				var pr = a.properties || {}, ev = pr.event || 'Alert';
+				var area = (pr.areaDesc || '').split(';').map(function(x){ return x.trim(); }).filter(Boolean);
+				return { kind: alertKind(ev), head: ev + alertUntil(pr),
+					area: area.slice(0, 2).join(', ') + (area.length > 2 ? ' and ' + (area.length - 2) + ' more' : ''),
+					body: alertParas(pr) };
+			}));
 		}).catch(function(){});
 	}
 
