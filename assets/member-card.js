@@ -21,6 +21,22 @@
 		}
 	});
 
+	// Tap / click / Enter flips the card between front and back (QR).
+	document.querySelectorAll('[data-oyc-flip]').forEach(function (wrap) {
+		var btn = wrap.querySelector('button');
+		if (!btn) {
+			return;
+		}
+		btn.addEventListener('click', function () {
+			var on = wrap.classList.toggle('is-flipped');
+			btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+		});
+		if (/[?&]side=back\b/.test(location.search)) {
+			wrap.classList.add('is-flipped');
+			btn.setAttribute('aria-pressed', 'true');
+		}
+	});
+
 	var clocks = document.querySelectorAll('[data-oyc-clock]');
 	if (!clocks.length) {
 		return;

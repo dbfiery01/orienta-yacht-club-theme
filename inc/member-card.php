@@ -444,3 +444,149 @@ function oyc_card_import_csv( $path, $dry_run = false ) {
 	}
 	return $out;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Card badges (fun icons on the front of the card)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Badge slug => label. Stored as a comma list in user meta oyc_card_badges.
+ * Members pick their own on the card page; officers can set them too.
+ */
+function oyc_card_badge_list() {
+	return array(
+		'power' => __( 'Power Boater', 'orienta-yacht-club' ),
+		'sail'  => __( 'Sailor', 'orienta-yacht-club' ),
+		'fish'  => __( 'Fisherman', 'orienta-yacht-club' ),
+		'u42'   => __( '42 & Under', 'orienta-yacht-club' ),
+	);
+}
+
+function oyc_card_get_badges( $user_id ) {
+	$raw = (string) get_user_meta( $user_id, 'oyc_card_badges', true );
+	return array_values( array_intersect( array_keys( oyc_card_badge_list() ), array_filter( explode( ',', $raw ) ) ) );
+}
+
+function oyc_card_set_badges( $user_id, $badges ) {
+	$clean = array_values( array_intersect( array_keys( oyc_card_badge_list() ), array_map( 'sanitize_key', (array) $badges ) ) );
+	update_user_meta( $user_id, 'oyc_card_badges', implode( ',', $clean ) );
+	return $clean;
+}
+
+/**
+ * Inline SVG for a badge (drawn for a 40×40 medallion, currentColor strokes).
+ */
+function oyc_card_badge_svg( $slug ) {
+	$svgs = array(
+		// Motor yacht: hull, cabin, windows, wake.
+		'power' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 24h27l-4 6H10z" fill="currentColor"/><path d="M12 24v-5h10l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M15 17v-3h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 33c3 0 3-1.5 6-1.5s3 1.5 6 1.5 3-1.5 6-1.5 3 1.5 6 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+		// Sloop: mainsail, jib, hull, wave.
+		'sail'  => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 6v19H9z" fill="currentColor"/><path d="M22 9l9 16h-9z" fill="currentColor" opacity=".75"/><path d="M7 27h26l-4 4H11z" fill="currentColor"/><path d="M4 35c3 0 3-1.5 6-1.5s3 1.5 6 1.5 3-1.5 6-1.5 3 1.5 6 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+		// Fish on a hook line.
+		'fish'  => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 21c4-6 13-8 20-3l5-4v12l-5-4c-7 5-16 3-20-1z" fill="currentColor"/><circle cx="13" cy="20" r="1.4" fill="#0b2a4a"/><path d="M20 4v7a3 3 0 0 1-6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+		// "42 & U" lettering.
+		'u42'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><text x="20" y="19" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="800" font-size="15" fill="currentColor">42</text><text x="20" y="31" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">&amp; U</text></svg>',
+	);
+	return $svgs[ $slug ] ?? '';
+}
+
+/**
+ * Save badges from the card page (the member's own, or an officer for a member).
+ */
+add_action( 'admin_post_oyc_card_badges', function () {
+	if ( ! is_user_logged_in() || ! check_admin_referer( 'oyc_card_badges', 'oyc_card_badges_nonce' ) ) {
+		wp_die( esc_html__( 'Please log in again.', 'orienta-yacht-club' ), '', array( 'response' => 403 ) );
+	}
+	$uid  = (int) ( $_POST['user_id'] ?? 0 );
+	$self = get_current_user_id();
+	$args = array( 'badges' => 'saved' );
+	if ( $uid && $uid !== $self ) {
+		require_once get_template_directory() . '/inc/officer-admin.php';
+		if ( ! current_user_can( 'oyc_manage_members' ) || ! oyc_officer_can_manage_user( $uid ) ) {
+			wp_die( esc_html__( 'You cannot change that member\'s card.', 'orienta-yacht-club' ), '', array( 'response' => 403 ) );
+		}
+		$args['uid'] = $uid;
+	} else {
+		$uid = $self;
+	}
+	oyc_card_set_badges( $uid, wp_unslash( (array) ( $_POST['badges'] ?? array() ) ) );
+	if ( isset( $_POST['cert_name'] ) ) {
+		oyc_card_set_certs( $uid, wp_unslash( (array) $_POST['cert_name'] ), wp_unslash( (array) ( $_POST['cert_expires'] ?? array() ) ) );
+	}
+	wp_safe_redirect( oyc_card_url( $args ) );
+	exit;
+} );
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Licenses & certifications (shown on the card back and the Verify page)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Suggestions offered while typing (free text is still allowed).
+ */
+function oyc_card_cert_suggestions() {
+	return array(
+		'NY Boater Safety Certificate',
+		'USCG Captain — OUPV (6-Pack)',
+		'USCG Master License',
+		'US Sailing Keelboat Certification',
+		'America\'s Boating Club course',
+		'Marine VHF Radio Operator',
+		'First Aid / CPR',
+		'NY Fishing License',
+	);
+}
+
+/**
+ * The member's licenses/certifications: up to 6 entries of
+ * array( 'name' => string, 'expires' => string year or '' ).
+ */
+function oyc_card_get_certs( $user_id ) {
+	$raw = get_user_meta( $user_id, 'oyc_card_certs', true );
+	return is_array( $raw ) ? array_slice( $raw, 0, 6 ) : array();
+}
+
+function oyc_card_set_certs( $user_id, $names, $expires ) {
+	$out = array();
+	foreach ( (array) $names as $i => $n ) {
+		$n = substr( trim( sanitize_text_field( (string) $n ) ), 0, 60 );
+		if ( '' === $n ) {
+			continue;
+		}
+		$e = trim( sanitize_text_field( (string) ( $expires[ $i ] ?? '' ) ) );
+		$e = preg_match( '/(19|20)\d{2}/', $e, $m ) ? $m[0] : '';
+		$out[] = array( 'name' => $n, 'expires' => $e );
+		if ( count( $out ) >= 6 ) {
+			break;
+		}
+	}
+	update_user_meta( $user_id, 'oyc_card_certs', $out );
+	return $out;
+}
+
+/**
+ * Whether a certification has passed its expiry year.
+ */
+function oyc_card_cert_expired( $cert ) {
+	return ! empty( $cert['expires'] ) && (int) $cert['expires'] < (int) current_time( 'Y' );
+}
+
+/**
+ * Small HTML list of certifications, shared by the card back and Verify page.
+ */
+function oyc_card_certs_html( $certs, $class = 'mcard__certs' ) {
+	if ( ! $certs ) {
+		return '';
+	}
+	$html = '<ul class="' . esc_attr( $class ) . '">';
+	foreach ( $certs as $c ) {
+		$exp   = oyc_card_cert_expired( $c );
+		$html .= '<li' . ( $exp ? ' class="is-expired"' : '' ) . '>' . esc_html( $c['name'] );
+		if ( $c['expires'] ) {
+			/* translators: %s: year. */
+			$html .= ' <span class="mcard__cert-exp">' . esc_html( sprintf( $exp ? __( 'expired %s', 'orienta-yacht-club' ) : __( 'exp. %s', 'orienta-yacht-club' ), $c['expires'] ) ) . '</span>';
+		}
+		$html .= '</li>';
+	}
+	return $html . '</ul>';
+}

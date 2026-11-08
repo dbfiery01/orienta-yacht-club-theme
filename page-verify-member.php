@@ -86,6 +86,13 @@ get_header();
 					</dl>
 				<?php endif; ?>
 
+				<?php if ( $oyc_user && ( $oyc_certs = oyc_card_get_certs( $oyc_user->ID ) ) ) : ?>
+					<div class="mverify__certs">
+						<p class="mverify__certs-title"><?php esc_html_e( 'Licenses & certifications (as entered by the member)', 'orienta-yacht-club' ); ?></p>
+						<?php echo oyc_card_certs_html( $oyc_certs, 'mverify__cert-list' ); // phpcs:ignore -- escaped in helper ?>
+					</div>
+				<?php endif; ?>
+
 				<?php if ( ! $oyc_valid && ! empty( $oyc_reasons[ $oyc_status['reason'] ] ) ) : ?>
 					<p class="mverify__reason"><?php echo esc_html( $oyc_reasons[ $oyc_status['reason'] ] ); ?></p>
 				<?php endif; ?>
