@@ -164,6 +164,23 @@ require_once get_template_directory() . '/inc/grib-endpoint.php';
 require_once get_template_directory() . '/inc/wind-map.php';
 
 /*
+ * Racers' race tools on the wind map: Polars & Target Speed overlay, GPS race
+ * log, shared team archive + replay (racers only; admins until the hub ships).
+ */
+require_once get_template_directory() . '/inc/race-tools.php';
+
+/*
+ * Chart plotter fleet positions: members share their live GPS fix, anyone on
+ * the wind map can see the boats sharing now (short-lived, nothing stored).
+ */
+require_once get_template_directory() . '/inc/fleet-share.php';
+
+/*
+ * AIS ships on the wind map (aisstream.io, key in Settings → AIS ships).
+ */
+require_once get_template_directory() . '/inc/ais.php';
+
+/*
  * Nav weather glyph + its cached conditions proxy. Loaded here (not just from
  * header.php) so the wp_ajax_oyc_header_wx handler is registered on admin-ajax
  * requests too — header.php doesn't run for those, so registering it only there
@@ -222,6 +239,12 @@ require_once get_template_directory() . '/inc/video-gallery.php';
 require_once get_template_directory() . '/inc/bulletin-board.php';
 
 /**
+ * Racing: race RSVP, the racers-only hub at /racing/, Crew Wanted / Boat
+ * Wanted board, crew and yacht profiles, and emailing racers (Race Committee).
+ */
+require_once get_template_directory() . '/inc/racing.php';
+
+/**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
  * fetched, and old cached embeds lack the allow/referrerpolicy attributes the
  * player now requires (YouTube "Error 153").
@@ -246,6 +269,11 @@ require_once get_template_directory() . '/inc/seo.php';
  * [oyc_harbor_mini] — compact live harbor-conditions widget linking to /weather/.
  */
 require_once get_template_directory() . '/inc/harbor-mini.php';
+
+/**
+ * NOAA chart tile cache for the Wind & Radar map (static PNGs in uploads/oyc-enc).
+ */
+require_once get_template_directory() . '/inc/enc-cache.php';
 
 /**
  * Inject Customizer-overridden section background images as inline CSS.
@@ -472,7 +500,7 @@ function oyc_hero_header_body_class( $classes ) {
 	}
 	// Fully-immersive pages (fixed photo background): the menu stays transparent
 	// the whole way down instead of turning solid on scroll.
-	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'member-login-setup', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement', 'video-gallery', 'dock-and-dine', 'bulletin-board' ) ) ) {
+	if ( is_front_page() || is_page( array( 'about', 'boating', 'fishing', 'visitors', 'membership', 'membership-application', 'member-login-setup', 'calendar', 'contact', 'members-area', 'mamaroneck-harbor', 'thank-you-application', 'oyc-resources', 'videos', '2026-fee-schedule', 'edit-profile', 'storm-warnings', 'facilities', 'reciprocity-list', 'approach', 'fleet-roster', 'photo-gallery', 'video-streaming', 'live-video-streaming', 'slip-waiting-list', 'dock-assignments', 'constitution-and-bylaws-2026', 'club-rental-agreement', 'member-guidelines-2026', 'member-guidelines', 'member-rental-agreement', 'video-gallery', 'dock-and-dine', 'bulletin-board', 'racing' ) ) ) {
 		$classes[] = 'oyc-immersive';
 	}
 	return $classes;

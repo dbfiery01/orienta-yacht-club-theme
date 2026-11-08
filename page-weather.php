@@ -56,6 +56,9 @@ if ( ! $oyc_weather_menu ) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Live Conditions — Mamaroneck Harbor · Orienta Yacht Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
 <style>
 	:root{
 		/* OYC DARK palette (default) — the July "signage" look: navy ground, cream
@@ -176,17 +179,62 @@ if ( ! $oyc_weather_menu ) {
 	.card h2 a.h2link:hover{color:var(--amber);border-bottom-color:var(--amber)}
 	.card h2 a.h2link::after{content:"\00A0\2197\FE0F";font-size:.8em;opacity:.7}
 
-	/* card reorder controls */
-	.card h2{padding-right:58px}
-	.mover{position:absolute;top:11px;right:12px;display:flex;gap:4px;z-index:3}
-	.mv{background:#eef3f8;border:1px solid var(--edge);color:var(--muted);border-radius:6px;
-		width:24px;height:22px;font-size:10px;line-height:1;cursor:pointer;padding:0;
-		display:inline-flex;align-items:center;justify-content:center;transition:color .15s,background .15s}
-	.mv:hover{color:var(--amber);background:#e2eaf3}
-	.order-resetwrap{display:flex;justify-content:center;margin-top:-4px}
-	#orderReset{display:none;background:none;border:1px solid var(--edge);color:var(--faint);border-radius:999px;
-		padding:6px 16px;font-size:11px;letter-spacing:.06em;cursor:pointer;transition:color .15s,border-color .15s}
-	#orderReset:hover{color:var(--ink);border-color:var(--edge2)}
+
+	/* ---- title + view tabs ---- */
+	.wx-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 24px;
+		border-bottom:1px solid var(--edge2);padding:4px 4px 0}
+	.wx-title{padding-bottom:10px}
+	.wx-title h1{font-size:clamp(24px,3vw,34px);line-height:1.1;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+	.wx-sub{color:var(--muted);font-size:13px;margin-top:4px}
+	.wx-tabs{display:flex;gap:4px}
+	.wx-tab{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;
+		font-size:15px;font-weight:600;padding:12px 18px 11px;cursor:pointer;min-height:44px;transition:color .15s,border-color .15s}
+	.wx-tab:hover{color:var(--ink)}
+	.wx-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--teal)}
+	.wx-tab:focus-visible,.go-btn:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+	.wx-panel{display:flex;flex-direction:column;gap:16px}
+	.wx-panel[hidden]{display:none}
+	.wx-panel .windmap-card{margin-top:0}
+
+	/* ---- Now: headline tiles ---- */
+	.now-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+	.ns{border:1px solid var(--edge);border-radius:14px;background:var(--panel);padding:14px 16px}
+	.ns-k{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+	.ns-v{font-size:clamp(24px,2.4vw,32px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:4px;color:var(--ink)}
+	.ns-v.miss{color:var(--faint)}
+	.ns-s{font-size:13px;color:var(--muted);margin-top:2px;min-height:1.3em}
+	.now-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
+	.now-main,.now-side{display:flex;flex-direction:column;gap:16px}
+	.now-go{margin-top:14px}
+	.go-btn{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:10px;cursor:pointer;
+		background:transparent;border:1px solid var(--edge2);color:var(--ink);font:inherit;font-size:14px;font-weight:600;
+		transition:border-color .15s,color .15s}
+	.go-btn:hover{border-color:var(--teal);color:var(--teal)}
+	.now-teaser p{color:var(--muted);font-size:14px;line-height:1.45;margin:8px 0 14px}
+	.nt-big{font-size:26px;font-weight:700;color:var(--ink)}
+	.nf-score{display:flex;align-items:center;gap:12px;margin-top:10px}
+	.nf-score .fish-dots{margin-top:0}
+	.nf-vis{margin:0 0 16px}
+	.now-teaser .nf-vis .fish-k{margin-top:0}
+	.nh{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:14px}
+	.nh:empty{display:none}
+	.nh-h{border:1px solid var(--edge);border-radius:10px;padding:8px 6px;text-align:center}
+	.nh-t{font-size:12px;color:var(--muted);font-weight:600}
+	.nh-w{font-size:20px;font-weight:700;color:var(--ink)}
+	.nh-w small{font-size:11px;color:var(--muted);font-weight:600}
+	.nh-g{font-size:12px;color:var(--muted)}
+	.nt-row4{margin-top:12px}
+	@media (max-width:1100px){
+		.now-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+		.now-grid{grid-template-columns:minmax(0,1fr)}
+	}
+	@media (max-width:560px){
+		.now-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+		.ns{padding:10px 12px}
+		.nh{grid-template-columns:repeat(3,minmax(0,1fr))}
+		.wx-tabs{width:100%}
+		.wx-tab{flex:1;padding:12px 4px 11px;font-size:14px}
+	}
 
 	/* tide */
 	.tide-now{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
@@ -380,17 +428,38 @@ if ( ! $oyc_weather_menu ) {
 	.windmap-embed{width:auto;margin:12px -18px -16px;overflow:hidden}
 	.windmap-embed #oycwm.embed{width:100%}
 	@media (max-width:560px){ .windmap-embed{margin:12px -14px -14px} }
-	.alertbar{display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;
-		border:1px solid rgba(192,57,43,.45);background:rgba(192,57,43,.10)}
-	.alertbar.hidden{display:none}
-	.alertbar--card{border-radius:6px;margin:0 0 8px;flex-shrink:0}
-	.alert-tag{background:var(--red);color:#fff;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-		font-size:13px;display:flex;align-items:center;gap:8px;padding:0 18px;white-space:nowrap}
-	.marquee{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
-	.marquee span{display:inline-block;white-space:nowrap;color:#ffd9d4;font-size:14px;
-		font-weight:600;letter-spacing:.02em;animation:scroll 34s linear infinite}
-	:root[data-theme="light"] .marquee span{color:#8f2d20} /* dark maroon on the light board; light pink (above) stays for dark */
-	@keyframes scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+	/* ---- marine alert banner: one row per active NWS alert, colored by type ---- */
+	.alerts[hidden]{display:none}
+	.alerts{display:flex;flex-direction:column;gap:6px}
+	.al{border-radius:12px;color:#fff;background:#44586C}
+	.al.al-warn{background:#A3261B}
+	.al.al-adv{background:#8A4B00}
+	.al-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 12px 10px 16px}
+	.al-ico{flex:none;width:22px;height:22px}
+	.al-head{font-weight:700;font-size:15px}
+	.al-area{font-size:14px;opacity:.88;flex:1 1 200px;min-width:0}
+	.al-btns{display:flex;gap:8px;margin-left:auto}
+	.al-btn{min-height:40px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.55);background:transparent;
+		color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+	.al-btn:hover{background:rgba(255,255,255,.14)}
+	.al-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+	.al-more{display:none}
+	.alerts.many .al-more{display:inline-flex;align-items:center}
+	.alerts:not(.open) .al + .al{display:none}
+	.al-txt{padding:0 16px 14px 52px;font-size:14px;line-height:1.5;max-width:900px}
+	.al-txt p + p{margin-top:8px}
+	.al-txt[hidden]{display:none}
+	.fc-alert{border-left:0}
+	.fc-alert h2{color:#A3261B}
+	:root[data-theme="dark"] .fc-alert h2{color:#ff9f8f}
+	.fc-alert .al-body{margin-top:10px;font-size:14px;line-height:1.55;color:var(--ink)}
+	.fc-alert .al-body p + p{margin-top:8px}
+	@media (max-width:560px){
+		.al-row{padding:10px 10px 10px 12px}
+		.al-txt{padding:0 12px 12px}
+		.al-btns{margin-left:0;width:100%}
+		.al-btn{flex:1}
+	}
 
 	.miss{color:var(--faint)}
 	/* Mobile: minmax(0,1fr), NOT bare 1fr. A bare 1fr track is minmax(auto,1fr) —
@@ -399,6 +468,71 @@ if ( ! $oyc_weather_menu ) {
 	   0 minimum caps the track at the viewport; the marquee then clips normally. */
 	@media (max-width:1100px){ .grid{grid-template-columns:minmax(0,1fr)}}
 	@media (max-width:560px){ .topbar{padding:12px 14px} .card{padding:14px} }
+
+	/* ===================== REDESIGN LOOK (step 4) =====================
+	   Inter for text, Source Serif 4 for the big headings, the mockup's
+	   flat harbor-grey ground and navy ink in light mode; dark mode keeps
+	   its navy palette. On phones the view tabs become a bottom tab bar. */
+	body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+	:root[data-theme="light"]{
+		--bg1:#F2F5F8; --bg2:#F2F5F8; --edge:#DCE3EA; --edge2:#C4D0DC;
+		--ink:#10263F; --muted:#56677A; --faint:#687889;
+		--teal:#B0842F; --teal2:#8A6420; --amber:#0F68A6;
+	}
+	:root[data-theme="light"] body{background:#F2F5F8}
+	/* one flat ground in dark mode too: the old radial gradient was sized to the
+	   first screen, so lower down the page showed a second, different navy */
+	:root[data-theme="dark"],:root[data-theme="dark"] body{background:#0a2440}
+	:root[data-theme="light"]{background:#F2F5F8}
+	.wx-title h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:clamp(24px,2.6vw,30px);letter-spacing:0}
+	.wx-tab{display:inline-flex;align-items:center;gap:6px;font-size:16px;min-height:48px;padding:0 20px}
+	.wx-ico{display:none;width:24px;height:24px;flex:none}
+	:root[data-theme="light"] .wx-tab[aria-selected="true"]{color:#10263F;border-bottom-color:#B0842F}
+
+	/* headline tiles: one joined strip, like the mockup */
+	.now-stats{gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:14px;overflow:hidden;
+		grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+	.ns{border:0;border-radius:0;padding:16px 20px;background:var(--panel)}
+	:root[data-theme="dark"] .ns{background:#0d2c4c}
+	.ns-k{text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--muted)}
+	.ns-v{font-size:clamp(28px,3vw,42px);font-weight:600;letter-spacing:-.5px;margin-top:2px}
+	.ns-s{font-size:14px}
+
+	/* cards: sentence-style headings, softer corners */
+	.wx-panel .card{border-radius:14px;padding:18px 22px}
+	.wx-panel .card > h2{font-size:16px;letter-spacing:0;text-transform:none;font-weight:600;margin-bottom:6px}
+	.wx-panel .card > h2 .sta{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;font-weight:500;letter-spacing:.06em}
+	.now-main .card > h2,.fc-full-card > h2{font-family:"Source Serif 4",Georgia,serif;font-size:21px}
+	.fc-alert > h2{text-transform:none!important;letter-spacing:0!important;font-size:18px!important}
+	.go-btn{border-radius:8px}
+	.windmap-embed{margin-left:-22px;margin-right:-22px}
+
+	/* ---- phones: bottom tab bar + slimmer top bar ---- */
+	@media (max-width:700px){
+		body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+		.wx-head{border-bottom:0;padding-bottom:0}
+		.wx-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1500;width:auto;margin:0;gap:0;
+			display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+			padding-bottom:env(safe-area-inset-bottom,0px);background:#FFFFFF;border-top:1px solid var(--edge);
+			box-shadow:0 -2px 10px rgba(16,38,63,.06)}
+		:root[data-theme="dark"] .wx-tabs{background:#071d35;border-top-color:rgba(245,239,226,.16)}
+		.wx-tab{flex-direction:column;justify-content:center;gap:2px;min-height:64px;padding:0;border:0;
+			font-size:13px;color:var(--muted)}
+		.wx-tab[aria-selected="true"],:root[data-theme="light"] .wx-tab[aria-selected="true"]{color:#8A6420;border:0}
+		:root[data-theme="dark"] .wx-tab[aria-selected="true"]{color:var(--teal)}
+		.wx-ico{display:block}
+		.tb-title,.clockwrap{display:none}
+		.wx-panel .card{padding:14px}
+		.windmap-embed{margin-left:-14px;margin-right:-14px}
+		.now-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+		.ns{padding:10px 12px}
+		.ns-v{font-size:30px}
+		.ns-k,.ns-s{font-size:13px}
+	}
+	/* Chart tab: the map is the page — no card heading, map starts at the card top */
+	.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+	#panel-chart .windmap-card{padding-top:10px}
+	#panel-chart .windmap-embed{margin-top:0}
 </style>
 </head>
 <body>
@@ -428,56 +562,85 @@ if ( ! $oyc_weather_menu ) {
 	</script>
 
 	<!-- ALERT (prominent, at the top) -->
-	<div class="alertbar hidden" id="alertBar">
-		<div class="alert-tag">&#9888; Marine Alert</div>
-		<div class="marquee"><span id="alertText"></span></div>
+	<section class="alerts" id="alertBox" aria-label="Marine alerts" hidden></section>
+
+	<!-- TITLE + VIEW TABS (Now · Forecast · Chart · Fishing) -->
+	<div class="wx-head">
+		<div class="wx-title">
+			<h1>Mamaroneck Harbor</h1>
+			<p class="wx-sub" id="wxSub">Live conditions</p>
+		</div>
+		<div class="wx-tabs" role="tablist" aria-label="Weather views">
+			<button type="button" role="tab" class="wx-tab" id="tab-now" data-tab="now" aria-controls="panel-now" aria-selected="true"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7.5V12l3 2"/></svg><span>Now</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-forecast" data-tab="forecast" aria-controls="panel-forecast" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 14.5V5a2.5 2.5 0 0 0-5 0v9.5a4.5 4.5 0 1 0 5 0Z"/><path d="M10.5 9v8"/><circle cx="10.5" cy="17.8" r="1.6" fill="currentColor"/><path d="M16 5h3M16 8.5h3M16 12h3"/></svg><span>Forecast</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Chart</span></button>
+			<button type="button" role="tab" class="wx-tab" id="tab-fishing" data-tab="fishing" aria-controls="panel-fishing" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2.6-4 6-6 9.5-6 3.5 0 6.2 2 8 6-1.8 4-4.5 6-8 6-3.5 0-6.9-2-9.5-6ZM3 12 1 8.5M3 12l-2 3.5M16.5 10.5h.01"/></svg><span>Fishing</span></button>
+		</div>
 	</div>
 
-	<div class="grid">
-		<!-- LEFT COLUMN -->
-		<div class="col" id="colA">
+	<!-- ===== NOW ===== -->
+	<section class="wx-panel" id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+		<div class="now-stats" aria-label="Current conditions">
+			<div class="ns"><div class="ns-k">Wind</div><div class="ns-v" id="nsWind">&mdash;</div><div class="ns-s" id="nsWindS">&nbsp;</div></div>
+			<div class="ns"><div class="ns-k">Seas</div><div class="ns-v" id="nsSeas">&mdash;</div><div class="ns-s" id="nsSeasS">&nbsp;</div></div>
+			<div class="ns"><div class="ns-k">Tide</div><div class="ns-v" id="nsTide">&mdash;</div><div class="ns-s" id="nsTideS">&nbsp;</div></div>
+			<div class="ns"><div class="ns-k">Pressure</div><div class="ns-v" id="nsPres">&mdash;</div><div class="ns-s" id="nsPresS">&nbsp;</div></div>
+			<div class="ns"><div class="ns-k">Air</div><div class="ns-v" id="nsAir">&mdash;</div><div class="ns-s" id="nsAirS">&nbsp;</div></div>
+			<div class="ns"><div class="ns-k">Water</div><div class="ns-v" id="nsWater">&mdash;</div><div class="ns-s" id="nsWaterS">&nbsp;</div></div>
+		</div>
+		<div class="now-grid">
+			<div class="now-main">
+				<div class="card" data-card="forecast">
+					<h2>Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
+					<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
+					<div class="nh" id="nextHours" aria-label="Next 12 hours in 2-hour blocks: wind, gusts and seas"></div>
+					<div class="now-go"><button type="button" class="go-btn" data-go="forecast">Full 7-day forecast</button></div>
+				</div>
+				<div class="card graph-card" data-card="graph">
+					<h2>Tide <span class="sta" id="tideSta">NOAA</span></h2>
+					<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none" role="img" aria-label="Tide curve for the next 48 hours"></svg></div>
+					<div class="nt nt-row4" id="nextTides">
+						<div class="nt-row"><span class="miss" style="grid-column:1/-1">Loading&hellip;</span></div>
+					</div>
+				</div>
+			</div>
+			<div class="now-side">
+				<div class="card" data-card="sunmoon">
+					<h2>Sun &amp; Moon</h2>
+					<div class="sm">
+						<div class="it"><span class="k">&#9728; Sunrise</span><span class="v" id="sunrise">&mdash;</span></div>
+						<div class="it"><span class="k">&#9790; Sunset</span><span class="v" id="sunset">&mdash;</span></div>
+						<div class="moon" id="moon" title="Moon phase"></div>
+					</div>
+					<div class="sm" style="margin-top:10px;grid-template-columns:1fr auto">
+						<div class="it"><span class="k">Moon phase</span><span class="v" id="moonName">&mdash;</span></div>
+						<div class="it" style="text-align:right"><span class="k">Illuminated</span><span class="v" id="moonPct">&mdash;</span></div>
+					</div>
+				</div>
+				<div class="card now-teaser" data-card="fishteaser">
+					<h2>Fishing today</h2>
+					<div class="nf-score"><span class="nt-big" id="nowFishWord">&mdash;</span><span class="fish-dots" id="nowFishDots" aria-hidden="true"></span></div>
+					<p id="nowFishWhy">Working out the day&rsquo;s outlook&hellip;</p>
+					<div class="nf-vis">
+						<div class="fish-k">Best windows</div>
+						<div class="fish-tl" id="nowFishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
+						<div class="fish-ticks tide" id="nowFishTide" aria-hidden="true"></div>
+						<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
+						<div class="fish-wins" id="nowFishWins"></div>
+					</div>
+					<button type="button" class="go-btn" data-go="fishing">See fishing details</button>
+				</div>
+			</div>
+		</div>
+		<!-- data sources for the tiles above: the original readout cards stay in
+		     the page (hidden) so every loader keeps writing where it always did -->
+		<div class="now-src" hidden>
 			<div class="card" data-card="tide">
-				<h2>Tide Forecast <span class="sta" id="tideSta">NOAA</span></h2>
+				<h2>Tide Forecast</h2>
 				<div class="tide-now"><span class="tide-val" id="tideVal">&mdash;</span><span class="tide-unit">ft MLLW</span></div>
 				<div class="trend" id="tideTrend"><span id="tideTrendAr">&mdash;</span> <span id="tideTrendTxt">&mdash;</span></div>
 				<div class="tide-cap">Predicted level, interpolated to the minute</div>
 			</div>
-
-			<div class="card" data-card="next">
-				<h2>Next Tides</h2>
-				<div class="nt" id="nextTides">
-					<div class="nt-row"><span class="miss" style="grid-column:1/-1">Loading&hellip;</span></div>
-				</div>
-			</div>
-
-			<div class="card" data-card="sunmoon">
-				<h2>Sun &amp; Moon</h2>
-				<div class="sm">
-					<div class="it"><span class="k">&#9728; Sunrise</span><span class="v" id="sunrise">&mdash;</span></div>
-					<div class="it"><span class="k">&#9790; Sunset</span><span class="v" id="sunset">&mdash;</span></div>
-					<div class="moon" id="moon" title="Moon phase"></div>
-				</div>
-				<div class="sm" style="margin-top:10px;grid-template-columns:1fr auto">
-					<div class="it"><span class="k">Moon phase</span><span class="v" id="moonName">&mdash;</span></div>
-					<div class="it" style="text-align:right"><span class="k">Illuminated</span><span class="v" id="moonPct">&mdash;</span></div>
-				</div>
-			</div>
-		</div>
-
-		<!-- CENTER COLUMN -->
-		<div class="col" id="colB">
-			<div class="card" data-card="forecast">
-				<h2>48-Hour Marine Forecast <span class="sta" id="fcZone">NWS Zone ANZ335</span></h2>
-				<div class="fc" id="forecast"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
-			</div>
-			<div class="card graph-card" data-card="graph">
-				<h2>48-Hour Tide Forecast <span class="sta">NOAA Forecast</span></h2>
-				<div class="graph-wrap"><svg class="tidegraph" id="tideGraph" viewBox="0 0 1000 320" preserveAspectRatio="none"></svg></div>
-			</div>
-		</div>
-
-		<!-- RIGHT COLUMN -->
-		<div class="col" id="colC">
 			<div class="card" data-card="wind">
 				<h2>Wind <span class="sta" id="windSta">STA. 8516945</span></h2>
 				<div class="wind-body">
@@ -502,7 +665,6 @@ if ( ! $oyc_weather_menu ) {
 				</div>
 				<div class="wave-cap" id="waveCap">Forecast seas, current period</div>
 			</div>
-
 			<div class="card" data-card="cond">
 				<h2>Conditions</h2>
 				<div class="cond">
@@ -515,55 +677,67 @@ if ( ! $oyc_weather_menu ) {
 				</div>
 			</div>
 		</div>
-	</div>
+	</section>
 
-	<div class="order-resetwrap"><button type="button" id="orderReset">&#8634;&nbsp;Reset card order</button></div>
-
-	<!-- FISHING (full-width row: outlook + solunar | best windows | conditions + species) -->
-	<div class="card fish-card" id="fishCard">
-		<h2>Fishing <span class="sta" id="fishDay">Today</span></h2>
-		<div class="fish-grid">
-			<div class="fa-out">
-				<div class="fish-out">
-					<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div><div class="fish-wg" id="fishWordWind"></div></div>
-					<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
-				</div>
-			</div>
-			<div class="fa-win">
-				<div class="fish-k">Best windows</div>
-				<div class="fish-tl" id="fishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
-				<div class="fish-ticks tide" id="fishTide" aria-hidden="true"></div>
-				<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
-				<div class="fish-wins" id="fishWins"></div>
-			</div>
-			<div class="fa-cond">
-				<div class="cond fish-cond">
-					<div class="cell"><div class="v" id="fishWater">&mdash;</div><div class="k">Water</div><div class="t" id="fishWaterT"></div></div>
-					<div class="cell"><div class="v" id="fishPres">&mdash;</div><div class="k">Pressure mb</div><div class="t" id="fishPresT"></div></div>
-					<div class="cell"><div class="v" id="fishWind">&mdash;</div><div class="k" id="fishWindK">Max wind</div><div class="t" id="fishWindT"></div></div>
-					<div class="cell"><div class="v" id="fishCur">&mdash;</div><div class="k">Peak current</div><div class="t" id="fishCurT"></div></div>
-				</div>
-			</div>
-			<div class="fa-sol">
-				<div class="fish-k">Solunar</div>
-				<div class="fish-sol" id="fishSol"></div>
-			</div>
-			<div class="fa-note"><div class="fish-note" id="fishNote" hidden></div></div>
-			<div class="fa-spots" id="fishSpotsWrap" hidden>
-				<div class="fish-k">Top spots today</div>
-				<div class="fish-spots" id="fishSpots"></div>
-			</div>
-			<div class="fa-foot"><div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div></div>
+	<!-- ===== FORECAST ===== -->
+	<section class="wx-panel" id="panel-forecast" role="tabpanel" aria-labelledby="tab-forecast" hidden>
+		<div class="card fc-alert" id="fcAlert" hidden></div>
+	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table ?>
+		<div class="card fc-full-card">
+			<h2>NWS Forecast &middot; Western Long Island Sound</h2>
+			<div class="fc" id="forecastFull"><div class="fc-row"><span class="miss">Loading forecast&hellip;</span></div></div>
 		</div>
-	</div>
+	</section>
 
-	<?php echo oyc_forecast_table_html(); // full-width multi-model forecast table (replaces the old 48-Hour Outlook card) ?>
+	<!-- ===== CHART ===== -->
+	<section class="wx-panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" hidden>
+		<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
+		<div class="card windmap-card">
+			<h2 class="sr-only">Wind &amp; Radar Map</h2>
+			<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
+		</div>
+	</section>
 
-	<!-- WIND & RADAR MAP (inline scoped component — no iframe) -->
-	<div class="card windmap-card">
-		<h2>Wind &amp; Radar Map <span class="sta">allow a few secs for the data to populate</span></h2>
-		<div class="windmap-embed"><?php echo oyc_wind_map_html( true ); ?></div>
-	</div>
+	<!-- ===== FISHING ===== -->
+	<section class="wx-panel" id="panel-fishing" role="tabpanel" aria-labelledby="tab-fishing" hidden>
+		<!-- FISHING (full-width row: outlook + solunar | best windows | conditions + species) -->
+		<div class="card fish-card" id="fishCard">
+			<h2>Fishing <span class="sta" id="fishDay">Today</span></h2>
+			<div class="fish-grid">
+				<div class="fa-out">
+					<div class="fish-out">
+						<div class="fish-score"><div class="fish-word" id="fishWord">&mdash;</div><div class="fish-dots" id="fishDots" aria-hidden="true"></div><div class="fish-wg" id="fishWordWind"></div></div>
+						<p id="fishWhy">Working out the day&rsquo;s outlook&hellip;</p>
+					</div>
+				</div>
+				<div class="fa-win">
+					<div class="fish-k">Best windows</div>
+					<div class="fish-tl" id="fishTl" role="img" aria-label="Best fishing windows, 5 AM to 9 PM"></div>
+					<div class="fish-ticks tide" id="fishTide" aria-hidden="true"></div>
+					<div class="fish-ticks hrs" aria-hidden="true"><span style="left:6.25%">6a</span><span style="left:25%">9a</span><span style="left:43.75%">12p</span><span style="left:62.5%">3p</span><span style="left:81.25%">6p</span><span style="left:96%">9p</span></div>
+					<div class="fish-wins" id="fishWins"></div>
+				</div>
+				<div class="fa-cond">
+					<div class="cond fish-cond">
+						<div class="cell"><div class="v" id="fishWater">&mdash;</div><div class="k">Water</div><div class="t" id="fishWaterT"></div></div>
+						<div class="cell"><div class="v" id="fishPres">&mdash;</div><div class="k">Pressure mb</div><div class="t" id="fishPresT"></div></div>
+						<div class="cell"><div class="v" id="fishWind">&mdash;</div><div class="k" id="fishWindK">Max wind</div><div class="t" id="fishWindT"></div></div>
+						<div class="cell"><div class="v" id="fishCur">&mdash;</div><div class="k">Peak current</div><div class="t" id="fishCurT"></div></div>
+					</div>
+				</div>
+				<div class="fa-sol">
+					<div class="fish-k">Solunar</div>
+					<div class="fish-sol" id="fishSol"></div>
+				</div>
+				<div class="fa-note"><div class="fish-note" id="fishNote" hidden></div></div>
+				<div class="fa-spots" id="fishSpotsWrap" hidden>
+					<div class="fish-k">Top spots today</div>
+					<div class="fish-spots" id="fishSpots"></div>
+				</div>
+				<div class="fa-foot"><div class="fish-foot"><span>Tides and current: NOAA &middot; Solunar: calculated</span><a href="https://dec.ny.gov/things-to-do/saltwater-fishing/recreational-fishing-regulations" target="_blank" rel="noopener">NY DEC rules &#8599;</a></div></div>
+			</div>
+		</div>
+	</section>
 
 	<!-- DISCLAIMER -->
 	<p class="weather-disclaimer"><em>Weather forecasts are best treated as an opinion. Poseidon always has the final word.</em></p>
@@ -604,63 +778,70 @@ if ( ! $oyc_weather_menu ) {
 		apply(document.documentElement.getAttribute('data-theme'));
 	})();
 
-	// ---------- CARD REORDERING (per-visitor, saved in localStorage) ----------
-	// One flat order of the 8 cards; desktop fills the columns 3/3/3 with it
-	// (middle column = the wide "featured" slots), mobile shows it as a list.
-	var ORDER_KEY = 'oyc_board_order_v3';
-	var DEFAULT_ORDER = ['tide','next','sunmoon','forecast','graph','wind','waves','cond'];
-	var ORDER_COLS = [document.getElementById('colA'), document.getElementById('colB'), document.getElementById('colC')];
-	var ORDER_SPLIT = [3,3,3];
-	function getOrder(){
-		try{
-			var o = JSON.parse(localStorage.getItem(ORDER_KEY));
-			/* the Fishing card sat in the columns briefly on staging; it's a full-width row now */
-			if(Array.isArray(o)){ o = o.filter(function(k){ return k !== 'fish'; }); }
-			if(Array.isArray(o) && o.slice().sort().join() === DEFAULT_ORDER.slice().sort().join()){ return o; }
-		}catch(e){}
-		return DEFAULT_ORDER.slice();
-	}
-	function applyOrder(){
-		var o = getOrder(), i = 0, c, k, el;
-		for(c=0;c<3;c++){
-			for(k=0;k<ORDER_SPLIT[c];k++){
-				el = document.querySelector('[data-card="'+o[i++]+'"]');
-				if(el && ORDER_COLS[c]){ ORDER_COLS[c].appendChild(el); }
+	// ---------- VIEW TABS (Now · Forecast · Chart · Fishing) ----------
+	// One panel shows at a time. The open tab lives in the URL hash (#chart etc.)
+	// so a link or bookmark opens straight to it. Panels that were hidden get a
+	// window resize nudge when shown, so the Leaflet map and the forecast table
+	// measure themselves at their real size.
+	var WX_TABS = ['now','forecast','chart','fishing'];
+	var wxTab = null;
+	function showTab(id, opts){
+		opts = opts || {};
+		if(WX_TABS.indexOf(id) < 0){ id = 'now'; }
+		if(id === wxTab){ return; }
+		wxTab = id;
+		WX_TABS.forEach(function(t){
+			var on = (t === id), b = document.getElementById('tab-'+t), p = document.getElementById('panel-'+t);
+			if(b){ b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; }
+			if(p){ p.hidden = !on; }
+		});
+		document.documentElement.setAttribute('data-wx-tab', id);
+		if(!opts.noHash){
+			try{ history.replaceState(null, '', id === 'now' ? location.pathname + location.search : '#' + id); }catch(e){}
+		}
+		if(opts.focus){ var fb = document.getElementById('tab-'+id); if(fb){ fb.focus(); } }
+		if(opts.scroll){
+			var hd = document.querySelector('.wx-head');
+			if(hd && hd.getBoundingClientRect().top < 0){ hd.scrollIntoView({ block:'start' }); }
+			/* phones: on the Chart tab bring the map toolbar to the top of the screen
+			   so the map itself is in view, not below the site header */
+			if(id === 'chart' && window.matchMedia('(max-width:700px)').matches){
+				var wc = document.querySelector('#panel-chart .windmap-card');
+				if(wc){ setTimeout(function(){ try{ window.scrollTo({ top: wc.getBoundingClientRect().top + window.pageYOffset - 6, behavior:'smooth' }); }catch(e){} }, 60); }
 			}
 		}
-		var rst = document.getElementById('orderReset');
-		if(rst){ rst.style.display = (o.join() === DEFAULT_ORDER.join()) ? 'none' : 'inline-flex'; }
+		// let hidden-at-load widgets re-measure now that they are visible
+		setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 30);
 	}
-	// inject the ▲▼ controls into every card
+	window.oycWxTab = function(id){ showTab(id, { scroll:true }); };
 	(function(){
-		var cards = document.querySelectorAll('[data-card]'), i;
-		for(i=0;i<cards.length;i++){
-			var m = document.createElement('span');
-			m.className = 'mover';
-			m.innerHTML = '<button type="button" class="mv" data-mv="-1" aria-label="Move card earlier" title="Move up">&#9650;</button>'
-				+ '<button type="button" class="mv" data-mv="1" aria-label="Move card later" title="Move down">&#9660;</button>';
-			cards[i].appendChild(m);
+		var bar = document.querySelector('.wx-tabs');
+		if(bar){
+			bar.addEventListener('click', function(e){
+				var b = e.target.closest ? e.target.closest('.wx-tab') : null;
+				if(b){ showTab(b.getAttribute('data-tab'), { scroll:true }); }
+			});
+			bar.addEventListener('keydown', function(e){
+				var i = WX_TABS.indexOf(wxTab), n = null;
+				if(e.key === 'ArrowRight'){ n = WX_TABS[(i+1) % WX_TABS.length]; }
+				else if(e.key === 'ArrowLeft'){ n = WX_TABS[(i+WX_TABS.length-1) % WX_TABS.length]; }
+				else if(e.key === 'Home'){ n = WX_TABS[0]; }
+				else if(e.key === 'End'){ n = WX_TABS[WX_TABS.length-1]; }
+				if(n){ e.preventDefault(); showTab(n, { focus:true }); }
+			});
 		}
+		// "Full 7-day forecast", "See fishing details", "Open the chart"
+		document.addEventListener('click', function(e){
+			var g = e.target.closest ? e.target.closest('[data-go]') : null;
+			if(g){ e.preventDefault(); showTab(g.getAttribute('data-go'), { scroll:true }); }
+		});
+		window.addEventListener('hashchange', function(){
+			var h = (location.hash || '').replace('#','');
+			if(WX_TABS.indexOf(h) >= 0){ showTab(h, { noHash:true }); }
+		});
+		var h0 = (location.hash || '').replace('#','');
+		showTab(WX_TABS.indexOf(h0) >= 0 ? h0 : 'now', { noHash:true });
 	})();
-	document.addEventListener('click', function(e){
-		var b = e.target.closest ? e.target.closest('.mv') : null;
-		if(b){
-			var card = b.closest('[data-card]');
-			var o = getOrder();
-			var i = o.indexOf(card.getAttribute('data-card'));
-			var j = i + parseInt(b.getAttribute('data-mv'), 10);
-			if(i < 0 || j < 0 || j >= o.length) return;
-			var t = o[i]; o[i] = o[j]; o[j] = t;
-			try{ localStorage.setItem(ORDER_KEY, JSON.stringify(o)); }catch(err){}
-			applyOrder();
-			return;
-		}
-		if(e.target.closest && e.target.closest('#orderReset')){
-			try{ localStorage.removeItem(ORDER_KEY); }catch(err){}
-			applyOrder();
-		}
-	});
-	applyOrder();
 
 	// ===== EDITABLE CONFIG — verify against your Yodeck dashboard =====
 	var CFG = {
@@ -686,7 +867,8 @@ if ( ! $oyc_weather_menu ) {
 
 	function markUpdated(ok){
 		$('statusDot').className = 'dot' + (ok ? ' ok' : '');
-		if(ok){ var n=new Date(); $('updated').textContent = 'Last good update ' + hmt(n); }
+		if(ok){ var n=new Date(); $('updated').textContent = 'Last good update ' + hmt(n);
+			if($('wxSub')){ $('wxSub').textContent = 'Updated ' + hmt(n) + ' \u00b7 ' + DOW[n.getDay()] + ', ' + MON[n.getMonth()] + ' ' + n.getDate(); } }
 	}
 
 	// ---------- CLOCK ----------
@@ -883,6 +1065,7 @@ if ( ! $oyc_weather_menu ) {
 			if(out.length>=4) break;
 		}
 		if(!out.length){ return; }
+		nextTideEvts = out;
 		$('nextTides').innerHTML = out.map(function(x){
 			return '<div class="nt-row '+(x.hi?'nt-hi':'nt-lo')+'">'
 				+ '<span class="nt-ar">'+(x.hi?'&#9650;':'&#9660;')+'</span>'
@@ -1132,10 +1315,14 @@ if ( ! $oyc_weather_menu ) {
 				if(body) periods.push({ name:m[1].trim(), body:body });
 			}
 			if(!periods.length) throw new Error('no periods');
-			$('forecast').innerHTML = periods.slice(0,2).map(function(p){
-				return '<div class="fc-row"><div class="fc-when">'+p.name+'</div>'
-					+ '<div class="fc-txt">'+p.body+'</div></div>';
-			}).join('');
+			function fcRows(list){
+				return list.map(function(p){
+					return '<div class="fc-row"><div class="fc-when">'+p.name+'</div>'
+						+ '<div class="fc-txt">'+p.body+'</div></div>';
+				}).join('');
+			}
+			$('forecast').innerHTML = fcRows(periods.slice(0,2));
+			if($('forecastFull')){ $('forecastFull').innerHTML = fcRows(periods); }
 			renderWaves(periods);
 			markUpdated(true);
 		}).catch(function(){});
@@ -1148,11 +1335,24 @@ if ( ! $oyc_weather_menu ) {
 		// The 48-Hour Outlook card was replaced by the full-width forecast table
 		// (inc/forecast-table.php). This light fetch now only feeds the Conditions
 		// card's today Hi/Lo from the Execution Rock daily forecast.
-		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=1')
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&daily=temperature_2m_max,temperature_2m_min&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=kn&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=2')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
 				var D = j && j.daily;
+				if(j && j.hourly && j.hourly.time){ nhWind = j.hourly; renderNextHours(); }
 				if(D && D.temperature_2m_max && D.temperature_2m_max.length && D.temperature_2m_min && D.temperature_2m_min.length){
+					nowHiLo = [Math.round(D.temperature_2m_max[0]), Math.round(D.temperature_2m_min[0]), null, null];
+					// when today's high and low happen, from the hourly temperatures
+					var H = j.hourly, day = (D.time && D.time[0]) || '';
+					if(H && H.temperature_2m && day){
+						var hi = null, lo = null;
+						H.time.forEach(function(t, k){
+							var v = H.temperature_2m[k]; if(v == null || t.slice(0, 10) !== day) return;
+							if(hi === null || v > H.temperature_2m[hi]) hi = k;
+							if(lo === null || v < H.temperature_2m[lo]) lo = k;
+						});
+						if(hi !== null){ nowHiLo[2] = new Date(H.time[hi]); nowHiLo[3] = new Date(H.time[lo]); }
+					}
 					$('hiLoTemp').innerHTML = '<span style="color:#ef9a5a">'+Math.round(D.temperature_2m_max[0])+'&deg;</span>'
 						+ '<span style="color:var(--faint)"> / </span>'
 						+ '<span style="color:#57a6d6">'+Math.round(D.temperature_2m_min[0])+'&deg;</span>';
@@ -1221,9 +1421,10 @@ if ( ! $oyc_weather_menu ) {
 	// the CWF-text fallback below won't overwrite it.
 	var omWavesOk = false;
 	function loadWavesOM(){
-		fetch('https://marine-api.open-meteo.com/v1/marine?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&current=wave_height,wave_direction,wave_period&length_unit=imperial')
+		fetch('https://marine-api.open-meteo.com/v1/marine?latitude='+CFG.EXRX_LAT+'&longitude='+CFG.EXRX_LON+'&current=wave_height,wave_direction,wave_period&hourly=wave_height&length_unit=imperial&timezone=America/New_York&forecast_days=2')
 			.then(function(r){ if(!r.ok) throw new Error('om '+r.status); return r.json(); })
 			.then(function(j){
+				if(j && j.hourly && j.hourly.time){ nhWave = j.hourly; renderNextHours(); }
 				var c = j && j.current;
 				if(!c || c.wave_height == null) throw new Error('no om waves');
 				omWavesOk = true;
@@ -1256,22 +1457,89 @@ if ( ! $oyc_weather_menu ) {
 	}
 
 	// ---------- ALERTS ----------
+	// One row per active alert at the club (NWS), newest-most-serious first:
+	// warnings red, watches/advisories amber, statements slate. The first row
+	// shows "+N more" when there are others; "Details" opens the NWS text.
+	// The Forecast tab repeats the top alert in full.
+	var ALERT_ICO = '<svg class="al-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5"/><path d="M12 17.5h.01"/></svg>';
+	function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+	function alertKind(ev){ return /warning/i.test(ev) ? 'warn' : (/watch|advisory/i.test(ev) ? 'adv' : 'st'); }
+	function alertUntil(pr){
+		var e = pr.ends || pr.expires; if(!e) return '';
+		var d = new Date(e); if(isNaN(d)) return '';
+		var now = new Date(), same = d.toDateString() === now.toDateString();
+		var tm = new Date(now.getTime() + 86400000).toDateString() === d.toDateString();
+		return ' until ' + hmt(d) + (same ? '' : (tm ? ' tomorrow' : ' ' + DOW[d.getDay()]));
+	}
+	function alertParas(pr){
+		var t = [pr.description, pr.instruction].filter(Boolean).join('\n\n');
+		return t.split(/\n\s*\n/).map(function(x){ return x.replace(/\s+/g, ' ').trim(); }).filter(Boolean)
+			.map(function(x){ return '<p>' + esc(x) + '</p>'; }).join('');
+	}
+	var ALERT_RANK = { warn:0, adv:1, st:2 };
+	function renderAlerts(list){
+		var box = $('alertBox'), fc = $('fcAlert');
+		if(!list.length){
+			box.hidden = true; box.innerHTML = ''; box.removeAttribute('data-sig');
+			if(fc){ fc.hidden = true; fc.innerHTML = ''; }
+			return;
+		}
+		list.sort(function(a, b){ return ALERT_RANK[a.kind] - ALERT_RANK[b.kind]; });
+		var sig = JSON.stringify(list);
+		if(box.getAttribute('data-sig') === sig && !box.hidden){ return; }   // unchanged: keep open details as they are
+		box.setAttribute('data-sig', sig);
+		var openNow = box.classList.contains('open');
+		box.classList.toggle('many', list.length > 1);
+		box.innerHTML = list.map(function(a, i){
+			var more = (i === 0 && list.length > 1)
+				? '<button type="button" class="al-btn al-more" data-al-more aria-expanded="' + (openNow ? 'true' : 'false') + '">' + (openNow ? 'Show less' : '+' + (list.length - 1) + ' more') + '</button>' : '';
+			return '<div class="al al-' + a.kind + '">'
+				+ '<div class="al-row">' + ALERT_ICO
+				+ '<strong class="al-head">' + esc(a.head) + '</strong>'
+				+ (a.area ? '<span class="al-area">' + esc(a.area) + '</span>' : '')
+				+ '<span class="al-btns">' + more
+				+ (a.body ? '<button type="button" class="al-btn" data-al-det="' + i + '" aria-expanded="false" aria-controls="alTxt' + i + '">Details</button>' : '')
+				+ '</span></div>'
+				+ (a.body ? '<div class="al-txt" id="alTxt' + i + '" hidden>' + a.body + '</div>' : '')
+				+ '</div>';
+		}).join('');
+		box.hidden = false;
+		if(fc){
+			var t = list[0];
+			fc.innerHTML = '<h2>' + esc(t.head) + '</h2>' + (t.area ? '<p class="wx-sub">' + esc(t.area) + '</p>' : '')
+				+ '<div class="al-body">' + (t.body || '') + '</div>';
+			fc.hidden = false;
+		}
+	}
+	(function(){
+		var box = $('alertBox'); if(!box) return;
+		box.addEventListener('click', function(e){
+			var m = e.target.closest ? e.target.closest('[data-al-more]') : null;
+			if(m){
+				var o = box.classList.toggle('open'), n = box.querySelectorAll('.al').length - 1;
+				m.setAttribute('aria-expanded', o ? 'true' : 'false');
+				m.textContent = o ? 'Show less' : '+' + n + ' more';
+				return;
+			}
+			var d = e.target.closest ? e.target.closest('[data-al-det]') : null;
+			if(d){
+				var p = $('alTxt' + d.getAttribute('data-al-det')); if(!p) return;
+				p.hidden = !p.hidden;
+				d.setAttribute('aria-expanded', p.hidden ? 'false' : 'true');
+				d.textContent = p.hidden ? 'Details' : 'Hide details';
+			}
+		});
+	})();
 	function loadAlerts(){
 		nws('alerts/active?point='+CFG.LAT+'%2C'+CFG.LON).then(function(j){
 			var f = (j && j.features) || [];
-			if(!f.length){
-				$('alertBar').classList.add('hidden');
-				return;
-			}
-			var parts = f.map(function(a){
-				var pr=a.properties||{};
-				var txt = (pr.event||'Alert') + ' — ' + (pr.headline || pr.event || '');
-				if(pr.areaDesc){ txt += '    |    Coverage: ' + pr.areaDesc; }
-				return txt;
-			});
-			var txt = parts.join('    •    ');
-			$('alertText').textContent = txt;
-			$('alertBar').classList.remove('hidden');
+			renderAlerts(f.map(function(a){
+				var pr = a.properties || {}, ev = pr.event || 'Alert';
+				var area = (pr.areaDesc || '').split(';').map(function(x){ return x.trim(); }).filter(Boolean);
+				return { kind: alertKind(ev), head: ev + alertUntil(pr),
+					area: area.slice(0, 2).join(', ') + (area.length > 2 ? ' and ' + (area.length - 2) + ' more' : ''),
+					body: alertParas(pr) };
+			}));
 		}).catch(function(){});
 	}
 
@@ -1547,6 +1815,7 @@ if ( ! $oyc_weather_menu ) {
 	$('fishSpots').addEventListener('click', function(e){
 		var b=e.target.closest ? e.target.closest('.fish-spot') : null; if(!b) return;
 		var x=fishTop[+b.getAttribute('data-i')]; if(!x) return;
+		if(window.oycWxTab){ window.oycWxTab('chart'); }
 		var mc=document.querySelector('#oycwm .leaflet-container') || document.querySelector('.windmap-card');
 		if(mc) mc.scrollIntoView({ behavior:'smooth', block:'center' });
 		var tries=0;
@@ -1685,6 +1954,85 @@ if ( ! $oyc_weather_menu ) {
 		}).catch(function(){ fishBusy=false; });
 	}
 
+	// ---------- NOW VIEW: headline tiles, next-hours strip, fishing summary ----------
+	// The tiles read the (hidden) original readout cards, so every loader and
+	// fallback above keeps working unchanged; a MutationObserver re-syncs them
+	// whenever a loader writes a new value.
+	var nowHiLo = null, nextTideEvts = [], nhWind = null, nhWave = null;
+	function txt(id){ var el = $(id); var t = el ? el.textContent.trim() : ''; return (t === '—' || t === '-') ? '' : t; }
+	function setNs(id, v, sub){
+		var a = $(id), b = $(id+'S');
+		if(a){ a.textContent = v || '—'; a.classList.toggle('miss', !v); }
+		if(b){ b.textContent = sub || ' '; }
+	}
+	function syncNow(){
+		var w = txt('windSpd'), wd = txt('windDir'), wg = txt('windGust');
+		setNs('nsWind', w ? w + ' kt' : '', [wd ? 'From ' + wd : '', wg ? 'gusts ' + wg.replace(/\s*kt$/, '') : ''].filter(Boolean).join(', '));
+		var sh = txt('waveHt'), sp = txt('wavePer'), sd = txt('waveDir');
+		setNs('nsSeas', sh, [sp, sd ? 'from ' + sd : ''].filter(Boolean).join(' '));
+		var tv = txt('tideVal'), tt = txt('tideTrendTxt'), nx = nextTideEvts[0];
+		setNs('nsTide', tv ? tv + ' ft' : '', [tt, nx ? (nx.hi ? 'high ' : 'low ') + hmt(nx.t) : ''].filter(Boolean).join(', '));
+		var pr = txt('pressure').replace(/\s*mb$/, ''), pt = $('pressureTrend'), ptt = pt ? (pt.getAttribute('title') || '') : '';
+		setNs('nsPres', pr, ptt ? ptt.replace(' mb / 3h', ' mb in 3 h') : (pr ? 'mb' : ''));
+		var air = txt('airTemp'), hum = txt('humidity');
+		function hr(d){ var h = d.getHours(); return (h % 12 || 12) + (h >= 12 ? ' PM' : ' AM'); }
+		setNs('nsAir', air, nowHiLo
+			? 'Hi ' + nowHiLo[0] + '°' + (nowHiLo[2] ? ' ' + hr(nowHiLo[2]) : '') + ' · Lo ' + nowHiLo[1] + '°' + (nowHiLo[3] ? ' ' + hr(nowHiLo[3]) : '')
+			: (hum ? 'Humidity ' + hum : ''));
+		var wt = txt('waterTemp'), vis = txt('visibility');
+		setNs('nsWater', wt, vis ? 'Visibility ' + vis : '');
+		var fw = txt('fishWord'), fy = txt('fishWhy');
+		if($('nowFishWord')){ $('nowFishWord').textContent = fw || '—'; }
+		if($('nowFishWhy') && fy){ $('nowFishWhy').textContent = fy; }
+		// the Fishing tab's visuals, copied as-is: score dots, the 5 AM-9 PM
+		// windows timeline with its tide marks, and the window list
+		[['fishDots','nowFishDots'],['fishTl','nowFishTl'],['fishTide','nowFishTide'],['fishWins','nowFishWins']].forEach(function(p){
+			var a = $(p[0]), b = $(p[1]);
+			if(a && b && b.innerHTML !== a.innerHTML){ b.innerHTML = a.innerHTML; }
+		});
+		if($('fishTl') && $('nowFishTl')){ $('nowFishTl').setAttribute('aria-label', $('fishTl').getAttribute('aria-label') || ''); }
+	}
+	var syncT = null;
+	function syncSoon(){ clearTimeout(syncT); syncT = setTimeout(syncNow, 60); }
+	if(window.MutationObserver){
+		var mo = new MutationObserver(syncSoon);
+		[document.querySelector('.now-src'), $('fishWord'), $('fishWhy'), $('fishDots'), $('fishTl'), $('fishTide'), $('fishWins')].forEach(function(n){
+			if(n){ mo.observe(n, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['title','class'] }); }
+		});
+	}
+	// Next 12 hours in 2-hour blocks on even hours (e.g. 10–12, 12–2, 2–4 …),
+	// starting with the block we're in now. Each block shows the wind range
+	// over its two hours, the average direction, the top gust and the top seas.
+	function renderNextHours(){
+		var box = $('nextHours'); if(!box || !nhWind) return;
+		var start = new Date(); start.setMinutes(0, 0, 0); start.setHours(start.getHours() - start.getHours() % 2);
+		var wv = {};
+		if(nhWave && nhWave.time){ nhWave.time.forEach(function(t, k){ wv[t] = nhWave.wave_height[k]; }); }
+		function ap(h){ return (h % 12 || 12) + (h % 24 >= 12 ? 'p' : 'a'); }
+		var out = [];
+		for(var b = 0; b < 6; b++){
+			var t0 = start.getTime() + b*2*3600000, t1 = t0 + 2*3600000;
+			var sp = [], gs = [], hts = [], u = 0, v = 0;
+			nhWind.time.forEach(function(t, k){
+				var ms = new Date(t).getTime(); if(ms < t0 || ms >= t1) return;
+				var s1 = nhWind.wind_speed_10m[k], g1 = nhWind.wind_gusts_10m[k], d1 = nhWind.wind_direction_10m[k];
+				if(s1 != null){ sp.push(s1); if(d1 != null){ u += s1*Math.sin(d1*Math.PI/180); v += s1*Math.cos(d1*Math.PI/180); } }
+				if(g1 != null) gs.push(g1);
+				if(wv[t] != null) hts.push(wv[t]);
+			});
+			if(!sp.length) continue;
+			var lo = Math.round(Math.min.apply(null, sp)), hi = Math.round(Math.max.apply(null, sp));
+			var dir = (u || v) ? (Math.atan2(u, v)*180/Math.PI + 360) % 360 : null;
+			var h0 = new Date(t0).getHours(), h1 = new Date(t1).getHours();
+			var lbl = (h1 !== 0 && (h0 < 12) === (h1 < 12)) ? ap(h0).slice(0, -1) + '–' + ap(h1) : ap(h0) + '–' + ap(h1);
+			out.push('<div class="nh-h"><div class="nh-t">' + lbl + '</div>'
+				+ '<div class="nh-w">' + (lo === hi ? lo : lo + '–' + hi) + '<small> kt' + (dir != null ? ' ' + dirCardinal(dir) : '') + '</small></div>'
+				+ '<div class="nh-g">' + (gs.length ? 'g' + Math.round(Math.max.apply(null, gs)) : '')
+				+ (hts.length ? ' · ' + (Math.round(Math.max.apply(null, hts)*10)/10) + ' ft' : '') + '</div></div>');
+		}
+		box.innerHTML = out.join('');
+	}
+
 	// ---------- INIT + refresh ----------
 	refreshTideCache();                                // seed the 30-day fallback cache
 	loadTides(); loadWind(); loadWavesOM(); loadConditions(); loadForecast(); loadPrecip(); loadAlerts(); loadSunMoon(); loadFishing();
@@ -1700,6 +2048,8 @@ if ( ! $oyc_weather_menu ) {
 	setInterval(loadAlerts, 5*60*1000);
 	setInterval(loadSunMoon, 30*60*1000);
 	setInterval(loadFishing, 15*60*1000);             // windows dim as they pass; flips to tomorrow at 8 PM
+	setInterval(renderNextHours, 10*60*1000);         // roll the next-hours strip forward
+	syncNow();
 })();
 </script>
 </body>

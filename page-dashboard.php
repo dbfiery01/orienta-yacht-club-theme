@@ -92,6 +92,9 @@ get_header();
 				<!-- Bulletin Board: newest For Sale / Wanted posts; the whole panel links to the board -->
 				<?php if ( function_exists( 'oyc_bb_dashboard_panel' ) ) { oyc_bb_dashboard_panel(); } ?>
 
+				<!-- Racing: next race; the whole panel links to /racing/ -->
+				<?php if ( function_exists( 'oyc_race_dashboard_panel' ) ) { oyc_race_dashboard_panel(); } ?>
+
 			</div><!-- .dashboard-main -->
 
 			<aside class="dashboard-side">

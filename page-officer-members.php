@@ -110,9 +110,13 @@ if ( isset( $_POST['oyc_user_update_nonce'] ) &&
 		$role    = sanitize_key( wp_unslash( $_POST['role'] ?? '' ) );
 		$allowed = oyc_officer_assignable_roles();
 
-		if ( $role && isset( $allowed[ $role ] ) ) {
+		$target  = get_userdata( $uid );
+
+		if ( $role && isset( $allowed[ $role ] ) && $target && ! in_array( $role, (array) $target->roles, true ) ) {
 			if ( $uid === get_current_user_id() && ! current_user_can( 'administrator' ) ) {
 				oyc_officer_notice( __( 'You cannot change your own role.', 'orienta-yacht-club' ), 'error' );
+			} elseif ( ! oyc_officer_can_change_role_of( $target ) ) {
+				oyc_officer_notice( __( 'Only a site administrator can change this account\'s role.', 'orienta-yacht-club' ), 'error' );
 			} else {
 				$update['role'] = $role;
 			}
@@ -305,8 +309,12 @@ get_header();
 					<div class="officer-form__row">
 						<label for="role"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></label>
 						<?php if ( $oyc_edit->ID === get_current_user_id() && ! current_user_can( 'administrator' ) ) : ?>
-							<p class="officer-form__locked"><?php echo esc_html( translate_user_role( $oyc_roles[ $edit_role ] ?? $edit_role ) ); ?>
+							<p class="officer-form__locked"><?php echo esc_html( translate_user_role( wp_roles()->get_names()[ $edit_role ] ?? $edit_role ) ); ?>
 								<span class="officer-form__hint"><?php esc_html_e( 'You cannot change your own role.', 'orienta-yacht-club' ); ?></span>
+							</p>
+						<?php elseif ( ! oyc_officer_can_change_role_of( $oyc_edit ) ) : ?>
+							<p class="officer-form__locked"><?php echo esc_html( translate_user_role( wp_roles()->get_names()[ $edit_role ] ?? $edit_role ) ); ?>
+								<span class="officer-form__hint"><?php esc_html_e( 'Only a site administrator can change this role.', 'orienta-yacht-club' ); ?></span>
 							</p>
 						<?php else : ?>
 							<select id="role" name="role">
