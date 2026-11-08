@@ -30,7 +30,7 @@
 			<?php endif; ?>
 		</a>
 		<?php if ( function_exists( 'oyc_header_wx_glyph' ) ) echo oyc_header_wx_glyph( 'oyc-wx-mobile' ); // live harbor-weather glyph beside the logo (mobile only) ?>
-		<nav class="primary-nav" aria-label="<?php esc_attr_e( 'Primary', 'orienta-yacht-club' ); ?>">
+		<nav class="primary-nav<?php echo function_exists( 'oyc_desk_nav_class' ) ? esc_attr( oyc_desk_nav_class() ) : ''; ?>" aria-label="<?php esc_attr_e( 'Primary', 'orienta-yacht-club' ); ?>">
 			<button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu">
 				<span class="sr-only"><?php esc_html_e( 'Menu', 'orienta-yacht-club' ); ?></span>
 				<span class="bars" aria-hidden="true"></span>
@@ -38,6 +38,7 @@
 			<button class="theme-btn" id="siteThemeToggle" type="button" aria-label="<?php esc_attr_e( 'Switch between light and dark mode', 'orienta-yacht-club' ); ?>" title="<?php esc_attr_e( 'Light / dark', 'orienta-yacht-club' ); ?>">
 				<span class="theme-ic theme-ic--moon" aria-hidden="true">&#9790;</span><span class="theme-ic theme-ic--sun" aria-hidden="true">&#9728;</span>
 			</button>
+			<?php if ( function_exists( 'oyc_render_desktop_nav' ) ) oyc_render_desktop_nav(); // public desktop menu with dropdowns (logged-out, >880px) ?>
 			<?php
 			if ( has_nav_menu( 'primary' ) ) {
 				wp_nav_menu( array(

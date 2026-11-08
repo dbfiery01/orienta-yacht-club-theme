@@ -189,6 +189,11 @@ require_once get_template_directory() . '/inc/ais.php';
 require_once get_template_directory() . '/inc/header-weather.php';
 
 /**
+ * Public desktop navigation: six items with dropdowns for logged-out visitors.
+ */
+require_once get_template_directory() . '/inc/desktop-nav.php';
+
+/**
  * WP-Cron warmer that keeps the board's always-loaded weather readings hot in
  * the transient cache (so visitors hit warm cache instead of slow upstream
  * fetches). Loaded after the proxies above, whose *_build()/_spec() it calls.
