@@ -37,9 +37,6 @@ function oyc_desk_nav_items() {
 			'url'      => home_url( '/about/' ),
 			'children' => array(
 				array( __( 'About the Club', 'orienta-yacht-club' ), home_url( '/about/' ) ),
-				array( __( 'Our History', 'orienta-yacht-club' ), home_url( '/our-history/' ) ),
-				array( __( 'Officers & Trustees', 'orienta-yacht-club' ), home_url( '/officers-trustees/' ) ),
-				array( __( 'Facilities', 'orienta-yacht-club' ), home_url( '/facilities/' ) ),
 				array( __( 'Club Store', 'orienta-yacht-club' ), OYC_DESK_NAV_STORE_URL, true ),
 			),
 		),
