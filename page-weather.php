@@ -803,6 +803,12 @@ if ( ! $oyc_weather_menu ) {
 		if(opts.scroll){
 			var hd = document.querySelector('.wx-head');
 			if(hd && hd.getBoundingClientRect().top < 0){ hd.scrollIntoView({ block:'start' }); }
+			/* phones: on the Chart tab bring the map toolbar to the top of the screen
+			   so the map itself is in view, not below the site header */
+			if(id === 'chart' && window.matchMedia('(max-width:700px)').matches){
+				var wc = document.querySelector('#panel-chart .windmap-card');
+				if(wc){ setTimeout(function(){ try{ window.scrollTo({ top: wc.getBoundingClientRect().top + window.pageYOffset - 6, behavior:'smooth' }); }catch(e){} }, 60); }
+			}
 		}
 		// let hidden-at-load widgets re-measure now that they are visible
 		setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 30);
