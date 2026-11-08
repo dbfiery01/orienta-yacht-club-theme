@@ -1426,15 +1426,28 @@ function setER(s){if(!s)return;
    Build {t,kt,gust,dir,mb,tempF,pop,waveFt} from a {wx,marine} response. Handles
    both the best_match-suffixed keys from the multi-model board feed and the plain
    keys from a single-point fetch. */
+/* BLEND = hourly mean of GFS/ECMWF/ICON/GEM (direction vector-averaged), the
+   same consensus the Marine Forecast board's BLEND button shows. Open-Meteo's
+   best_match is just GFS over the US, so it is only a fallback now. */
+var FC_BLEND=['gfs_seamless','ecmwf_ifs025','icon_seamless','gem_seamless'];
+function fcBlend(h,base){
+	var arrs=FC_BLEND.map(function(m){return h[base+'_'+m];}).filter(Boolean);
+	if(!arrs.length)return null;
+	var n=h.time.length,out=new Array(n),isDir=base==='wind_direction_10m';
+	for(var i=0;i<n;i++){var a=0,b=0,c=0;arrs.forEach(function(r){var v=r[i];if(v!=null&&!isNaN(v)){if(isDir){var q=v*Math.PI/180;a+=Math.sin(q);b+=Math.cos(q);}else a+=v;c++;}});
+		out[i]=!c?null:(isDir?(Math.atan2(a,b)*180/Math.PI+360)%360:a/c);}
+	return out;
+}
 function fcKey(h,base){var k=base+'_best_match';return h[k]!==undefined?k:base;}
+function fcCol(h,base){return fcBlend(h,base)||h[fcKey(h,base)];}
 function fcSeriesFrom(res){
 	if(!res||!res.ok||!res.wx||!res.wx.hourly)return null;
 	var wx=res.wx,h=wx.hourly,off=(wx.utc_offset_seconds||0)*1000;
 	var t=h.time.map(function(s){return Date.parse(s+':00Z')-off;});
 	var wave={},wper={};
 	if(res.marine&&res.marine.hourly&&res.marine.hourly.wave_height){var mh=res.marine.hourly;mh.time.forEach(function(tt,i){wave[tt]=mh.wave_height[i];if(mh.wave_period)wper[tt]=mh.wave_period[i];});}
-	return {t:t, kt:h[fcKey(h,'wind_speed_10m')], gust:h[fcKey(h,'wind_gusts_10m')], dir:h[fcKey(h,'wind_direction_10m')],
-		mb:h[fcKey(h,'pressure_msl')], tempF:h[fcKey(h,'temperature_2m')], pop:h[fcKey(h,'precipitation_probability')],
+	return {t:t, kt:fcCol(h,'wind_speed_10m'), gust:fcCol(h,'wind_gusts_10m'), dir:fcCol(h,'wind_direction_10m'),
+		mb:fcCol(h,'pressure_msl'), tempF:fcCol(h,'temperature_2m'), pop:fcCol(h,'precipitation_probability'),
 		waveFt:h.time.map(function(s){return wave[s]!=null?wave[s]:null;}),
 		wavePer:h.time.map(function(s){return wper[s]!=null?wper[s]:null;})};
 }
@@ -1634,6 +1647,7 @@ function rerenderCallouts(){for(var i=0;i<pins.length;i++)pins[i].popup.setConte
 function clientPointWx(lat,lon){
 	var u='https://api.open-meteo.com/v1/forecast?latitude='+(+lat).toFixed(3)+'&longitude='+(+lon).toFixed(3)
 		+'&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,temperature_2m,precipitation_probability'
+		+'&models=gfs_seamless,ecmwf_ifs025,icon_seamless,gem_seamless'
 		+'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}).then(function(wx){return {ok:true,wx:wx,marine:null};});
 }
