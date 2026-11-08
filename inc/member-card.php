@@ -37,6 +37,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'OYC_CARD_SLUG', 'member-card' );
 define( 'OYC_VERIFY_SLUG', 'verify-member' );
 
+/*
+ * While the card is being trialled, both sides carry a "not yet live" band.
+ * Set to false (here, or define it in wp-config.php) when the club launches it.
+ */
+if ( ! defined( 'OYC_CARD_NOT_LIVE' ) ) {
+	define( 'OYC_CARD_NOT_LIVE', true );
+}
+
+/**
+ * The "not yet live" band, or '' once the card is launched.
+ */
+function oyc_card_not_live_band() {
+	if ( ! OYC_CARD_NOT_LIVE ) {
+		return '';
+	}
+	return '<span class="mcard__notlive">' . esc_html__( 'Preview · This card is not yet live', 'orienta-yacht-club' ) . '</span>';
+}
+
 /**
  * Officer-editable card fields: meta key => label.
  */
