@@ -114,7 +114,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .lyr-drawer{position:absolute;z-index:700;top:10px;right:10px;width:262px;max-height:calc(100% - 104px);overflow:auto;overscroll-behavior:contain;
 	background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(11,42,74,.22);padding:8px 12px 12px}
 #oycwm .lyr-drawer[hidden]{display:none}
-#oycwm .lyr-hd{display:flex;justify-content:space-between;align-items:center;font-size:.9rem}
+#oycwm .lyr-hd{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;
+	/* stays pinned while the layer list scrolls, so the close \00d7 is always reachable */
+	position:sticky;top:-8px;z-index:2;margin:-8px -12px 0;padding:8px 12px 4px;background:inherit;border-bottom:1px solid var(--line)}
 #oycwm .lyr-x{border:0;background:none;font-size:22px;line-height:1;width:36px;height:36px;margin-right:-8px;cursor:pointer;color:var(--mute);border-radius:8px}
 #oycwm .lyr-drawer .layers{flex-direction:column;flex-wrap:nowrap;gap:8px;padding:0;background:transparent}
 #oycwm .lyr-sec + .lyr-sec{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
