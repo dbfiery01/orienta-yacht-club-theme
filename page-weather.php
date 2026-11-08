@@ -622,11 +622,6 @@ if ( ! $oyc_weather_menu ) {
 					</div>
 					<button type="button" class="go-btn" data-go="fishing">See fishing details</button>
 				</div>
-				<div class="card now-teaser" data-card="chartteaser">
-					<h2>Chart &amp; route planner</h2>
-					<p>NOAA chart, wind, radar, AIS traffic, route planning and race tools.</p>
-					<button type="button" class="go-btn" data-go="chart">Open the chart</button>
-				</div>
 			</div>
 		</div>
 		<!-- data sources for the tiles above: the original readout cards stay in
