@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.93
+Version: 1.5.94
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -931,3 +931,103 @@ html[data-theme="dark"] .sail-docs-link a:hover { color: #9fd0f0 !important; }
 /* Dock & Dine location eyebrow — light layer uses a medium teal (#2c6e9b) that's
    too dim on the dark card. */
 html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9 !important; }
+
+/* ── Public desktop navigation (v1.7.392) ─────────────────────────────────
+   Logged-out visitors on screens wider than 880px get six items with short
+   dropdowns (parent theme inc/desktop-nav.php). The WP menu's own text links are hidden
+   there; its weather glyph, Member Login and Reservations items stay, and are
+   re-ordered to the right with the light/dark toggle. #nav-menu becomes
+   display:contents so those <li>s line up as items of .site-header .primary-nav. The mobile
+   hamburger (≤880px) is unchanged: the desktop list is hidden there. */
+.site-header .primary-nav .oyc-desk-nav { display: none; }
+@media (min-width: 881px) {
+  /* Logo left, menu right (the centered 3-column header grid from 48) above
+     pushed the wider public menu off the right edge). */
+  .site-header .header-inner:has(.primary-nav.has-desk-nav) { grid-template-columns: auto 1fr; column-gap: 20px; }
+  .site-header .header-inner:has(.primary-nav.has-desk-nav) .primary-nav { grid-column: 2; justify-self: end; }
+  .site-header .primary-nav.has-desk-nav { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+  .site-header .primary-nav.has-desk-nav #nav-menu { display: contents; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li { display: none; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { display: flex; order: 2; margin-left: 14px; }
+  .site-header .primary-nav.has-desk-nav .theme-btn { order: 3; margin: 0; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login { display: list-item; order: 4; margin-left: 8px; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--reservations { display: list-item; order: 5; }
+
+  .site-header .primary-nav.has-desk-nav .oyc-desk-nav {
+    order: 1; display: flex; align-items: center; gap: 4px;
+    list-style: none; margin: 0; padding: 0;
+  }
+  .site-header .oyc-desk-item { position: relative; }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 12px 10px; font-size: 0.9rem; font-weight: 500; white-space: nowrap;
+  }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top::after { left: 10px; right: 10px; bottom: 6px; }
+  .site-header .oyc-desk-item.has-dd > a.oyc-desk-top::after { right: 25px; }
+  .site-header .oyc-desk-item.is-current > a.oyc-desk-top::after { transform: scaleX(1); }
+  .oyc-desk-caret { opacity: 0.55; transition: transform 0.15s ease; }
+  .site-header .oyc-desk-item.is-open .oyc-desk-caret { transform: rotate(180deg); }
+
+  .site-header .primary-nav .oyc-desk-dd {
+    position: absolute; top: 100%; left: 0; z-index: 60;
+    display: none; flex-direction: column; align-items: stretch; gap: 0;
+    min-width: 220px; margin: 4px 0 0; padding: 8px; list-style: none;
+    background: #fff; border: 1px solid rgba(11, 42, 74, 0.12); border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(4, 22, 42, 0.16);
+  }
+  .site-header .primary-nav .oyc-desk-dd::before { /* hover bridge across the 4px gap */
+    content: ""; position: absolute; left: 0; right: 0; top: -8px; height: 8px;
+  }
+  .site-header .oyc-desk-item.is-open > .oyc-desk-dd { display: flex; }
+  .site-header .primary-nav .oyc-desk-dd li { display: block; }
+  .site-header .primary-nav .oyc-desk-dd a,
+  body.has-hero-header .site-header .primary-nav .oyc-desk-dd a {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 12px; border-radius: 8px;
+    font-size: 0.97rem; font-weight: 500; white-space: nowrap;
+    color: #0b2a4a;
+  }
+  .site-header .primary-nav .oyc-desk-dd a::after { display: none !important; }
+  .site-header .primary-nav .oyc-desk-dd a:hover,
+  .site-header .primary-nav .oyc-desk-dd a:focus-visible,
+  body.has-hero-header .site-header .primary-nav .oyc-desk-dd a:hover {
+    background: #eef4fa; color: var(--harbor);
+  }
+  .site-header .primary-nav .oyc-desk-dd a.is-current { color: var(--harbor); font-weight: 600; }
+  .oyc-desk-ext { opacity: 0.6; }
+
+  html[data-theme="dark"] .site-header .primary-nav .oyc-desk-dd {
+    background: #0c2237; border-color: rgba(245, 239, 226, 0.14);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  }
+  html[data-theme="dark"] .site-header .primary-nav .oyc-desk-dd a,
+  html[data-theme="dark"] body.has-hero-header .site-header .primary-nav .oyc-desk-dd a { color: #e9e1d2; }
+  html[data-theme="dark"] .site-header .primary-nav .oyc-desk-dd a:hover,
+  html[data-theme="dark"] .site-header .primary-nav .oyc-desk-dd a:focus-visible { background: rgba(140, 193, 230, 0.12); color: #8cc1e6; }
+  html[data-theme="dark"] .site-header .primary-nav .oyc-desk-dd a.is-current { color: #8cc1e6; }
+}
+@media (min-width: 881px) and (hover: hover) {
+  .site-header .oyc-desk-item.has-dd:hover > .oyc-desk-dd { display: flex; } /* works without JS */
+}
+/* Small laptops / tablets in landscape: tighter spacing, and Reservations moves
+   into the Visitors dropdown ("Reserve a Mooring") so nothing runs off-screen. */
+@media (min-width: 881px) and (max-width: 1279px) {
+  .site-header .primary-nav.has-desk-nav { gap: 6px; }
+  .site-header .primary-nav.has-desk-nav .oyc-desk-nav { gap: 0; }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top { padding: 12px 7px; }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top::after { left: 7px; right: 7px; }
+  .site-header .oyc-desk-item.has-dd > a.oyc-desk-top::after { right: 22px; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { margin-left: 4px; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login { margin-left: 2px; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--reservations { display: none; }
+}
+/* 881–1023px: smaller type, the login button without its icon. */
+@media (min-width: 881px) and (max-width: 1023px) {
+  .site-header .header-inner:has(.primary-nav.has-desk-nav) { column-gap: 10px; }
+  .site-header .primary-nav.has-desk-nav { gap: 4px; }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top { padding: 12px 5px; font-size: 0.82rem; gap: 3px; }
+  .site-header .primary-nav .oyc-desk-nav a.oyc-desk-top::after { left: 5px; right: 5px; }
+  .site-header .oyc-desk-item.has-dd > a.oyc-desk-top::after { right: 18px; }
+  .site-header .primary-nav.has-desk-nav #nav-menu > li.cta--member-login svg { display: none; }
+  .site-header .primary-nav.has-desk-nav #nav-menu li.cta.cta--member-login > a { font-size: 0.85rem !important; padding: 7px 10px !important; }
+}
