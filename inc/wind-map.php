@@ -906,7 +906,11 @@ function lockMap(lock){['dragging','doubleClickZoom','boxZoom','keyboard'].forEa
    359°→1° turns 2°, not 358°); each frame it eases toward the target heading
    with a ~0.35 s time constant, and the 1.5x zoom-in that hides the corners
    eases in and out the same way. The boat marker glides between GPS fixes. */
-var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0};
+var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0,freeT:0};
+/* after a right-button pan in heads-up, stop re-centring on the boat for a while
+   so you can look around; then the next GPS fix glides the chart back */
+var HU_FREE_MS=20000;
+function huFree(){return HU.freeT&&Date.now()-HU.freeT<HU_FREE_MS;}
 function huTarget(){
 	if(HU.exiting)return 0;
 	var moving=mySpeedKt!=null&&mySpeedKt>=1.5&&myHeading!=null;
@@ -934,7 +938,7 @@ function headsUpTick(t){
 function huKick(){if(!HU.raf){HU.last=0;HU.raf=requestAnimationFrame(headsUpTick);}}
 function setHeadsUp(on){
 	if(on===headsUp&&!HU.exiting)return;
-	headsUp=on;lockMap(on);var w=mwEl();
+	headsUp=on;lockMap(on);HU.freeT=0;var w=mwEl();
 	if(on){HU.exiting=false;if(!w.classList.contains('headsup')){HU.disp=0;HU.scale=1;w.style.setProperty('--hdg','0deg');w.style.setProperty('--hus','1');w.classList.add('headsup');}
 		if(myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
 		compassStart();}
@@ -1036,7 +1040,7 @@ function setMyLoc(lat,lon,acc,heading,speed){
 		/* keep you centred so the chart turns around you: the first fix jumps
 		   there; after that a linear ~0.9 s pan per fix, so the chart glides */
 		if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:false});}catch(e){}}
-		else{try{map.panTo([lat,lon],{animate:true,duration:0.9,easeLinearity:1,noMoveStart:true});}catch(e){}}
+		else if(!huFree()){try{map.panTo([lat,lon],{animate:true,duration:0.9,easeLinearity:1,noMoveStart:true});}catch(e){}}
 		huKick();
 	}
 	else if(!locFirst){locFirst=true;try{map.setView([lat,lon],Math.max(map.getZoom(),13),{animate:true});}catch(e){}}
@@ -1280,24 +1284,43 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 /* heads-up: un-rotate map taps (mapPointFromEvent, with My location) */
 (function(){var orig=map.mouseEventToContainerPoint;
 	map.mouseEventToContainerPoint=function(e){return mwEl().classList.contains('headsup')?mapPointFromEvent(e):orig.call(map,e);};})();
-/* Right-button pan (desktop mouse): hold the right button anywhere on the map and
-   drag to pan, same as the left button. The browser's right-click menu is kept off
-   the map so it doesn't pop up over the drag (macOS opens it on press, not release).
-   Off in heads-up, where map dragging is off too. */
-(function(){var el=map.getContainer(),rp=null;
-	function mv(e){if(!rp)return;if(!(e.buttons&2)){up();return;}
-		var dx=e.clientX-rp.x,dy=e.clientY-rp.y;rp.x=e.clientX;rp.y=e.clientY;
+/* Mouse panning, the same in north-up and heads-up: drag with either button to
+   pan, click (left) to pick a point or drop a waypoint.
+   - Right button: hold anywhere on the map and drag. The browser's right-click
+     menu is kept off the map so it doesn't pop up over the drag (macOS opens it
+     on press, not release).
+   - Left button in heads-up: Leaflet's own drag is off there (it would move the
+     turned chart the wrong way), so this handler takes over once the mouse has
+     moved a few px; a plain click still drops a waypoint, and the click that ends
+     a drag is swallowed so it doesn't.
+   In heads-up each mouse move is un-rotated (as mapPointFromEvent) so the chart
+   follows the hand, and follow-the-boat re-centring pauses for HU_FREE_MS after
+   the last pan, then the next GPS fix glides back to the boat. */
+(function(){var el=map.getContainer(),rp=null,eatClick=false;
+	function isHU(){return mwEl().classList.contains('headsup');}
+	function mv(e){if(!rp)return;if(!(e.buttons&rp.bit)){up();return;}
+		var dx=e.clientX-rp.x,dy=e.clientY-rp.y;
+		if(!rp.on){if(Math.abs(e.clientX-rp.x0)+Math.abs(e.clientY-rp.y0)<5)return; /* not a drag yet: let it be a click */
+			rp.on=true;el.classList.add('rpan');map.stop();map.fire('movestart');}
+		rp.x=e.clientX;rp.y=e.clientY;
 		if(!dx&&!dy)return;
-		if(map._rawPanBy){map._rawPanBy(L.point(-dx,-dy));map.fire('move');} /* like a left drag: move now, moveend once at the end */
+		if(isHU()){var a=HU.disp*Math.PI/180,sc=HU.scale||1,ux=(dx*Math.cos(a)-dy*Math.sin(a))/sc,uy=(dx*Math.sin(a)+dy*Math.cos(a))/sc;dx=ux;dy=uy;
+			HU.freeT=Date.now();}
+		if(map._rawPanBy){map._rawPanBy(L.point(-dx,-dy));map.fire('move');} /* like Leaflet's drag: move now, moveend once at the end */
 		else map.panBy([-dx,-dy],{animate:false});}
-	function up(){if(!rp)return;rp=null;el.classList.remove('rpan');
-		document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);map.fire('moveend');}
+	function up(){if(!rp)return;var was=rp.on,left=rp.bit===1;rp=null;el.classList.remove('rpan');
+		document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);
+		if(was){map.fire('moveend');if(left){eatClick=true;setTimeout(function(){eatClick=false;},0);}}}
 	el.addEventListener('mousedown',function(e){
-		if(e.button!==2||mwEl().classList.contains('headsup'))return;
-		if(e.target.closest&&e.target.closest('.leaflet-control,.leaflet-popup'))return; /* leave buttons + cards alone */
-		e.preventDefault();rp={x:e.clientX,y:e.clientY};el.classList.add('rpan');map.stop();map.fire('movestart');
+		var right=e.button===2,left=e.button===0&&isHU();
+		if(!right&&!left)return;      /* north-up left drag = Leaflet's own */
+		if(e.target.closest&&e.target.closest('.leaflet-control,.leaflet-popup,.leaflet-marker-icon'))return; /* buttons, cards, markers keep their own clicks */
+		if(right)e.preventDefault();
+		rp={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,bit:right?2:1,on:false};
 		document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);
 	});
+	/* swallow the click that ends a left-button pan (before Leaflet sees it on the map) */
+	mwEl().addEventListener('click',function(e){if(eatClick&&el.contains(e.target)){eatClick=false;e.stopPropagation();e.preventDefault();}},true);
 	el.addEventListener('contextmenu',function(e){e.preventDefault();});
 })();
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
