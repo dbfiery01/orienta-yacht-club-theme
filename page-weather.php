@@ -186,7 +186,13 @@ if ( ! $oyc_weather_menu ) {
 	.wx-title{padding-bottom:10px}
 	.wx-title h1{font-size:clamp(24px,3vw,34px);line-height:1.1;font-weight:700;color:var(--ink);letter-spacing:-.01em}
 	.wx-sub{color:var(--muted);font-size:13px;margin-top:4px}
-	.wx-tabs{display:flex;gap:4px}
+	.wx-tabs{display:flex;gap:4px;margin-left:auto}
+	/* login glyph right of the tabs: Member login when logged out, Log out when logged in */
+	.wx-login{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin:0 0 4px -14px;
+		border-radius:50%;border:1px solid var(--edge2);color:var(--ink);text-decoration:none;align-self:center;flex:none;
+		transition:background .15s,border-color .15s,color .15s}
+	.wx-login:hover{border-color:var(--teal);color:var(--teal)}
+	.wx-login:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
 	.wx-tab{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;
 		font-size:15px;font-weight:600;padding:12px 18px 11px;cursor:pointer;min-height:44px;transition:color .15s,border-color .15s}
 	.wx-tab:hover{color:var(--ink)}
@@ -510,7 +516,8 @@ if ( ! $oyc_weather_menu ) {
 	/* ---- phones: bottom tab bar + slimmer top bar ---- */
 	@media (max-width:700px){
 		body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-		.wx-head{border-bottom:0;padding-bottom:0}
+		.wx-head{border-bottom:0;padding-bottom:0;flex-wrap:nowrap;align-items:center}
+		.wx-login{margin:0 0 0 auto}
 		.wx-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1500;width:auto;margin:0;gap:0;
 			display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
 			padding-bottom:env(safe-area-inset-bottom,0px);background:#FFFFFF;border-top:1px solid var(--edge);
@@ -576,6 +583,11 @@ if ( ! $oyc_weather_menu ) {
 			<button type="button" role="tab" class="wx-tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><span>Chart</span></button>
 			<button type="button" role="tab" class="wx-tab" id="tab-fishing" data-tab="fishing" aria-controls="panel-fishing" aria-selected="false" tabindex="-1"><svg class="wx-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2.6-4 6-6 9.5-6 3.5 0 6.2 2 8 6-1.8 4-4.5 6-8 6-3.5 0-6.9-2-9.5-6ZM3 12 1 8.5M3 12l-2 3.5M16.5 10.5h.01"/></svg><span>Fishing</span></button>
 		</div>
+		<?php if ( is_user_logged_in() ) : ?>
+		<a class="wx-login is-out" href="<?php echo esc_url( wp_logout_url( home_url( '/weather/' ) ) ); ?>" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></a>
+		<?php else : ?>
+		<a class="wx-login" href="<?php echo esc_url( wp_login_url( home_url( '/weather/' ) ) ); ?>" title="Member login" aria-label="Member login"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></a>
+		<?php endif; ?>
 	</div>
 
 	<!-- ===== NOW ===== -->
