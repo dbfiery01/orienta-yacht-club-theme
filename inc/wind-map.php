@@ -642,11 +642,7 @@ function oyc_wind_map_html( $embed = false ) {
 		<div class="hd">
 			<h2>Wind &amp; Radar Map</h2>
 			<div class="tabs" id="viewTabs" role="tablist">
-				<button id="tabWind" class="on" role="tab" aria-selected="true">Wind</button>
-				<button id="tabRadar" role="tab" aria-selected="false">Radar</button>
-				<button id="tabTemp" role="tab" aria-selected="false">Temp</button>
-				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
-				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
+				<button id="tabWind" class="on" role="tab" aria-selected="true">Chart Plotter</button>
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
@@ -762,6 +758,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<label><input type="checkbox" id="tgWindColor"> Wind color</label>
 						<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
 						<label><input type="checkbox" id="tgIso"> Isobars</label>
+						<label><input type="checkbox" id="tgRadarOv"> Radar</label>
 						<label><input type="checkbox" id="tgTemp"> Temp</label>
 						<label><input type="checkbox" id="tgPrecip"> Precip</label>
 						<label><input type="checkbox" id="tgWave"> Waves</label>
@@ -2752,7 +2749,7 @@ function drawCurrents(){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();replotRace();}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();drawRadarOv();replotRace();}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -3098,10 +3095,7 @@ function setMode(m){
 	showWind(Math.min(curTi,Math.max(0,TIMES.length-1)));
 }
 document.getElementById('tabWind').addEventListener('click',function(){setMode('wind');});
-document.getElementById('tabRadar').addEventListener('click',function(){setMode('radar');});
-document.getElementById('tabTemp').addEventListener('click',function(){setMode('temp');});
-document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
-document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
+/* Radar / Temp / Precip / Waves view buttons removed (v1.7.404); setMode keeps those modes but nothing opens them */
 document.getElementById('tabSat').addEventListener('click',function(){setMode('sat');});
 document.getElementById('tabCharts').addEventListener('click',function(){setMode('charts');});
 [].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.addEventListener('click',function(){loadSat(b.getAttribute('data-sat'));});});
@@ -3221,6 +3215,34 @@ function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWa
 document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
 document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
+/* Radar overlay on the chart plotter (v1.7.404, replaces the old Radar view
+   button): IEM tiles that follow the time slider. Past / now = NEXRAD mosaic
+   (refreshed every 5 min), later hours = HRRR simulated reflectivity, out to
+   +18 h; beyond that HRRR has no frames, so the overlay steps aside. */
+var RO={layer:null,url:'',timer:null};
+function radarOvOn(){var el=document.getElementById('tgRadarOv');return !!(el&&el.checked);}
+function radarOvUrl(){
+	var t=TIMES.length?new Date(TIMES[Math.max(0,Math.min(TIMES.length-1,curTi))]).getTime():Date.now();
+	var off=Math.round((t-Date.now())/60000);
+	if(off<=7)return nexradUrl(0);
+	off=Math.max(15,Math.round(off/15)*15);
+	return off>1080?'':wideRadarUrl(off);
+}
+function drawRadarOv(){
+	if(!RO)return; /* showWind can run before this block has set RO up */
+	if(!radarOvOn()||mode!=='wind'){if(RO.layer){map.removeLayer(RO.layer);RO.layer=null;RO.url='';}return;}
+	var u=radarOvUrl();
+	if(!u){if(RO.layer){map.removeLayer(RO.layer);RO.layer=null;RO.url='';}return;}
+	if(RO.layer&&RO.url===u)return;
+	RO.url=u;
+	if(RO.layer)RO.layer.setUrl(u);
+	else{RO.layer=L.tileLayer(u,{opacity:0.65,zIndex:344,interactive:false,attribution:'NEXRAD &amp; HRRR &middot; Iowa State IEM',updateWhenZooming:false});RO.layer.addTo(map);}
+}
+document.getElementById('tgRadarOv').addEventListener('change',function(){
+	drawRadarOv();
+	if(this.checked&&!RO.timer)RO.timer=setInterval(function(){if(RO.layer&&RO.url===nexradUrl(0)){RO.layer.setUrl(nexradUrl(0)+'?t='+Date.now());}},300000);
+	else if(!this.checked&&RO.timer){clearInterval(RO.timer);RO.timer=null;}
+});
 document.getElementById('tgGulf').addEventListener('change',function(){
 	if(this.checked){gsBandLayer.addTo(map);gsArrows.addTo(map);
 		/* NOAA frontal analysis = position only; no Open-Meteo marine fetch (keeps
@@ -3586,7 +3608,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
 		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
 		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
