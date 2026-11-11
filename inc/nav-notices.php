@@ -307,6 +307,14 @@ add_action( 'switch_theme', function () {
 	}
 } );
 
+/** Has the site ever read NAVCEN's notice files? Until it has (NAVCEN refuses
+    this server, or nothing has run yet), the map leaves the Notices toggle
+    out instead of showing an empty layer. */
+function oyc_nn_ready() {
+	$c = get_option( 'oyc_nn_cache', array() );
+	return ! empty( $c['t'] ) && ! empty( $c['files'] );
+}
+
 /* admin-ajax oyc_nn: the saved notices for the map. When the list is missing
    or over a day old, a background refresh is queued (the map never waits). */
 add_action( 'wp_ajax_oyc_nn', 'oyc_nn_ajax' );
