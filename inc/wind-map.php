@@ -1166,7 +1166,7 @@ function locFail(msg){
    From my boat, the Heads-up compass or Share my position — the visitor must tick
    and accept that the chart plotter is for information only. Accepting is kept
    in this browser (oyc_nav_disc); Cancel turns My location back off. */
-var DISC_KEY='oyc_nav_disc_v1',discOpen=false;
+var DISC_KEY='oyc_nav_disc_v2',discOpen=false;
 function discOk(){try{return localStorage.getItem(DISC_KEY)==='1';}catch(e){return false;}}
 function showNavDisclaimer(onAccept,onCancel){
 	if(discOpen)return;discOpen=true;
@@ -1174,7 +1174,8 @@ function showNavDisclaimer(onAccept,onCancel){
 	w.innerHTML='<div class="dbox"><h3 id="oycDiscH">Not for navigation</h3>'
 		+'<ul><li>This chart plotter is for <b>information purposes only</b> and is not meant for navigation.</li>'
 		+'<li>Use official <b>NOAA nautical charts</b> for navigation.</li>'
-		+'<li>This tool does <b>not replace good seamanship</b>. You are responsible for the safe navigation of your boat.</li></ul>'
+		+'<li>This tool does <b>not replace good seamanship</b>. You are responsible for the safe navigation of your boat.</li>'
+		+'<li>By using this tool you agree to hold <b>Orienta Yacht Club (OYC)</b> and <b>Intualytics LLC</b> harmless and blameless for any damage that may arise from its use.</li></ul>'
 		+'<label><input type="checkbox" id="oycDiscCb"> I understand and agree</label>'
 		+'<div class="dbtns"><button type="button" class="no" id="oycDiscNo">Cancel</button><button type="button" class="ok" id="oycDiscOk" disabled>Continue</button></div></div>';
 	(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(w);
