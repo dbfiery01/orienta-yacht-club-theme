@@ -26,6 +26,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Bump together with DISC_KEY in inc/wind-map.php whenever the wording changes. */
 define( 'OYC_NAV_DISC_VER', 2 );
 
+/** An acceptance counts for this many days; after that the member is asked again. Keep in step with DISC_DAYS in inc/wind-map.php. */
+define( 'OYC_NAV_DISC_DAYS', 120 );
+
 /** Latest acceptance for a user, or null. */
 function oyc_nav_disc_get( $user_id ) {
 	$a = get_user_meta( (int) $user_id, 'oyc_nav_disc_ack', true );
@@ -41,7 +44,7 @@ function oyc_nav_disc_me() {
 	$a = oyc_nav_disc_get( $uid );
 	wp_send_json( array(
 		'logged'   => true,
-		'accepted' => ( $a && (int) $a['v'] >= OYC_NAV_DISC_VER ) ? $a['t'] : null,
+		'accepted' => ( $a && (int) $a['v'] >= OYC_NAV_DISC_VER && strtotime( $a['t'] . ' UTC' ) > time() - OYC_NAV_DISC_DAYS * DAY_IN_SECONDS ) ? $a['t'] : null,
 		'nonce'    => wp_create_nonce( 'oyc_nav_disc' ),
 	) );
 }
@@ -90,7 +93,7 @@ function oyc_nav_disc_profile( $user ) {
 					echo '</ul>';
 				}
 				?>
-				<p class="description"><?php esc_html_e( 'Recorded when the member ticks "I understand and agree" on the chart plotter\'s Not for navigation box (information only, use NOAA charts, does not replace good seamanship, holds OYC and Intualytics LLC harmless).', 'orienta-yacht-club' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Recorded (valid 120 days) when the member ticks "I understand and agree" on the chart plotter\'s Not for navigation box (information only, use NOAA charts, does not replace good seamanship, holds OYC and Intualytics LLC harmless).', 'orienta-yacht-club' ); ?></p>
 			</td>
 		</tr>
 	</table>
