@@ -426,8 +426,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .poi-fish{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#0f7a6c;border:1.5px solid #fff;box-shadow:0 0 0 1px #0a5a50,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 #oycwm .poi-fish svg{display:block}
 #oycwm .poi-fish.off{opacity:.5}
+/* POI / fishing spot card: a real card width (Leaflet sometimes measured the
+   content at its 50px minimum, giving a one-word-per-line strip as tall as the
+   map), capped height with its own scroll so it never runs off the chart */
+#oycwm .poi-pop .leaflet-popup-content{min-width:min(250px,calc(100vw - 64px));max-width:min(290px,calc(100vw - 64px));max-height:min(340px,calc(100vh - 160px));overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;text-align:left}
 #oycwm .poi-pop .pp-sp{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
-#oycwm .poi-pop .pp-sp span{font-size:11px;font-weight:700;border-radius:999px;padding:2px 7px;background:#e3f2ef;color:#0a5a50}
+#oycwm .poi-pop .pp-sp span{white-space:nowrap;font-size:11px;font-weight:700;border-radius:999px;padding:2px 7px;background:#e3f2ef;color:#0a5a50}
 #oycwm .poi-pop .pp-sp span.out{background:#eef1f4;color:#7a8896;font-weight:600}
 #oycwm .poi-pop .pp-sp-k{font-size:10.5px;color:#7a8896;margin-top:6px;letter-spacing:.04em}
 #oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
@@ -3243,6 +3247,11 @@ var POI_HOME={lat:40.9486,lon:-73.7296};
 function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180,a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(POI_HOME.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
 var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
+/* shared popup options: card width + keep the whole card inside the map when it opens */
+var POI_POP={className:'poi-pop',minWidth:250,maxWidth:290,autoPanPadding:[16,16]};
+/* re-measure once the card is on screen, so its width/height never come from a
+   half-laid-out moment (tab switch, expand) */
+map.on('popupopen',function(e){var pp=e.popup;if(!pp||!/poi-pop/.test(pp.options.className||''))return;requestAnimationFrame(function(){if(pp.isOpen&&pp.isOpen())pp.update();});});
 var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage',fish:'Fishing spot'};
 function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
@@ -3288,24 +3297,24 @@ function fishPopup(p){
 }
 fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
 	(j.clubs||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),{className:'poi-pop',maxWidth:260}).addTo(poiClubs);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),POI_POP).addTo(poiClubs);
 	});
 	(j.dine||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),{className:'poi-pop',maxWidth:260}).addTo(poiDine);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),POI_POP).addTo(poiDine);
 	});
 	var POI_PUMP='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16M3.5 21h12M14 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5M6.8 7h5.4v4H6.8z"/></svg>';
 	(j.fuel||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),{className:'poi-pop',maxWidth:260}).addTo(poiFuel);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),POI_POP).addTo(poiFuel);
 	});
 	var POI_ANCHOR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M12 21c-4 0-7.2-3-7.6-6.8M12 21c4 0 7.2-3 7.6-6.8M3 12.8l1.4 1.4 1.4-1.4M18.2 14.2l1.4-1.4 1.4 1.4M8.6 10h6.8"/></svg>';
 	(j.anc||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),{className:'poi-pop',maxWidth:260}).addTo(poiAnch);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),POI_POP).addTo(poiAnch);
 	});
 	var POI_FISH='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12c2.6-4 6.1-6 10-6 3.6 0 6.3 2 8 6-1.7 4-4.4 6-8 6-3.9 0-7.4-2-10-6Z"/><path d="M2.5 12 .8 8.5M2.5 12 .8 15.5"/><circle cx="16.3" cy="10.6" r=".9" fill="#fff"/></svg>';
 	var fishMon=new Date().getMonth()+1;
 	(j.fish||[]).forEach(function(p){
 		var off=fishInSeason(p,fishMon).length?'':' off';
-		fishMk[p.name]=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),{className:'poi-pop',maxWidth:270}).addTo(poiFish);
+		fishMk[p.name]=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),POI_POP).addTo(poiFish);
 	});
 }).catch(function(){});
 function poiWire(id,layer,key){
