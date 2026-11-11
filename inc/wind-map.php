@@ -1178,14 +1178,18 @@ function locFail(msg){
    and accept that the chart plotter is for information only. Accepting is kept
    in this browser (oyc_nav_disc); Cancel turns My location back off. */
 var DISC_KEY='oyc_nav_disc_v2',discOpen=false;
-function discOk(){try{return localStorage.getItem(DISC_KEY)==='1';}catch(e){return false;}}
+/* an acceptance counts for 120 days (v1.7.411); the browser keeps its time in ms */
+var DISC_DAYS=120;
+function discOk(){try{var t=parseInt(localStorage.getItem(DISC_KEY)||'0',10);return t>0&&Date.now()-t<DISC_DAYS*864e5;}catch(e){return false;}}
+function discSet(ms){try{localStorage.setItem(DISC_KEY,String(ms||Date.now()));}catch(e){}}
 /* signed-in members: acceptance is recorded on their profile (inc/nav-disclaimer.php)
    with a date-time stamp, and one already on file counts in any browser */
 var DISC={logged:false,nonce:'',accepted:null};
 fetch(AJAX+'?action=oyc_nav_disc_me',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
 	if(!d)return;DISC=d;
-	if(d.accepted){try{localStorage.setItem(DISC_KEY,'1');}catch(e){}}
-	else if(d.logged&&discOk()&&d.nonce)discRecord(); /* accepted here before signing in → put it on the profile */
+	/* the member's profile is the record: within 120 days → no box; otherwise ask again */
+	if(d.accepted){discSet(Date.parse(String(d.accepted).replace(' ','T')+'Z')||Date.now());}
+	else if(d.logged){try{localStorage.removeItem(DISC_KEY);}catch(e){}}
 }).catch(function(){});
 function discRecord(){
 	if(!DISC.logged||!DISC.nonce)return;
@@ -1206,7 +1210,7 @@ function showNavDisclaimer(onAccept,onCancel){
 	var cb=w.querySelector('#oycDiscCb'),ok=w.querySelector('#oycDiscOk'),no=w.querySelector('#oycDiscNo');
 	function close(){discOpen=false;if(w.parentNode)w.parentNode.removeChild(w);}
 	cb.addEventListener('change',function(){ok.disabled=!cb.checked;});
-	ok.addEventListener('click',function(){if(!cb.checked)return;try{localStorage.setItem(DISC_KEY,'1');}catch(e){}discRecord();close();onAccept();});
+	ok.addEventListener('click',function(){if(!cb.checked)return;discSet();discRecord();close();onAccept();});
 	no.addEventListener('click',function(){close();onCancel();});
 	setTimeout(function(){try{cb.focus();}catch(e){}},0);
 }
