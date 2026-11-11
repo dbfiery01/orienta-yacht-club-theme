@@ -835,12 +835,21 @@ if ( ! $oyc_weather_menu ) {
 			var g = e.target.closest ? e.target.closest('[data-go]') : null;
 			if(g){ e.preventDefault(); showTab(g.getAttribute('data-go'), { scroll:true }); }
 		});
+		// #satellite (site menu: Chart > Satellite) opens the Chart tab on its
+		// Satellite view. Clicked once the page has loaded so the map's own
+		// startup (e.g. a saved "My chart" view) doesn't switch it back.
+		function openSat(){
+			var go = function(){ setTimeout(function(){ var b = document.getElementById('tabSat'); if(b && b.getAttribute('aria-selected') !== 'true'){ b.click(); } }, 150); };
+			if(document.readyState === 'complete'){ go(); } else { window.addEventListener('load', go); }
+		}
 		window.addEventListener('hashchange', function(){
 			var h = (location.hash || '').replace('#','');
-			if(WX_TABS.indexOf(h) >= 0){ showTab(h, { noHash:true }); }
+			if(h === 'satellite'){ showTab('chart', { noHash:true, scroll:true }); openSat(); return; }
+			if(WX_TABS.indexOf(h) >= 0){ showTab(h, { noHash:true, scroll:true }); }
 		});
 		var h0 = (location.hash || '').replace('#','');
-		showTab(WX_TABS.indexOf(h0) >= 0 ? h0 : 'now', { noHash:true });
+		if(h0 === 'satellite'){ showTab('chart', { noHash:true }); openSat(); }
+		else { showTab(WX_TABS.indexOf(h0) >= 0 ? h0 : 'now', { noHash:true }); }
 	})();
 
 	// ===== EDITABLE CONFIG — verify against your Yodeck dashboard =====

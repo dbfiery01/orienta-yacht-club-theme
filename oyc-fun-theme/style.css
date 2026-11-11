@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.95
+Version: 1.5.96
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -1044,4 +1044,25 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9
 }
 @media (min-width: 881px) and (max-width: 1023px) {
   body.logged-in .site-header .primary-nav.has-desk-nav #nav-menu > li.oyc-wx-item { display: none; }
+}
+
+/* ── Chart menu in the mobile hamburger (v1.7.413) ──────────────────────
+   parent theme inc/desktop-nav.php adds a "Chart" item with its four links
+   (Current conditions, Forecast, Satellite, NOAA Weather) as small pill
+   buttons under it, so the list stays short on phones. Desktop hides it
+   with the other WP-menu text links and shows the Chart dropdown instead. */
+@media (max-width: 880px) {
+  #nav-menu li.oyc-m-chart .oyc-m-sub {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    list-style: none; margin: 0 0 10px; padding: 0;
+  }
+  #nav-menu li.oyc-m-chart .oyc-m-sub li { border: 0 !important; }
+  #nav-menu li.oyc-m-chart .oyc-m-sub a {
+    display: inline-flex !important; align-items: center; gap: 5px;
+    min-height: 34px !important; padding: 5px 12px !important;
+    border: 1px solid rgba(22, 50, 74, 0.22); border-radius: 999px;
+    font-size: 0.88rem; line-height: 1.2;
+  }
+  #nav-menu li.oyc-m-chart .oyc-m-sub a::after { display: none !important; }
+  html[data-theme="dark"] #nav-menu li.oyc-m-chart .oyc-m-sub a { border-color: rgba(245, 239, 226, 0.22); }
 }
