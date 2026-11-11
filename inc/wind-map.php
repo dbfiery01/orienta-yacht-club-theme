@@ -180,6 +180,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .navrose{position:absolute;z-index:596;right:10px;bottom:46px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(11,42,74,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #oycwm .navrose svg{display:block}
 #oycwm .mapwrap.headsup{overflow:hidden}
+#oycwm .leaflet-container.rpan,#oycwm .leaflet-container.rpan *{cursor:grabbing!important}
 #oycwm .mapwrap.headsup .maprot{transform:rotate(calc(-1 * var(--hdg,0deg))) scale(var(--hus,1.5));transform-origin:center;will-change:transform}
 #oycwm .mapwrap.headsup .grat,
 #oycwm .mapwrap.headsup .map-ll,
@@ -1279,6 +1280,26 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 /* heads-up: un-rotate map taps (mapPointFromEvent, with My location) */
 (function(){var orig=map.mouseEventToContainerPoint;
 	map.mouseEventToContainerPoint=function(e){return mwEl().classList.contains('headsup')?mapPointFromEvent(e):orig.call(map,e);};})();
+/* Right-button pan (desktop mouse): hold the right button anywhere on the map and
+   drag to pan, same as the left button. The browser's right-click menu is kept off
+   the map so it doesn't pop up over the drag (macOS opens it on press, not release).
+   Off in heads-up, where map dragging is off too. */
+(function(){var el=map.getContainer(),rp=null;
+	function mv(e){if(!rp)return;if(!(e.buttons&2)){up();return;}
+		var dx=e.clientX-rp.x,dy=e.clientY-rp.y;rp.x=e.clientX;rp.y=e.clientY;
+		if(!dx&&!dy)return;
+		if(map._rawPanBy){map._rawPanBy(L.point(-dx,-dy));map.fire('move');} /* like a left drag: move now, moveend once at the end */
+		else map.panBy([-dx,-dy],{animate:false});}
+	function up(){if(!rp)return;rp=null;el.classList.remove('rpan');
+		document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);map.fire('moveend');}
+	el.addEventListener('mousedown',function(e){
+		if(e.button!==2||mwEl().classList.contains('headsup'))return;
+		if(e.target.closest&&e.target.closest('.leaflet-control,.leaflet-popup'))return; /* leave buttons + cards alone */
+		e.preventDefault();rp={x:e.clientX,y:e.clientY};el.classList.add('rpan');map.stop();map.fire('movestart');
+		document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);
+	});
+	el.addEventListener('contextmenu',function(e){e.preventDefault();});
+})();
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
    tint over the map, with dark barbs and dark flow lines legible on top. */
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map);
