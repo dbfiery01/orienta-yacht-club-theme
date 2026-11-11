@@ -145,6 +145,21 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .lyr-drawer{background:#0b2240;border-color:rgba(245,239,226,.25);color:#f0eadd}
 [data-theme="dark"] #oycwm .lyr-g h3,[data-theme="dark"] #oycwm .lyr-help summary,[data-theme="dark"] #oycwm .lyr-x{color:#c3cedb}
 [data-theme="dark"] #oycwm .lyr-sec + .lyr-sec{border-color:rgba(245,239,226,.2)}
+/* "My boat" navigation disclaimer (v1.7.405) */
+.oyc-disc{position:fixed;inset:0;z-index:100000;background:rgba(5,20,38,.62);display:flex;align-items:center;justify-content:center;padding:16px}
+.oyc-disc .dbox{background:#fff;color:#0b2a4a;max-width:440px;width:100%;border-radius:12px;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font:15px/1.45 system-ui,-apple-system,sans-serif;max-height:90vh;overflow:auto}
+.oyc-disc h3{margin:0 0 10px;font-size:1.05rem}
+.oyc-disc ul{margin:0 0 12px;padding-left:20px}
+.oyc-disc li{margin:0 0 6px}
+.oyc-disc label{display:flex;gap:9px;align-items:flex-start;font-weight:600;margin:4px 0 14px;cursor:pointer}
+.oyc-disc label input{margin-top:3px;width:18px;height:18px;flex:none}
+.oyc-disc .dbtns{display:flex;gap:10px;justify-content:flex-end}
+.oyc-disc button{font:inherit;font-weight:600;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid #0b2a4a;background:#fff;color:#0b2a4a}
+.oyc-disc button.ok{background:#0b2a4a;color:#fff}
+.oyc-disc button.ok:disabled{opacity:.4;cursor:not-allowed}
+[data-theme="dark"] .oyc-disc .dbox{background:#0b2240;color:#f0eadd;border:1px solid rgba(245,239,226,.25)}
+[data-theme="dark"] .oyc-disc button{background:transparent;color:#f0eadd;border-color:rgba(245,239,226,.4)}
+[data-theme="dark"] .oyc-disc button.ok{background:#d4a851;color:#0b2a4a;border-color:#d4a851}
 #oycwm .legend{display:flex;align-items:center;gap:2px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);flex-wrap:wrap}
 #oycwm .barbhint{display:flex;align-items:center;gap:9px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);line-height:1.35}
 #oycwm .barbhint svg{flex:none}
@@ -1147,7 +1162,37 @@ function locFail(msg){
 	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
 	alert(msg);
 }
+/* "My boat" disclaimer (v1.7.405): before the first GPS fix — via My location,
+   From my boat, the Heads-up compass or Share my position — the visitor must tick
+   and accept that the chart plotter is for information only. Accepting is kept
+   in this browser (oyc_nav_disc); Cancel turns My location back off. */
+var DISC_KEY='oyc_nav_disc_v1',discOpen=false;
+function discOk(){try{return localStorage.getItem(DISC_KEY)==='1';}catch(e){return false;}}
+function showNavDisclaimer(onAccept,onCancel){
+	if(discOpen)return;discOpen=true;
+	var w=document.createElement('div');w.className='oyc-disc';w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');w.setAttribute('aria-labelledby','oycDiscH');
+	w.innerHTML='<div class="dbox"><h3 id="oycDiscH">Not for navigation</h3>'
+		+'<ul><li>This chart plotter is for <b>information purposes only</b> and is not meant for navigation.</li>'
+		+'<li>Use official <b>NOAA nautical charts</b> for navigation.</li>'
+		+'<li>This tool does <b>not replace good seamanship</b>. You are responsible for the safe navigation of your boat.</li></ul>'
+		+'<label><input type="checkbox" id="oycDiscCb"> I understand and agree</label>'
+		+'<div class="dbtns"><button type="button" class="no" id="oycDiscNo">Cancel</button><button type="button" class="ok" id="oycDiscOk" disabled>Continue</button></div></div>';
+	(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(w);
+	var cb=w.querySelector('#oycDiscCb'),ok=w.querySelector('#oycDiscOk'),no=w.querySelector('#oycDiscNo');
+	function close(){discOpen=false;if(w.parentNode)w.parentNode.removeChild(w);}
+	cb.addEventListener('change',function(){ok.disabled=!cb.checked;});
+	ok.addEventListener('click',function(){if(!cb.checked)return;try{localStorage.setItem(DISC_KEY,'1');}catch(e){}close();onAccept();});
+	no.addEventListener('click',function(){close();onCancel();});
+	setTimeout(function(){try{cb.focus();}catch(e){}},0);
+}
 function startLoc(){
+	if(!discOk()){
+		showNavDisclaimer(startLocNow,function(){stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;});
+		return;
+	}
+	startLocNow();
+}
+function startLocNow(){
 	locFirst=false;
 	if(!navigator.geolocation){locFail('Location is not available in this browser.');return;}
 	locWatch=navigator.geolocation.watchPosition(
@@ -3068,7 +3113,7 @@ function setMode(m){
 	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);updateBarbHint();
 		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
 	setTimeout(function(){map.invalidateSize();drawGraticule();},0); /* map container may have been hidden by satellite mode */
-	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
+	syncBuoys();
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);updateBarbHint();
 		updateLegend();drawField();
@@ -3211,10 +3256,14 @@ document.getElementById('tgIso').addEventListener('change',function(){isoTouched
 document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
 	if(cb.checked){fieldMode=which;for(var k in ids){if(k!==which)document.getElementById(ids[k]).checked=false;}}
-	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();}
+	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();syncBuoys();}
 document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
-document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
+document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);syncBuoys();});
+/* buoy observation markers ride with the Waves layer (they used to come with the
+   Waves view button, removed in v1.7.404) */
+function buoysWanted(){var w=document.getElementById('tgWave');return (mode==='wave'||mode==='wind')&&!!(w&&w.checked);}
+function syncBuoys(){if(buoysWanted())loadBuoys(function(){if(buoysWanted())buoyLayer.addTo(map);});else map.removeLayer(buoyLayer);}
 /* Radar overlay on the chart plotter (v1.7.404, replaces the old Radar view
    button): IEM tiles that follow the time slider. Past / now = NEXRAD mosaic
    (refreshed every 5 min), later hours = HRRR simulated reflectivity, out to
