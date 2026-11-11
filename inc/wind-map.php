@@ -661,7 +661,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="tabs" id="viewTabs" role="tablist">
 				<button id="tabWind" class="on" role="tab" aria-selected="true">Chart Plotter</button>
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
-				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
+				<button id="tabCharts" role="tab" aria-selected="false" title="Additional charts (NWS/OPC)" aria-label="Additional charts">Add&rsquo;l Charts</button>
 			</div>
 			<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
 			<div class="presetbar" id="presetBar">
