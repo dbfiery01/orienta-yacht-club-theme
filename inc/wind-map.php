@@ -1168,6 +1168,19 @@ function locFail(msg){
    in this browser (oyc_nav_disc); Cancel turns My location back off. */
 var DISC_KEY='oyc_nav_disc_v2',discOpen=false;
 function discOk(){try{return localStorage.getItem(DISC_KEY)==='1';}catch(e){return false;}}
+/* signed-in members: acceptance is recorded on their profile (inc/nav-disclaimer.php)
+   with a date-time stamp, and one already on file counts in any browser */
+var DISC={logged:false,nonce:'',accepted:null};
+fetch(AJAX+'?action=oyc_nav_disc_me',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+	if(!d)return;DISC=d;
+	if(d.accepted){try{localStorage.setItem(DISC_KEY,'1');}catch(e){}}
+	else if(d.logged&&discOk()&&d.nonce)discRecord(); /* accepted here before signing in → put it on the profile */
+}).catch(function(){});
+function discRecord(){
+	if(!DISC.logged||!DISC.nonce)return;
+	var fd=new FormData();fd.append('action','oyc_nav_disc_ok');fd.append('nonce',DISC.nonce);
+	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){if(d&&d.success)DISC.accepted=d.data.t;}).catch(function(){});
+}
 function showNavDisclaimer(onAccept,onCancel){
 	if(discOpen)return;discOpen=true;
 	var w=document.createElement('div');w.className='oyc-disc';w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');w.setAttribute('aria-labelledby','oycDiscH');
@@ -1182,7 +1195,7 @@ function showNavDisclaimer(onAccept,onCancel){
 	var cb=w.querySelector('#oycDiscCb'),ok=w.querySelector('#oycDiscOk'),no=w.querySelector('#oycDiscNo');
 	function close(){discOpen=false;if(w.parentNode)w.parentNode.removeChild(w);}
 	cb.addEventListener('change',function(){ok.disabled=!cb.checked;});
-	ok.addEventListener('click',function(){if(!cb.checked)return;try{localStorage.setItem(DISC_KEY,'1');}catch(e){}close();onAccept();});
+	ok.addEventListener('click',function(){if(!cb.checked)return;try{localStorage.setItem(DISC_KEY,'1');}catch(e){}discRecord();close();onAccept();});
 	no.addEventListener('click',function(){close();onCancel();});
 	setTimeout(function(){try{cb.focus();}catch(e){}},0);
 }
