@@ -145,6 +145,8 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .lyr-drawer{background:#0b2240;border-color:rgba(245,239,226,.25);color:#f0eadd}
 [data-theme="dark"] #oycwm .lyr-g h3,[data-theme="dark"] #oycwm .lyr-help summary,[data-theme="dark"] #oycwm .lyr-x{color:#c3cedb}
 [data-theme="dark"] #oycwm .lyr-sec + .lyr-sec{border-color:rgba(245,239,226,.2)}
+/* My boat (GPS, From my boat, heads-up, sharing) is for signed-in members only (v1.7.408) */
+#oycwm.nologin .mbr-only{display:none!important}
 /* "My boat" navigation disclaimer (v1.7.405) */
 .oyc-disc{position:fixed;inset:0;z-index:100000;background:rgba(5,20,38,.62);display:flex;align-items:center;justify-content:center;padding:16px}
 .oyc-disc .dbox{background:#fff;color:#0b2a4a;max-width:440px;width:100%;border-radius:12px;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font:15px/1.45 system-ui,-apple-system,sans-serif;max-height:90vh;overflow:auto}
@@ -638,7 +640,7 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .leaflet-popup-content,
 [data-theme="dark"] #oycwm .leaflet-tooltip{--ink:#16324a;--mute:#5a6b7d;--faint:#8a99a8}
 </style>
-<div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
+<div id="oycwm" class="<?php echo esc_attr( trim( ( $embed ? 'embed' : '' ) . ( is_user_logged_in() ? '' : ' nologin' ) ) ); ?>">
 <div class="wrap">
 	<div class="topbar">
 		<div class="tb-left">
@@ -781,7 +783,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
 					</div>
 					<div class="lyr-g" role="group" aria-labelledby="lyrGN"><h3 id="lyrGN">Navigation</h3>
-						<label><input type="checkbox" id="tgLoc"> My location</label>
+						<label class="mbr-only"><input type="checkbox" id="tgLoc"> My location</label>
 						<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
 						<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <button type="button" class="lay-btn" id="layBtn" aria-expanded="false" aria-controls="layPop" title="Layline angles">45°</button></label>
 						<div class="lay-pop" id="layPop" hidden role="group" aria-label="Layline angles">
@@ -809,7 +811,7 @@ function oyc_wind_map_html( $embed = false ) {
 						</div>
 						<label><input type="checkbox" id="tgFleet"> Other boats</label>
 						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
-						<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
+						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
 					</div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
@@ -830,8 +832,8 @@ function oyc_wind_map_html( $embed = false ) {
 				<div id="map"></div>
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
-			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
-			<button type="button" class="navfollow" id="navFollow" title="Centre on the boat and follow it again" aria-label="Follow boat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Follow boat</button>
+			<button type="button" class="navrose mbr-only" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<button type="button" class="navfollow mbr-only" id="navFollow" title="Centre on the boat and follow it again" aria-label="Follow boat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Follow boat</button>
 			<div class="racebar" id="raceBar">
 				<span class="rc-lab">Course</span>
 				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
@@ -856,7 +858,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="route-btns">
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
-					<button type="button" class="rb-tog" id="rbFromBoat" aria-pressed="false" title="Start the route from your live GPS position (turns on My location)">From my boat</button>
+					<button type="button" class="rb-tog mbr-only" id="rbFromBoat" aria-pressed="false" title="Start the route from your live GPS position (turns on My location)">From my boat</button>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
 					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="false" aria-controls="wpTab" title="Hide or show the waypoint table">Show table</button>
 				</div>
@@ -1199,7 +1201,13 @@ function showNavDisclaimer(onAccept,onCancel){
 	no.addEventListener('click',function(){close();onCancel();});
 	setTimeout(function(){try{cb.focus();}catch(e){}},0);
 }
+var LOGGED=<?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
 function startLoc(){
+	if(!LOGGED){ /* controls are hidden for visitors; this catches any other path */
+		var t=document.getElementById('tgLoc');if(t)t.checked=false;if(headsUp)setHeadsUp(false);if(routeFromBoat)setFromBoat(false);
+		alert('My boat (your live GPS position) is for signed-in members. Please log in to use it.');
+		return;
+	}
 	if(!discOk()){
 		showNavDisclaimer(startLocNow,function(){stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;});
 		return;
