@@ -176,6 +176,12 @@ require_once get_template_directory() . '/inc/race-tools.php';
 require_once get_template_directory() . '/inc/fleet-share.php';
 
 /*
+ * Chart plotter "Not for navigation" disclaimer: records members' acceptance
+ * (date-time stamp) on their user profile.
+ */
+require_once get_template_directory() . '/inc/nav-disclaimer.php';
+
+/*
  * AIS ships on the wind map (aisstream.io, key in Settings → AIS ships).
  */
 require_once get_template_directory() . '/inc/ais.php';

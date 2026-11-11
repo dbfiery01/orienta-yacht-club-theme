@@ -145,6 +145,23 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .lyr-drawer{background:#0b2240;border-color:rgba(245,239,226,.25);color:#f0eadd}
 [data-theme="dark"] #oycwm .lyr-g h3,[data-theme="dark"] #oycwm .lyr-help summary,[data-theme="dark"] #oycwm .lyr-x{color:#c3cedb}
 [data-theme="dark"] #oycwm .lyr-sec + .lyr-sec{border-color:rgba(245,239,226,.2)}
+/* My boat (GPS, From my boat, heads-up, sharing) is for signed-in members only (v1.7.408) */
+#oycwm.nologin .mbr-only{display:none!important}
+/* "My boat" navigation disclaimer (v1.7.405) */
+.oyc-disc{position:fixed;inset:0;z-index:100000;background:rgba(5,20,38,.62);display:flex;align-items:center;justify-content:center;padding:16px}
+.oyc-disc .dbox{background:#fff;color:#0b2a4a;max-width:440px;width:100%;border-radius:12px;padding:20px 20px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font:15px/1.45 system-ui,-apple-system,sans-serif;max-height:90vh;overflow:auto}
+.oyc-disc h3{margin:0 0 10px;font-size:1.05rem}
+.oyc-disc ul{margin:0 0 12px;padding-left:20px}
+.oyc-disc li{margin:0 0 6px}
+.oyc-disc label{display:flex;gap:9px;align-items:flex-start;font-weight:600;margin:4px 0 14px;cursor:pointer}
+.oyc-disc label input{margin-top:3px;width:18px;height:18px;flex:none}
+.oyc-disc .dbtns{display:flex;gap:10px;justify-content:flex-end}
+.oyc-disc button{font:inherit;font-weight:600;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid #0b2a4a;background:#fff;color:#0b2a4a}
+.oyc-disc button.ok{background:#0b2a4a;color:#fff}
+.oyc-disc button.ok:disabled{opacity:.4;cursor:not-allowed}
+[data-theme="dark"] .oyc-disc .dbox{background:#0b2240;color:#f0eadd;border:1px solid rgba(245,239,226,.25)}
+[data-theme="dark"] .oyc-disc button{background:transparent;color:#f0eadd;border-color:rgba(245,239,226,.4)}
+[data-theme="dark"] .oyc-disc button.ok{background:#d4a851;color:#0b2a4a;border-color:#d4a851}
 #oycwm .legend{display:flex;align-items:center;gap:2px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);flex-wrap:wrap}
 #oycwm .barbhint{display:flex;align-items:center;gap:9px;padding:0 18px 8px;font-size:.72rem;color:var(--mute);line-height:1.35}
 #oycwm .barbhint svg{flex:none}
@@ -623,7 +640,7 @@ function oyc_wind_map_html( $embed = false ) {
 [data-theme="dark"] #oycwm .leaflet-popup-content,
 [data-theme="dark"] #oycwm .leaflet-tooltip{--ink:#16324a;--mute:#5a6b7d;--faint:#8a99a8}
 </style>
-<div id="oycwm" class="<?php echo $embed ? 'embed' : ''; ?>">
+<div id="oycwm" class="<?php echo esc_attr( trim( ( $embed ? 'embed' : '' ) . ( is_user_logged_in() ? '' : ' nologin' ) ) ); ?>">
 <div class="wrap">
 	<div class="topbar">
 		<div class="tb-left">
@@ -642,11 +659,7 @@ function oyc_wind_map_html( $embed = false ) {
 		<div class="hd">
 			<h2>Wind &amp; Radar Map</h2>
 			<div class="tabs" id="viewTabs" role="tablist">
-				<button id="tabWind" class="on" role="tab" aria-selected="true">Wind</button>
-				<button id="tabRadar" role="tab" aria-selected="false">Radar</button>
-				<button id="tabTemp" role="tab" aria-selected="false">Temp</button>
-				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
-				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
+				<button id="tabWind" class="on" role="tab" aria-selected="true">Chart Plotter</button>
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
@@ -762,6 +775,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<label><input type="checkbox" id="tgWindColor"> Wind color</label>
 						<label><input type="checkbox" id="tgArrows"> Wind barbs</label>
 						<label><input type="checkbox" id="tgIso"> Isobars</label>
+						<label><input type="checkbox" id="tgRadarOv"> Radar</label>
 						<label><input type="checkbox" id="tgTemp"> Temp</label>
 						<label><input type="checkbox" id="tgPrecip"> Precip</label>
 						<label><input type="checkbox" id="tgWave"> Waves</label>
@@ -769,7 +783,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<label><input type="checkbox" id="tgGulf"> Gulf Stream</label>
 					</div>
 					<div class="lyr-g" role="group" aria-labelledby="lyrGN"><h3 id="lyrGN">Navigation</h3>
-						<label><input type="checkbox" id="tgLoc"> My location</label>
+						<label class="mbr-only"><input type="checkbox" id="tgLoc"> My location</label>
 						<label title="Line ahead of each boat showing where it will be at its current speed and course">Vector <select id="vecMin" aria-label="Course vector length"><option value="0">off</option><option value="5">5 min</option><option value="10" selected>10 min</option><option value="30">30 min</option></select></label>
 						<label title="Lines you can sail straight to a mark on, each tack, from the forecast wind"><input type="checkbox" id="tgLay"> Laylines <button type="button" class="lay-btn" id="layBtn" aria-expanded="false" aria-controls="layPop" title="Layline angles">45°</button></label>
 						<div class="lay-pop" id="layPop" hidden role="group" aria-label="Layline angles">
@@ -797,7 +811,7 @@ function oyc_wind_map_html( $embed = false ) {
 						</div>
 						<label><input type="checkbox" id="tgFleet"> Other boats</label>
 						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
-						<label title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
+						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
 					</div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
@@ -818,8 +832,8 @@ function oyc_wind_map_html( $embed = false ) {
 				<div id="map"></div>
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
-			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
-			<button type="button" class="navfollow" id="navFollow" title="Centre on the boat and follow it again" aria-label="Follow boat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Follow boat</button>
+			<button type="button" class="navrose mbr-only" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<button type="button" class="navfollow mbr-only" id="navFollow" title="Centre on the boat and follow it again" aria-label="Follow boat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Follow boat</button>
 			<div class="racebar" id="raceBar">
 				<span class="rc-lab">Course</span>
 				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
@@ -844,7 +858,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="route-btns">
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
-					<button type="button" class="rb-tog" id="rbFromBoat" aria-pressed="false" title="Start the route from your live GPS position (turns on My location)">From my boat</button>
+					<button type="button" class="rb-tog mbr-only" id="rbFromBoat" aria-pressed="false" title="Start the route from your live GPS position (turns on My location)">From my boat</button>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
 					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="false" aria-controls="wpTab" title="Hide or show the waypoint table">Show table</button>
 				</div>
@@ -1150,7 +1164,57 @@ function locFail(msg){
 	stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;
 	alert(msg);
 }
+/* "My boat" disclaimer (v1.7.405): before the first GPS fix — via My location,
+   From my boat, the Heads-up compass or Share my position — the visitor must tick
+   and accept that the chart plotter is for information only. Accepting is kept
+   in this browser (oyc_nav_disc); Cancel turns My location back off. */
+var DISC_KEY='oyc_nav_disc_v2',discOpen=false;
+function discOk(){try{return localStorage.getItem(DISC_KEY)==='1';}catch(e){return false;}}
+/* signed-in members: acceptance is recorded on their profile (inc/nav-disclaimer.php)
+   with a date-time stamp, and one already on file counts in any browser */
+var DISC={logged:false,nonce:'',accepted:null};
+fetch(AJAX+'?action=oyc_nav_disc_me',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+	if(!d)return;DISC=d;
+	if(d.accepted){try{localStorage.setItem(DISC_KEY,'1');}catch(e){}}
+	else if(d.logged&&discOk()&&d.nonce)discRecord(); /* accepted here before signing in → put it on the profile */
+}).catch(function(){});
+function discRecord(){
+	if(!DISC.logged||!DISC.nonce)return;
+	var fd=new FormData();fd.append('action','oyc_nav_disc_ok');fd.append('nonce',DISC.nonce);
+	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){if(d&&d.success)DISC.accepted=d.data.t;}).catch(function(){});
+}
+function showNavDisclaimer(onAccept,onCancel){
+	if(discOpen)return;discOpen=true;
+	var w=document.createElement('div');w.className='oyc-disc';w.setAttribute('role','dialog');w.setAttribute('aria-modal','true');w.setAttribute('aria-labelledby','oycDiscH');
+	w.innerHTML='<div class="dbox"><h3 id="oycDiscH">Not for navigation</h3>'
+		+'<ul><li>This chart plotter is for <b>information purposes only</b> and is not meant for navigation.</li>'
+		+'<li>Use official <b>NOAA nautical charts</b> for navigation.</li>'
+		+'<li>This tool does <b>not replace good seamanship</b>. You are responsible for the safe navigation of your boat.</li>'
+		+'<li>By using this tool you agree to hold <b>Orienta Yacht Club (OYC)</b> and <b>Intualytics LLC</b> harmless and blameless for any damage that may arise from its use.</li></ul>'
+		+'<label><input type="checkbox" id="oycDiscCb"> I understand and agree</label>'
+		+'<div class="dbtns"><button type="button" class="no" id="oycDiscNo">Cancel</button><button type="button" class="ok" id="oycDiscOk" disabled>Continue</button></div></div>';
+	(document.fullscreenElement||document.webkitFullscreenElement||document.body).appendChild(w);
+	var cb=w.querySelector('#oycDiscCb'),ok=w.querySelector('#oycDiscOk'),no=w.querySelector('#oycDiscNo');
+	function close(){discOpen=false;if(w.parentNode)w.parentNode.removeChild(w);}
+	cb.addEventListener('change',function(){ok.disabled=!cb.checked;});
+	ok.addEventListener('click',function(){if(!cb.checked)return;try{localStorage.setItem(DISC_KEY,'1');}catch(e){}discRecord();close();onAccept();});
+	no.addEventListener('click',function(){close();onCancel();});
+	setTimeout(function(){try{cb.focus();}catch(e){}},0);
+}
+var LOGGED=<?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
 function startLoc(){
+	if(!LOGGED){ /* controls are hidden for visitors; this catches any other path */
+		var t=document.getElementById('tgLoc');if(t)t.checked=false;if(headsUp)setHeadsUp(false);if(routeFromBoat)setFromBoat(false);
+		alert('My boat (your live GPS position) is for signed-in members. Please log in to use it.');
+		return;
+	}
+	if(!discOk()){
+		showNavDisclaimer(startLocNow,function(){stopLoc();var t=document.getElementById('tgLoc');if(t)t.checked=false;});
+		return;
+	}
+	startLocNow();
+}
+function startLocNow(){
 	locFirst=false;
 	if(!navigator.geolocation){locFail('Location is not available in this browser.');return;}
 	locWatch=navigator.geolocation.watchPosition(
@@ -2752,7 +2816,7 @@ function drawCurrents(){
 function showWind(ti){ti=Math.max(0,Math.min(TIMES.length-1,ti));curTi=ti;slider.value=ti;
 	if(vl&&map.hasLayer(vl)&&activeGrid.FRAMES[ti])vl.setData(activeGrid.FRAMES[ti]);
 	var f=fmt(TIMES[ti]);tlabel.innerHTML=f.big+'<small>'+f.small+(ti===NOWI?' · now':'')+'</small>';
-	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();replotRace();}
+	refreshOverlays();drawField();if(!map.hasLayer(hlLayer))hlLayer.addTo(map);drawHL(activeGrid,ti);updatePins(ti);updateER(ti);updateStormsAt(new Date(TIMES[ti]).getTime());if(gsOn())drawGulf(ti);if(curOn())drawCurrents();drawRadarOv();replotRace();}
 
 /* ---------- grid switching by zoom ---------- */
 function chooseGrid(){var b=map.getBounds();
@@ -3071,7 +3135,7 @@ function setMode(m){
 	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);updateBarbHint();
 		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
 	setTimeout(function(){map.invalidateSize();drawGraticule();},0); /* map container may have been hidden by satellite mode */
-	if(m==='wave'){loadBuoys(function(){if(mode==='wave')buoyLayer.addTo(map);});}else{map.removeLayer(buoyLayer);}
+	syncBuoys();
 	if(m==='radar'){
 		setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(hlLayer);updateBarbHint();
 		updateLegend();drawField();
@@ -3098,10 +3162,7 @@ function setMode(m){
 	showWind(Math.min(curTi,Math.max(0,TIMES.length-1)));
 }
 document.getElementById('tabWind').addEventListener('click',function(){setMode('wind');});
-document.getElementById('tabRadar').addEventListener('click',function(){setMode('radar');});
-document.getElementById('tabTemp').addEventListener('click',function(){setMode('temp');});
-document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
-document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
+/* Radar / Temp / Precip / Waves view buttons removed (v1.7.404); setMode keeps those modes but nothing opens them */
 document.getElementById('tabSat').addEventListener('click',function(){setMode('sat');});
 document.getElementById('tabCharts').addEventListener('click',function(){setMode('charts');});
 [].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.addEventListener('click',function(){loadSat(b.getAttribute('data-sat'));});});
@@ -3217,10 +3278,42 @@ document.getElementById('tgIso').addEventListener('change',function(){isoTouched
 document.getElementById('tgWindColor').addEventListener('change',function(){drawField();updateLegend();});
 function pickField(which,cb){var ids={temp:'tgTemp',precip:'tgPrecip',wave:'tgWave'};
 	if(cb.checked){fieldMode=which;for(var k in ids){if(k!==which)document.getElementById(ids[k]).checked=false;}}
-	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();}
+	else if(fieldMode===which){fieldMode=null;}drawField();updateLegend();syncBuoys();}
 document.getElementById('tgTemp').addEventListener('change',function(){pickField('temp',this);});
 document.getElementById('tgPrecip').addEventListener('change',function(){pickField('precip',this);});
-document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);});
+document.getElementById('tgWave').addEventListener('change',function(){pickField('wave',this);syncBuoys();});
+/* buoy observation markers ride with the Waves layer (they used to come with the
+   Waves view button, removed in v1.7.404) */
+function buoysWanted(){var w=document.getElementById('tgWave');return (mode==='wave'||mode==='wind')&&!!(w&&w.checked);}
+function syncBuoys(){if(buoysWanted())loadBuoys(function(){if(buoysWanted())buoyLayer.addTo(map);});else map.removeLayer(buoyLayer);}
+/* Radar overlay on the chart plotter (v1.7.404, replaces the old Radar view
+   button): IEM tiles that follow the time slider. Past / now = NEXRAD mosaic
+   (refreshed every 5 min), later hours = HRRR simulated reflectivity, out to
+   +18 h; beyond that HRRR has no frames, so the overlay steps aside. */
+var RO={layer:null,url:'',timer:null};
+function radarOvOn(){var el=document.getElementById('tgRadarOv');return !!(el&&el.checked);}
+function radarOvUrl(){
+	var t=TIMES.length?new Date(TIMES[Math.max(0,Math.min(TIMES.length-1,curTi))]).getTime():Date.now();
+	var off=Math.round((t-Date.now())/60000);
+	if(off<=7)return nexradUrl(0);
+	off=Math.max(15,Math.round(off/15)*15);
+	return off>1080?'':wideRadarUrl(off);
+}
+function drawRadarOv(){
+	if(!RO)return; /* showWind can run before this block has set RO up */
+	if(!radarOvOn()||mode!=='wind'){if(RO.layer){map.removeLayer(RO.layer);RO.layer=null;RO.url='';}return;}
+	var u=radarOvUrl();
+	if(!u){if(RO.layer){map.removeLayer(RO.layer);RO.layer=null;RO.url='';}return;}
+	if(RO.layer&&RO.url===u)return;
+	RO.url=u;
+	if(RO.layer)RO.layer.setUrl(u);
+	else{RO.layer=L.tileLayer(u,{opacity:0.65,zIndex:344,interactive:false,attribution:'NEXRAD &amp; HRRR &middot; Iowa State IEM',updateWhenZooming:false});RO.layer.addTo(map);}
+}
+document.getElementById('tgRadarOv').addEventListener('change',function(){
+	drawRadarOv();
+	if(this.checked&&!RO.timer)RO.timer=setInterval(function(){if(RO.layer&&RO.url===nexradUrl(0)){RO.layer.setUrl(nexradUrl(0)+'?t='+Date.now());}},300000);
+	else if(!this.checked&&RO.timer){clearInterval(RO.timer);RO.timer=null;}
+});
 document.getElementById('tgGulf').addEventListener('change',function(){
 	if(this.checked){gsBandLayer.addTo(map);gsArrows.addTo(map);
 		/* NOAA frontal analysis = position only; no Open-Meteo marine fetch (keeps
@@ -3586,7 +3679,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
 		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
 		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
