@@ -426,8 +426,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .poi-fish{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;background:#0f7a6c;border:1.5px solid #fff;box-shadow:0 0 0 1px #0a5a50,0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 #oycwm .poi-fish svg{display:block}
 #oycwm .poi-fish.off{opacity:.5}
+/* POI / fishing spot card: a real card width (Leaflet sometimes measured the
+   content at its 50px minimum, giving a one-word-per-line strip as tall as the
+   map), capped height with its own scroll so it never runs off the chart */
+#oycwm .poi-pop .leaflet-popup-content{min-width:min(250px,calc(100vw - 64px));max-width:min(290px,calc(100vw - 64px));max-height:min(340px,calc(100vh - 160px));overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;text-align:left}
 #oycwm .poi-pop .pp-sp{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
-#oycwm .poi-pop .pp-sp span{font-size:11px;font-weight:700;border-radius:999px;padding:2px 7px;background:#e3f2ef;color:#0a5a50}
+#oycwm .poi-pop .pp-sp span{white-space:nowrap;font-size:11px;font-weight:700;border-radius:999px;padding:2px 7px;background:#e3f2ef;color:#0a5a50}
 #oycwm .poi-pop .pp-sp span.out{background:#eef1f4;color:#7a8896;font-weight:600}
 #oycwm .poi-pop .pp-sp-k{font-size:10.5px;color:#7a8896;margin-top:6px;letter-spacing:.04em}
 #oycwm .poi-pop .pp-name{font-weight:800;font-size:13px;color:#0b2a4a}
@@ -510,6 +514,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm.ais-far .ais-lbl{display:none}
 #oycwm .ais-note{display:none;font-size:.74rem;color:var(--mute);padding:0 18px 6px}
 #oycwm .ais-note.on{display:block}
+/* Coast Guard Local Notice to Mariners pins (inc/nav-notices.php) */
+#oycwm .nn-mk{background:none;border:none}
+#oycwm .nn-ic{transform:translate(-50%,-50%);width:22px;height:22px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+#oycwm .nn-ic svg{display:block}
+.pin-pop .nn-cat{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:#b25d00;font-weight:700}
+.pin-pop .nn-txt{display:block;margin-top:4px;max-height:180px;overflow:auto;line-height:1.4}
+.pin-pop .nn-you{display:block;margin-top:4px}
+.pin-pop .nn-src{display:block;margin-top:6px;font-size:.72rem;color:#5d6d7e}
 #oycwm .layers select{font:inherit;font-size:.74rem;border:1px solid var(--line);border-radius:6px;padding:1px 4px;background:#fff;color:var(--ink)}
 #oycwm .lay-btn{font:inherit;font-size:.74rem;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:#fff;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
 #oycwm .lay-btn::after{content:" \25BE";font-weight:400}
@@ -704,6 +716,7 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 
 		<div class="ais-note" id="aisNote"></div>
+		<div class="ais-note" id="nnNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
 			<span class="hint">Past hour &rarr; +18&nbsp;h forecast (NOAA HRRR) &middot; zoom out for the national radar</span>
@@ -835,10 +848,11 @@ function oyc_wind_map_html( $embed = false ) {
 						</div>
 						<label><input type="checkbox" id="tgFleet"> Other boats</label>
 						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
+						<label title="Coast Guard Local Notice to Mariners: dredging, surveys, buoys off station, construction, safety zones"><input type="checkbox" id="tgNotice"> Notices</label>
 						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
 					</div>
-					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
+					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
 				<div class="layers lyr-sec" id="poiLayers">
 					<div class="lyr-g" role="group" aria-labelledby="lyrGP"><h3 id="lyrGP">Chart &amp; places</h3>
@@ -3233,6 +3247,11 @@ var POI_HOME={lat:40.9486,lon:-73.7296};
 function poiNm(lat,lng){var R=3440.065,dLa=(lat-POI_HOME.lat)*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180,a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(POI_HOME.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 function poiDir(lat,lng){var la1=POI_HOME.lat*Math.PI/180,la2=lat*Math.PI/180,dLo=(lng-POI_HOME.lon)*Math.PI/180;var b=(Math.atan2(Math.sin(dLo)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo))*180/Math.PI+360)%360;return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];}
 var POI_FORK='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 3v8M8.4 3v8M6.7 11v10M5 3c0 3.2 3.4 3.2 3.4 0M16.2 3c-1.6 0-2.7 2.1-2.7 5.2 0 2 .9 3 1.6 3V21M16.2 3c1.6 0 2.7 2.1 2.7 5.2 0 2-.9 3-1.6 3"/></svg>';
+/* shared popup options: card width + keep the whole card inside the map when it opens */
+var POI_POP={className:'poi-pop',minWidth:250,maxWidth:290,autoPanPadding:[16,16]};
+/* re-measure once the card is on screen, so its width/height never come from a
+   half-laid-out moment (tab switch, expand) */
+map.on('popupopen',function(e){var pp=e.popup;if(!pp||!/poi-pop/.test(pp.options.className||''))return;requestAnimationFrame(function(){if(pp.isOpen&&pp.isOpen())pp.update();});});
 var POI_KIND={club:'Reciprocal club',dine:'Dock &amp; dine',fuel:'Fuel dock',anc:'Anchorage',fish:'Fishing spot'};
 function poiPopup(p,kind){
 	var d=poiNm(p.lat,p.lng);
@@ -3278,24 +3297,24 @@ function fishPopup(p){
 }
 fetch('<?php echo esc_url( get_template_directory_uri() ); ?>/assets/map-pois.json?v='+encodeURIComponent('<?php echo esc_js( OYC_VERSION ); ?>')).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
 	(j.clubs||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),{className:'poi-pop',maxWidth:260}).addTo(poiClubs);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-club" title="'+String(p.name).replace(/"/g,'&quot;')+'"></div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'club'),POI_POP).addTo(poiClubs);
 	});
 	(j.dine||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),{className:'poi-pop',maxWidth:260}).addTo(poiDine);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-dine" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FORK+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'dine'),POI_POP).addTo(poiDine);
 	});
 	var POI_PUMP='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16M3.5 21h12M14 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5M6.8 7h5.4v4H6.8z"/></svg>';
 	(j.fuel||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),{className:'poi-pop',maxWidth:260}).addTo(poiFuel);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fuel" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_PUMP+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'fuel'),POI_POP).addTo(poiFuel);
 	});
 	var POI_ANCHOR='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M12 21c-4 0-7.2-3-7.6-6.8M12 21c4 0 7.2-3 7.6-6.8M3 12.8l1.4 1.4 1.4-1.4M18.2 14.2l1.4-1.4 1.4 1.4M8.6 10h6.8"/></svg>';
 	(j.anc||[]).forEach(function(p){
-		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),{className:'poi-pop',maxWidth:260}).addTo(poiAnch);
+		L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-anc" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_ANCHOR+'</div>',iconSize:[0,0]}),zIndexOffset:800}).bindPopup(poiPopup(p,'anc'),POI_POP).addTo(poiAnch);
 	});
 	var POI_FISH='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12c2.6-4 6.1-6 10-6 3.6 0 6.3 2 8 6-1.7 4-4.4 6-8 6-3.9 0-7.4-2-10-6Z"/><path d="M2.5 12 .8 8.5M2.5 12 .8 15.5"/><circle cx="16.3" cy="10.6" r=".9" fill="#fff"/></svg>';
 	var fishMon=new Date().getMonth()+1;
 	(j.fish||[]).forEach(function(p){
 		var off=fishInSeason(p,fishMon).length?'':' off';
-		fishMk[p.name]=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),{className:'poi-pop',maxWidth:270}).addTo(poiFish);
+		fishMk[p.name]=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'poi-mk',html:'<div class="poi-fish'+off+'" title="'+String(p.name).replace(/"/g,'&quot;')+'">'+POI_FISH+'</div>',iconSize:[0,0]}),zIndexOffset:790}).bindPopup(fishPopup(p),POI_POP).addTo(poiFish);
 	});
 }).catch(function(){});
 function poiWire(id,layer,key){
@@ -3708,6 +3727,60 @@ function setAis(on){
 	document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')pollAis();});
 })();
 
+/* ---------- Coast Guard Local Notice to Mariners (inc/nav-notices.php) ----------
+   The server reads the District 1 notices from NAVCEN twice a day and keeps the
+   ones in the Sound; this draws a warning pin per notice (and the outline of a
+   zone or line). Loaded once when the layer is switched on. */
+var NN={layer:L.layerGroup(),items:null,t:0,busy:false};
+function nnOn(){var t=document.getElementById('tgNotice');return !!(t&&t.checked);}
+function nnNote(t){var n=document.getElementById('nnNote');if(!n)return;n.textContent=t||'';n.classList.toggle('on',!!t);}
+function nnDate(v){
+	if(v==null||v==='')return '';
+	var n=+v;if(isFinite(n)&&n>1e9){var d=new Date(n>1e11?n:n*1000);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
+	var d2=new Date(v);if(/^\d{4}-\d{2}-\d{2}/.test(v)&&!isNaN(d2))return d2.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+	return String(v);
+}
+var NN_ICON='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2.5 23 21.5H1z" fill="#f39c12" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5.5" stroke="#3a2500" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.8" r="1.4" fill="#3a2500"/></svg>';
+function drawNotices(){
+	NN.layer.clearLayers();if(!nnOn()||!NN.items)return;
+	NN.items.forEach(function(it){
+		var pop=function(){
+			var h=(it.cat?'<span class="nn-cat">'+xmlEsc(it.cat)+'</span><br>':'')+'<b>'+xmlEsc(it.title||'Notice')+'</b>';
+			var f=nnDate(it.from),to=nnDate(it.to);
+			if(f||to)h+='<br>'+(f?xmlEsc(f):'')+(to?' &rarr; '+xmlEsc(to):'');
+			if(it.text&&it.text!==it.title)h+='<span class="nn-txt">'+xmlEsc(it.text)+'</span>';
+			if(myLoc)h+='<span class="nn-you">From you '+magBrg(myLoc.lat,myLoc.lon,it.lat,it.lon)+'°M · '+distNM(myLoc.lat,myLoc.lon,it.lat,it.lon).toFixed(1)+' nm</span>';
+			h+='<span class="nn-src">Coast Guard District 1 Local Notice to Mariners'+(it.id?' · '+xmlEsc(it.id):'')+(NN.t?' · checked '+new Date(NN.t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'')+' · <a href="https://www.navcen.uscg.gov/msi" target="_blank" rel="noopener">NAVCEN</a>. Not for navigation.</span>';
+			return h;};
+		if(it.geom){try{L.geoJSON(it.geom,{style:{color:'#e67e22',weight:2,dashArray:'6 4',fillColor:'#f39c12',fillOpacity:.12},pointToLayer:function(g,ll){return L.circleMarker(ll,{radius:3,color:'#e67e22'});}}).bindPopup(pop,{className:'pin-pop',maxWidth:300}).addTo(NN.layer);}catch(e){}}
+		L.marker([it.lat,it.lon],{icon:L.divIcon({className:'nn-mk',html:'<div class="nn-ic">'+NN_ICON+'</div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:800,title:it.title||'Notice'}).bindPopup(pop,{className:'pin-pop',maxWidth:300}).addTo(NN.layer);
+	});
+	nnViewNote();
+}
+function nnViewNote(){
+	if(!nnOn()||!NN.items)return;
+	if(!NN.items.length){nnNote(NN.t?'No Coast Guard notices for the Sound right now.':'Coast Guard notices are still loading on the server. Try again in a few minutes.');return;}
+	var b=map.getBounds(),n=0;NN.items.forEach(function(it){if(b.contains([it.lat,it.lon]))n++;});
+	nnNote(n?'':NN.items.length+' Coast Guard notice'+(NN.items.length>1?'s':'')+' in the Sound, none in this view. Zoom out to see them.');
+}
+function loadNotices(){
+	if(NN.busy)return;NN.busy=true;
+	fetchT(AJAX+'?action=oyc_nn',20000).then(function(r){return r.json();}).then(function(res){
+		NN.busy=false;if(!res||!res.ok)return;
+		NN.items=res.items||[];NN.t=res.t||0;drawNotices();
+	}).catch(function(){NN.busy=false;nnNote('Couldn’t load the Coast Guard notices. Try again later.');});
+}
+function setNotices(on){
+	var t=document.getElementById('tgNotice');if(t)t.checked=on;lsSet('oyc_nn_view',on?'1':null);
+	if(on){NN.layer.addTo(map);if(NN.items)drawNotices();else loadNotices();}
+	else{NN.layer.clearLayers();map.removeLayer(NN.layer);nnNote('');}
+}
+(function(){
+	var t=document.getElementById('tgNotice');if(t)t.addEventListener('change',function(){setNotices(this.checked);});
+	map.on('moveend',nnViewNote);
+	if(lsGet('oyc_nn_view')==='1')setNotices(true);
+})();
+
 /* Small read-only API for the racers' race tools (assets/race-tools.js):
    live boat state, model wind at any point/time, and the Leaflet map. */
 window.OYCWM={
@@ -3736,12 +3809,12 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgNotice','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
-		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
+		sail:['tgChart','tgArrows','tgAnch','tgFuel','tgNotice'],
 		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
 		fish:['tgChart','tgCur','tgFish','tgFuel'],
-		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
+		cruise:['tgChart','tgArrows','tgAis','tgNotice','tgClubs','tgDine','tgFuel','tgAnch']
 	};
 	/* "My chart": the visitor's own saved setup (layers incl. Animated / Wind
 	   color, the view tab, and the map centre + zoom), kept in this browser. */
