@@ -606,7 +606,6 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .wptab.wp-below .route-btns button,#oycwm .wptab.wp-below .route-btns a{padding:6px 8px;font-size:.66rem}
 	#oycwm .wptab.wp-below .wpt tbody tr{padding:6px 10px 6px 18px}
 	#oycwm .wptab.wp-below .wpt-foot{padding:5px 10px}
-	#oycwm.embed #map{height:clamp(300px,calc(100svh - 330px - var(--wph,0px)),640px)}
 }
 
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
@@ -1968,17 +1967,15 @@ function wpToggleLabel(){var tab=document.getElementById('wpTab'),b=document.get
 var WP_NARROW=window.matchMedia('(max-width:900px)');
 function wpFit(){
 	var wrap=document.querySelector('#oycwm .wpt-wrap');if(!wrap)return;
-	if(!WP_NARROW.matches){wrap.style.maxHeight='';wpRoom();return;}
+	if(!WP_NARROW.matches){wrap.style.maxHeight='';return;}
 	var rows=document.querySelectorAll('#wptBody tr'),h=0;
 	for(var i=0;i<rows.length&&i<2;i++)h+=rows[i].getBoundingClientRect().height;
 	wrap.style.maxHeight=h?Math.ceil(h)+'px':'';
-	wpRoom();
 }
 /* Phones: the table lives under the time slider (between it and the map), so it
    never covers the chart. wpPlace moves the one table element there and back
-   (same element, so every handler keeps working); wpRoom shortens the map by the
-   table's height so the map still ends on screen. */
-var WP_BELOW=window.matchMedia('(max-width:760px)'),wpRoomH=-1;
+   (same element, so every handler keeps working). The map keeps its full size. */
+var WP_BELOW=window.matchMedia('(max-width:760px)');
 function wpPlace(){
 	var tab=document.getElementById('wpTab'),grid=document.getElementById('mapGrid');if(!tab||!grid)return;
 	var below=WP_BELOW.matches;
@@ -1986,13 +1983,6 @@ function wpPlace(){
 	else if(!below&&tab.parentNode!==grid)grid.appendChild(tab);
 	tab.classList.toggle('wp-below',below);
 	tab.classList.toggle('wp-on',grid.classList.contains('has-wp'));
-}
-function wpRoom(){
-	var tab=document.getElementById('wpTab'),root=document.getElementById('oycwm');if(!tab||!root)return;
-	var h=(tab.classList.contains('wp-below')&&tab.offsetParent)?Math.round(tab.getBoundingClientRect().height):0;
-	if(h===wpRoomH)return;wpRoomH=h;
-	root.style.setProperty('--wph',h+'px');
-	setTimeout(function(){try{map.invalidateSize({pan:false});drawGraticule();}catch(e){}},0);
 }
 wpPlace();
 if(WP_BELOW.addEventListener)WP_BELOW.addEventListener('change',function(){wpPlace();wpFit();});
