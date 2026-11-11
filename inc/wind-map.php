@@ -1131,9 +1131,18 @@ function drawLaylines(){
 	var rc=document.getElementById('tgRace'),race=!!(rc&&rc.checked&&typeof MARKS!=='undefined');
 	if(!layOn()&&!race){if(map.hasLayer(layLayer))map.removeLayer(layLayer);return;}
 	if(!map.hasLayer(layLayer))layLayer.addTo(map);
-	if(layOn()){
-		if(myLoc&&pins.length&&pins[nextWp])drawLayFor([myLoc.lat,myLoc.lon],[pins[nextWp].lat,pins[nextWp].lon],true,true);
-		else{var pts=routePts();for(var i=1;i<pts.length;i++)drawLayFor(pts[i-1],pts[i],false,false);}
+	/* Laylines on (v1.7.410): every waypoint shows its laylines, for the leg
+	   that arrives at it (upwind or downwind). The waypoint you're sailing to
+	   uses your live position + live wind; a first waypoint with no leg into it
+	   gets its upwind laylines. */
+	if(layOn()&&pins.length){
+		var pts=routePts(),off=pts.length-pins.length,live=!!(myLoc&&pins[nextWp]);
+		for(var i=0;i<pins.length;i++){var M=[pins[i].lat,pins[i].lon];
+			if(live&&i===nextWp){drawLayFor([myLoc.lat,myLoc.lon],M,true,true);continue;}
+			var F=pts[i+off-1];
+			if(F)drawLayFor(F,M,false,true);
+			else{var w0=layWind(M[0],M[1],false);if(w0)drawLayFor(destPt(M[0],M[1],(w0.twd+180)%360,1),M,false,true);}
+		}
 	}
 	/* Race on: laylines at every race mark, from the forecast at the slider hour
 	   (they move as you scrub). With a course plotted, each mark gets the
