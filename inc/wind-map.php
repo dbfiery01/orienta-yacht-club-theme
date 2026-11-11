@@ -187,6 +187,9 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .mapwrap.headsup .leaflet-control-container,
 #oycwm .mapwrap.headsup .leaflet-popup{display:none !important}
 #oycwm .mapwrap.headsup .wp-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}
+#oycwm .navfollow{display:none;position:absolute;z-index:596;left:50%;bottom:16px;transform:translateX(-50%);align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(26,115,232,.45);white-space:nowrap}
+#oycwm .navfollow svg{display:block}
+#oycwm .mapwrap.headsup.hufree .navfollow{display:flex}
 #oycwm .mapwrap.headsup .navrose{background:#1a73e8;border-color:#1a73e8;box-shadow:0 2px 10px rgba(26,115,232,.5)}
 #oycwm .mapwrap.headsup .navrose svg{transform:rotate(calc(-1 * var(--hdg,0deg)))}
 /* ---- Race course builder ---- */
@@ -809,6 +812,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="grat" id="gratic" aria-hidden="true"></div>
 			</div>
 			<button type="button" class="navrose" id="navRose" title="Heads-up / North-up view" aria-label="Toggle heads-up (course-up) view" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><polygon points="12,3 16,13 12,11 8,13" fill="#c0392b"/><polygon points="12,21 8,11 12,13 16,11" fill="#8aa0ac"/></svg></button>
+			<button type="button" class="navfollow" id="navFollow" title="Centre on the boat and follow it again" aria-label="Follow boat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Follow boat</button>
 			<div class="racebar" id="raceBar">
 				<span class="rc-lab">Course</span>
 				<input type="text" id="raceCourse" placeholder="e.g. A F C A" autocapitalize="characters" autocorrect="off" spellcheck="false" aria-label="Race course — mark letters in order">
@@ -906,11 +910,12 @@ function lockMap(lock){['dragging','doubleClickZoom','boxZoom','keyboard'].forEa
    359°→1° turns 2°, not 358°); each frame it eases toward the target heading
    with a ~0.35 s time constant, and the 1.5x zoom-in that hides the corners
    eases in and out the same way. The boat marker glides between GPS fixes. */
-var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0,freeT:0};
-/* after a right-button pan in heads-up, stop re-centring on the boat for a while
-   so you can look around; then the next GPS fix glides the chart back */
-var HU_FREE_MS=20000;
-function huFree(){return HU.freeT&&Date.now()-HU.freeT<HU_FREE_MS;}
+var HU={disp:0,scale:1,raf:0,last:0,cmp:null,cmpT:0,exiting:false,mk:null,mkFrom:null,mkTo:null,mkT0:0,free:false};
+/* Panning in heads-up stops following the boat until you tap "Follow boat"
+   (the button shows only while following is off). */
+function huFree(){return HU.free;}
+function setHuFree(on){HU.free=!!on;mwEl().classList.toggle('hufree',HU.free);
+	if(!HU.free&&headsUp&&myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:true});}catch(e){}}}
 function huTarget(){
 	if(HU.exiting)return 0;
 	var moving=mySpeedKt!=null&&mySpeedKt>=1.5&&myHeading!=null;
@@ -938,7 +943,7 @@ function headsUpTick(t){
 function huKick(){if(!HU.raf){HU.last=0;HU.raf=requestAnimationFrame(headsUpTick);}}
 function setHeadsUp(on){
 	if(on===headsUp&&!HU.exiting)return;
-	headsUp=on;lockMap(on);HU.freeT=0;var w=mwEl();
+	headsUp=on;lockMap(on);HU.free=false;mwEl().classList.remove('hufree');var w=mwEl();
 	if(on){HU.exiting=false;if(!w.classList.contains('headsup')){HU.disp=0;HU.scale=1;w.style.setProperty('--hdg','0deg');w.style.setProperty('--hus','1');w.classList.add('headsup');}
 		if(myLoc){try{map.setView([myLoc.lat,myLoc.lon],map.getZoom(),{animate:false});}catch(e){}}
 		compassStart();}
@@ -1163,6 +1168,7 @@ function stopLoc(){
 /* the compass on the chart: North-up ↔ Heads-up (needs GPS, so it turns on My
    location if it isn't already). Asking for the phone compass happens here,
    inside the tap, because iPhones only allow it from a tap. */
+(function(){var f=document.getElementById('navFollow');if(f)f.addEventListener('click',function(){setHuFree(false);});})();
 (function(){var b=document.getElementById('navRose');if(!b)return;
 	b.addEventListener('click',function(){
 		if(!headsUp){var t=document.getElementById('tgLoc');if(!locWatch){if(t)t.checked=true;startLoc();}setHeadsUp(true);}
@@ -1284,43 +1290,47 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 /* heads-up: un-rotate map taps (mapPointFromEvent, with My location) */
 (function(){var orig=map.mouseEventToContainerPoint;
 	map.mouseEventToContainerPoint=function(e){return mwEl().classList.contains('headsup')?mapPointFromEvent(e):orig.call(map,e);};})();
-/* Mouse panning, the same in north-up and heads-up: drag with either button to
-   pan, click (left) to pick a point or drop a waypoint.
-   - Right button: hold anywhere on the map and drag. The browser's right-click
-     menu is kept off the map so it doesn't pop up over the drag (macOS opens it
-     on press, not release).
-   - Left button in heads-up: Leaflet's own drag is off there (it would move the
-     turned chart the wrong way), so this handler takes over once the mouse has
-     moved a few px; a plain click still drops a waypoint, and the click that ends
-     a drag is swallowed so it doesn't.
+/* Mouse, the same in north-up and heads-up:
+   - LEFT button only clicks: pick things on the chart (markers, cards, buttons)
+     and drop waypoints. A left drag on the open map does nothing — Leaflet's own
+     drag is stopped for the mouse here (touch drag on phones/tablets is untouched),
+     and markers (drag a waypoint to move it), cards and map buttons keep theirs.
+     Shift + left drag still box-zooms in north-up.
+   - RIGHT button pans: hold it anywhere on the map and drag. The browser's
+     right-click menu is kept off the map so it doesn't pop up over the drag
+     (macOS opens it on press, not release).
    In heads-up each mouse move is un-rotated (as mapPointFromEvent) so the chart
-   follows the hand, and follow-the-boat re-centring pauses for HU_FREE_MS after
-   the last pan, then the next GPS fix glides back to the boat. */
-(function(){var el=map.getContainer(),rp=null,eatClick=false;
-	function isHU(){return mwEl().classList.contains('headsup');}
-	function mv(e){if(!rp)return;if(!(e.buttons&rp.bit)){up();return;}
+   follows the hand, and panning turns off follow-the-boat until "Follow boat". */
+(function(){var el=map.getContainer(),rp=null;
+	function onMapSurface(t){return el.contains(t)&&!(t.closest&&t.closest('.leaflet-control,.leaflet-popup,.leaflet-marker-icon'));}
+	var lp=null,eat=false;
+	mwEl().addEventListener('mousedown',function(e){
+		if(e.button!==0||e.shiftKey&&!headsUp||!onMapSurface(e.target))return;
+		e.stopPropagation();e.preventDefault(); /* no left-drag pan (click still fires) and no text/tile drag */
+		lp={x:e.clientX,y:e.clientY};
+	},true);
+	/* a left press that wandered off (a drag) is not a click: don't drop a waypoint for it */
+	document.addEventListener('mouseup',function(e){if(e.button===0&&lp){eat=Math.abs(e.clientX-lp.x)+Math.abs(e.clientY-lp.y)>6;lp=null;}},true);
+	mwEl().addEventListener('click',function(e){if(eat){eat=false;if(el.contains(e.target)){e.stopPropagation();e.preventDefault();}}},true);
+	function mv(e){if(!rp)return;if(!(e.buttons&2)){up();return;}
 		var dx=e.clientX-rp.x,dy=e.clientY-rp.y;
-		if(!rp.on){if(Math.abs(e.clientX-rp.x0)+Math.abs(e.clientY-rp.y0)<5)return; /* not a drag yet: let it be a click */
-			rp.on=true;el.classList.add('rpan');map.stop();map.fire('movestart');}
+		if(!rp.on){if(Math.abs(e.clientX-rp.x0)+Math.abs(e.clientY-rp.y0)<4)return;
+			rp.on=true;el.classList.add('rpan');map.stop();map.fire('movestart');
+			if(headsUp)setHuFree(true);}
 		rp.x=e.clientX;rp.y=e.clientY;
 		if(!dx&&!dy)return;
-		if(isHU()){var a=HU.disp*Math.PI/180,sc=HU.scale||1,ux=(dx*Math.cos(a)-dy*Math.sin(a))/sc,uy=(dx*Math.sin(a)+dy*Math.cos(a))/sc;dx=ux;dy=uy;
-			HU.freeT=Date.now();}
+		if(mwEl().classList.contains('headsup')){var a=HU.disp*Math.PI/180,sc=HU.scale||1,ux=(dx*Math.cos(a)-dy*Math.sin(a))/sc,uy=(dx*Math.sin(a)+dy*Math.cos(a))/sc;dx=ux;dy=uy;}
 		if(map._rawPanBy){map._rawPanBy(L.point(-dx,-dy));map.fire('move');} /* like Leaflet's drag: move now, moveend once at the end */
 		else map.panBy([-dx,-dy],{animate:false});}
-	function up(){if(!rp)return;var was=rp.on,left=rp.bit===1;rp=null;el.classList.remove('rpan');
+	function up(){if(!rp)return;var was=rp.on;rp=null;el.classList.remove('rpan');
 		document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);
-		if(was){map.fire('moveend');if(left){eatClick=true;setTimeout(function(){eatClick=false;},0);}}}
+		if(was)map.fire('moveend');}
 	el.addEventListener('mousedown',function(e){
-		var right=e.button===2,left=e.button===0&&isHU();
-		if(!right&&!left)return;      /* north-up left drag = Leaflet's own */
-		if(e.target.closest&&e.target.closest('.leaflet-control,.leaflet-popup,.leaflet-marker-icon'))return; /* buttons, cards, markers keep their own clicks */
-		if(right)e.preventDefault();
-		rp={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,bit:right?2:1,on:false};
+		if(e.button!==2||!onMapSurface(e.target))return;
+		e.preventDefault();
+		rp={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,on:false};
 		document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);
 	});
-	/* swallow the click that ends a left-button pan (before Leaflet sees it on the map) */
-	mwEl().addEventListener('click',function(e){if(eatClick&&el.contains(e.target)){eatClick=false;e.stopPropagation();e.preventDefault();}},true);
 	el.addEventListener('contextmenu',function(e){e.preventDefault();});
 })();
 /* Light base (OSM). The wind-speed fill is kept translucent so it reads as a
