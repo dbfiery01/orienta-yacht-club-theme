@@ -3,7 +3,7 @@ Theme Name: OYC Fun
 Template: orienta-yacht-club-theme
 Author: Orienta Yacht Club
 Description: A light, white-background theme like orientayachtclub.com — sky-blue + lime-green accents, Open Sans, dark readable text, photos used as headers. Activate to preview; switch back anytime.
-Version: 1.5.96
+Version: 1.5.97
 */
 
 /* ===== OYC FUN — light/white (mirrors orientayachtclub.com) ===== */
@@ -1048,7 +1048,7 @@ html[data-theme="dark"] body.oyc-page-dock-and-dine .dd-eyebrow { color: #7fb3d9
 
 /* ── Chart menu in the mobile hamburger (v1.7.413) ──────────────────────
    parent theme inc/desktop-nav.php adds a "Chart" item with its four links
-   (Current conditions, Forecast, Satellite, NOAA Weather) as small pill
+   (Chart, Current conditions, Forecast, Satellite) as small pill
    buttons under it, so the list stays short on phones. Desktop hides it
    with the other WP-menu text links and shows the Chart dropdown instead. */
 @media (max-width: 880px) {

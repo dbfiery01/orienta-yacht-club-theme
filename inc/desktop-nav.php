@@ -18,8 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Store and Dockwa links (external, open in a new tab). */
 define( 'OYC_DESK_NAV_STORE_URL', 'https://www.team1newport.com/Orienta-Yacht-Club/products/1083/' );
-/** NOAA / National Weather Service point forecast for Mamaroneck Harbor (external). */
-define( 'OYC_DESK_NAV_NOAA_URL', 'https://forecast.weather.gov/MapClick.php?lat=40.9415&lon=-73.7316' );
 define( 'OYC_DESK_NAV_DOCKWA_URL', 'https://dockwa.com/explore/destination/3gcrvl-orienta-yacht-club?utm_campaign=marina_site_referral&utm_medium=web_badge&utm_source=3gcrvl-orienta-yacht-club&form=transient' );
 
 /**
@@ -88,20 +86,20 @@ function oyc_desk_nav_items() {
 
 /**
  * Sub-items of the Chart menu: tabs of the weather page (opened by URL hash,
- * see page-weather.php) plus the NWS forecast. Shared by the desktop dropdown
+ * see page-weather.php). Shared by the desktop dropdown
  * and the mobile hamburger menu.
  */
 function oyc_chart_nav_children() {
 	return array(
+		array( __( 'Chart', 'orienta-yacht-club' ), home_url( '/weather/#chart' ) ),
 		array( __( 'Current conditions', 'orienta-yacht-club' ), home_url( '/weather/#now' ) ),
 		array( __( 'Forecast', 'orienta-yacht-club' ), home_url( '/weather/#forecast' ) ),
 		array( __( 'Satellite', 'orienta-yacht-club' ), home_url( '/weather/#satellite' ) ),
-		array( __( 'NOAA Weather', 'orienta-yacht-club' ), OYC_DESK_NAV_NOAA_URL, true ),
 	);
 }
 
 /**
- * Mobile hamburger: add a "Chart" entry (with its four links as small buttons
+ * Mobile hamburger: add a "Chart" entry (with its links as small buttons
  * under it) to the WordPress Primary menu, just before Calendar. On desktop the
  * WP menu's text links are hidden, so this only shows in the hamburger.
  */
