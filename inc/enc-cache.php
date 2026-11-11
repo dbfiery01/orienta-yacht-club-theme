@@ -15,8 +15,8 @@
  *
  * Home waters (western Long Island Sound) are pre-loaded in the background by
  * WP-Cron, a small batch every 15 minutes, so the first viewer is fast too.
- * Tiles older than OYC_ENC_MAX_AGE are deleted daily and re-fetched on demand
- * (NOAA updates the charts weekly). Only tiles inside OYC_ENC_AREA and zoom
+ * Home-waters tiles are renewed weekly (NOAA updates the charts weekly); other
+ * tiles older than OYC_ENC_MAX_AGE are deleted daily and re-fetched on demand. Only tiles inside OYC_ENC_AREA and zoom
  * 9-17 are cached, and the cache stops growing at OYC_ENC_MAX_BYTES, so the
  * endpoint can't be used to fill the disk. Not for navigation.
  *
@@ -30,6 +30,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'OYC_ENC_WMS', 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer' );
 define( 'OYC_ENC_LAYERS', '2,3,4,5,6,7' );            // must match encLayer in inc/wind-map.php
 define( 'OYC_ENC_MAX_AGE', 30 * DAY_IN_SECONDS );
+/* Home-waters tiles are re-fetched once they are this old, so the chart there
+   picks up NOAA's weekly updates (Local Notice to Mariners corrections). */
+define( 'OYC_ENC_REFRESH', 7 * DAY_IN_SECONDS );
 define( 'OYC_ENC_MAX_BYTES', 600 * 1024 * 1024 );     // 600 MB ceiling
 /* Area we cache at all (Chesapeake to Cape Cod), and home waters we pre-load. */
 define( 'OYC_ENC_AREA', '38.0,-77.0,42.5,-69.5' );     // south,west,north,east
@@ -322,8 +325,10 @@ function oyc_enc_home_tiles() {
 }
 
 /* Fetch up to 40 missing or ageing home tiles per run (about a minute of work).
-   A tile is refreshed once it is 25 days old, before the daily prune deletes it
-   at 30, so home waters never have gaps. */
+   A home tile is refreshed once it is OYC_ENC_REFRESH (7 days) old, so home
+   waters show NOAA's weekly chart updates; the old tile stays until the new one
+   arrives, so there are never gaps. 40 tiles every 15 minutes is ~3,800 a day,
+   so all ~8,600 home tiles are renewed in under three days each week. */
 add_action( 'oyc_enc_warm', 'oyc_enc_warm' );
 function oyc_enc_warm( $limit = 40 ) {
 	if ( get_transient( 'oyc_enc_warm_lock' ) ) {
@@ -338,7 +343,7 @@ function oyc_enc_warm( $limit = 40 ) {
 			break;
 		}
 		$f = oyc_enc_file( $t[0], $t[1], $t[2], $t[3] );
-		if ( file_exists( $f ) && ( time() - filemtime( $f ) ) < OYC_ENC_MAX_AGE - 5 * DAY_IN_SECONDS ) {
+		if ( file_exists( $f ) && ( time() - filemtime( $f ) ) < OYC_ENC_REFRESH ) {
 			continue;
 		}
 		if ( '' !== oyc_enc_fetch( $t[0], $t[1], $t[2], $t[3] ) ) {

@@ -294,6 +294,11 @@ require_once get_template_directory() . '/inc/harbor-mini.php';
 require_once get_template_directory() . '/inc/enc-cache.php';
 
 /**
+ * Coast Guard Local Notice to Mariners (District 1) for the map's Notices layer.
+ */
+require_once get_template_directory() . '/inc/nav-notices.php';
+
+/**
  * Inject Customizer-overridden section background images as inline CSS.
  * Only outputs rules when a Customizer image has been set (non-empty),
  * so the bundled CSS fallbacks stay in effect when nothing is configured.
