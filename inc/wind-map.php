@@ -263,9 +263,12 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .stack-toggle:hover{background:var(--harbor,#13507a)}
 #oycwm .leftstack.stack-hidden .boatinfo,#oycwm .leftstack.stack-hidden .racesheet{display:none !important}
 @media (max-width:880px){#oycwm .boatinfo.on{display:block}#oycwm .leftstack.has-cards .stack-toggle{display:inline-flex}}
-/* phones: the Hide/Show cards pill sits at the top of the map just right of the
-   +/- zoom buttons (it was right under them) */
-@media (max-width:880px){#oycwm .leftstack .stack-toggle{position:absolute;top:-62px;left:36px}}
+/* phones: the card stack (My boat / Underway, race sheet) and its Hide/Show cards
+   pill sit to the RIGHT of the +/- zoom buttons, so the zoom buttons never cover them */
+@media (max-width:880px){
+	#oycwm .leftstack{left:46px;top:40px}
+	#oycwm .leftstack .stack-toggle{position:absolute;top:-32px;left:0}
+}
 #oycwm .race-mk{background:none;border:none}
 #oycwm .race-ic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#e8820c;border:2px solid #7a3d00;box-shadow:0 0 0 1.5px #fff,0 1px 3px rgba(0,0,0,.45);color:#fff;font:800 11px/18px -apple-system,sans-serif;text-align:center}
 #oycwm .mapwrap.headsup .race-ic{transform:translate(-50%,-50%) rotate(var(--hdg,0deg))}

@@ -83,7 +83,7 @@
 [data-theme="dark"] #oycwm .rt-panel button.rt-link{color:#7cc0f0}
 @media (max-width:600px){
 	#oycwm .rt-panel{padding:12px}
-	#oycwm .rt-badge{top:auto;bottom:96px;right:8px}
-	#oycwm .rt-badge .pct{font-size:1.6rem}
+	/* phones: no target speed card on the map (Brad, v1.7.420) */
+	#oycwm .rt-badge,#oycwm .rt-badge.on{display:none !important}
 }
 #oycwm .rt-panel [hidden]{display:none !important}
