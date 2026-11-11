@@ -180,6 +180,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .navrose{position:absolute;z-index:596;right:10px;bottom:46px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(11,42,74,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #oycwm .navrose svg{display:block}
 #oycwm .mapwrap.headsup{overflow:hidden}
+/* mouse cursor on the chart: an ARROW in select mode (left button: click things,
+   drop waypoints) and a HAND only while panning (right button held). Leaflet's
+   grab hand and the hand over markers/routes are switched to the arrow; map
+   buttons and the waypoint cards keep their own cursors. */
+#oycwm .leaflet-container,#oycwm .leaflet-container.leaflet-grab,#oycwm .leaflet-container.leaflet-dragging .leaflet-grab,
+#oycwm .leaflet-container .leaflet-interactive,#oycwm .leaflet-container .leaflet-marker-icon,#oycwm .leaflet-container .leaflet-marker-icon *,
+#oycwm .leaflet-container .wp-ic,#oycwm .leaflet-container .wp-ic:active{cursor:default!important}
 #oycwm .leaflet-container.rpan,#oycwm .leaflet-container.rpan *{cursor:grabbing!important}
 #oycwm .mapwrap.headsup .maprot{transform:rotate(calc(-1 * var(--hdg,0deg))) scale(var(--hus,1.5));transform-origin:center;will-change:transform}
 #oycwm .mapwrap.headsup .grat,
@@ -1328,7 +1335,7 @@ var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
 	el.addEventListener('mousedown',function(e){
 		if(e.button!==2||!onMapSurface(e.target))return;
 		e.preventDefault();
-		rp={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,on:false};
+		rp={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,on:false};el.classList.add('rpan'); /* hand as soon as the right button is down */
 		document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);
 	});
 	el.addEventListener('contextmenu',function(e){e.preventDefault();});
