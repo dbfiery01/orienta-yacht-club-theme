@@ -642,11 +642,7 @@ function oyc_wind_map_html( $embed = false ) {
 		<div class="hd">
 			<h2>Wind &amp; Radar Map</h2>
 			<div class="tabs" id="viewTabs" role="tablist">
-				<button id="tabWind" class="on" role="tab" aria-selected="true">Wind</button>
-				<button id="tabRadar" role="tab" aria-selected="false">Radar</button>
-				<button id="tabTemp" role="tab" aria-selected="false">Temp</button>
-				<button id="tabPrecip" role="tab" aria-selected="false">Precip</button>
-				<button id="tabWave" role="tab" aria-selected="false">Waves</button>
+				<button id="tabWind" class="on" role="tab" aria-selected="true">Chart Plotter</button>
 				<button id="tabSat" role="tab" aria-selected="false">Satellite</button>
 				<button id="tabCharts" role="tab" aria-selected="false">Charts</button>
 			</div>
@@ -3098,10 +3094,7 @@ function setMode(m){
 	showWind(Math.min(curTi,Math.max(0,TIMES.length-1)));
 }
 document.getElementById('tabWind').addEventListener('click',function(){setMode('wind');});
-document.getElementById('tabRadar').addEventListener('click',function(){setMode('radar');});
-document.getElementById('tabTemp').addEventListener('click',function(){setMode('temp');});
-document.getElementById('tabPrecip').addEventListener('click',function(){setMode('precip');});
-document.getElementById('tabWave').addEventListener('click',function(){setMode('wave');});
+/* Radar / Temp / Precip / Waves view buttons removed (v1.7.404); setMode keeps those modes but nothing opens them */
 document.getElementById('tabSat').addEventListener('click',function(){setMode('sat');});
 document.getElementById('tabCharts').addEventListener('click',function(){setMode('charts');});
 [].forEach.call(document.querySelectorAll('#satLayers .sat-t'),function(b){b.addEventListener('click',function(){loadSat(b.getAttribute('data-sat'));});});
