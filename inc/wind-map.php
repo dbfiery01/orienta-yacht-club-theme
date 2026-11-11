@@ -258,6 +258,15 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .hovertip{box-sizing:border-box;background:rgba(11,42,74,.94);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;line-height:1.35;display:none;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 #oycwm .hovertip .hd2{color:#bfe4f5;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:1px}
 #oycwm .tiphelp{box-sizing:border-box;background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--mute);font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;line-height:1.35}
+/* map tips box: +/- toggle, starts collapsed (just the "+ Map tips" pill) */
+#oycwm .tiphelp{position:relative;pointer-events:auto}
+#oycwm .tiphelp .tip-tog{float:right;display:inline-flex;align-items:center;gap:5px;margin:-2px -4px 2px 8px;padding:1px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;line-height:1.3}
+#oycwm .tiphelp .tip-sign{font-size:13px;line-height:1;width:10px;text-align:center}
+#oycwm .tiphelp .tip-lbl{display:none}
+#oycwm .tiphelp.collapsed{align-self:flex-start;padding:4px 6px}
+#oycwm .tiphelp.collapsed .tip-tog{float:none;margin:0;border:0}
+#oycwm .tiphelp.collapsed .tip-lbl{display:inline}
+#oycwm .tiphelp.collapsed .tip-txt{display:none}
 /* route export bar — appears top-right once waypoints are dropped */
 #oycwm .routebar{position:absolute;z-index:596;right:10px;top:10px;display:none;flex-direction:column;gap:6px;align-items:flex-end;max-width:70%}
 #oycwm .routebar.on{display:flex}
@@ -814,7 +823,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp" id="tipHelp">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row up or down to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</div>
+				<div class="tiphelp collapsed" id="tipHelp"><button type="button" class="tip-tog" id="tipTog" aria-expanded="false" aria-controls="tipText" title="Show map tips"><span class="tip-sign" aria-hidden="true">+</span><span class="tip-lbl">Map tips</span></button><span class="tip-txt" id="tipText">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row up or down to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</span></div>
 			</div>
 		</div>
 		<aside class="wptab collapsed" id="wpTab" aria-label="Passage waypoints"><?php /* starts hidden: only the summary bar + buttons show until "Show table" */ ?>
@@ -2239,6 +2248,13 @@ function layoutLeftStack(){
 	ls.classList.toggle('has-cards',(bi&&bi.classList.contains('on'))||(rsEl&&rsEl.classList.contains('on')));  /* show the "hide all" toggle only when there are cards */
 }
 /* mobile master toggle: hide/show every card at once */
+/* Map tips box: +/- toggle. Collapsed by default; remembers the reader's choice per browser. */
+(function(){var box=document.getElementById('tipHelp'),b=document.getElementById('tipTog');if(!box||!b)return;
+	function set(open){box.classList.toggle('collapsed',!open);b.setAttribute('aria-expanded',open?'true':'false');
+		b.title=open?'Hide map tips':'Show map tips';b.querySelector('.tip-sign').textContent=open?'\u2212':'+';}
+	var o=false;try{o=localStorage.getItem('oyc_wm_tips')==='1';}catch(e){}set(o);
+	b.addEventListener('click',function(e){e.stopPropagation();var open=box.classList.contains('collapsed');set(open);
+		try{localStorage.setItem('oyc_wm_tips',open?'1':'0');}catch(e2){}});})();
 (function(){var b=document.getElementById('stackToggle'),ls=document.getElementById('leftStack');if(!b||!ls)return;
 	b.addEventListener('click',function(){var hide=!ls.classList.contains('stack-hidden');ls.classList.toggle('stack-hidden',hide);b.textContent=hide?'Show cards':'Hide cards';b.setAttribute('aria-label',b.textContent);});
 })();
