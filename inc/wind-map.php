@@ -1767,7 +1767,7 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    point; the row's ✕ removes it. */
 var wptShown=false;
 function wpRow(pin,i,ti){
-	/* Kept to distance, wind and seas so the column stays narrow; position and
+	/* Kept to distance, wind (+ air temp) and seas so the column stays narrow; position and
 	   pressure remain on the point's map card (and in the CSV export). */
 	var s=pinReading(pin.lat,pin.lon,ti,pin.fc),lg=legInfo(pin);
 	var prev=(i===0)?routeOrigin():pins[i-1]; /* Pt 1 is the start unless the route runs from your boat */
@@ -1778,7 +1778,8 @@ function wpRow(pin,i,ti){
 			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');}
 	var wind='<span class="s">No data</span>',sea='';
 	if(s){
-		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>';
+		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>'
+			+(s.tempF!=null?'<span class="s">'+Math.round(s.tempF)+'°F temp</span>':''); /* air temp, labelled like the map card */
 		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
