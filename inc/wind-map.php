@@ -1121,7 +1121,10 @@ function layGeom(F,M,live){
 function drawLayFor(F,M,live,force){
 	var g=layGeom(F,M,live);if(!g)return;
 	if(!force&&g.lays)return;   /* planning view: only legs you can't sail straight */
-	var len=Math.min(Math.max(g.d*1.15,0.4),6);
+	/* length in nm from the leg, but never shorter than ~120 px on screen, so
+	   the lines stay readable when zoomed out (v1.7.412; redrawn on zoom) */
+	var nmPx=156543.03*Math.cos(M[0]*Math.PI/180)/Math.pow(2,map.getZoom())/1852;
+	var len=Math.max(Math.min(Math.max(g.d*1.15,0.4),6),120*nmPx);
 	[['stbd','#1e8e3e'],['port','#c0392b']].forEach(function(sc){var o=g[sc[0]],end=destPt(M[0],M[1],o.back,len);
 		L.polyline([M,end],{color:sc[1],weight:2,opacity:.85,dashArray:'8 6',interactive:false}).addTo(layLayer);
 		L.marker(end,{icon:L.divIcon({className:'lay-lbl',html:'<b style="color:'+sc[1]+'">'+(sc[0]==='stbd'?'Stbd':'Port')+' '+pad3(o.heading+MAGVAR)+'°M</b>',iconSize:[0,0]}),interactive:false,keyboard:false,zIndexOffset:390}).addTo(layLayer);});
@@ -2852,6 +2855,7 @@ function maybeSwitchGrid(){
 	if(switched||chooseGrid()===BASIN)setFoot();
 }
 map.on('zoomend',maybeSwitchGrid);
+map.on('zoomend',function(){if(map.hasLayer(layLayer))drawLaylines();}); /* laylines keep a minimum on-screen length */
 
 /* ---------- hover pointer ---------- */
 var hoverTip=document.getElementById('hoverTip');
