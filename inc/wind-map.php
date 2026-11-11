@@ -590,6 +590,25 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .ctrl .tlabel{min-width:0}
 }
 
+/* Phones: a lean Chart tab. No Sail/Race/Fish/Cruise or My chart presets (a saved
+   My chart still opens the map that way), no Buoy 42 line, and the waypoint table
+   sits right under the time slider (moved there in JS, wpPlace) instead of
+   floating over the map; same rows, drag-to-reorder, tap-to-zoom, Hide/Show. */
+@media (max-width:760px){
+	#oycwm .presetbar .presets,#oycwm .presetbar .mine-save{display:none !important}
+	#oycwm .ctrl .erbar{display:none !important}
+	#oycwm .wptab.wp-below{position:static;width:auto;max-width:none;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;overflow:visible}
+	#oycwm .wptab.wp-below.wp-on{display:flex}
+	#oycwm .wptab.wp-below.wp-img{display:none}
+	#oycwm .wptab.wp-below .routebar{padding:6px 10px;gap:6px}
+	#oycwm .wptab.wp-below .route-info{flex-basis:100%}
+	#oycwm .wptab.wp-below .route-btns{flex-wrap:nowrap;gap:4px;margin-left:0;width:100%;justify-content:space-between}
+	#oycwm .wptab.wp-below .route-btns button,#oycwm .wptab.wp-below .route-btns a{padding:6px 8px;font-size:.66rem}
+	#oycwm .wptab.wp-below .wpt tbody tr{padding:6px 10px 6px 18px}
+	#oycwm .wptab.wp-below .wpt-foot{padding:5px 10px}
+	#oycwm.embed #map{height:clamp(300px,calc(100svh - 330px - var(--wph,0px)),640px)}
+}
+
 #oycwm:not(.embed){padding:16px;background:radial-gradient(1200px 700px at 70% -10%,#ffffff 0%,#eaf1f8 50%,#dde8f2 100%);border-radius:16px}
 /* ── Dark theme (driven by the board's data-theme="dark"): dark chrome; the
    Leaflet map and its overlays (barbs, isobars, graticule, routebar, tip help)
@@ -1936,7 +1955,7 @@ function renderWpTable(){
 	body.innerHTML=h;
 	var f=(on&&TIMES[ti]!=null)?fmt(TIMES[ti]):null;
 	document.getElementById('wptFoot').textContent=f?('Forecast for '+f.big+', '+f.small+'. Move the time slider to update.'):'';
-	if(on!==wptShown){wptShown=on;grid.classList.toggle('has-wp',on);
+	if(on!==wptShown){wptShown=on;grid.classList.toggle('has-wp',on);wpPlace();
 		setTimeout(function(){try{map.invalidateSize({pan:false});drawGraticule();}catch(e){}},0);}
 	wpToggleLabel();
 	wpFit();
@@ -1949,11 +1968,35 @@ function wpToggleLabel(){var tab=document.getElementById('wpTab'),b=document.get
 var WP_NARROW=window.matchMedia('(max-width:900px)');
 function wpFit(){
 	var wrap=document.querySelector('#oycwm .wpt-wrap');if(!wrap)return;
-	if(!WP_NARROW.matches){wrap.style.maxHeight='';return;}
+	if(!WP_NARROW.matches){wrap.style.maxHeight='';wpRoom();return;}
 	var rows=document.querySelectorAll('#wptBody tr'),h=0;
 	for(var i=0;i<rows.length&&i<2;i++)h+=rows[i].getBoundingClientRect().height;
 	wrap.style.maxHeight=h?Math.ceil(h)+'px':'';
+	wpRoom();
 }
+/* Phones: the table lives under the time slider (between it and the map), so it
+   never covers the chart. wpPlace moves the one table element there and back
+   (same element, so every handler keeps working); wpRoom shortens the map by the
+   table's height so the map still ends on screen. */
+var WP_BELOW=window.matchMedia('(max-width:760px)'),wpRoomH=-1;
+function wpPlace(){
+	var tab=document.getElementById('wpTab'),grid=document.getElementById('mapGrid');if(!tab||!grid)return;
+	var below=WP_BELOW.matches;
+	if(below&&tab.parentNode===grid)grid.parentNode.insertBefore(tab,grid);
+	else if(!below&&tab.parentNode!==grid)grid.appendChild(tab);
+	tab.classList.toggle('wp-below',below);
+	tab.classList.toggle('wp-on',grid.classList.contains('has-wp'));
+}
+function wpRoom(){
+	var tab=document.getElementById('wpTab'),root=document.getElementById('oycwm');if(!tab||!root)return;
+	var h=(tab.classList.contains('wp-below')&&tab.offsetParent)?Math.round(tab.getBoundingClientRect().height):0;
+	if(h===wpRoomH)return;wpRoomH=h;
+	root.style.setProperty('--wph',h+'px');
+	setTimeout(function(){try{map.invalidateSize({pan:false});drawGraticule();}catch(e){}},0);
+}
+wpPlace();
+if(WP_BELOW.addEventListener)WP_BELOW.addEventListener('change',function(){wpPlace();wpFit();});
+else if(WP_BELOW.addListener)WP_BELOW.addListener(function(){wpPlace();wpFit();});
 window.addEventListener('resize',wpFit);
 (function(){var b=document.getElementById('rbToggle'),tab=document.getElementById('wpTab');if(!b||!tab)return;
 	b.addEventListener('click',function(){
@@ -3149,6 +3192,7 @@ function setMode(m){
 	document.getElementById('satPanel').style.display=isImg?'flex':'none';
 	document.getElementById('ctrlBar').style.display=isImg?'none':'flex';
 	document.getElementById('erBar').style.display=isImg?'none':'';
+	var wpT=document.getElementById('wpTab');if(wpT){wpT.classList.toggle('wp-img',isImg);try{wpFit();}catch(e){}}
 	if(isImg){setParticlesVisible(false);map.removeLayer(arrowsLayer);map.removeLayer(isoLayer);map.removeLayer(buoyLayer);updateBarbHint();
 		document.getElementById('legend').style.display='none';(m==='sat')?loadSat(satWhich):loadChart();return;}
 	setTimeout(function(){map.invalidateSize();drawGraticule();},0); /* map container may have been hidden by satellite mode */
