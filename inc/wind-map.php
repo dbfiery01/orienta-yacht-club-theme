@@ -510,6 +510,14 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm.ais-far .ais-lbl{display:none}
 #oycwm .ais-note{display:none;font-size:.74rem;color:var(--mute);padding:0 18px 6px}
 #oycwm .ais-note.on{display:block}
+/* Coast Guard Local Notice to Mariners pins (inc/nav-notices.php) */
+#oycwm .nn-mk{background:none;border:none}
+#oycwm .nn-ic{transform:translate(-50%,-50%);width:22px;height:22px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+#oycwm .nn-ic svg{display:block}
+.pin-pop .nn-cat{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:#b25d00;font-weight:700}
+.pin-pop .nn-txt{display:block;margin-top:4px;max-height:180px;overflow:auto;line-height:1.4}
+.pin-pop .nn-you{display:block;margin-top:4px}
+.pin-pop .nn-src{display:block;margin-top:6px;font-size:.72rem;color:#5d6d7e}
 #oycwm .layers select{font:inherit;font-size:.74rem;border:1px solid var(--line);border-radius:6px;padding:1px 4px;background:#fff;color:var(--ink)}
 #oycwm .lay-btn{font:inherit;font-size:.74rem;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:#fff;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
 #oycwm .lay-btn::after{content:" \25BE";font-weight:400}
@@ -704,6 +712,7 @@ function oyc_wind_map_html( $embed = false ) {
 		</div>
 
 		<div class="ais-note" id="aisNote"></div>
+		<div class="ais-note" id="nnNote"></div>
 		<div class="layers" id="radarLayers" style="display:none">
 			<label><input type="checkbox" id="tgRadarWind"> Wind barbs</label>
 			<span class="hint">Past hour &rarr; +18&nbsp;h forecast (NOAA HRRR) &middot; zoom out for the national radar</span>
@@ -835,10 +844,11 @@ function oyc_wind_map_html( $embed = false ) {
 						</div>
 						<label><input type="checkbox" id="tgFleet"> Other boats</label>
 						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
+						<label title="Coast Guard Local Notice to Mariners: dredging, surveys, buoys off station, construction, safety zones"><input type="checkbox" id="tgNotice"> Notices</label>
 						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
 					</div>
-					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
+					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
 				<div class="layers lyr-sec" id="poiLayers">
 					<div class="lyr-g" role="group" aria-labelledby="lyrGP"><h3 id="lyrGP">Chart &amp; places</h3>
@@ -3708,6 +3718,60 @@ function setAis(on){
 	document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')pollAis();});
 })();
 
+/* ---------- Coast Guard Local Notice to Mariners (inc/nav-notices.php) ----------
+   The server reads the District 1 notices from NAVCEN twice a day and keeps the
+   ones in the Sound; this draws a warning pin per notice (and the outline of a
+   zone or line). Loaded once when the layer is switched on. */
+var NN={layer:L.layerGroup(),items:null,t:0,busy:false};
+function nnOn(){var t=document.getElementById('tgNotice');return !!(t&&t.checked);}
+function nnNote(t){var n=document.getElementById('nnNote');if(!n)return;n.textContent=t||'';n.classList.toggle('on',!!t);}
+function nnDate(v){
+	if(v==null||v==='')return '';
+	var n=+v;if(isFinite(n)&&n>1e9){var d=new Date(n>1e11?n:n*1000);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
+	var d2=new Date(v);if(/^\d{4}-\d{2}-\d{2}/.test(v)&&!isNaN(d2))return d2.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+	return String(v);
+}
+var NN_ICON='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2.5 23 21.5H1z" fill="#f39c12" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5.5" stroke="#3a2500" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.8" r="1.4" fill="#3a2500"/></svg>';
+function drawNotices(){
+	NN.layer.clearLayers();if(!nnOn()||!NN.items)return;
+	NN.items.forEach(function(it){
+		var pop=function(){
+			var h=(it.cat?'<span class="nn-cat">'+xmlEsc(it.cat)+'</span><br>':'')+'<b>'+xmlEsc(it.title||'Notice')+'</b>';
+			var f=nnDate(it.from),to=nnDate(it.to);
+			if(f||to)h+='<br>'+(f?xmlEsc(f):'')+(to?' &rarr; '+xmlEsc(to):'');
+			if(it.text&&it.text!==it.title)h+='<span class="nn-txt">'+xmlEsc(it.text)+'</span>';
+			if(myLoc)h+='<span class="nn-you">From you '+magBrg(myLoc.lat,myLoc.lon,it.lat,it.lon)+'°M · '+distNM(myLoc.lat,myLoc.lon,it.lat,it.lon).toFixed(1)+' nm</span>';
+			h+='<span class="nn-src">Coast Guard District 1 Local Notice to Mariners'+(it.id?' · '+xmlEsc(it.id):'')+(NN.t?' · checked '+new Date(NN.t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'')+' · <a href="https://www.navcen.uscg.gov/msi" target="_blank" rel="noopener">NAVCEN</a>. Not for navigation.</span>';
+			return h;};
+		if(it.geom){try{L.geoJSON(it.geom,{style:{color:'#e67e22',weight:2,dashArray:'6 4',fillColor:'#f39c12',fillOpacity:.12},pointToLayer:function(g,ll){return L.circleMarker(ll,{radius:3,color:'#e67e22'});}}).bindPopup(pop,{className:'pin-pop',maxWidth:300}).addTo(NN.layer);}catch(e){}}
+		L.marker([it.lat,it.lon],{icon:L.divIcon({className:'nn-mk',html:'<div class="nn-ic">'+NN_ICON+'</div>',iconSize:[0,0]}),keyboard:false,zIndexOffset:800,title:it.title||'Notice'}).bindPopup(pop,{className:'pin-pop',maxWidth:300}).addTo(NN.layer);
+	});
+	nnViewNote();
+}
+function nnViewNote(){
+	if(!nnOn()||!NN.items)return;
+	if(!NN.items.length){nnNote(NN.t?'No Coast Guard notices for the Sound right now.':'Coast Guard notices are still loading on the server. Try again in a few minutes.');return;}
+	var b=map.getBounds(),n=0;NN.items.forEach(function(it){if(b.contains([it.lat,it.lon]))n++;});
+	nnNote(n?'':NN.items.length+' Coast Guard notice'+(NN.items.length>1?'s':'')+' in the Sound, none in this view. Zoom out to see them.');
+}
+function loadNotices(){
+	if(NN.busy)return;NN.busy=true;
+	fetchT(AJAX+'?action=oyc_nn',20000).then(function(r){return r.json();}).then(function(res){
+		NN.busy=false;if(!res||!res.ok)return;
+		NN.items=res.items||[];NN.t=res.t||0;drawNotices();
+	}).catch(function(){NN.busy=false;nnNote('Couldn’t load the Coast Guard notices. Try again later.');});
+}
+function setNotices(on){
+	var t=document.getElementById('tgNotice');if(t)t.checked=on;lsSet('oyc_nn_view',on?'1':null);
+	if(on){NN.layer.addTo(map);if(NN.items)drawNotices();else loadNotices();}
+	else{NN.layer.clearLayers();map.removeLayer(NN.layer);nnNote('');}
+}
+(function(){
+	var t=document.getElementById('tgNotice');if(t)t.addEventListener('change',function(){setNotices(this.checked);});
+	map.on('moveend',nnViewNote);
+	if(lsGet('oyc_nn_view')==='1')setNotices(true);
+})();
+
 /* Small read-only API for the racers' race tools (assets/race-tools.js):
    live boat state, model wind at any point/time, and the Leaflet map. */
 window.OYCWM={
@@ -3736,12 +3800,12 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgNotice','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
-		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
+		sail:['tgChart','tgArrows','tgAnch','tgFuel','tgNotice'],
 		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
 		fish:['tgChart','tgCur','tgFish','tgFuel'],
-		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
+		cruise:['tgChart','tgArrows','tgAis','tgNotice','tgClubs','tgDine','tgFuel','tgAnch']
 	};
 	/* "My chart": the visitor's own saved setup (layers incl. Animated / Wind
 	   color, the view tab, and the map centre + zoom), kept in this browser. */
