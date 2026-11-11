@@ -489,11 +489,20 @@ add_action( 'manage_pages_custom_column', function ( $column, $post_id ) {
 	}
 }, 10, 2 );
 
-/* ── 5. Header login button: local wp_login_url ──────────── */
-// (header.php is updated separately — this hook ensures the
-//  logout link also redirects cleanly back to the home page)
+/* ── 5. Logout: stay on the page you logged out from ──────── */
+// Logout links carry redirect_to = the current page (see oyc_logout_here_url()).
+// wp-login.php still runs it through wp_safe_redirect(), so only this site's
+// URLs are followed; a logout with no redirect_to lands on the home page.
 
-add_filter( 'logout_redirect', fn() => home_url( '/' ) );
+add_filter( 'logout_redirect', function ( $redirect_to, $requested ) {
+	return $requested ? $requested : home_url( '/' );
+}, 10, 2 );
+
+/** Logout URL that returns to the page being viewed. */
+function oyc_logout_here_url() {
+	$here = isset( $_SERVER['REQUEST_URI'] ) ? home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : home_url( '/' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+	return wp_logout_url( $here );
+}
 
 /* ── 6. Replace "Howdy" in the WordPress admin toolbar ──────── */
 
@@ -763,7 +772,7 @@ add_filter( 'wp_nav_menu_objects', function ( $items, $args ) {
 			$logout->ID      = 'oyc-logout';
 			$logout->db_id   = 0;
 			$logout->title   = __( 'Logout', 'orienta-yacht-club' );
-			$logout->url     = wp_logout_url( home_url( '/' ) );
+			$logout->url     = oyc_logout_here_url();
 			$logout->classes = array( 'menu-item', 'cta', 'cta--login', 'cta--logout' );
 			$out[]           = $logout;
 			continue;

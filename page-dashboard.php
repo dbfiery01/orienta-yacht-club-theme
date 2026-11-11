@@ -151,7 +151,7 @@ get_header();
 								<a class="btn btn-primary" href="<?php echo esc_url( oyc_card_url() ); ?>"><?php esc_html_e( 'My Membership Card', 'orienta-yacht-club' ); ?></a>
 							<?php endif; ?>
 							<a class="btn btn-primary" href="<?php echo esc_url( home_url( '/edit-profile/' ) ); ?>"><?php esc_html_e( 'Edit Profile', 'orienta-yacht-club' ); ?></a>
-							<a class="btn btn-ghost" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?></a>
+							<a class="btn btn-ghost" href="<?php echo esc_url( oyc_logout_here_url() ); ?>"><?php esc_html_e( 'Log Out', 'orienta-yacht-club' ); ?></a>
 						</div>
 					</div>
 				</div>
