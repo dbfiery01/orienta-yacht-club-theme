@@ -628,3 +628,9 @@ html[data-theme="dark"] body.oyc-officer-page .officer-notice--error {
 
 /* Collapsible "+" summary row now sits on a dark panel */
 html[data-theme="dark"] body.oyc-officer-page .officer-panel--collapsible > summary { color: #e9e1d2; }
+
+/* Export Roster button sits at the right end of the member search row. */
+.officer-search .officer-btn--export {
+  margin-left: auto;
+  white-space: nowrap;
+}
