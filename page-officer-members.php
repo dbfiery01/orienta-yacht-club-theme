@@ -134,6 +134,11 @@ if ( isset( $_POST['oyc_user_update_nonce'] ) &&
 				update_user_meta( $uid, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ?? '' ) ) );
 			}
 
+			// Club fields: locker, dinghy rack (inc/roster-import.php).
+			foreach ( array_keys( oyc_member_club_fields() ) as $key ) {
+				update_user_meta( $uid, $key, sanitize_text_field( wp_unslash( $_POST[ $key ] ?? '' ) ) );
+			}
+
 			// Membership card fields (inc/member-card.php).
 			foreach ( array_keys( oyc_card_fields() ) as $key ) {
 				update_user_meta( $uid, $key, oyc_card_clean_field( $key, wp_unslash( $_POST[ $key ] ?? '' ) ) );
@@ -247,15 +252,16 @@ if ( isset( $_POST['oyc_card_import_nonce'] ) &&
 
 	$file    = $_FILES['oyc_card_csv'] ?? null;
 	$dry_run = ! empty( $_POST['oyc_card_dry_run'] );
+	$do_dir  = ! empty( $_POST['oyc_roster_directory'] );
 
 	if ( ! $file || UPLOAD_ERR_OK !== (int) $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) {
-		oyc_officer_notice( __( 'Please choose a CSV file to import.', 'orienta-yacht-club' ), 'error' );
+		oyc_officer_notice( __( 'Please choose the roster file to upload.', 'orienta-yacht-club' ), 'error' );
 	} elseif ( (int) $file['size'] > 2 * 1024 * 1024 ) {
 		oyc_officer_notice( __( 'That file is too large (2 MB limit).', 'orienta-yacht-club' ), 'error' );
-	} elseif ( ! preg_match( '/\.(csv|txt)$/i', (string) $file['name'] ) ) {
-		oyc_officer_notice( __( 'Please save the roster as a .csv file (in Excel: File → Save As → CSV).', 'orienta-yacht-club' ), 'error' );
+	} elseif ( ! preg_match( '/\.(xlsx|csv|txt)$/i', (string) $file['name'] ) ) {
+		oyc_officer_notice( __( 'Please upload the roster as an Excel (.xlsx) or .csv file.', 'orienta-yacht-club' ), 'error' );
 	} else {
-		$oyc_import            = oyc_card_import_csv( $file['tmp_name'], $dry_run );
+		$oyc_import            = oyc_roster_import( $file['tmp_name'], (string) $file['name'], $dry_run, $do_dir );
 		$oyc_import['dry_run'] = $dry_run;
 		if ( $oyc_import['error'] ) {
 			oyc_officer_notice( $oyc_import['error'], 'error' );
@@ -271,6 +277,19 @@ if ( isset( $_POST['oyc_card_import_nonce'] ) &&
 				$oyc_import['unchanged'],
 				count( $oyc_import['unmatched'] )
 			), $oyc_import['unmatched'] ? 'error' : 'success' );
+			if ( null !== $oyc_import['directory'] ) {
+				oyc_officer_notice( 0 === $oyc_import['directory']
+					? __( 'Fleet Roster directory not changed: the file has no boat, spouse, phone or address columns.', 'orienta-yacht-club' )
+					: sprintf(
+						$dry_run
+							/* translators: 1: members, 2: rows left out. */
+							? __( 'Test run: the Fleet Roster directory would be replaced with %1$d members (%2$d Expelled/Deceased rows left out).', 'orienta-yacht-club' )
+							/* translators: 1: members, 2: rows left out. */
+							: __( 'Fleet Roster directory replaced with %1$d members (%2$d Expelled/Deceased rows left out).', 'orienta-yacht-club' ),
+						$oyc_import['directory'],
+						$oyc_import['dir_skipped']
+					), 0 === $oyc_import['directory'] ? 'error' : 'success' );
+			}
 		}
 	}
 }
@@ -439,6 +458,16 @@ get_header();
 								       value="<?php echo esc_attr( get_user_meta( $oyc_edit->ID, $key, true ) ); ?>"
 								       <?php echo 'oyc_membership_type' === $key ? 'list="oyc-membership-types"' : ''; ?>
 								       <?php echo 'oyc_dues_paid_through' === $key ? 'inputmode="numeric" placeholder="' . esc_attr( current_time( 'Y' ) ) . '"' : ''; ?> />
+							</div>
+						<?php endforeach; ?>
+					</div>
+					<h3 class="officer-form__subhead"><?php esc_html_e( 'Club Facilities', 'orienta-yacht-club' ); ?></h3>
+					<div class="officer-form__grid">
+						<?php foreach ( oyc_member_club_fields() as $key => $label ) : ?>
+							<div class="officer-form__row">
+								<label for="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label>
+								<input type="text" id="<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>"
+								       value="<?php echo esc_attr( get_user_meta( $oyc_edit->ID, $key, true ) ); ?>" />
 							</div>
 						<?php endforeach; ?>
 					</div>
@@ -643,30 +672,41 @@ get_header();
 			</details>
 
 			<details class="officer-panel officer-panel--collapsible"<?php echo $oyc_import ? ' open' : ''; ?>>
-				<summary class="officer-panel__title"><?php esc_html_e( 'Import Member Numbers (CSV)', 'orienta-yacht-club' ); ?></summary>
+				<summary class="officer-panel__title"><?php esc_html_e( 'Upload Roster', 'orienta-yacht-club' ); ?></summary>
 				<div class="officer-import">
 
-				<p><?php esc_html_e( 'Load the club roster to fill in member numbers for the digital membership card. The first row must be column headings. Each row is matched to a website account by Email, then Username, then First + Last Name.', 'orienta-yacht-club' ); ?></p>
-				<p class="officer-form__hint"><?php esc_html_e( 'Columns used: Email, Username, First Name, Last Name (or one Name column), Member Number, Membership Type, Dues Paid Through, Member Since. Other columns are ignored, and blank cells never erase what is already saved.', 'orienta-yacht-club' ); ?></p>
+				<p><?php esc_html_e( 'Upload the club roster spreadsheet (.xlsx or .csv) as it is. Each row is matched to a website account by Email, then Username, then First + Last Name, and fills in Member No., Member Type, Member Since, Locker and Dinghy Rack on that member\'s profile. It can also replace the members-only Fleet Roster directory (names, spouse, boat, phones, address).', 'orienta-yacht-club' ); ?></p>
+				<p class="officer-form__hint"><?php esc_html_e( 'The heading row can be anywhere in the first 10 rows. Blank cells never erase what is already saved. Expelled and Deceased members are left out of the directory. Names, emails and addresses on accounts are not changed.', 'orienta-yacht-club' ); ?></p>
 
 				<form method="post" enctype="multipart/form-data" class="officer-form">
 					<?php wp_nonce_field( 'oyc_card_import', 'oyc_card_import_nonce' ); ?>
 					<div class="officer-form__row">
-						<label for="oyc_card_csv"><?php esc_html_e( 'Roster file (.csv)', 'orienta-yacht-club' ); ?></label>
-						<input type="file" id="oyc_card_csv" name="oyc_card_csv" accept=".csv,text/csv" required />
+						<label for="oyc_card_csv"><?php esc_html_e( 'Roster file (.xlsx or .csv)', 'orienta-yacht-club' ); ?></label>
+						<input type="file" id="oyc_card_csv" name="oyc_card_csv" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+					</div>
+					<div class="officer-form__row">
+						<label><input type="checkbox" name="oyc_roster_directory" value="1" checked /> <?php esc_html_e( 'Also replace the Fleet Roster directory with this file', 'orienta-yacht-club' ); ?></label>
 					</div>
 					<div class="officer-form__row">
 						<label><input type="checkbox" name="oyc_card_dry_run" value="1" checked /> <?php esc_html_e( 'Test run first (shows what would change, saves nothing)', 'orienta-yacht-club' ); ?></label>
 					</div>
-					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Import', 'orienta-yacht-club' ); ?></button>
+					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Upload', 'orienta-yacht-club' ); ?></button>
 				</form>
 
+				<?php if ( $oyc_import && $oyc_import['inactive'] ) : ?>
+					<h3 class="officer-form__subhead"><?php esc_html_e( 'Expelled or Deceased members who still have an account', 'orienta-yacht-club' ); ?></h3>
+					<ul class="officer-import-list">
+						<?php foreach ( $oyc_import['inactive'] as $line ) : ?>
+							<li><?php echo esc_html( $line ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
 				<?php if ( $oyc_import && ( $oyc_import['unmatched'] || $oyc_import['duplicates'] ) ) : ?>
 					<?php if ( $oyc_import['unmatched'] ) : ?>
 						<h3 class="officer-form__subhead"><?php esc_html_e( 'Rows with no matching account', 'orienta-yacht-club' ); ?></h3>
-						<p class="officer-form__hint"><?php esc_html_e( 'Add an email column, or fix the name on the website account, then import again.', 'orienta-yacht-club' ); ?></p>
+						<p class="officer-form__hint"><?php esc_html_e( 'These members have no website account, or their email and name differ from the account. Fix the account (or the roster) and upload again.', 'orienta-yacht-club' ); ?></p>
 						<ul class="officer-import-list">
-							<?php foreach ( array_slice( $oyc_import['unmatched'], 0, 100 ) as $line ) : ?>
+							<?php foreach ( array_slice( $oyc_import['unmatched'], 0, 200 ) as $line ) : ?>
 								<li><?php echo esc_html( $line ); ?></li>
 							<?php endforeach; ?>
 						</ul>

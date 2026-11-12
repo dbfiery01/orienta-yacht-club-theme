@@ -261,6 +261,7 @@ require_once get_template_directory() . '/inc/racing.php';
  * Members page or by CSV import.
  */
 require_once get_template_directory() . '/inc/member-card.php';
+require_once get_template_directory() . '/inc/roster-import.php';
 
 /**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first
