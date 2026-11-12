@@ -277,6 +277,13 @@ function oyc_roster_directory_entry( $r ) {
 		'boatLen'  => $len,
 		'boatType' => (string) ( $r['boatType'] ?? '' ),
 		'category' => (string) ( $r['oyc_membership_type'] ?? '' ),
+		// Kept for the officer export only (the directory page does not show them),
+		// so members without a website account keep these values too.
+		'since'    => (string) ( $r['oyc_member_since'] ?? '' ),
+		'locker'   => (string) ( $r['oyc_locker'] ?? '' ),
+		'dinghy'   => (string) ( $r['oyc_dinghy_rack'] ?? '' ),
+		'number'   => (string) ( $r['oyc_member_number'] ?? '' ),
+		'dues'     => (string) ( $r['oyc_dues_paid_through'] ?? '' ),
 	);
 	return array_map( fn( $v ) => is_array( $v ) ? array_map( 'sanitize_text_field', $v ) : sanitize_text_field( $v ), $entry );
 }
@@ -427,3 +434,136 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 	}
 	return $out;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Officer: export the roster (CSV that opens in Excel and re-imports as-is)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Export URL for the officer Members page button.
+ */
+function oyc_roster_export_url() {
+	return wp_nonce_url( add_query_arg( 'oyc_roster_export', '1', home_url( '/' ) ), 'oyc_roster_export' );
+}
+
+/**
+ * Build the export rows: every Fleet Roster directory member, merged with
+ * their website account (matched by email). Account values win over the
+ * directory's copy, so officer edits on the Members page show up.
+ *
+ * @return array{0:array,1:array} Header row and data rows.
+ */
+function oyc_roster_export_rows() {
+	$header = array( 'Member', 'First Name', 'Last Name', 'Phone', 'Alt Phone', 'Billing Street', 'Billing City', 'Billing State', 'Billing ZIP', 'Email', 'Member Type', 'Spouse', 'Boat Name', 'Size', 'Type', 'Member Since', 'Locker', 'Dinghy Rack', 'OYC Member No.', 'Dues Paid Through', 'Website Username', 'Account Status' );
+
+	// Accounts this officer may see, keyed by lower-case email.
+	$accounts = array();
+	foreach ( get_users( array( 'fields' => 'all' ) ) as $u ) {
+		if ( oyc_officer_can_manage_user( $u->ID ) ) {
+			$accounts[ strtolower( trim( $u->user_email ) ) ] = $u;
+		}
+	}
+	$meta = function ( $u, $k ) {
+		return $u ? (string) get_user_meta( $u->ID, $k, true ) : '';
+	};
+	$state = function ( $u ) {
+		if ( ! $u ) {
+			return '';
+		}
+		$s = function_exists( 'oyc_user_approval_state' ) ? oyc_user_approval_state( $u->ID ) : 'approved';
+		return ucfirst( $s );
+	};
+	$row = function ( $first, $last, $d, $u ) use ( $meta, $state ) {
+		$first  = '' !== $first ? $first : $meta( $u, 'first_name' );
+		$last   = '' !== $last ? $last : $meta( $u, 'last_name' );
+		$phones = isset( $d['phones'] ) && is_array( $d['phones'] ) ? array_values( $d['phones'] ) : array();
+		if ( ! $phones && $u ) {
+			$phones = array_values( array_filter( array( $meta( $u, 'oyc_phone' ), $meta( $u, 'billing_phone' ) ), 'strlen' ) );
+		}
+		$pick = function ( $dk, $mk ) use ( $d, $u, $meta ) {
+			$v = isset( $d[ $dk ] ) ? (string) $d[ $dk ] : '';
+			return '' !== $v ? $v : $meta( $u, $mk );
+		};
+		$both = function ( $dk, $mk ) use ( $d, $u, $meta ) {
+			$v = $meta( $u, $mk );
+			return '' !== $v ? $v : (string) ( $d[ $dk ] ?? '' );
+		};
+		$type = $both( 'category', 'oyc_membership_type' );
+		return array(
+			trim( $last . ( '' !== $first ? ', ' . $first : '' ), ', ' ),
+			$first,
+			$last,
+			$phones[0] ?? '',
+			$phones[1] ?? '',
+			$pick( 'street', 'billing_address_1' ),
+			$pick( 'city', 'billing_city' ),
+			$pick( 'state', 'billing_state' ),
+			$pick( 'zip', 'billing_postcode' ),
+			'' !== (string) ( $d['email'] ?? '' ) ? (string) $d['email'] : ( $u ? $u->user_email : '' ),
+			$type,
+			(string) ( $d['spouse'] ?? '' ),
+			(string) ( $d['boat'] ?? '' ),
+			rtrim( (string) ( $d['boatLen'] ?? '' ), "'" ),
+			(string) ( $d['boatType'] ?? '' ),
+			$both( 'since', 'oyc_member_since' ),
+			$both( 'locker', 'oyc_locker' ),
+			$both( 'dinghy', 'oyc_dinghy_rack' ),
+			$both( 'number', 'oyc_member_number' ),
+			$both( 'dues', 'oyc_dues_paid_through' ),
+			$u ? $u->user_login : '',
+			$u ? $state( $u ) : 'No account',
+		);
+	};
+
+	// The roster is the Fleet Roster directory (last uploaded roster); accounts
+	// that are not on it (admins, pending sign-ups, spam) are left out.
+	$rows = array();
+	foreach ( ( function_exists( 'oyc_get_roster' ) ? oyc_get_roster() : array() ) as $d ) {
+		if ( ! is_array( $d ) ) {
+			continue;
+		}
+		$em = strtolower( trim( (string) ( $d['email'] ?? '' ) ) );
+		$u  = ( '' !== $em && isset( $accounts[ $em ] ) ) ? $accounts[ $em ] : null;
+		$n = trim( (string) ( $d['name'] ?? '' ) );
+		if ( false !== strpos( $n, ',' ) ) {
+			list( $last, $first ) = array_map( 'trim', explode( ',', $n, 2 ) );
+		} else {
+			$parts = preg_split( '/\s+/', $n );
+			$last  = (string) array_pop( $parts );
+			$first = implode( ' ', $parts );
+		}
+		$rows[] = $row( $first, $last, $d, $u );
+	}
+	usort( $rows, fn( $a, $b ) => strcasecmp( $a[0], $b[0] ) );
+	return array( $header, $rows );
+}
+
+add_action( 'template_redirect', function () {
+	if ( empty( $_GET['oyc_roster_export'] ) ) {
+		return;
+	}
+	if ( ! is_user_logged_in() || ! current_user_can( 'oyc_manage_members' ) ) {
+		wp_die( esc_html__( 'You do not have permission to export the roster.', 'orienta-yacht-club' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'oyc_roster_export' );
+
+	list( $header, $rows ) = oyc_roster_export_rows();
+	if ( function_exists( 'oyc_audit_log' ) ) {
+		oyc_audit_log( 'user.roster_export', sprintf( 'Exported the roster (%d rows)', count( $rows ) ), 0 );
+	}
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename=OYC-Roster-' . current_time( 'Y-m-d' ) . '.csv' );
+	header( 'X-Robots-Tag: noindex' );
+	$out = fopen( 'php://output', 'w' );
+	fwrite( $out, "\xEF\xBB\xBF" ); // Excel reads UTF-8 with a BOM.
+	fputcsv( $out, $header, ',', '"', '\\' );
+	foreach ( $rows as $r ) {
+		// Stop Excel treating a leading = + - @ as a formula.
+		$r = array_map( fn( $v ) => preg_match( '/^[=+\-@]/', (string) $v ) ? "'" . $v : $v, $r );
+		fputcsv( $out, $r, ',', '"', '\\' );
+	}
+	fclose( $out );
+	exit;
+}, 1 );

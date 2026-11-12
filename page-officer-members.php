@@ -544,6 +544,7 @@ get_header();
 					<?php if ( $oyc_search ) : ?>
 						<a class="officer-btn" href="<?php echo esc_url( get_permalink() ); ?>"><?php esc_html_e( 'Clear', 'orienta-yacht-club' ); ?></a>
 					<?php endif; ?>
+					<a class="officer-btn officer-btn--export" href="<?php echo esc_url( oyc_roster_export_url() ); ?>" title="<?php esc_attr_e( 'Download the full club roster as a spreadsheet (opens in Excel)', 'orienta-yacht-club' ); ?>">&#8681; <?php esc_html_e( 'Export Roster', 'orienta-yacht-club' ); ?></a>
 				</form>
 
 				<p class="officer-count">
@@ -676,6 +677,7 @@ get_header();
 				<div class="officer-import">
 
 				<p><?php esc_html_e( 'Upload the club roster spreadsheet (.xlsx or .csv) as it is. Each row is matched to a website account by Email, then Username, then First + Last Name, and fills in Member No., Member Type, Member Since, Locker and Dinghy Rack on that member\'s profile. It can also replace the members-only Fleet Roster directory (names, spouse, boat, phones, address).', 'orienta-yacht-club' ); ?></p>
+				<p class="officer-form__hint"><a href="<?php echo esc_url( oyc_roster_export_url() ); ?>"><?php esc_html_e( 'Export the current roster', 'orienta-yacht-club' ); ?></a> <?php esc_html_e( 'to get a spreadsheet in the same layout: edit it in Excel and upload it here.', 'orienta-yacht-club' ); ?></p>
 				<p class="officer-form__hint"><?php esc_html_e( 'The heading row can be anywhere in the first 10 rows. Blank cells never erase what is already saved. Expelled and Deceased members are left out of the directory. Names, emails and addresses on accounts are not changed.', 'orienta-yacht-club' ); ?></p>
 
 				<form method="post" enctype="multipart/form-data" class="officer-form">
