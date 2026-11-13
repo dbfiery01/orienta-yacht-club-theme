@@ -131,17 +131,11 @@ get_header();
 							// True membership start when an officer has set it (the account's
 							// user_registered only records when the WordPress login was created,
 							// which for migrated members is years after they actually joined).
-							$oyc_since    = get_user_meta( $user->ID, 'oyc_member_since', true );
-							$oyc_since_ts = $oyc_since ? strtotime( $oyc_since ) : false;
-							if ( $oyc_since_ts ) {
-								$oyc_since_txt = date( 'F Y', $oyc_since_ts );
-							} elseif ( $oyc_since ) {
-								$oyc_since_txt = $oyc_since; // unparseable — show as typed
-							} else {
-								$oyc_since_txt = date( 'F Y', strtotime( $user->user_registered ) );
-							}
+							$oyc_since_txt = oyc_member_since_text( $user, true );
 							?>
-							<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_since_txt ); ?></p>
+							<?php if ( '' !== $oyc_since_txt ) : ?>
+								<p><strong><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_since_txt ); ?></p>
+							<?php endif; ?>
 							<?php $oyc_num = (string) get_user_meta( $user->ID, 'oyc_member_number', true ); if ( '' !== $oyc_num ) : ?>
 								<p><strong><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?>:</strong> <?php echo esc_html( $oyc_num ); ?></p>
 							<?php endif; ?>
