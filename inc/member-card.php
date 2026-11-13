@@ -439,7 +439,7 @@ function oyc_card_gear( WP_User $user ) {
 		'sloop'   => __( 'Sloop', 'orienta-yacht-club' ),
 		'ketch'   => __( 'Ketch', 'orienta-yacht-club' ),
 		'trawler' => __( 'Trawler', 'orienta-yacht-club' ),
-		'cruiser' => __( 'Express Cruiser', 'orienta-yacht-club' ),
+		'cruiser' => __( 'Power Boat', 'orienta-yacht-club' ),
 	);
 	$out  = array();
 	$boat = oyc_card_boat_glyph( $entry['boatType'] ?? '' );
@@ -456,7 +456,7 @@ function oyc_card_gear( WP_User $user ) {
 	}
 	$dinghy = $meta( 'oyc_dinghy_rack', 'dinghy' );
 	if ( oyc_card_has_value( $dinghy ) ) {
-		$out[] = array( 'dinghy', __( 'Dinghy Rack', 'orienta-yacht-club' ), __( 'Dinghy Rack', 'orienta-yacht-club' ) . ': ' . $dinghy );
+		$out[] = array( 'dinghy', __( 'Dinghy', 'orienta-yacht-club' ), __( 'Dinghy Rack', 'orienta-yacht-club' ) . ': ' . $dinghy );
 	}
 	return $out;
 }
