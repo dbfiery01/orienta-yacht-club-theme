@@ -633,6 +633,80 @@ get_header();
 						?>
 					</div>
 				<?php endif; ?>
+
+				<?php
+				// Roster members with no website account (Fleet Roster directory entries
+				// not matched to any account by email or first + last name).
+				$oyc_noacct = array();
+				if ( function_exists( 'oyc_get_roster' ) ) {
+					$oyc_norm   = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
+					$oyc_emails = array();
+					$oyc_names  = array();
+					foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $oyc_a ) {
+						$oyc_emails[ strtolower( trim( $oyc_a->user_email ) ) ] = true;
+						$oyc_names[ $oyc_norm( get_user_meta( $oyc_a->ID, 'first_name', true ) . get_user_meta( $oyc_a->ID, 'last_name', true ) ) ] = true;
+					}
+					$oyc_q = strtolower( trim( (string) $oyc_search ) );
+					foreach ( oyc_get_roster() as $oyc_e ) {
+						if ( ! is_array( $oyc_e ) ) {
+							continue;
+						}
+						$oyc_em = strtolower( trim( (string) ( $oyc_e['email'] ?? '' ) ) );
+						if ( ( '' !== $oyc_em && isset( $oyc_emails[ $oyc_em ] ) ) || isset( $oyc_names[ $oyc_norm( $oyc_e['name'] ?? '' ) ] ) ) {
+							continue;
+						}
+						if ( '' !== $oyc_q ) {
+							$oyc_hay = strtolower( implode( ' ', array( $oyc_e['name'] ?? '', $oyc_e['listed'] ?? '', $oyc_em, $oyc_e['number'] ?? '', $oyc_e['boat'] ?? '' ) ) );
+							if ( false === strpos( $oyc_hay, $oyc_q ) ) {
+								continue;
+							}
+						}
+						$oyc_noacct[] = $oyc_e;
+					}
+					usort( $oyc_noacct, fn( $a, $b ) => strcasecmp( ( $a['last'] ?? '' ) . ( $a['name'] ?? '' ), ( $b['last'] ?? '' ) . ( $b['name'] ?? '' ) ) );
+				}
+				?>
+				<?php if ( $oyc_noacct ) : ?>
+					<details class="officer-noacct"<?php echo '' !== (string) $oyc_search ? ' open' : ''; ?>>
+						<summary class="officer-count">
+							<?php printf(
+								/* translators: %d: number of roster members without a website account. */
+								esc_html( _n( '%d roster member without a website account', '%d roster members without a website account', count( $oyc_noacct ), 'orienta-yacht-club' ) ),
+								count( $oyc_noacct )
+							); ?>
+						</summary>
+						<p class="officer-noacct__hint"><?php esc_html_e( 'On the club roster (Upload Roster) but not signed up on the website yet, so they have no login or card. They show in the Fleet Roster directory.', 'orienta-yacht-club' ); ?></p>
+						<div class="officer-table-wrap">
+						<table class="officer-table officer-table--members">
+							<thead>
+								<tr>
+									<th scope="col"><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Member #', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Phone', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Member Type', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $oyc_noacct as $oyc_e ) :
+									$oyc_ph = isset( $oyc_e['phones'] ) && is_array( $oyc_e['phones'] ) ? (string) reset( $oyc_e['phones'] ) : '';
+									$oyc_em = (string) ( $oyc_e['email'] ?? '' );
+								?>
+									<tr>
+										<td class="officer-table__name"><?php echo esc_html( oyc_proper_case( (string) ( $oyc_e['name'] ?? '' ) ) ); ?></td>
+										<td class="officer-table__nowrap"><?php echo '' !== (string) ( $oyc_e['number'] ?? '' ) ? esc_html( $oyc_e['number'] ) : '—'; ?></td>
+										<td class="officer-table__email"><?php if ( '' !== $oyc_em ) : ?><a href="mailto:<?php echo esc_attr( $oyc_em ); ?>"><?php echo esc_html( $oyc_em ); ?></a><?php else : ?>—<?php endif; ?></td>
+										<td class="officer-table__nowrap"><?php echo '' !== $oyc_ph ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $oyc_ph ) ) . '">' . esc_html( $oyc_ph ) . '</a>' : '—'; ?></td>
+										<td><?php echo esc_html( (string) ( $oyc_e['category'] ?? '' ) ); ?></td>
+										<td><span class="officer-status officer-status--none"><?php esc_html_e( 'No account', 'orienta-yacht-club' ); ?></span></td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+						</div>
+					</details>
+				<?php endif; ?>
 			</div>
 
 			<details class="officer-panel officer-panel--collapsible">
