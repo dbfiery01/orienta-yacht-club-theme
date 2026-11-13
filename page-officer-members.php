@@ -422,8 +422,16 @@ get_header();
 								<span class="officer-form__hint"><?php esc_html_e( 'Only a site administrator can change this role.', 'orienta-yacht-club' ); ?></span>
 							</p>
 						<?php else : ?>
+							<?php
+							// Keep a role the picker no longer offers (e.g. Editor) if this
+							// member already has it, so saving doesn't change it.
+							$oyc_pick = $oyc_roles;
+							if ( $edit_role && ! isset( $oyc_pick[ $edit_role ] ) ) {
+								$oyc_pick = array( $edit_role => wp_roles()->get_names()[ $edit_role ] ?? $edit_role ) + $oyc_pick;
+							}
+							?>
 							<select id="role" name="role">
-								<?php foreach ( $oyc_roles as $slug => $label ) : ?>
+								<?php foreach ( $oyc_pick as $slug => $label ) : ?>
 									<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $edit_role, $slug ); ?>>
 										<?php echo esc_html( translate_user_role( $label ) ); ?>
 									</option>
@@ -685,6 +693,7 @@ get_header();
 									<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 									<th scope="col"><?php esc_html_e( 'Phone', 'orienta-yacht-club' ); ?></th>
 									<th scope="col"><?php esc_html_e( 'Member Type', 'orienta-yacht-club' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
 									<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
 								</tr>
 							</thead>
@@ -699,6 +708,7 @@ get_header();
 										<td class="officer-table__email"><?php if ( '' !== $oyc_em ) : ?><a href="mailto:<?php echo esc_attr( $oyc_em ); ?>"><?php echo esc_html( $oyc_em ); ?></a><?php else : ?>—<?php endif; ?></td>
 										<td class="officer-table__nowrap"><?php echo '' !== $oyc_ph ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $oyc_ph ) ) . '">' . esc_html( $oyc_ph ) . '</a>' : '—'; ?></td>
 										<td><?php echo esc_html( (string) ( $oyc_e['category'] ?? '' ) ); ?></td>
+										<td><?php esc_html_e( 'Not Registered', 'orienta-yacht-club' ); ?></td>
 										<td><span class="officer-status officer-status--none"><?php esc_html_e( 'No account', 'orienta-yacht-club' ); ?></span></td>
 									</tr>
 								<?php endforeach; ?>
