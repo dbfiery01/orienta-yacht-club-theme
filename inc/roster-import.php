@@ -571,3 +571,145 @@ add_action( 'template_redirect', function () {
 	fclose( $out );
 	exit;
 }, 1 );
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Not Registered members: roster entries with no website account, and enrolling them
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Fleet Roster directory entries not matched to any account by email or
+ * first + last name, sorted by last name. Optional search text filters them.
+ */
+function oyc_roster_unregistered( $search = '' ) {
+	if ( ! function_exists( 'oyc_get_roster' ) ) {
+		return array();
+	}
+	$norm   = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
+	$emails = array();
+	$names  = array();
+	foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $a ) {
+		$emails[ strtolower( trim( $a->user_email ) ) ] = true;
+		$names[ $norm( get_user_meta( $a->ID, 'first_name', true ) . get_user_meta( $a->ID, 'last_name', true ) ) ] = true;
+	}
+	$q   = strtolower( trim( (string) $search ) );
+	$out = array();
+	foreach ( oyc_get_roster() as $e ) {
+		if ( ! is_array( $e ) ) {
+			continue;
+		}
+		$em = strtolower( trim( (string) ( $e['email'] ?? '' ) ) );
+		if ( ( '' !== $em && isset( $emails[ $em ] ) ) || isset( $names[ $norm( $e['name'] ?? '' ) ] ) ) {
+			continue;
+		}
+		if ( '' !== $q ) {
+			$hay = strtolower( implode( ' ', array( $e['name'] ?? '', $e['listed'] ?? '', $em, $e['number'] ?? '', $e['boat'] ?? '' ) ) );
+			if ( false === strpos( $hay, $q ) ) {
+				continue;
+			}
+		}
+		$out[] = $e;
+	}
+	usort( $out, fn( $a, $b ) => strcasecmp( ( $a['last'] ?? '' ) . ( $a['name'] ?? '' ), ( $b['last'] ?? '' ) . ( $b['name'] ?? '' ) ) );
+	return $out;
+}
+
+/**
+ * A free username like "jsmith", "jsmith2", ...
+ */
+function oyc_roster_new_login( $first, $last, $email ) {
+	$base = sanitize_user( strtolower( remove_accents( substr( (string) $first, 0, 1 ) . preg_replace( '/[^a-z]/i', '', (string) $last ) ) ), true );
+	if ( strlen( $base ) < 3 ) {
+		$base = sanitize_user( strtok( (string) $email, '@' ), true );
+	}
+	$login = $base;
+	for ( $i = 2; username_exists( $login ); $i++ ) {
+		$login = $base . $i;
+	}
+	return $login;
+}
+
+/**
+ * Create website accounts for Not Registered roster members.
+ *
+ * Each gets a Subscriber account, approved (no officer confirm step, no email
+ * validation), with name, phone, address and the club fields from the roster.
+ * Members without a usable email, or whose email is already on an account, are
+ * skipped. With $send_email each new member gets WordPress's set-password email;
+ * without it nobody is emailed (they can use "Lost your password?" later).
+ *
+ * @return array{created:array,skipped:array}
+ */
+function oyc_roster_enroll( $dry_run = true, $send_email = false ) {
+	$out  = array( 'created' => array(), 'skipped' => array() );
+	$seen = array(); // emails used earlier in this run (e.g. a couple sharing one address).
+	foreach ( oyc_roster_unregistered() as $e ) {
+		$name  = trim( (string) ( $e['name'] ?? '' ) );
+		$last  = trim( (string) ( $e['last'] ?? '' ) );
+		$first = trim( '' !== $last && strtolower( substr( $name, -strlen( $last ) ) ) === strtolower( $last ) ? substr( $name, 0, -strlen( $last ) ) : $name );
+		if ( '' === $last ) {
+			$parts = preg_split( '/\s+/', $name );
+			$last  = (string) array_pop( $parts );
+			$first = implode( ' ', $parts );
+		}
+		$label = oyc_proper_case( $name );
+		$email = sanitize_email( (string) ( $e['email'] ?? '' ) );
+		if ( '' === $email || ! is_email( $email ) ) {
+			$out['skipped'][] = sprintf( __( '%s: no email address on the roster', 'orienta-yacht-club' ), $label );
+			continue;
+		}
+		if ( email_exists( $email ) || isset( $seen[ strtolower( $email ) ] ) ) {
+			$out['skipped'][] = sprintf( __( '%1$s: %2$s is already used by another account', 'orienta-yacht-club' ), $label, $email );
+			continue;
+		}
+		$seen[ strtolower( $email ) ] = true;
+		$login = oyc_roster_new_login( $first, $last, $email );
+		if ( $dry_run ) {
+			$out['created'][] = sprintf( '%1$s (%2$s, username %3$s)', $label, $email, $login );
+			continue;
+		}
+		$uid = wp_insert_user( array(
+			'user_login'   => $login,
+			'user_email'   => $email,
+			'user_pass'    => wp_generate_password( 24, true, true ),
+			'first_name'   => oyc_proper_case( $first ),
+			'last_name'    => oyc_proper_case( $last ),
+			'display_name' => $label,
+			'role'         => 'subscriber',
+		) );
+		if ( is_wp_error( $uid ) ) {
+			$out['skipped'][] = sprintf( __( '%1$s: %2$s', 'orienta-yacht-club' ), $label, $uid->get_error_message() );
+			continue;
+		}
+		$phones = isset( $e['phones'] ) && is_array( $e['phones'] ) ? array_values( $e['phones'] ) : array();
+		$meta   = array(
+			'active'                 => '1',              // approved: no officer Confirm step.
+			'_wpmem_user_confirmed'  => (string) time(),  // email treated as confirmed.
+			'oyc_enrolled_from_roster' => current_time( 'mysql' ),
+			'oyc_member_number'      => (string) ( $e['number'] ?? '' ),
+			'oyc_membership_type'    => (string) ( $e['category'] ?? '' ),
+			'oyc_member_since'       => (string) ( $e['since'] ?? '' ),
+			'oyc_dues_paid_through'  => (string) ( $e['dues'] ?? '' ),
+			'oyc_locker'             => (string) ( $e['locker'] ?? '' ),
+			'oyc_dinghy_rack'        => (string) ( $e['dinghy'] ?? '' ),
+			'oyc_phone'              => (string) ( $phones[0] ?? '' ),
+			'billing_phone'          => (string) ( $phones[1] ?? '' ),
+			'billing_address_1'      => (string) ( $e['street'] ?? '' ),
+			'billing_city'           => (string) ( $e['city'] ?? '' ),
+			'billing_state'          => (string) ( $e['state'] ?? '' ),
+			'billing_postcode'       => (string) ( $e['zip'] ?? '' ),
+		);
+		foreach ( $meta as $k => $v ) {
+			if ( '' !== $v ) {
+				update_user_meta( $uid, $k, $v );
+			}
+		}
+		if ( $send_email ) {
+			wp_send_new_user_notifications( $uid, 'user' );
+		}
+		if ( function_exists( 'oyc_audit_log' ) ) {
+			oyc_audit_log( 'user.enroll', sprintf( 'Enrolled roster member "%s" (%s) as %s%s', $label, $email, $login, $send_email ? ', set-password email sent' : '' ), $uid );
+		}
+		$out['created'][] = sprintf( '%1$s (%2$s, username %3$s)', $label, $email, $login );
+	}
+	return $out;
+}
