@@ -156,6 +156,32 @@ function oyc_card_lookup( $code ) {
 }
 
 /**
+ * "Member since" text: the profile value, else the member's roster entry.
+ * A bare year is shown as is (strtotime() reads "2015" as the time 20:15
+ * today, which showed this year). No fallback to the website sign-up date,
+ * which isn't when they joined the club. '' when unknown.
+ *
+ * @param bool $long Show "June 2022" when a full date was entered (else year only).
+ */
+function oyc_member_since_text( WP_User $user, $long = false ) {
+	$since = trim( (string) get_user_meta( $user->ID, 'oyc_member_since', true ) );
+	if ( '' === $since && function_exists( 'oyc_card_roster_entry' ) ) {
+		$since = trim( (string) ( oyc_card_roster_entry( $user )['since'] ?? '' ) );
+	}
+	if ( '' === $since ) {
+		return '';
+	}
+	if ( preg_match( '/^\s*(1[89]\d\d|20\d\d)\s*$/', $since, $m ) ) {
+		return $m[1];
+	}
+	$ts = strtotime( $since );
+	if ( $ts ) {
+		return date( $long ? 'F Y' : 'Y', $ts );
+	}
+	return preg_match( '/\b(1[89]\d\d|20\d\d)\b/', $since, $m ) && ! $long ? $m[1] : $since;
+}
+
+/**
  * Card details for display.
  */
 function oyc_card_data( WP_User $user ) {
@@ -165,13 +191,7 @@ function oyc_card_data( WP_User $user ) {
 	}
 	$name = oyc_proper_case( $name );
 
-	$since    = (string) get_user_meta( $user->ID, 'oyc_member_since', true );
-	$since_ts = $since ? strtotime( $since ) : false;
-	if ( $since_ts ) {
-		$since = date( 'Y', $since_ts );
-	} elseif ( '' === $since && $user->user_registered ) {
-		$since = date( 'Y', strtotime( $user->user_registered ) );
-	}
+	$since = oyc_member_since_text( $user );
 
 	return array(
 		'name'    => $name,
