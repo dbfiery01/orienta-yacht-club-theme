@@ -554,12 +554,12 @@ get_header();
 					); ?>
 				</p>
 
-				<table class="officer-table">
+				<div class="officer-table-wrap">
+				<table class="officer-table officer-table--members">
 					<thead>
 						<tr>
-							<th scope="col"><?php esc_html_e( 'Name', 'orienta-yacht-club' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Name / Username', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Member #', 'orienta-yacht-club' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Username', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Email', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Role', 'orienta-yacht-club' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Status', 'orienta-yacht-club' ); ?></th>
@@ -579,17 +579,16 @@ get_header();
 							$u_state    = oyc_user_approval_state( $u->ID );
 						?>
 							<tr>
-								<td><?php echo esc_html( $u_name ); ?></td>
-								<td><?php $u_num = (string) get_user_meta( $u->ID, 'oyc_member_number', true ); echo '' !== $u_num ? esc_html( $u_num ) : '—'; ?></td>
-								<td><?php echo esc_html( $u->user_login ); ?></td>
-								<td><a href="mailto:<?php echo esc_attr( $u->user_email ); ?>"><?php echo esc_html( $u->user_email ); ?></a></td>
+								<td class="officer-table__name"><?php echo esc_html( $u_name ); ?><span class="officer-table__login-name"><?php echo esc_html( $u->user_login ); ?></span></td>
+								<td class="officer-table__nowrap"><?php $u_num = (string) get_user_meta( $u->ID, 'oyc_member_number', true ); echo '' !== $u_num ? esc_html( $u_num ) : '—'; ?></td>
+								<td class="officer-table__email"><a href="mailto:<?php echo esc_attr( $u->user_email ); ?>"><?php echo esc_html( $u->user_email ); ?></a></td>
 								<td><?php echo esc_html( $u_role ? translate_user_role( wp_roles()->get_names()[ $u_role ] ?? $u_role ) : '—' ); ?></td>
 								<td>
 									<span class="officer-status officer-status--<?php echo esc_attr( $u_state ); ?>">
 										<?php echo esc_html( oyc_user_approval_label( $u_state ) ); ?>
 									</span>
 								</td>
-								<td><?php echo oyc_last_login_html( $u->ID ); ?></td>
+								<td class="officer-table__last-login"><?php echo oyc_last_login_html( $u->ID ); ?></td>
 								<td class="officer-table__actions">
 									<?php if ( $manageable && ! oyc_user_is_confirmed( $u->ID ) ) : ?>
 										<form method="post" style="display:inline">
@@ -612,6 +611,7 @@ get_header();
 						<?php endforeach; ?>
 					</tbody>
 				</table>
+				</div>
 				<?php oyc_last_login_local_script(); ?>
 
 				<?php if ( $oyc_total_pages > 1 ) : ?>
