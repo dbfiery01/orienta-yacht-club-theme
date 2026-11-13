@@ -544,7 +544,7 @@ function oyc_last_login_html( $user_id ) {
 	return sprintf(
 		'<time class="oyc-local-time" datetime="%s">%s</time>',
 		esc_attr( gmdate( 'c', $ts ) ),
-		esc_html( wp_date( 'M j, Y g:i a', $ts ) )
+		'<span class="oyc-lt-date">' . esc_html( wp_date( 'M j, Y', $ts ) ) . '</span><span class="oyc-lt-time">' . esc_html( wp_date( 'g:i a', $ts ) ) . '</span>'
 	);
 }
 
@@ -568,8 +568,18 @@ function oyc_last_login_local_script() {
 		document.querySelectorAll( 'time.oyc-local-time[datetime]' ).forEach( function ( el ) {
 			var d = new Date( el.getAttribute( 'datetime' ) );
 			if ( isNaN( d.getTime() ) ) { return; }
-			el.textContent = fmt.format( d );
 			el.title = full.format( d );
+			if ( el.closest( '.officer-table__last-login' ) ) {
+				// Two short lines (date, then time) so the column stays narrow.
+				var day  = d.toLocaleDateString( undefined, { year: 'numeric', month: 'short', day: 'numeric' } );
+				var time = d.toLocaleTimeString( undefined, { hour: 'numeric', minute: '2-digit' } );
+				el.textContent = '';
+				var a = document.createElement( 'span' ); a.className = 'oyc-lt-date'; a.textContent = day;
+				var b = document.createElement( 'span' ); b.className = 'oyc-lt-time'; b.textContent = time;
+				el.appendChild( a ); el.appendChild( b );
+				return;
+			}
+			el.textContent = fmt.format( d );
 		} );
 	} )();
 	</script>
