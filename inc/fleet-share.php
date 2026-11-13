@@ -79,7 +79,7 @@ function oyc_fleet_default_name( $user_id ) {
 		return '';
 	}
 	$n = trim( $u->first_name . ' ' . $u->last_name );
-	return '' !== $n ? $n : $u->display_name;
+	return oyc_proper_case( '' !== $n ? $n : $u->display_name );
 }
 
 function oyc_fleet_nocache() {

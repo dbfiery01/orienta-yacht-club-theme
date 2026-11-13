@@ -163,6 +163,7 @@ function oyc_card_data( WP_User $user ) {
 	if ( '' === $name ) {
 		$name = $user->display_name;
 	}
+	$name = oyc_proper_case( $name );
 
 	$since    = (string) get_user_meta( $user->ID, 'oyc_member_since', true );
 	$since_ts = $since ? strtotime( $since ) : false;
