@@ -91,6 +91,7 @@ add_action( 'wp_enqueue_scripts', 'oyc_enqueue_assets' );
  * Default content map (used by both Customizer and front-end).
  */
 require_once get_template_directory() . '/inc/defaults.php';
+require_once get_template_directory() . '/inc/proper-case.php';
 
 /**
  * Customizer settings.
@@ -261,6 +262,7 @@ require_once get_template_directory() . '/inc/racing.php';
  * Members page or by CSV import.
  */
 require_once get_template_directory() . '/inc/member-card.php';
+require_once get_template_directory() . '/inc/roster-import.php';
 
 /**
  * Repair YouTube oEmbed markup: WordPress caches the iframe HTML it first

@@ -316,11 +316,11 @@ get_header();
 			<?php
 			// Prefer the officer-set membership date (oyc_member_since); user_registered
 			// is only when the WP login was created (years off for migrated members).
-			$oyc_since    = get_user_meta( $user->ID, 'oyc_member_since', true );
-			$oyc_since_ts = $oyc_since ? strtotime( $oyc_since ) : false;
-			$oyc_since_txt = $oyc_since_ts ? date( 'F Y', $oyc_since_ts ) : ( $oyc_since ? $oyc_since : date( 'F Y', strtotime( $user->user_registered ) ) );
+			$oyc_since_txt = oyc_member_since_text( $user, true );
 			?>
-			<p><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>: <strong><?php echo esc_html( $oyc_since_txt ); ?></strong></p>
+			<?php if ( '' !== $oyc_since_txt ) : ?>
+				<p><?php esc_html_e( 'Member since', 'orienta-yacht-club' ); ?>: <strong><?php echo esc_html( $oyc_since_txt ); ?></strong></p>
+			<?php endif; ?>
 		</div>
 
 	</div>

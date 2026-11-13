@@ -848,7 +848,9 @@ function oyc_wind_map_html( $embed = false ) {
 						</div>
 						<label><input type="checkbox" id="tgFleet"> Other boats</label>
 						<label title="Vessels transmitting AIS (ships, ferries, tugs, larger yachts)"><input type="checkbox" id="tgAis"> AIS ships</label>
+						<?php if ( function_exists( 'oyc_nn_ready' ) && oyc_nn_ready() ) : ?>
 						<label title="Coast Guard Local Notice to Mariners: dredging, surveys, buoys off station, construction, safety zones"><input type="checkbox" id="tgNotice"> Notices</label>
+						<?php endif; ?>
 						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
 					</div>
@@ -3776,7 +3778,8 @@ function setNotices(on){
 	else{NN.layer.clearLayers();map.removeLayer(NN.layer);nnNote('');}
 }
 (function(){
-	var t=document.getElementById('tgNotice');if(t)t.addEventListener('change',function(){setNotices(this.checked);});
+	var t=document.getElementById('tgNotice');if(!t)return;   /* no toggle until the server has read NAVCEN's files */
+	t.addEventListener('change',function(){setNotices(this.checked);});
 	map.on('moveend',nnViewNote);
 	if(lsGet('oyc_nn_view')==='1')setNotices(true);
 })();

@@ -78,7 +78,7 @@ get_header();
 				</div>
 			<?php endif; ?>
 
-			<?php $oyc_badges = oyc_card_get_badges( $oyc_card_u->ID ); $oyc_badge_names = oyc_card_badge_list(); $oyc_certs = oyc_card_get_certs( $oyc_card_u->ID ); ?>
+			<?php $oyc_badges = oyc_card_get_badges( $oyc_card_u->ID ); $oyc_badge_names = oyc_card_badge_list(); $oyc_certs = oyc_card_get_certs( $oyc_card_u->ID ); $oyc_gear = oyc_card_gear( $oyc_card_u ); ?>
 
 			<div class="mcard-flip" data-oyc-flip>
 				<button type="button" class="mcard-flip__inner <?php echo $oyc_status['valid'] ? '' : 'mcard--invalid'; ?>"
@@ -97,18 +97,34 @@ get_header();
 						</span>
 						<span class="mcard__club-sub"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></span>
 
-						<?php if ( $oyc_badges ) : ?>
-							<span class="mcard__badges">
+						<?php if ( $oyc_badges || $oyc_gear ) : ?>
+							<span class="mcard__badges<?php $oyc_n = count( $oyc_badges ) + count( $oyc_gear ); echo $oyc_n > 5 ? ' is-crowded' : ''; echo $oyc_n > 7 ? ' is-packed' : ''; ?>">
 								<?php foreach ( $oyc_badges as $b ) : ?>
 									<span class="mcard__badge mcard__badge--<?php echo esc_attr( $b ); ?>" title="<?php echo esc_attr( $oyc_badge_names[ $b ] ); ?>">
 										<span class="mcard__badge-icon"><?php echo oyc_card_badge_svg( $b ); // phpcs:ignore -- static SVG ?></span>
 										<span class="mcard__badge-label"><?php echo esc_html( $oyc_badge_names[ $b ] ); ?></span>
 									</span>
 								<?php endforeach; ?>
+								<?php if ( $oyc_gear ) : ?>
+									<span class="mcard__gear">
+										<?php foreach ( $oyc_gear as $g ) : ?>
+											<span class="mcard__badge mcard__badge--gear mcard__badge--<?php echo esc_attr( $g[0] ); ?>" title="<?php echo esc_attr( $g[2] ); ?>">
+												<span class="mcard__badge-icon"><?php echo oyc_card_gear_svg( $g[0] ); // phpcs:ignore -- static SVG ?></span>
+												<span class="mcard__badge-label"><?php echo esc_html( $g[1] ); ?></span>
+											</span>
+										<?php endforeach; ?>
+									</span>
+								<?php endif; ?>
 							</span>
 						<?php endif; ?>
 
-						<span class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+						<?php $oyc_boat_name = trim( (string) ( oyc_card_roster_entry( $oyc_card_u )['boat'] ?? '' ) ); ?>
+						<span class="mcard__nameline">
+							<span class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+							<?php if ( '' !== $oyc_boat_name ) : ?>
+								<span class="mcard__boat" title="<?php esc_attr_e( 'Boat', 'orienta-yacht-club' ); ?>"><?php echo esc_html( $oyc_boat_name ); ?></span>
+							<?php endif; ?>
+						</span>
 						<span class="mcard__facts">
 							<span><span class="mcard__k"><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?></span>
 								<span class="mcard__v mcard__number"><?php echo $oyc_card['number'] ? esc_html( $oyc_card['number'] ) : '<span class="mcard__pending">' . esc_html__( 'Pending', 'orienta-yacht-club' ) . '</span>'; ?></span></span>

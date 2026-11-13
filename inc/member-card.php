@@ -156,6 +156,32 @@ function oyc_card_lookup( $code ) {
 }
 
 /**
+ * "Member since" text: the profile value, else the member's roster entry.
+ * A bare year is shown as is (strtotime() reads "2015" as the time 20:15
+ * today, which showed this year). No fallback to the website sign-up date,
+ * which isn't when they joined the club. '' when unknown.
+ *
+ * @param bool $long Show "June 2022" when a full date was entered (else year only).
+ */
+function oyc_member_since_text( WP_User $user, $long = false ) {
+	$since = trim( (string) get_user_meta( $user->ID, 'oyc_member_since', true ) );
+	if ( '' === $since && function_exists( 'oyc_card_roster_entry' ) ) {
+		$since = trim( (string) ( oyc_card_roster_entry( $user )['since'] ?? '' ) );
+	}
+	if ( '' === $since ) {
+		return '';
+	}
+	if ( preg_match( '/^\s*(1[89]\d\d|20\d\d)\s*$/', $since, $m ) ) {
+		return $m[1];
+	}
+	$ts = strtotime( $since );
+	if ( $ts ) {
+		return date( $long ? 'F Y' : 'Y', $ts );
+	}
+	return preg_match( '/\b(1[89]\d\d|20\d\d)\b/', $since, $m ) && ! $long ? $m[1] : $since;
+}
+
+/**
  * Card details for display.
  */
 function oyc_card_data( WP_User $user ) {
@@ -163,14 +189,9 @@ function oyc_card_data( WP_User $user ) {
 	if ( '' === $name ) {
 		$name = $user->display_name;
 	}
+	$name = oyc_proper_case( $name );
 
-	$since    = (string) get_user_meta( $user->ID, 'oyc_member_since', true );
-	$since_ts = $since ? strtotime( $since ) : false;
-	if ( $since_ts ) {
-		$since = date( 'Y', $since_ts );
-	} elseif ( '' === $since && $user->user_registered ) {
-		$since = date( 'Y', strtotime( $user->user_registered ) );
-	}
+	$since = oyc_member_since_text( $user );
 
 	return array(
 		'name'    => $name,
@@ -306,171 +327,7 @@ add_action( 'wp_enqueue_scripts', function () {
 	wp_enqueue_script( 'oyc-member-card', $uri . '/assets/member-card.js', array(), $ver( '/assets/member-card.js' ), true );
 }, 100 );
 
-/* ─────────────────────────────────────────────────────────────────────────────
- * Officer: CSV import of member numbers
- * ───────────────────────────────────────────────────────────────────────────── */
-
-/**
- * Map a CSV header cell to a field name.
- */
-function oyc_card_csv_header( $cell ) {
-	$h = strtolower( preg_replace( '/[^a-z0-9]+/i', ' ', (string) $cell ) );
-	$h = trim( preg_replace( '/\s+/', ' ', $h ) );
-	$map = array(
-		'email'                 => array( 'email', 'e mail', 'email address' ),
-		'login'                 => array( 'username', 'user name', 'login', 'user login' ),
-		'first'                 => array( 'first', 'first name', 'firstname', 'given name' ),
-		'last'                  => array( 'last', 'last name', 'lastname', 'surname', 'family name' ),
-		'name'                  => array( 'name', 'full name', 'member name', 'member' ),
-		'oyc_member_number'     => array( 'member number', 'member no', 'member num', 'member', 'member id', 'number', 'no', 'membership number', 'membership no' ),
-		'oyc_membership_type'   => array( 'membership type', 'member type', 'type', 'membership', 'class', 'category' ),
-		'oyc_dues_paid_through' => array( 'dues paid through', 'paid through', 'valid through', 'expires', 'expiry', 'expiration', 'dues year', 'season', 'year' ),
-		'oyc_member_since'      => array( 'member since', 'joined', 'since', 'year joined' ),
-	);
-	// "member #" and "#" arrive as "member" / "" after the cleanup above.
-	if ( preg_match( '/#/', (string) $cell ) ) {
-		return 'oyc_member_number';
-	}
-	foreach ( $map as $field => $aliases ) {
-		if ( in_array( $h, $aliases, true ) ) {
-			// "member" alone is ambiguous: a number column is far more likely in a roster.
-			if ( 'member' === $h ) {
-				return 'oyc_member_number';
-			}
-			return $field;
-		}
-	}
-	return '';
-}
-
-/**
- * Import a roster CSV. Matches each row to an account by email, then username,
- * then first + last name (only when exactly one account has that name). Blank
- * cells never overwrite existing values.
- *
- * @param string $path    Uploaded file path.
- * @param bool   $dry_run Report what would change without saving.
- * @return array{updated:int, unchanged:int, unmatched:array, duplicates:array, error:string}
- */
-function oyc_card_import_csv( $path, $dry_run = false ) {
-	$out = array( 'updated' => 0, 'unchanged' => 0, 'unmatched' => array(), 'duplicates' => array(), 'error' => '' );
-
-	$fh = fopen( $path, 'r' );
-	if ( ! $fh ) {
-		$out['error'] = __( 'The file could not be read.', 'orienta-yacht-club' );
-		return $out;
-	}
-
-	$header = fgetcsv( $fh, 0, ',', '"', '\\' );
-	if ( $header && isset( $header[0] ) ) {
-		$header[0] = preg_replace( '/^\xEF\xBB\xBF/', '', (string) $header[0] ); // Excel BOM
-	}
-	$cols = array();
-	foreach ( (array) $header as $i => $cell ) {
-		$f = oyc_card_csv_header( $cell );
-		if ( $f && ! in_array( $f, $cols, true ) ) {
-			$cols[ $i ] = $f;
-		}
-	}
-	if ( ! in_array( 'oyc_member_number', $cols, true ) && ! in_array( 'oyc_membership_type', $cols, true ) && ! in_array( 'oyc_dues_paid_through', $cols, true ) ) {
-		fclose( $fh );
-		$out['error'] = __( 'No "Member Number", "Membership Type" or "Dues Paid Through" column was found in the first row.', 'orienta-yacht-club' );
-		return $out;
-	}
-	if ( ! array_intersect( array( 'email', 'login', 'first', 'name' ), $cols ) ) {
-		fclose( $fh );
-		$out['error'] = __( 'The file needs an Email, Username or Name column to match rows to accounts.', 'orienta-yacht-club' );
-		return $out;
-	}
-
-	$fields   = array_merge( array_keys( oyc_card_fields() ), array( 'oyc_member_since' ) );
-	$seen_num = array();
-	$line     = 1;
-
-	while ( ( $row = fgetcsv( $fh, 0, ',', '"', '\\' ) ) !== false ) {
-		$line++;
-		if ( ! array_filter( $row, fn( $v ) => '' !== trim( (string) $v ) ) ) {
-			continue;
-		}
-		$r = array();
-		foreach ( $cols as $i => $f ) {
-			$r[ $f ] = trim( (string) ( $row[ $i ] ?? '' ) );
-		}
-		if ( empty( $r['first'] ) && empty( $r['last'] ) && ! empty( $r['name'] ) ) {
-			$n = $r['name'];
-			if ( false !== strpos( $n, ',' ) ) { // "Smith, John"
-				list( $l, $fn ) = array_map( 'trim', explode( ',', $n, 2 ) );
-				$r['first'] = $fn;
-				$r['last']  = $l;
-			} else {
-				$parts      = preg_split( '/\s+/', $n );
-				$r['last']  = array_pop( $parts );
-				$r['first'] = implode( ' ', $parts );
-			}
-		}
-
-		$user = null;
-		if ( ! empty( $r['email'] ) && is_email( $r['email'] ) ) {
-			$user = get_user_by( 'email', $r['email'] );
-		}
-		if ( ! $user && ! empty( $r['login'] ) ) {
-			$user = get_user_by( 'login', $r['login'] );
-		}
-		if ( ! $user && ! empty( $r['first'] ) && ! empty( $r['last'] ) ) {
-			$found = get_users( array(
-				'number'     => 2,
-				'meta_query' => array(
-					'relation' => 'AND',
-					array( 'key' => 'first_name', 'value' => $r['first'] ),
-					array( 'key' => 'last_name', 'value' => $r['last'] ),
-				),
-			) );
-			if ( 1 === count( $found ) ) {
-				$user = $found[0];
-			}
-		}
-
-		$label = trim( ( $r['first'] ?? '' ) . ' ' . ( $r['last'] ?? '' ) );
-		if ( '' === $label ) {
-			$label = $r['email'] ?? ( $r['login'] ?? '' );
-		}
-
-		if ( ! $user || ! oyc_officer_can_manage_user( $user->ID ) ) {
-			$out['unmatched'][] = sprintf( __( 'Row %1$d: %2$s', 'orienta-yacht-club' ), $line, $label ? $label : __( '(no name)', 'orienta-yacht-club' ) );
-			continue;
-		}
-
-		$changed = false;
-		foreach ( $fields as $f ) {
-			if ( ! isset( $r[ $f ] ) || '' === $r[ $f ] ) {
-				continue;
-			}
-			$val = 'oyc_member_since' === $f ? sanitize_text_field( $r[ $f ] ) : oyc_card_clean_field( $f, $r[ $f ] );
-			if ( '' === $val ) {
-				continue;
-			}
-			if ( 'oyc_member_number' === $f ) {
-				if ( isset( $seen_num[ $val ] ) && $seen_num[ $val ] !== $user->ID ) {
-					$out['duplicates'][] = sprintf( __( 'Row %1$d: member number %2$s is also on an earlier row', 'orienta-yacht-club' ), $line, $val );
-				}
-				$seen_num[ $val ] = $user->ID;
-			}
-			if ( (string) get_user_meta( $user->ID, $f, true ) !== $val ) {
-				$changed = true;
-				if ( ! $dry_run ) {
-					update_user_meta( $user->ID, $f, $val );
-				}
-			}
-		}
-		$out[ $changed ? 'updated' : 'unchanged' ]++;
-	}
-	fclose( $fh );
-
-	if ( ! $dry_run && function_exists( 'oyc_audit_log' ) ) {
-		oyc_audit_log( 'user.card_import', sprintf( 'Imported member numbers from CSV: %d updated, %d unchanged, %d unmatched', $out['updated'], $out['unchanged'], count( $out['unmatched'] ) ), 0 );
-	}
-	return $out;
-}
+/* Roster CSV/Excel import: see inc/roster-import.php. */
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Card badges (fun icons on the front of the card)
@@ -513,6 +370,174 @@ function oyc_card_badge_svg( $slug ) {
 		'fish'  => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 21c4-6 13-8 20-3l5-4v12l-5-4c-7 5-16 3-20-1z" fill="currentColor"/><circle cx="13" cy="20" r="1.4" fill="#0b2a4a"/><path d="M20 4v7a3 3 0 0 1-6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
 		// "42 & U" lettering.
 		'u42'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><text x="20" y="19" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="800" font-size="15" fill="currentColor">42</text><text x="20" y="31" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">&amp; U</text></svg>',
+	);
+	return $svgs[ $slug ] ?? '';
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Boat, locker and dinghy rack glyphs (front of the card, from roster data)
+ * Shown only when the member's data has them; members can't toggle these.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The member's Fleet Roster directory entry (boat name/size/type live only
+ * there), matched by email, then by first + last name.
+ */
+function oyc_card_roster_entry( WP_User $user ) {
+	static $cache = array();
+	if ( isset( $cache[ $user->ID ] ) ) {
+		return $cache[ $user->ID ];
+	}
+	$found = array();
+	if ( function_exists( 'oyc_get_roster' ) ) {
+		$norm  = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
+		$email = strtolower( trim( $user->user_email ) );
+		$name  = $norm( $user->first_name . $user->last_name );
+		$by_name = array();
+		foreach ( oyc_get_roster() as $e ) {
+			if ( ! is_array( $e ) ) {
+				continue;
+			}
+			if ( '' !== $email && strtolower( trim( (string) ( $e['email'] ?? '' ) ) ) === $email ) {
+				$found = $e;
+				break;
+			}
+			if ( ! $by_name && '' !== $name && $norm( $e['name'] ?? '' ) === $name ) {
+				$by_name = $e;
+			}
+		}
+		if ( ! $found ) {
+			$found = $by_name;
+		}
+	}
+	$cache[ $user->ID ] = $found;
+	return $found;
+}
+
+/**
+ * Roster boat type => glyph slug. Sloop and any sail boat → sloop, Ketch (and
+ * other two-masters) → ketch, Trawler → trawler, Power → express cruiser.
+ * Returns '' for blank or unrecognised types (no glyph).
+ */
+function oyc_card_boat_glyph( $type ) {
+	$t = strtolower( trim( (string) $type ) );
+	if ( '' === $t ) {
+		return '';
+	}
+	if ( preg_match( '/ketch|yawl|schooner/', $t ) ) {
+		return 'ketch';
+	}
+	if ( false !== strpos( $t, 'trawler' ) ) {
+		return 'trawler';
+	}
+	if ( preg_match( '/power|motor|cruiser|express|sport ?fish|center console|runabout|lobster/', $t ) ) {
+		return 'cruiser';
+	}
+	if ( preg_match( '/sloop|sail|cutter|catamaran|trimaran|sunfish|laser|day ?sailer/', $t ) ) {
+		return 'sloop';
+	}
+	return '';
+}
+
+/**
+ * Locker / Dinghy Rack: hidden when blank or "No", shown for anything else.
+ */
+function oyc_card_has_value( $v ) {
+	$v = strtolower( trim( (string) $v, " \t\n\r\0\x0B." ) );
+	return '' !== $v && 'no' !== $v;
+}
+
+/**
+ * Glyphs for the front of the card: list of [slug, label, title].
+ */
+function oyc_card_gear( WP_User $user ) {
+	$entry = oyc_card_roster_entry( $user );
+	$meta  = function ( $mk, $dk ) use ( $user, $entry ) {
+		$v = trim( (string) get_user_meta( $user->ID, $mk, true ) );
+		return '' !== $v ? $v : trim( (string) ( $entry[ $dk ] ?? '' ) );
+	};
+	$labels = array(
+		'sloop'   => __( 'Sloop', 'orienta-yacht-club' ),
+		'ketch'   => __( 'Ketch', 'orienta-yacht-club' ),
+		'trawler' => __( 'Trawler', 'orienta-yacht-club' ),
+		'cruiser' => __( 'Power Boat', 'orienta-yacht-club' ),
+	);
+	$out  = oyc_card_role_glyphs( $user );
+	$boat = oyc_card_boat_glyph( $entry['boatType'] ?? '' );
+	if ( $boat ) {
+		$title = trim( implode( ' · ', array_filter( array( (string) ( $entry['boat'] ?? '' ), trim( ( $entry['boatLen'] ?? '' ) . ' ' . ( $entry['boatType'] ?? '' ) ) ), 'strlen' ) ) );
+		$out[] = array( 'boat-' . $boat, $labels[ $boat ], $title );
+	}
+	$locker = $meta( 'oyc_locker', 'locker' );
+	if ( oyc_card_has_value( $locker ) ) {
+		$is_num = (bool) preg_match( '/\d/', $locker );
+		/* translators: %s: locker number(s). */
+		$label = $is_num ? sprintf( __( 'Locker %s', 'orienta-yacht-club' ), $locker ) : __( 'Locker', 'orienta-yacht-club' );
+		$out[] = array( 'locker', $label, $is_num ? $label : __( 'Locker', 'orienta-yacht-club' ) . ': ' . $locker );
+	}
+	$dinghy = $meta( 'oyc_dinghy_rack', 'dinghy' );
+	if ( oyc_card_has_value( $dinghy ) ) {
+		$out[] = array( 'dinghy', __( 'Dinghy', 'orienta-yacht-club' ), __( 'Dinghy Rack', 'orienta-yacht-club' ) . ': ' . $dinghy );
+	}
+	return $out;
+}
+
+/**
+ * Role glyphs (nothing for a plain Subscriber): Club Officer and Race
+ * Committee → "Officer"; Administrator → "Admin"; any Trustee role → "Board Member".
+ */
+function oyc_card_role_glyphs( WP_User $user ) {
+	$names   = function_exists( 'wp_roles' ) ? wp_roles()->get_names() : array();
+	$officer = false;
+	$admin   = false;
+	$board   = false;
+	foreach ( (array) $user->roles as $role ) {
+		$label = strtolower( $role . ' ' . ( $names[ $role ] ?? '' ) );
+		if ( false !== strpos( $label, 'trustee' ) ) {
+			$board = true;
+		} elseif ( 'administrator' === $role ) {
+			$admin = true;
+		} elseif ( in_array( $role, array( 'oyc_officer', 'oyc_race_committee' ), true ) ) {
+			$officer = true;
+		}
+	}
+	$out = array();
+	if ( $officer ) {
+		$out[] = array( 'officer', __( 'Officer', 'orienta-yacht-club' ), __( 'Club Officer', 'orienta-yacht-club' ) );
+	}
+	if ( $admin ) {
+		$out[] = array( 'admin', __( 'Admin', 'orienta-yacht-club' ), __( 'Website administrator', 'orienta-yacht-club' ) );
+	}
+	if ( $board ) {
+		$out[] = array( 'board', __( 'Board Member', 'orienta-yacht-club' ), __( 'Board of Trustees', 'orienta-yacht-club' ) );
+	}
+	return $out;
+}
+
+/**
+ * Inline SVG for a boat / locker / dinghy glyph (40×40, currentColor; bow to the right).
+ */
+function oyc_card_gear_svg( $slug ) {
+	$wave = '<path d="M4 35c3 0 3-1.5 6-1.5s3 1.5 6 1.5 3-1.5 6-1.5 3 1.5 6 1.5 3-1.5 6-1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+	$svgs = array(
+		// Sloop: one mast, mainsail + jib.
+		'boat-sloop'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M19 5v20h-9z" fill="currentColor"/><path d="M21 8l10 17H21z" fill="currentColor" opacity=".75"/><path d="M6 27h28l-4.5 4.5H10z" fill="currentColor"/>' . $wave . '</svg>',
+		// Ketch: tall mainmast forward, shorter mizzen aft, jib.
+		'boat-ketch'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M22 4v21h-8z" fill="currentColor"/><path d="M24 8l8 17h-8z" fill="currentColor" opacity=".75"/><path d="M12 12v13H6z" fill="currentColor"/><path d="M5 27h30l-4.5 4.5H9z" fill="currentColor"/>' . $wave . '</svg>',
+		// Trawler: high bow, deckhouse with windows, flybridge, mast.
+		'boat-trawler' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 23h33l-3 8H8z" fill="currentColor"/><path d="M9 23v-8h20l3 8z" fill="currentColor"/><rect x="12" y="10" width="11" height="5" rx="1" fill="currentColor" opacity=".8"/><path d="M17.5 10V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 17.5h4v3h-4zM18 17.5h4v3h-4zM24 17.5h3.5l1.2 3H24z" fill="#0b2a4a"/>' . $wave . '</svg>',
+		// Express cruiser: low sleek hull, raked windscreen, radar arch.
+		'boat-cruiser' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 24h28l6-1-4 7H8z" fill="currentColor"/><path d="M11 24l2-5h10l7 5z" fill="currentColor" opacity=".8"/><path d="M14 19l2.5-6h4l1 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M23.5 19.5l3 2.7" stroke="#0b2a4a" stroke-width="1.4"/>' . $wave . '</svg>',
+		// Officer: anchor under a star.
+		'officer'      => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="currentColor"/><circle cx="20" cy="16.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 18.8V35M14.5 22h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9 27c0 5 5 8 11 8s11-3 11-8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6.5 29.5L9 26.5l2.8 2.6M33.5 29.5L31 26.5l-2.8 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		// Admin: key.
+		'admin'        => '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="13" cy="15" r="7.5" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="13" cy="15" r="2.4" fill="currentColor"/><path d="M18.5 20.5L33 35M27 29l3-3M30.5 32.5l3-3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+		// Board member: gavel and block.
+		'board'        => '<svg viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(-40 18 15)"><rect x="9" y="9" width="18" height="9" rx="2" fill="currentColor"/><rect x="7" y="8" width="3" height="11" rx="1" fill="currentColor"/><rect x="26" y="8" width="3" height="11" rx="1" fill="currentColor"/><rect x="16.5" y="17" width="3" height="17" rx="1.5" fill="currentColor"/></g><rect x="18" y="31" width="17" height="4" rx="1.5" fill="currentColor"/><rect x="20" y="28.5" width="13" height="3" rx="1" fill="currentColor" opacity=".75"/></svg>',
+		// Locker: two-door cabinet with handles and vents.
+		'locker'       => '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="5" width="22" height="30" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 5v30" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 10h5M12.5 13h5M22.5 10h5M22.5 13h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M17.3 20v4M22.7 20v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+		// Dinghy: small tender with a seat and crossed oars, on the rack bar.
+		'dinghy'       => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 13l24 13M32 13L8 26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 21h30l-5 8H11z" fill="currentColor"/><path d="M5 21h30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 24h6" stroke="#0b2a4a" stroke-width="1.6" stroke-linecap="round"/><path d="M5 33h30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 33v3M31 33v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
 	);
 	return $svgs[ $slug ] ?? '';
 }

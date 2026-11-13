@@ -96,8 +96,25 @@
 .mcard__badge--power .mcard__badge-icon { background: radial-gradient(circle at 35% 30%, #8a3a2c, #3a120c 70%); }
 .mcard__badge--u42 .mcard__badge-icon { color: #04162a; background: radial-gradient(circle at 35% 30%, #f1d08a, #b08a3e 75%); }
 .mcard__badge--fish .mcard__badge-icon circle { fill: #0d3b33; }
+/* Boat / locker / dinghy glyphs: from roster data, grouped on the right as rounded squares. */
+.mcard__gear { display: flex; gap: 6px; margin-left: auto; }
+.mcard__badge--gear .mcard__badge-icon { border-radius: 8px; color: #e6c06a; background: linear-gradient(160deg, #123f66, #071d33); box-shadow: inset 0 0 0 1.5px rgba(212, 168, 81, 0.75), 0 2px 4px rgba(0, 0, 0, 0.35); }
+.mcard__badges.is-crowded { gap: 4px; }
+.mcard__badges.is-crowded .mcard__gear { gap: 4px; }
+.mcard__badges.is-crowded .mcard__badge { width: 38px; }
+.mcard__badges.is-crowded .mcard__badge-icon { width: 27px; height: 27px; }
+.mcard__badges.is-crowded .mcard__badge-icon svg { width: 20px; height: 20px; }
+.mcard__badges.is-packed { gap: 2px; }
+.mcard__badges.is-packed .mcard__gear { gap: 2px; }
+.mcard__badges.is-packed .mcard__badge { width: 32px; }
+.mcard__badges.is-packed .mcard__badge-icon { width: 24px; height: 24px; }
+.mcard__badges.is-packed .mcard__badge-icon svg { width: 18px; height: 18px; }
+.mcard__badges.is-packed .mcard__badge-label { font-size: 5.5px; letter-spacing: 0.02em; }
 .mcard__badge-label { font-size: 6.5px; line-height: 1.15; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(245, 239, 226, 0.8); }
 
+.mcard__nameline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 9px; margin: auto 0 4px; min-width: 0; }
+.mcard__nameline .mcard__name { margin: 0; }
+.mcard__boat { font-size: 11px; font-weight: 600; font-style: italic; letter-spacing: 0.02em; color: #e6c06a; overflow-wrap: anywhere; }
 .mcard__name { display: block; margin: auto 0 4px; font-size: 17px; font-weight: 700; letter-spacing: 0.01em; overflow-wrap: anywhere; }
 .mcard__facts { display: flex; flex-wrap: wrap; gap: 2px 12px; padding-right: 54px; }
 .mcard__k { display: block; font-size: 7px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(245, 239, 226, 0.65); }
