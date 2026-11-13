@@ -118,7 +118,13 @@ get_header();
 							</span>
 						<?php endif; ?>
 
-						<span class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+						<?php $oyc_boat_name = trim( (string) ( oyc_card_roster_entry( $oyc_card_u )['boat'] ?? '' ) ); ?>
+						<span class="mcard__nameline">
+							<span class="mcard__name"><?php echo esc_html( $oyc_card['name'] ); ?></span>
+							<?php if ( '' !== $oyc_boat_name ) : ?>
+								<span class="mcard__boat" title="<?php esc_attr_e( 'Boat', 'orienta-yacht-club' ); ?>"><?php echo esc_html( $oyc_boat_name ); ?></span>
+							<?php endif; ?>
+						</span>
 						<span class="mcard__facts">
 							<span><span class="mcard__k"><?php esc_html_e( 'Member No.', 'orienta-yacht-club' ); ?></span>
 								<span class="mcard__v mcard__number"><?php echo $oyc_card['number'] ? esc_html( $oyc_card['number'] ) : '<span class="mcard__pending">' . esc_html__( 'Pending', 'orienta-yacht-club' ) . '</span>'; ?></span></span>
