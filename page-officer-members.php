@@ -575,7 +575,7 @@ get_header();
 							// display_name defaults to the username when no real name is
 							// recorded, which made the Name column read as usernames.
 							$u_name     = trim( $u->first_name . ' ' . $u->last_name );
-							$u_name     = '' !== $u_name ? $u_name : $u->display_name;
+							$u_name     = oyc_proper_case( '' !== $u_name ? $u_name : $u->display_name );
 							$u_state    = oyc_user_approval_state( $u->ID );
 						?>
 							<tr>

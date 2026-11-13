@@ -163,6 +163,7 @@ function oyc_card_data( WP_User $user ) {
 	if ( '' === $name ) {
 		$name = $user->display_name;
 	}
+	$name = oyc_proper_case( $name );
 
 	$since    = (string) get_user_meta( $user->ID, 'oyc_member_since', true );
 	$since_ts = $since ? strtotime( $since ) : false;
@@ -441,7 +442,7 @@ function oyc_card_gear( WP_User $user ) {
 		'trawler' => __( 'Trawler', 'orienta-yacht-club' ),
 		'cruiser' => __( 'Power Boat', 'orienta-yacht-club' ),
 	);
-	$out  = array();
+	$out  = oyc_card_role_glyphs( $user );
 	$boat = oyc_card_boat_glyph( $entry['boatType'] ?? '' );
 	if ( $boat ) {
 		$title = trim( implode( ' · ', array_filter( array( (string) ( $entry['boat'] ?? '' ), trim( ( $entry['boatLen'] ?? '' ) . ' ' . ( $entry['boatType'] ?? '' ) ) ), 'strlen' ) ) );
@@ -462,6 +463,32 @@ function oyc_card_gear( WP_User $user ) {
 }
 
 /**
+ * Role glyphs (nothing for a plain Subscriber): Club Officer, Race Committee
+ * and Administrator → "Officer"; any Trustee role → "Board Member".
+ */
+function oyc_card_role_glyphs( WP_User $user ) {
+	$names   = function_exists( 'wp_roles' ) ? wp_roles()->get_names() : array();
+	$officer = false;
+	$board   = false;
+	foreach ( (array) $user->roles as $role ) {
+		$label = strtolower( $role . ' ' . ( $names[ $role ] ?? '' ) );
+		if ( false !== strpos( $label, 'trustee' ) ) {
+			$board = true;
+		} elseif ( in_array( $role, array( 'administrator', 'oyc_officer', 'oyc_race_committee' ), true ) ) {
+			$officer = true;
+		}
+	}
+	$out = array();
+	if ( $officer ) {
+		$out[] = array( 'officer', __( 'Officer', 'orienta-yacht-club' ), __( 'Club Officer', 'orienta-yacht-club' ) );
+	}
+	if ( $board ) {
+		$out[] = array( 'board', __( 'Board Member', 'orienta-yacht-club' ), __( 'Board of Trustees', 'orienta-yacht-club' ) );
+	}
+	return $out;
+}
+
+/**
  * Inline SVG for a boat / locker / dinghy glyph (40×40, currentColor; bow to the right).
  */
 function oyc_card_gear_svg( $slug ) {
@@ -475,6 +502,10 @@ function oyc_card_gear_svg( $slug ) {
 		'boat-trawler' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 23h33l-3 8H8z" fill="currentColor"/><path d="M9 23v-8h20l3 8z" fill="currentColor"/><rect x="12" y="10" width="11" height="5" rx="1" fill="currentColor" opacity=".8"/><path d="M17.5 10V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 17.5h4v3h-4zM18 17.5h4v3h-4zM24 17.5h3.5l1.2 3H24z" fill="#0b2a4a"/>' . $wave . '</svg>',
 		// Express cruiser: low sleek hull, raked windscreen, radar arch.
 		'boat-cruiser' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 24h28l6-1-4 7H8z" fill="currentColor"/><path d="M11 24l2-5h10l7 5z" fill="currentColor" opacity=".8"/><path d="M14 19l2.5-6h4l1 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M23.5 19.5l3 2.7" stroke="#0b2a4a" stroke-width="1.4"/>' . $wave . '</svg>',
+		// Officer: anchor under a star.
+		'officer'      => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="currentColor"/><circle cx="20" cy="16.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 18.8V35M14.5 22h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9 27c0 5 5 8 11 8s11-3 11-8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6.5 29.5L9 26.5l2.8 2.6M33.5 29.5L31 26.5l-2.8 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		// Board member: gavel and block.
+		'board'        => '<svg viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(-40 18 15)"><rect x="9" y="9" width="18" height="9" rx="2" fill="currentColor"/><rect x="7" y="8" width="3" height="11" rx="1" fill="currentColor"/><rect x="26" y="8" width="3" height="11" rx="1" fill="currentColor"/><rect x="16.5" y="17" width="3" height="17" rx="1.5" fill="currentColor"/></g><rect x="18" y="31" width="17" height="4" rx="1.5" fill="currentColor"/><rect x="20" y="28.5" width="13" height="3" rx="1" fill="currentColor" opacity=".75"/></svg>',
 		// Locker: two-door cabinet with handles and vents.
 		'locker'       => '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="5" width="22" height="30" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 5v30" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 10h5M12.5 13h5M22.5 10h5M22.5 13h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M17.3 20v4M22.7 20v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
 		// Dinghy: small tender with a seat and crossed oars, on the rack bar.

@@ -91,6 +91,7 @@ add_action( 'wp_enqueue_scripts', 'oyc_enqueue_assets' );
  * Default content map (used by both Customizer and front-end).
  */
 require_once get_template_directory() . '/inc/defaults.php';
+require_once get_template_directory() . '/inc/proper-case.php';
 
 /**
  * Customizer settings.
