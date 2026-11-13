@@ -247,6 +247,27 @@ if ( isset( $_POST['oyc_card_reissue_nonce'] ) &&
 
 $oyc_import = null;
 
+/* ── Enroll Not Registered roster members ────────────────────────────────── */
+
+$oyc_enroll = null;
+if ( isset( $_POST['oyc_roster_enroll_nonce'] ) &&
+     wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_roster_enroll_nonce'] ) ), 'oyc_roster_enroll' ) &&
+     current_user_can( 'oyc_manage_members' ) && function_exists( 'oyc_roster_enroll' ) ) {
+	$oyc_dry    = ! empty( $_POST['oyc_enroll_dry_run'] );
+	$oyc_mail   = ! empty( $_POST['oyc_enroll_email'] );
+	$oyc_enroll = oyc_roster_enroll( $oyc_dry, $oyc_mail );
+	$oyc_enroll['dry_run'] = $oyc_dry;
+	oyc_officer_notice( sprintf(
+		$oyc_dry
+			/* translators: 1: accounts that would be created, 2: members skipped. */
+			? __( 'Test run, nothing created: %1$d members would get an account, %2$d skipped. Untick "Test run first" to enroll them.', 'orienta-yacht-club' )
+			/* translators: 1: accounts created, 2: members skipped. */
+			: __( 'Enrolled %1$d members on the website, %2$d skipped.', 'orienta-yacht-club' ),
+		count( $oyc_enroll['created'] ),
+		count( $oyc_enroll['skipped'] )
+	) . ( ! $oyc_dry ? ' ' . ( $oyc_mail ? __( 'Each was emailed a link to set their password.', 'orienta-yacht-club' ) : __( 'No emails were sent.', 'orienta-yacht-club' ) ) : '' ) );
+}
+
 if ( isset( $_POST['oyc_card_import_nonce'] ) &&
      wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['oyc_card_import_nonce'] ) ), 'oyc_card_import' ) ) {
 
@@ -642,40 +663,9 @@ get_header();
 					</div>
 				<?php endif; ?>
 
-				<?php
-				// Roster members with no website account (Fleet Roster directory entries
-				// not matched to any account by email or first + last name).
-				$oyc_noacct = array();
-				if ( function_exists( 'oyc_get_roster' ) ) {
-					$oyc_norm   = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
-					$oyc_emails = array();
-					$oyc_names  = array();
-					foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $oyc_a ) {
-						$oyc_emails[ strtolower( trim( $oyc_a->user_email ) ) ] = true;
-						$oyc_names[ $oyc_norm( get_user_meta( $oyc_a->ID, 'first_name', true ) . get_user_meta( $oyc_a->ID, 'last_name', true ) ) ] = true;
-					}
-					$oyc_q = strtolower( trim( (string) $oyc_search ) );
-					foreach ( oyc_get_roster() as $oyc_e ) {
-						if ( ! is_array( $oyc_e ) ) {
-							continue;
-						}
-						$oyc_em = strtolower( trim( (string) ( $oyc_e['email'] ?? '' ) ) );
-						if ( ( '' !== $oyc_em && isset( $oyc_emails[ $oyc_em ] ) ) || isset( $oyc_names[ $oyc_norm( $oyc_e['name'] ?? '' ) ] ) ) {
-							continue;
-						}
-						if ( '' !== $oyc_q ) {
-							$oyc_hay = strtolower( implode( ' ', array( $oyc_e['name'] ?? '', $oyc_e['listed'] ?? '', $oyc_em, $oyc_e['number'] ?? '', $oyc_e['boat'] ?? '' ) ) );
-							if ( false === strpos( $oyc_hay, $oyc_q ) ) {
-								continue;
-							}
-						}
-						$oyc_noacct[] = $oyc_e;
-					}
-					usort( $oyc_noacct, fn( $a, $b ) => strcasecmp( ( $a['last'] ?? '' ) . ( $a['name'] ?? '' ), ( $b['last'] ?? '' ) . ( $b['name'] ?? '' ) ) );
-				}
-				?>
+				<?php $oyc_noacct = function_exists( 'oyc_roster_unregistered' ) ? oyc_roster_unregistered( $oyc_search ) : array(); ?>
 				<?php if ( $oyc_noacct ) : ?>
-					<details class="officer-noacct"<?php echo '' !== (string) $oyc_search ? ' open' : ''; ?>>
+					<details class="officer-noacct" id="not-registered"<?php echo ( '' !== (string) $oyc_search || $oyc_enroll ) ? ' open' : ''; ?>>
 						<summary class="officer-count">
 							<?php printf(
 								/* translators: %d: number of roster members without a website account. */
@@ -684,6 +674,34 @@ get_header();
 							); ?>
 						</summary>
 						<p class="officer-noacct__hint"><?php esc_html_e( 'On the club roster (Upload Roster) but not signed up on the website yet, so they have no login or card. They show in the Fleet Roster directory.', 'orienta-yacht-club' ); ?></p>
+						<?php if ( '' === (string) $oyc_search ) : ?>
+							<form method="post" action="#not-registered" class="officer-form officer-enroll">
+								<?php wp_nonce_field( 'oyc_roster_enroll', 'oyc_roster_enroll_nonce' ); ?>
+								<p class="officer-form__subhead"><?php esc_html_e( 'Enroll them on the website', 'orienta-yacht-club' ); ?></p>
+								<p class="officer-form__hint"><?php esc_html_e( 'Creates an approved Subscriber account for each member below who has an email address, filled in from the roster (name, phone, address, member no., type, since, locker, dinghy rack), so they get a login and a membership card. Members with no email, or whose email is already on an account, are skipped.', 'orienta-yacht-club' ); ?></p>
+								<div class="officer-form__row">
+									<label><input type="checkbox" name="oyc_enroll_email" value="1" /> <?php esc_html_e( 'Email each new member a link to set their password (otherwise nobody is emailed; they can use "Lost your password?" on the login page)', 'orienta-yacht-club' ); ?></label>
+								</div>
+								<div class="officer-form__row">
+									<label><input type="checkbox" name="oyc_enroll_dry_run" value="1" checked /> <?php esc_html_e( 'Test run first (shows who would get an account, creates nothing)', 'orienta-yacht-club' ); ?></label>
+								</div>
+								<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Enroll Not Registered members', 'orienta-yacht-club' ); ?></button>
+							</form>
+						<?php endif; ?>
+						<?php if ( $oyc_enroll ) : ?>
+							<?php if ( $oyc_enroll['created'] ) : ?>
+								<h3 class="officer-form__subhead"><?php echo $oyc_enroll['dry_run'] ? esc_html__( 'Would get an account', 'orienta-yacht-club' ) : esc_html__( 'Accounts created', 'orienta-yacht-club' ); ?></h3>
+								<ul class="officer-import-list">
+									<?php foreach ( $oyc_enroll['created'] as $line ) : ?><li><?php echo esc_html( $line ); ?></li><?php endforeach; ?>
+								</ul>
+							<?php endif; ?>
+							<?php if ( $oyc_enroll['skipped'] ) : ?>
+								<h3 class="officer-form__subhead"><?php esc_html_e( 'Skipped', 'orienta-yacht-club' ); ?></h3>
+								<ul class="officer-import-list">
+									<?php foreach ( $oyc_enroll['skipped'] as $line ) : ?><li><?php echo esc_html( $line ); ?></li><?php endforeach; ?>
+								</ul>
+							<?php endif; ?>
+						<?php endif; ?>
 						<div class="officer-table-wrap">
 						<table class="officer-table officer-table--members">
 							<thead>
