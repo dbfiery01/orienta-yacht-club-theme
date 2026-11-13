@@ -104,6 +104,12 @@
 .mcard__badges.is-crowded .mcard__badge { width: 38px; }
 .mcard__badges.is-crowded .mcard__badge-icon { width: 27px; height: 27px; }
 .mcard__badges.is-crowded .mcard__badge-icon svg { width: 20px; height: 20px; }
+.mcard__badges.is-packed { gap: 2px; }
+.mcard__badges.is-packed .mcard__gear { gap: 2px; }
+.mcard__badges.is-packed .mcard__badge { width: 32px; }
+.mcard__badges.is-packed .mcard__badge-icon { width: 24px; height: 24px; }
+.mcard__badges.is-packed .mcard__badge-icon svg { width: 18px; height: 18px; }
+.mcard__badges.is-packed .mcard__badge-label { font-size: 5.5px; letter-spacing: 0.02em; }
 .mcard__badge-label { font-size: 6.5px; line-height: 1.15; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(245, 239, 226, 0.8); }
 
 .mcard__nameline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 9px; margin: auto 0 4px; min-width: 0; }

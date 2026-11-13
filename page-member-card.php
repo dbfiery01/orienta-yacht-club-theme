@@ -98,7 +98,7 @@ get_header();
 						<span class="mcard__club-sub"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></span>
 
 						<?php if ( $oyc_badges || $oyc_gear ) : ?>
-							<span class="mcard__badges<?php echo count( $oyc_badges ) + count( $oyc_gear ) > 5 ? ' is-crowded' : ''; ?>">
+							<span class="mcard__badges<?php $oyc_n = count( $oyc_badges ) + count( $oyc_gear ); echo $oyc_n > 5 ? ' is-crowded' : ''; echo $oyc_n > 7 ? ' is-packed' : ''; ?>">
 								<?php foreach ( $oyc_badges as $b ) : ?>
 									<span class="mcard__badge mcard__badge--<?php echo esc_attr( $b ); ?>" title="<?php echo esc_attr( $oyc_badge_names[ $b ] ); ?>">
 										<span class="mcard__badge-icon"><?php echo oyc_card_badge_svg( $b ); // phpcs:ignore -- static SVG ?></span>
