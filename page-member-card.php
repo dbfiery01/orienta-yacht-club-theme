@@ -78,7 +78,7 @@ get_header();
 				</div>
 			<?php endif; ?>
 
-			<?php $oyc_badges = oyc_card_get_badges( $oyc_card_u->ID ); $oyc_badge_names = oyc_card_badge_list(); $oyc_certs = oyc_card_get_certs( $oyc_card_u->ID ); ?>
+			<?php $oyc_badges = oyc_card_get_badges( $oyc_card_u->ID ); $oyc_badge_names = oyc_card_badge_list(); $oyc_certs = oyc_card_get_certs( $oyc_card_u->ID ); $oyc_gear = oyc_card_gear( $oyc_card_u ); ?>
 
 			<div class="mcard-flip" data-oyc-flip>
 				<button type="button" class="mcard-flip__inner <?php echo $oyc_status['valid'] ? '' : 'mcard--invalid'; ?>"
@@ -97,14 +97,24 @@ get_header();
 						</span>
 						<span class="mcard__club-sub"><?php esc_html_e( 'Membership Card', 'orienta-yacht-club' ); ?></span>
 
-						<?php if ( $oyc_badges ) : ?>
-							<span class="mcard__badges">
+						<?php if ( $oyc_badges || $oyc_gear ) : ?>
+							<span class="mcard__badges<?php echo count( $oyc_badges ) + count( $oyc_gear ) > 5 ? ' is-crowded' : ''; ?>">
 								<?php foreach ( $oyc_badges as $b ) : ?>
 									<span class="mcard__badge mcard__badge--<?php echo esc_attr( $b ); ?>" title="<?php echo esc_attr( $oyc_badge_names[ $b ] ); ?>">
 										<span class="mcard__badge-icon"><?php echo oyc_card_badge_svg( $b ); // phpcs:ignore -- static SVG ?></span>
 										<span class="mcard__badge-label"><?php echo esc_html( $oyc_badge_names[ $b ] ); ?></span>
 									</span>
 								<?php endforeach; ?>
+								<?php if ( $oyc_gear ) : ?>
+									<span class="mcard__gear">
+										<?php foreach ( $oyc_gear as $g ) : ?>
+											<span class="mcard__badge mcard__badge--gear mcard__badge--<?php echo esc_attr( $g[0] ); ?>" title="<?php echo esc_attr( $g[2] ); ?>">
+												<span class="mcard__badge-icon"><?php echo oyc_card_gear_svg( $g[0] ); // phpcs:ignore -- static SVG ?></span>
+												<span class="mcard__badge-label"><?php echo esc_html( $g[1] ); ?></span>
+											</span>
+										<?php endforeach; ?>
+									</span>
+								<?php endif; ?>
 							</span>
 						<?php endif; ?>
 

@@ -603,6 +603,11 @@ get_header();
 										<a class="officer-btn" href="<?php echo esc_url( add_query_arg( 'edit_user', $u->ID, get_permalink() ) ); ?>">
 											<?php esc_html_e( 'Edit', 'orienta-yacht-club' ); ?>
 										</a>
+										<?php if ( function_exists( 'oyc_card_url' ) ) : ?>
+											<a class="officer-btn" href="<?php echo esc_url( oyc_card_url( array( 'uid' => $u->ID ) ) ); ?>" title="<?php esc_attr_e( 'View this member\'s membership card', 'orienta-yacht-club' ); ?>">
+												<?php esc_html_e( 'Card', 'orienta-yacht-club' ); ?>
+											</a>
+										<?php endif; ?>
 									<?php else : ?>
 										<span class="officer-locked"><?php esc_html_e( 'Site administrator', 'orienta-yacht-club' ); ?></span>
 									<?php endif; ?>
