@@ -353,6 +353,136 @@ function oyc_card_badge_svg( $slug ) {
 	return $svgs[ $slug ] ?? '';
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Boat, locker and dinghy rack glyphs (front of the card, from roster data)
+ * Shown only when the member's data has them; members can't toggle these.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The member's Fleet Roster directory entry (boat name/size/type live only
+ * there), matched by email, then by first + last name.
+ */
+function oyc_card_roster_entry( WP_User $user ) {
+	static $cache = array();
+	if ( isset( $cache[ $user->ID ] ) ) {
+		return $cache[ $user->ID ];
+	}
+	$found = array();
+	if ( function_exists( 'oyc_get_roster' ) ) {
+		$norm  = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
+		$email = strtolower( trim( $user->user_email ) );
+		$name  = $norm( $user->first_name . $user->last_name );
+		$by_name = array();
+		foreach ( oyc_get_roster() as $e ) {
+			if ( ! is_array( $e ) ) {
+				continue;
+			}
+			if ( '' !== $email && strtolower( trim( (string) ( $e['email'] ?? '' ) ) ) === $email ) {
+				$found = $e;
+				break;
+			}
+			if ( ! $by_name && '' !== $name && $norm( $e['name'] ?? '' ) === $name ) {
+				$by_name = $e;
+			}
+		}
+		if ( ! $found ) {
+			$found = $by_name;
+		}
+	}
+	$cache[ $user->ID ] = $found;
+	return $found;
+}
+
+/**
+ * Roster boat type => glyph slug. Sloop and any sail boat → sloop, Ketch (and
+ * other two-masters) → ketch, Trawler → trawler, Power → express cruiser.
+ * Returns '' for blank or unrecognised types (no glyph).
+ */
+function oyc_card_boat_glyph( $type ) {
+	$t = strtolower( trim( (string) $type ) );
+	if ( '' === $t ) {
+		return '';
+	}
+	if ( preg_match( '/ketch|yawl|schooner/', $t ) ) {
+		return 'ketch';
+	}
+	if ( false !== strpos( $t, 'trawler' ) ) {
+		return 'trawler';
+	}
+	if ( preg_match( '/power|motor|cruiser|express|sport ?fish|center console|runabout|lobster/', $t ) ) {
+		return 'cruiser';
+	}
+	if ( preg_match( '/sloop|sail|cutter|catamaran|trimaran|sunfish|laser|day ?sailer/', $t ) ) {
+		return 'sloop';
+	}
+	return '';
+}
+
+/**
+ * Locker / Dinghy Rack: hidden when blank or "No", shown for anything else.
+ */
+function oyc_card_has_value( $v ) {
+	$v = strtolower( trim( (string) $v, " \t\n\r\0\x0B." ) );
+	return '' !== $v && 'no' !== $v;
+}
+
+/**
+ * Glyphs for the front of the card: list of [slug, label, title].
+ */
+function oyc_card_gear( WP_User $user ) {
+	$entry = oyc_card_roster_entry( $user );
+	$meta  = function ( $mk, $dk ) use ( $user, $entry ) {
+		$v = trim( (string) get_user_meta( $user->ID, $mk, true ) );
+		return '' !== $v ? $v : trim( (string) ( $entry[ $dk ] ?? '' ) );
+	};
+	$labels = array(
+		'sloop'   => __( 'Sloop', 'orienta-yacht-club' ),
+		'ketch'   => __( 'Ketch', 'orienta-yacht-club' ),
+		'trawler' => __( 'Trawler', 'orienta-yacht-club' ),
+		'cruiser' => __( 'Power Boat', 'orienta-yacht-club' ),
+	);
+	$out  = array();
+	$boat = oyc_card_boat_glyph( $entry['boatType'] ?? '' );
+	if ( $boat ) {
+		$title = trim( implode( ' · ', array_filter( array( (string) ( $entry['boat'] ?? '' ), trim( ( $entry['boatLen'] ?? '' ) . ' ' . ( $entry['boatType'] ?? '' ) ) ), 'strlen' ) ) );
+		$out[] = array( 'boat-' . $boat, $labels[ $boat ], $title );
+	}
+	$locker = $meta( 'oyc_locker', 'locker' );
+	if ( oyc_card_has_value( $locker ) ) {
+		$is_num = (bool) preg_match( '/\d/', $locker );
+		/* translators: %s: locker number(s). */
+		$label = $is_num ? sprintf( __( 'Locker %s', 'orienta-yacht-club' ), $locker ) : __( 'Locker', 'orienta-yacht-club' );
+		$out[] = array( 'locker', $label, $is_num ? $label : __( 'Locker', 'orienta-yacht-club' ) . ': ' . $locker );
+	}
+	$dinghy = $meta( 'oyc_dinghy_rack', 'dinghy' );
+	if ( oyc_card_has_value( $dinghy ) ) {
+		$out[] = array( 'dinghy', __( 'Dinghy', 'orienta-yacht-club' ), __( 'Dinghy Rack', 'orienta-yacht-club' ) . ': ' . $dinghy );
+	}
+	return $out;
+}
+
+/**
+ * Inline SVG for a boat / locker / dinghy glyph (40×40, currentColor; bow to the right).
+ */
+function oyc_card_gear_svg( $slug ) {
+	$wave = '<path d="M4 35c3 0 3-1.5 6-1.5s3 1.5 6 1.5 3-1.5 6-1.5 3 1.5 6 1.5 3-1.5 6-1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+	$svgs = array(
+		// Sloop: one mast, mainsail + jib.
+		'boat-sloop'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M19 5v20h-9z" fill="currentColor"/><path d="M21 8l10 17H21z" fill="currentColor" opacity=".75"/><path d="M6 27h28l-4.5 4.5H10z" fill="currentColor"/>' . $wave . '</svg>',
+		// Ketch: tall mainmast forward, shorter mizzen aft, jib.
+		'boat-ketch'   => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M22 4v21h-8z" fill="currentColor"/><path d="M24 8l8 17h-8z" fill="currentColor" opacity=".75"/><path d="M12 12v13H6z" fill="currentColor"/><path d="M5 27h30l-4.5 4.5H9z" fill="currentColor"/>' . $wave . '</svg>',
+		// Trawler: high bow, deckhouse with windows, flybridge, mast.
+		'boat-trawler' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 23h33l-3 8H8z" fill="currentColor"/><path d="M9 23v-8h20l3 8z" fill="currentColor"/><rect x="12" y="10" width="11" height="5" rx="1" fill="currentColor" opacity=".8"/><path d="M17.5 10V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 17.5h4v3h-4zM18 17.5h4v3h-4zM24 17.5h3.5l1.2 3H24z" fill="#0b2a4a"/>' . $wave . '</svg>',
+		// Express cruiser: low sleek hull, raked windscreen, radar arch.
+		'boat-cruiser' => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 24h28l6-1-4 7H8z" fill="currentColor"/><path d="M11 24l2-5h10l7 5z" fill="currentColor" opacity=".8"/><path d="M14 19l2.5-6h4l1 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M23.5 19.5l3 2.7" stroke="#0b2a4a" stroke-width="1.4"/>' . $wave . '</svg>',
+		// Locker: two-door cabinet with handles and vents.
+		'locker'       => '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="5" width="22" height="30" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 5v30" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 10h5M12.5 13h5M22.5 10h5M22.5 13h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M17.3 20v4M22.7 20v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+		// Dinghy: small tender with a seat and crossed oars, on the rack bar.
+		'dinghy'       => '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 13l24 13M32 13L8 26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 21h30l-5 8H11z" fill="currentColor"/><path d="M5 21h30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 24h6" stroke="#0b2a4a" stroke-width="1.6" stroke-linecap="round"/><path d="M5 33h30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 33v3M31 33v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+	);
+	return $svgs[ $slug ] ?? '';
+}
+
 /**
  * Save badges from the card page (the member's own, or an officer for a member).
  */
