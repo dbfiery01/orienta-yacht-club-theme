@@ -86,6 +86,15 @@ function oyc_officer_assignable_roles() {
 	$roles = wp_roles()->get_names();
 
 	if ( current_user_can( 'administrator' ) ) {
+		// Brad (2026-11-13): roles the club doesn't use stay out of the picker.
+		// A member who already holds one keeps it (the edit form adds their
+		// current role back), so nobody's role changes silently.
+		foreach ( $roles as $slug => $label ) {
+			if ( in_array( $slug, array( 'contributor', 'editor', 'wpseo_manager', 'wpseo_editor' ), true )
+				|| in_array( strtolower( $label ), array( 'seo manager', 'seo editor' ), true ) ) {
+				unset( $roles[ $slug ] );
+			}
+		}
 		return $roles;
 	}
 
