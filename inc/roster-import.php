@@ -284,8 +284,12 @@ function oyc_roster_directory_entry( $r ) {
 		'dinghy'   => (string) ( $r['oyc_dinghy_rack'] ?? '' ),
 		'number'   => (string) ( $r['oyc_member_number'] ?? '' ),
 		'dues'     => (string) ( $r['oyc_dues_paid_through'] ?? '' ),
+		'listed'   => (string) ( $r['name'] ?? '' ), // roster's own "Member" text, e.g. "Harnett, Pat".
 	);
-	return array_map( fn( $v ) => is_array( $v ) ? array_map( 'sanitize_text_field', $v ) : sanitize_text_field( $v ), $entry );
+	$street = sanitize_textarea_field( $entry['street'] ); // keep a 2-line street (Apt on line 2).
+	$entry  = array_map( fn( $v ) => is_array( $v ) ? array_map( 'sanitize_text_field', $v ) : sanitize_text_field( $v ), $entry );
+	$entry['street'] = $street;
+	return $entry;
 }
 
 /**
@@ -490,7 +494,7 @@ function oyc_roster_export_rows() {
 		};
 		$type = $both( 'category', 'oyc_membership_type' );
 		return array(
-			trim( $last . ( '' !== $first ? ', ' . $first : '' ), ', ' ),
+			'' !== (string) ( $d['listed'] ?? '' ) ? (string) $d['listed'] : trim( $last . ( '' !== $first ? ', ' . $first : '' ), ', ' ),
 			$first,
 			$last,
 			$phones[0] ?? '',
