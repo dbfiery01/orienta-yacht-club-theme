@@ -217,7 +217,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .mapwrap.headsup .navrose{background:#1a73e8;border-color:#1a73e8;box-shadow:0 2px 10px rgba(26,115,232,.5)}
 #oycwm .mapwrap.headsup .navrose svg{transform:rotate(calc(-1 * var(--hdg,0deg)))}
 /* ---- Race course builder ---- */
-#oycwm .racebar{position:absolute;z-index:596;left:10px;top:10px;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:calc(100% - 20px);background:rgba(11,42,74,.92);color:#fff;padding:7px 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+/* starts right of the +/- zoom buttons (they sit above it and used to cover the COURSE label) */
+#oycwm .racebar{position:absolute;z-index:596;left:52px;top:10px;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:calc(100% - 62px);background:rgba(11,42,74,.92);color:#fff;padding:7px 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
 #oycwm .racebar.on{display:flex}
 /* race wind dials: one up and to the right of each race mark, arrow the way the wind blows, speed + direction FROM (°T) for the slider hour */
 #oycwm .wdial{background:none;border:none;pointer-events:none}
