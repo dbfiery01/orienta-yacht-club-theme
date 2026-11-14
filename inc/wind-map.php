@@ -866,7 +866,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<label title="Racers: polars and target speed, race log and the team race archive (the panel under the map)"><input type="checkbox" id="tgRaceTools"> Race tools</label>
 						<?php endif; ?>
 					</div>
-					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
+					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day, on unless you switch it off; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
 				<div class="layers lyr-sec" id="poiLayers">
 					<div class="lyr-g" role="group" aria-labelledby="lyrGP"><h3 id="lyrGP">Chart &amp; places</h3>
@@ -3934,7 +3934,7 @@ function loadNotices(){
 	}).catch(function(){NN.busy=false;nnNote('Couldn’t load the Coast Guard notices. Try again later.');});
 }
 function setNotices(on){
-	var t=document.getElementById('tgNotice');if(t)t.checked=on;lsSet('oyc_nn_view',on?'1':null);
+	var t=document.getElementById('tgNotice');if(t)t.checked=on;lsSet('oyc_nn_view',on?null:'0');   /* on by default: only "off" is remembered */
 	if(on){NN.layer.addTo(map);if(NN.items)drawNotices();else loadNotices();}
 	else{NN.layer.clearLayers();map.removeLayer(NN.layer);nnNote('');}
 }
@@ -3942,7 +3942,7 @@ function setNotices(on){
 	var t=document.getElementById('tgNotice');if(!t)return;   /* no toggle until the server has read NAVCEN's files */
 	t.addEventListener('change',function(){setNotices(this.checked);});
 	map.on('moveend',nnViewNote);
-	if(lsGet('oyc_nn_view')==='1')setNotices(true);
+	setNotices(lsGet('oyc_nn_view')!=='0');
 })();
 
 /* Small read-only API for the racers' race tools (assets/race-tools.js):
@@ -3993,12 +3993,12 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgNotice','tgRace','tgRaceTools','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgRaceTools','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
-		sail:['tgChart','tgArrows','tgAnch','tgFuel','tgNotice'],
+		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
 		race:['tgChart','tgArrows','tgLay','tgRace','tgRaceTools','tgFleet'],
 		fish:['tgChart','tgCur','tgFish','tgFuel'],
-		cruise:['tgChart','tgArrows','tgAis','tgNotice','tgClubs','tgDine','tgFuel','tgAnch']
+		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
 	};
 	/* "My chart": the visitor's own saved setup (layers incl. Animated / Wind
 	   color, the view tab, and the map centre + zoom), kept in this browser. */
