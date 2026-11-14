@@ -1215,9 +1215,16 @@ function drawLaylines(){
 /* true wind angle on a leg a→b, from the forecast wind at the leg's midpoint at
    the slider's hour: {twa 0..180, side 'stbd'|'port'|'', pos point of sail} */
 function pointOfSail(t,kt){var u=45;try{if(LAY)u=layAng(kt).up;}catch(e){}return t<u?'beat':t<60?'close-hauled':t<80?'close reach':t<110?'beam reach':t<150?'broad reach':t<165?'run':'dead run';}
-function legTWA(a,b){
-	var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2],r=null;
-	try{r=readPoint(mid[0],mid[1],curTi);}catch(e){}
+/* the waypoint at [lat,lon], if any (its exact-point forecast backs up the grid) */
+function pinAt(p){for(var k=0;k<pins.length;k++)if(pins[k].lat===p[0]&&pins[k].lon===p[1])return pins[k];return null;}
+function legTWA(a,b,ti){
+	if(ti==null)ti=curTi;
+	/* the wind shown for the leg's end waypoint at the slider hour (its row and
+	   card), so the TWA matches the numbers on screen; else the map's forecast
+	   at the leg midpoint */
+	var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2],r=null,pb=pinAt(b);
+	try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}
+	if(!r||r.dir==null){try{r=readPoint(mid[0],mid[1],ti);}catch(e){r=null;}}
 	if(!r||r.dir==null)return null;
 	return twaFrom(r.dir,brgTrue(a[0],a[1],b[0],b[1]),r.kt);
 }
@@ -1791,7 +1798,7 @@ function pinContent(pin,ti){
 		+legLine
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
 		+'<div class="co-ll">'+ll+'</div>'+youLine;
-	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">No data here</div></div>';
+	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">'+(pin._fcWait?'Loading forecast&hellip;':'No data here')+'</div></div>';
 	/* precip: probability % from the point forecast, else grid amount in inches */
 	var pcp=(s.pop!=null)?('<span><span class="v">'+Math.round(s.pop)+'%</span> <span class="k">rain</span></span>')
 		:(s.precip!=null?'<span><span class="v">'+s.precip.toFixed(2)+'</span> <span class="k">in rain</span></span>':'');
@@ -1854,15 +1861,28 @@ function clientPointWx(lat,lon){
 		+'&wind_speed_unit=kn&temperature_unit=fahrenheit&forecast_days=7&timezone=America%2FNew_York';
 	return fetch(u).then(function(r){if(!r.ok)throw new Error('wx '+r.status);return r.json();}).then(function(wx){return {ok:true,wx:wx,marine:null};});
 }
-function loadPinFC(pin){
+/* Every waypoint reads its OWN exact-point forecast, so it never depends on the
+   Atlantic grid having loaded around it. If both the server and the browser are
+   rate-limited, it tries again after 20 s, 1 min and 3 min; until then the card
+   says "Loading forecast…" (or shows the grid, where that has loaded). */
+function loadPinFC(pin,tries){
+	tries=tries||0;var at=pin.lat.toFixed(3)+','+pin.lon.toFixed(3);
+	pin._fcWait=true;
+	function retry(){
+		if(pin._gone||(pin.lat.toFixed(3)+','+pin.lon.toFixed(3))!==at)return; /* removed or moved: a newer load owns it */
+		if(tries<3){setTimeout(function(){loadPinFC(pin,tries+1);},[20000,60000,180000][tries]);return;}
+		pin._fcWait=false;pin.popup.setContent(pinContent(pin,curTi));renderWpTable();
+	}
 	fetchT(AJAX+'?action=oyc_point_fc&lat='+pin.lat.toFixed(3)+'&lon='+pin.lon.toFixed(3),12000)
-		.then(function(r){return r.json();})
+		.then(function(r){return r.json();}).catch(function(){return null;})
 		.then(function(res){ return (res&&res.ok&&res.wx&&res.wx.hourly) ? res : clientPointWx(pin.lat,pin.lon); }) /* server wx 429'd → browser-direct wx */
 		.then(function(res){return withMarine(res,pin.lat,pin.lon);}) /* fill waves from the browser if the server was 429'd */
 		.then(function(res){
-			var S=fcSeriesFrom(res);if(!S||pin._gone)return;pin.fc=S;
-			pin.popup.setContent(pinContent(pin,curTi));renderWpTable();
-		}).catch(function(){});
+			var S=fcSeriesFrom(res);if(pin._gone)return;if(!S){retry();return;}
+			if((pin.lat.toFixed(3)+','+pin.lon.toFixed(3))!==at)return;
+			pin.fc=S;pin._fcWait=false;
+			refreshRoute(); /* leg wind angles, speeds and ETA use this point's forecast too */
+		}).catch(retry);
 }
 function addPin(lat,lon){
 	var m=L.marker([lat,lon],{icon:wpIcon(wpBadge(pins.length)),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
@@ -1968,8 +1988,9 @@ function wpRow(pin,i,ti){
 	if(!prev)dist='<span class="v">Start</span><span class="s">'+pin.lat.toFixed(3)+', '+pin.lon.toFixed(3)+'</span>';
 	else{var lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon),tw=legTWA([prev.lat,prev.lon],[pin.lat,pin.lon]); /* leg course (magnetic) + wind angle from the previous point */
 		dist='<span class="v">'+lb+'°M</span><span class="s">'+(i===0?lg.dist.toFixed(1)+' nm from you':'leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1))+'</span>'
-			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');}
-	var wind='<span class="s">No data</span>',sea='';
+			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');
+		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt in '+Math.round(pl.kt)+' kt wind'+(pl.ft>0.5?', '+pl.ft.toFixed(1)+' ft seas':'')+(pl.sea>=0.03?' (&minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
+	var wind='<span class="s">'+(pin._fcWait?'Loading&hellip;':'No data')+'</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>'
 			+(s.tempF!=null?'<span class="s">'+Math.round(s.tempF)+'°F temp</span>':''); /* air temp, labelled like the map card */
@@ -1980,11 +2001,14 @@ function wpRow(pin,i,ti){
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
 var wpDrag=null;   /* a row being dragged to a new place in the route (see below) */
+var WPPLAN=null;
 function renderWpTable(){
 	var grid=document.getElementById('mapGrid'),body=document.getElementById('wptBody');if(!grid||!body)return;
 	if(wpDrag)return;   /* don't rebuild the rows mid-drag (GPS fixes re-render the table) */
 	var on=pins.length>0,ti=curTi,h='';
+	WPPLAN=on?routePlan():null;
 	for(var i=0;i<pins.length;i++)h+=wpRow(pins[i],i,ti);
+	updateRouteBar(); /* the ETA follows the slider's departure hour */
 	body.innerHTML=h;
 	var f=(on&&TIMES[ti]!=null)?fmt(TIMES[ti]):null;
 	document.getElementById('wptFoot').textContent=f?('Forecast for '+f.big+', '+f.small+'. Move the time slider to update.'):'';
@@ -2556,6 +2580,76 @@ document.getElementById('tgRace').addEventListener('change',function(){
 	inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();plotCourse(inp.value);}});
 	c.addEventListener('click',function(){inp.value='';plotCourse('');});
 })();
+/* ---------- route leg speeds + ETA from the chosen polars ----------
+   With polars picked in Race tools (race-tools.js sets OYCWM.polarBsp), each leg
+   gets a planned speed made good from the forecast wind at the time the boat is
+   expected there: leaving at the slider's hour, leg by leg. Upwind of the best
+   VMG angle it tacks (VMG / cos of the course off the wind), likewise gybing
+   downwind; otherwise the polar speed at that wind angle, less the sea-state
+   loss (seaLoss) from the forecast waves. Under ~0.5 kt (or no
+   wind reading) the ETA is left out rather than guessed. */
+function tiFor(ep){var b=0,bd=1e18;for(var i=0;i<TIMES.length;i++){var d=Math.abs(new Date(TIMES[i]).getTime()-ep);if(d<bd){bd=d;b=i;}}return b;}
+/* Sea-state speed loss. Polars are flat-water numbers; in a seaway a heavy
+   cruiser loses speed to pitching and added wave resistance, most of all
+   heading into it. Loss per foot of significant wave height: ~3.5% close-hauled,
+   ~2% reaching, ~1.2% running, scaled by steepness (a 7 s sea is the reference;
+   shorter = steeper = worse, longer swell = gentler), capped at 50%. So 8.5 ft at
+   7 s takes about 30% off upwind, 17% on a reach and 10% running. */
+function seaLossFor(r,twa){
+	if(!r||r.waveFt==null||!(r.waveFt>0.5))return 0;
+	var per=(r.wavePer>0)?r.wavePer:7,steep=Math.max(0.6,Math.min(1.4,7/per));
+	var c=twa<60?0.035:(twa<=110?0.035-(twa-60)/50*0.015:(twa<=150?0.02-(twa-110)/40*0.008:0.012));
+	return Math.min(0.5,r.waveFt*c*steep);
+}
+/* Wind + sea where the boat is: the map's forecast at that spot, else the
+   nearer end waypoint's own exact-point forecast (offshore, before the Atlantic
+   grid loads). */
+function planSample(lat,lon,ti,pa,pb){
+	var r=null;try{r=readPoint(lat,lon,ti);}catch(e){}
+	if(r&&r.kt!=null&&r.dir!=null&&r.waveFt!=null)return r;
+	var near=null,da=pa?distNM(lat,lon,pa.lat,pa.lon):1e9,db=pb?distNM(lat,lon,pb.lat,pb.lon):1e9;
+	near=(da<=db)?(pa||pb):(pb||pa);
+	var q=null;try{if(near)q=pinReading(near.lat,near.lon,ti,near.fc);}catch(e){}
+	if(!r||r.kt==null||r.dir==null)return q;
+	if(q&&r.waveFt==null){r.waveFt=q.waveFt;r.wavePer=q.wavePer;}
+	return r;
+}
+/* Planned speed made good on course crs in reading r: tack upwind of the best
+   VMG angle, gybe downwind of it, else the polar speed; less the sea loss. */
+function planSpeed(W,r,crs){
+	if(!r||r.kt==null||r.dir==null)return null;
+	var D=Math.PI/180,tw=twaFrom(r.dir,crs,r.kt),v;
+	var up=W.polarVmg?W.polarVmg(r.kt,true):null,dn=W.polarVmg?W.polarVmg(r.kt,false):null;
+	if(up&&up.vmg>0&&tw.twa<up.twa)v=up.vmg/Math.max(0.2,Math.cos(tw.twa*D));
+	else if(dn&&dn.vmg>0&&tw.twa>dn.twa)v=dn.vmg/Math.max(0.2,Math.abs(Math.cos(tw.twa*D)));
+	else v=W.polarBsp(r.kt,tw.twa);
+	var sl=seaLossFor(r,tw.twa);
+	return {v:v*(1-sl),sea:sl,kt:r.kt,twa:tw.twa,ft:r.waveFt};
+}
+/* Each leg's speed comes from the conditions SHOWN for its end waypoint at the
+   slider's hour (the same wind and sea as that waypoint's row and card), so the
+   numbers on screen and the speed agree; move the slider to plan another
+   departure/weather hour. Where a waypoint has no reading yet, the map's
+   forecast at the leg midpoint is used. ETA = slider hour + the legs' times. */
+function routePlan(){
+	var W=window.OYCWM;if(!W||typeof W.polarBsp!=='function'||!TIMES.length)return null;
+	var pts=routePts();if(pts.length<2)return null;
+	var ti=curTi,t0=curEpoch(),t=t0,legs=[],ok=true;
+	for(var j=0;j<pts.length-1;j++){
+		var a=pts[j],b=pts[j+1],dist=distNM(a[0],a[1],b[0],b[1]),pb=pinAt(b),r=null;
+		try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}
+		if(!r||r.kt==null||r.dir==null)r=planSample((a[0]+b[0])/2,(a[1]+b[1])/2,ti,pinAt(a),pb);
+		var sp=ok?planSpeed(W,r,brgTrue(a[0],a[1],b[0],b[1])):null;
+		if(!sp||!(sp.v>0.5)){ok=false;legs.push(null);continue;}
+		var hrs=dist/sp.v;t+=hrs*36e5;
+		legs.push({v:sp.v,hrs:hrs,eta:t,sea:sp.sea,kt:sp.kt,ft:sp.ft,twa:sp.twa});
+	}
+	return {legs:legs,ok:ok,eta:ok?t:null,hrs:ok?(t-t0)/36e5:null,past:false,name:W.polarName||''};
+}
+function etaText(ms){var d=new Date(ms);return d.toLocaleDateString('en-US',{weekday:'short'})+' '+(d.getMonth()+1)+'/'+d.getDate()+' '+(d.getHours()%12||12)+(d.getMinutes()>=30?':30':'')+' '+(d.getHours()>=12?'PM':'AM');}
+function durText(h){var m=Math.round(h*60);if(m<60)return m+' min';var dd=Math.floor(m/1440),hh=Math.round((m-dd*1440)/60);if(hh===24){dd++;hh=0;}return (dd?dd+'d ':'')+hh+'h';}
+/* the planned leg that ENDS at waypoint i (legs run origin→Pt1 when routed from your boat) */
+function planLeg(P,i){if(!P)return null;var j=routeOrigin()?i:i-1;return j>=0?P.legs[j]:null;}
 function updateRouteBar(){
 	var rb=document.getElementById('routeBar');if(!rb)return;
 	if(!pins.length){rb.classList.remove('on');return;}
@@ -2565,6 +2659,8 @@ function updateRouteBar(){
 	var info=(pins.length===1)
 		?(o?('1 waypoint · '+distNM(o.lat,o.lon,pins[0].lat,pins[0].lon).toFixed(1)+' nm from you'):'Start set · tap the map for the next point')
 		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm'+(o?' from you':''));
+	var P=pins.length>1||routeOrigin()?routePlan():null;
+	if(P)info+=P.ok?(' · ETA '+etaText(P.eta)+' ('+durText(P.hrs)+(P.past?', past the forecast':'')+')'+(P.name?' · '+P.name:'')):' · ETA needs wind on every leg';
 	document.getElementById('routeInfo').textContent=info;
 }
 (function(){
@@ -3022,8 +3118,9 @@ function loadLocal(tries){
 }
 
 /* Atlantic basin loader, in 150-point chunks (CH=150 matches oyc_wind_basin).
-   Each chunk comes from the cron-warmed static file first (refreshed every ~6 h,
-   accepted up to 48 h old), then the cached proxy, then straight from Open-Meteo.
+   Each chunk comes from the cron-warmed static file first (refreshed once per
+   00Z/12Z GFS run, accepted up to 72 h old), then the cached proxy, then, spaced
+   out, straight from Open-Meteo.
    Chunks are drawn as they arrive. Values are placed on the master time axis by
    TIMESTAMP, not by index: a cached chunk can come from an earlier GFS run whose
    series starts on the previous day. A chunk that never loads stays null (blank)
@@ -3065,20 +3162,50 @@ function loadBasin(){
 			refreshOverlays();drawField();drawHL(BASIN,curTi);setFoot();
 		}else maybeSwitchGrid();
 	}
-	function fetchChunk(idx,tries){
-		var a=chunks[idx][0],b=chunks[idx][1];
-		return statFetch('wind_basin_'+idx,'oyc_wind_basin&chunk='+idx,48*60,12000)
-			.then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
-			.then(function(arr){return valid(arr)?arr:clientChunk(a,b);})
-			.then(function(arr){if(!valid(arr))throw new Error('chunk');store(a,arr);got++;progress();})
-			.catch(function(){
-				if(tries<2)return new Promise(function(res){setTimeout(res,1500*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
-				failed++;progress();
+	/* Browser-direct fallback, for when the server has nothing (it is the only
+	   path that asks Open-Meteo from the visitor's own connection). Open-Meteo
+	   counts each of a chunk's 150 points as a call, against ~600 a minute per
+	   address, so these run ONE AT A TIME and at least 25 s apart (~360 calls a
+	   minute); a 429 waits 65 s for the minute to reset and tries again, up to 3
+	   times. Chunks still draw as each one lands. */
+	var dq=Promise.resolve(),lastDirect=0,GAP=25000;
+	function direct(a,b){
+		function attempt(n){
+			var wait=Math.max(0,lastDirect+GAP-Date.now());
+			return new Promise(function(res){setTimeout(res,wait);}).then(function(){
+				lastDirect=Date.now();
+				return clientChunk(a,b).catch(function(e){
+					if(n<3)return new Promise(function(res){setTimeout(res,String(e).indexOf('429')>=0?65000:5000);}).then(function(){return attempt(n+1);});
+					throw e;
+				});
 			});
+		}
+		var p=dq.then(function(){return attempt(0);});
+		dq=p.catch(function(){});
+		return p;
+	}
+	/* server first: the cron-warmed static file (accepted up to 72 h old), then the
+	   cached proxy, which never fires the grid at Open-Meteo itself */
+	function fromServer(idx){
+		return statFetch('wind_basin_'+idx,'oyc_wind_basin&chunk='+idx,72*60,15000)
+			.then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+	}
+	/* resolves once the SERVER stage is done, so a chunk waiting in the direct
+	   queue doesn't hold up the next chunks' (fast) server reads */
+	function fetchChunk(idx){
+		var a=chunks[idx][0],b=chunks[idx][1];
+		function ok(arr){store(a,arr);got++;progress();}
+		function bad(){failed++;progress();}
+		return fromServer(idx)
+			.then(function(arr){return valid(arr)?arr:new Promise(function(res){setTimeout(res,2000);}).then(function(){return fromServer(idx);});})
+			.then(function(arr){
+				if(valid(arr)){ok(arr);return;}
+				direct(a,b).then(function(arr){if(valid(arr))ok(arr);else bad();},bad); /* not awaited */
+			},bad);
 	}
 	function pump(){
 		if(ci>=chunks.length)return Promise.resolve();
-		var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fetchChunk(ci,0));
+		var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fetchChunk(ci));
 		return Promise.all(batch).then(pump);
 	}
 	if(chooseGrid()===BASIN)setFoot();
@@ -3802,6 +3929,8 @@ window.OYCWM={
 	map:map,
 	/* race-tools.js sets polarAngles(tws)->{up,gybe} for the chosen polars, then calls this */
 	polarAngles:null,
+	/* race-tools.js calls this when the polars change: leg speeds + ETA */
+	routeRefresh:function(){if(pins.length)refreshRoute();},
 	layRefresh:function(){layUI();if(LAY.mode==='polar'){drawLaylines();replotRace();updateBoatInfo();}},
 	magvar:MAGVAR,
 	boat:function(){return myLoc?{lat:myLoc.lat,lon:myLoc.lon,sog:mySpeedKt,cog:myHeading}:null;},
