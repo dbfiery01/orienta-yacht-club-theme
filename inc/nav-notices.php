@@ -30,9 +30,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'OYC_NN_MSI', 'https://www.navcen.uscg.gov/msi' );
-/* Long Island Sound with New York Harbor, the East River and Block Island
-   Sound: south, west, north, east. */
-define( 'OYC_NN_BOX', '40.50,-74.15,41.45,-71.75' );
+/* Long Island Sound from the East River (Hell Gate) to Block Island Sound,
+   with its harbors and rivers: south, west, north, east. */
+define( 'OYC_NN_BOX', '40.70,-73.97,41.45,-71.75' );
 define( 'OYC_NN_MAX_ITEMS', 400 );
 define( 'OYC_NN_UA', 'Mozilla/5.0 (compatible; OYC-website/1.0; +https://orientayachtclub.com)' );
 
@@ -94,16 +94,44 @@ function oyc_nn_links( $fresh = false ) {
 	return $out;
 }
 
-/** Does this link look like a District 1 Local Notice file (not the Light List)? */
-function oyc_nn_is_d1_lnm( $l ) {
-	$s = rawurldecode( $l['url'] ) . ' ' . $l['text'];
-	if ( preg_match( '/light\s*list/i', $s ) ) {
-		return false;
-	}
-	return (bool) preg_match( '/(?<![a-z])(district|dist|cgd|d)[\s_\-]*0?1(?!\d)/i', $s );
+/* NAVCEN's Local Notice to Mariners files (one set for the whole country,
+   split into numbered parts), by file-name prefix, with the label the map
+   shows. Left out on purpose: the Light List, Western Rivers buoys, the
+   "Corrected" files (discrepancies already fixed), permanent/advance/proposed
+   chart changes, space operations, autonomous vessels and TESS advisories. */
+function oyc_nn_kinds() {
+	return array(
+		'discFedAid'  => 'Aid to navigation discrepancy',
+		'discPriAid'  => 'Private aid discrepancy',
+		'tmpChange'   => 'Temporary change',
+		'hazNav'      => 'Hazard to navigation',
+		'safeZone'    => 'Safety zone',
+		'marCon'      => 'Marine construction',
+		'bridge'      => 'Bridge',
+		'marEvent'    => 'Marine event',
+		'msib'        => 'Marine safety bulletin',
+		'navalAct'    => 'Naval activity',
+		'misc'        => 'Notice',
+	);
 }
 
-/** The District 1 LNM files to read. */
+/** The NAVCEN kind of a file URL ('' if it is not one we read). */
+function oyc_nn_kind( $u ) {
+	$b = basename( (string) wp_parse_url( $u, PHP_URL_PATH ) );
+	foreach ( array_keys( oyc_nn_kinds() ) as $k ) {
+		if ( preg_match( '/^' . $k . '(Line|Poly)?_\d+\.geojson$/', $b ) ) {
+			return $k;
+		}
+	}
+	return '';
+}
+
+/** Is this link one of the Local Notice to Mariners files we read? */
+function oyc_nn_is_d1_lnm( $l ) {
+	return '' !== oyc_nn_kind( $l['url'] );
+}
+
+/** The Local Notice to Mariners files to read. */
 function oyc_nn_sources() {
 	if ( defined( 'OYC_NN_SOURCES' ) && OYC_NN_SOURCES ) {
 		return array_values( array_filter( array_map( 'trim', explode( ',', OYC_NN_SOURCES ) ) ) );
@@ -148,20 +176,61 @@ function oyc_nn_pick( $p, $re ) {
 	return '';
 }
 
-function oyc_nn_clean( $s, $n ) {
-	$s = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( (string) $s ) ) );
+function oyc_nn_clean( $s, $n, $lines = false ) {
+	$s = wp_strip_all_tags( str_replace( array( "\r\n", "\r" ), "\n", (string) $s ) );
+	$s = $lines ? trim( preg_replace( array( '/[ \t]+/', '/ *\n */', '/\n{3,}/' ), array( ' ', "\n", "\n\n" ), $s ) ) : trim( preg_replace( '/\s+/', ' ', $s ) );
 	return mb_strlen( $s ) > $n ? mb_substr( $s, 0, $n - 1 ) . '…' : $s;
 }
 
-/** A category name from the file name or link text ("Marine Construction"). */
+/** The map label for a file ("Marine construction"). */
 function oyc_nn_cat_from_url( $u ) {
-	$b = rawurldecode( basename( wp_parse_url( $u, PHP_URL_PATH ) ) );
-	$b = preg_replace( '/\.geojson$/i', '', $b );
-	$b = preg_replace( '/(?<![a-z])(district|dist|cgd|d)[\s_\-]*0?1(?!\d)/i', ' ', $b );
-	$b = preg_replace( '/(?<![a-z])(lnm|local[\s_\-]*notices?[\s_\-]*to[\s_\-]*mariners|geojson)(?![a-z])/i', ' ', $b );
-	$b = preg_replace( '/[_\-]+\d+$/', '', $b );
-	$b = trim( preg_replace( '/[\s_\-]+/', ' ', $b ) );
-	return $b ? ucwords( strtolower( $b ) ) : 'Notice';
+	$k     = oyc_nn_kind( $u );
+	$kinds = oyc_nn_kinds();
+	return $k ? $kinds[ $k ] : 'Notice';
+}
+
+/* A NAVCEN date (epoch milliseconds) as epoch seconds, or 0. */
+function oyc_nn_ms( $v ) {
+	return is_numeric( $v ) && $v > 0 ? (int) floor( $v / 1000 ) : 0;
+}
+
+/** NAVCEN's own fields -> title, text, dates, id. Empty when not NAVCEN's layout. */
+function oyc_nn_navcen_fields( $p, $cat ) {
+	if ( isset( $p['TITLE'] ) || isset( $p['MSI_UID'] ) ) {
+		/* notices: TITLE is "Waterway/General/Sub category/Type" */
+		$parts = array_map( 'trim', explode( '/', (string) ( isset( $p['TITLE'] ) ? $p['TITLE'] : '' ) ) );
+		$where = $parts[0] ? $parts[0] : ( isset( $p['WATERWAY_NAME'] ) ? $p['WATERWAY_NAME'] : '' );
+		$what  = ! empty( $p['TYPE'] ) ? $p['TYPE'] : ( ! empty( $p['SUB_CATEGORY'] ) ? $p['SUB_CATEGORY'] : $cat );
+		$text  = isset( $p['DESCRIPTION'] ) ? (string) $p['DESCRIPTION'] : '';
+		/* the description repeats the TITLE path and the notice number first */
+		$text = preg_replace( '/^[^\n]*\/[^\n]*\n\s*\d+\s*\n/', '', $text );
+		return array(
+			'id'    => ! empty( $p['MSI_UID'] ) ? 'Notice ' . $p['MSI_UID'] : '',
+			'cat'   => $cat . ( $what && 0 !== strcasecmp( $what, $cat ) ? ' · ' . $what : '' ),
+			'title' => $where ? $where : $what,
+			'text'  => $text,
+			'from'  => oyc_nn_ms( isset( $p['BEGIN_DATE'] ) ? $p['BEGIN_DATE'] : 0 ),
+			'to'    => oyc_nn_ms( isset( $p['END_DATE'] ) ? $p['END_DATE'] : 0 ),
+		);
+	}
+	if ( isset( $p['LLNR'] ) || isset( $p['DISCREP_STATUS'] ) || isset( $p['ATON_GROUP'] ) ) {
+		/* aid discrepancies and temporary changes: one buoy or light each */
+		$st = array();
+		foreach ( array( 'DISCREP_STATUS', 'DISCREP_CORR_STATUS', 'MSI_STATUS' ) as $k ) {
+			if ( ! empty( $p[ $k ] ) && ! preg_match( '/unreported/i', $p[ $k ] ) ) {
+				$st[] = $p[ $k ];
+			}
+		}
+		return array(
+			'id'    => trim( ( ! empty( $p['LLNR'] ) ? 'LLNR ' . $p['LLNR'] : '' ) . ( ! empty( $p['BNM_NUM'] ) ? ' · BNM ' . $p['BNM_NUM'] : '' ), ' ·' ),
+			'cat'   => $cat,
+			'title' => ! empty( $p['NAME'] ) ? $p['NAME'] : $cat,
+			'text'  => $st ? implode( "\n", $st ) : 'Reported discrepancy: missing, off station, light out or damaged. Details in the weekly Local Notice to Mariners.',
+			'from'  => oyc_nn_ms( isset( $p['CREATE_DATE'] ) ? $p['CREATE_DATE'] : 0 ),
+			'to'    => 0,
+		);
+	}
+	return array();
 }
 
 /** One GeoJSON feature to our compact notice, or null when outside OYC_NN_BOX. */
@@ -193,6 +262,27 @@ function oyc_nn_item( $f, $cat ) {
 	}
 	if ( ! $in ) {
 		return null;
+	}
+	$nf = oyc_nn_navcen_fields( $p, $cat );
+	if ( $nf ) {
+		if ( $nf['to'] && $nf['to'] < time() ) {
+			return null;   // ended
+		}
+		$it = array(
+			'id'    => oyc_nn_clean( $nf['id'], 60 ),
+			'cat'   => oyc_nn_clean( $nf['cat'], 90 ),
+			'title' => oyc_nn_clean( $nf['title'], 140 ),
+			'text'  => oyc_nn_clean( $nf['text'], 1500, true ),
+			'from'  => $nf['from'] ? $nf['from'] * 1000 : '',
+			'to'    => $nf['to'] ? $nf['to'] * 1000 : '',
+			'lat'   => round( $sy / count( $pts ), 5 ),
+			'lon'   => round( $sx / count( $pts ), 5 ),
+		);
+		$gt = isset( $f['geometry']['type'] ) ? $f['geometry']['type'] : '';
+		if ( $gt && 'Point' !== $gt && 'MultiPoint' !== $gt && count( $pts ) <= 300 ) {
+			$it['geom'] = oyc_nn_round_geom( $f['geometry'] );
+		}
+		return $it;
 	}
 	$title = oyc_nn_pick( $p, '/^(title|subject|name|heading|aid_?name|aidname|structure|location_?name)$/i' );
 	if ( '' === $title ) {
