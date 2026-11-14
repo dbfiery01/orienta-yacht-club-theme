@@ -1429,7 +1429,14 @@ function card(d){return CARD[Math.round(d/22.5)%16];}
 function fmt(iso){var d=new Date(iso);return {big:(d.getHours()%12||12)+' '+(d.getHours()>=12?'PM':'AM'),small:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})};}
 
 /* ---------- map ---------- */
-var map=L.map('map',{worldCopyJump:true}).setView([40.915,-73.68],12);
+/* Opening view for everyone (Brad, 2026-11-14): Mamaroneck Harbor top-left, Milton
+   Harbor channel at the top, Buoy 42 bottom-centre. Fitted to the screen once the map
+   has a real size (it may start in a hidden tab), so phones and desktops show the same
+   water. A saved My chart view (applied later) or My location still win. */
+var HOME_VIEW=L.latLngBounds([40.922,-73.742],[40.948,-73.682]);
+var map=L.map('map',{worldCopyJump:true}).setView(HOME_VIEW.getCenter(),14);
+(function(){function fit(){try{map.fitBounds(HOME_VIEW,{animate:false});}catch(e){}}
+	if(map.getContainer().clientWidth)fit();else map.once('resize',fit);})();
 /* heads-up: un-rotate map taps (mapPointFromEvent, with My location) */
 (function(){var orig=map.mouseEventToContainerPoint;
 	map.mouseEventToContainerPoint=function(e){return mwEl().classList.contains('headsup')?mapPointFromEvent(e):orig.call(map,e);};})();
