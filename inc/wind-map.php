@@ -3983,6 +3983,13 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 		vis();
 		try{localStorage.setItem('oyc_wm_racetools',cb.checked?'1':'0');}catch(e){}
 	});
+	/* switching the Race layer on (drawer, Race preset or a My chart that has it)
+	   also brings up Race tools, so the polars are always one tap away */
+	var rc=document.getElementById('tgRace');
+	if(rc){
+		rc.addEventListener('change',function(){if(rc.checked&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
+		if(rc.checked&&!cb.checked){cb.checked=true;vis();}
+	}
 })();
 
 /* ---------- layer presets (Sail / Race / Fish / Cruise) + Layers drawer ----------
@@ -4007,7 +4014,10 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 	try{mine=JSON.parse(localStorage.getItem(MINE_KEY)||'null');}catch(e){mine=null;}
 	if(!mine||!mine.layers||!mine.layers.join)mine=null;
 	function syncMine(){
-		if(mine)PRESETS.mine=mine.layers.filter(function(id){return MANAGED.indexOf(id)>=0;});else delete PRESETS.mine;
+		if(mine){PRESETS.mine=mine.layers.filter(function(id){return MANAGED.indexOf(id)>=0;});
+			/* a My chart saved before the Race tools layer existed: Race brings it up */
+			if(PRESETS.mine.indexOf('tgRace')>=0&&PRESETS.mine.indexOf('tgRaceTools')<0&&document.getElementById('tgRaceTools'))PRESETS.mine.push('tgRaceTools');}
+		else delete PRESETS.mine;
 		var mb=bar.querySelector('.pre-mine');if(mb)mb.classList.toggle('empty',!mine);
 		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Update My chart':'Save as My chart';
 	}
