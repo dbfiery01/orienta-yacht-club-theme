@@ -87,3 +87,7 @@
 	#oycwm .rt-badge,#oycwm .rt-badge.on{display:none !important}
 }
 #oycwm .rt-panel [hidden]{display:none !important}
+
+/* Layers > Navigation > Race tools off: hide the panel and the on-map badge
+   (a race log that is recording keeps recording) */
+#oycwm.rt-hide .rt-panel,#oycwm.rt-hide .rt-badge:not(.recording){display:none !important}
