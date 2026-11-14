@@ -195,7 +195,10 @@ function oyc_point_fc_proxy() {
 	$key  = 'oyc_ptfcb_' . md5( $rlat . '_' . $rlon ); // …b = 4-model feed for BLEND (bump key on schema change)
 	$cached = get_transient( $key );
 	if ( false !== $cached ) { oyc_send_raw_json( $cached ); }
-	if ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) { oyc_send_raw_json( '{"ok":false}' ); } // client goes browser-direct
+	/* rate-limited: serve the last-known copy of this point (kept 12 h) rather
+	   than nothing, so a route waypoint never reads "No data here" */
+	$last = get_transient( $key . '_st' );
+	if ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) { oyc_send_raw_json( false !== $last ? $last : '{"ok":false}' ); } // else client goes browser-direct
 
 	$args   = array( 'timeout' => 12, 'headers' => array( 'User-Agent' => 'OYC-Weather/1.0' ) );
 	$wx_url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $rlat . '&longitude=' . $rlon
@@ -211,7 +214,7 @@ function oyc_point_fc_proxy() {
 	if ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) {
 		$wx = json_decode( (string) wp_remote_retrieve_body( $r ), true );
 	}
-	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) { oyc_send_raw_json( '{"ok":false}' ); } // don't cache a miss
+	if ( ! is_array( $wx ) || empty( $wx['hourly'] ) ) { oyc_send_raw_json( false !== $last ? $last : '{"ok":false}' ); } // don't cache a miss
 
 	$mar = null;
 	$rm  = wp_remote_get( $mar_url, $args );
@@ -224,6 +227,7 @@ function oyc_point_fc_proxy() {
 	// serving marine:null for 15 min. The client also fills waves browser-direct.
 	$out = wp_json_encode( array( 'ok' => true, 'wx' => $wx, 'marine' => $mar ) );
 	set_transient( $key, $out, ( null === $mar ? 3 : 15 ) * MINUTE_IN_SECONDS );
+	set_transient( $key . '_st', $out, 12 * HOUR_IN_SECONDS );
 	oyc_send_raw_json( $out );
 }
 

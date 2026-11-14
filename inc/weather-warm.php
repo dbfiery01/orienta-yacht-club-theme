@@ -13,7 +13,8 @@
  * so the warming fetch never blocks a visitor — the one whose visit triggers the
  * run doesn't wait, and the next visitor reads warm cache. The tick is every 5
  * min, but each reading has its own interval (oyc_warm_due): marine forecast and
- * header glyph 15 min, the 230-point local wind grid hourly, Atlantic chunks 12 h.
+ * header glyph 15 min, the 230-point local wind grid hourly, Atlantic chunks once
+ * per 00Z/12Z GFS run.
  * Live and staging share one server address and so one Open-Meteo allowance;
  * staging skips the grids and refreshes the rest every 30 min, and nothing is
  * fetched while Open-Meteo has the server in cooldown (oyc_om_cooling).
@@ -127,24 +128,31 @@ function oyc_warm_weather_run() {
 	if ( ! $staging && function_exists( 'oyc_wind_basin_spec' ) ) { oyc_warm_basin_chunk(); }
 }
 
-/* Refresh at most ONE 150-point basin chunk per tick: the stalest one, and only
-   once it is 12 h old (a 3-degree synoptic field; every other GFS run is plenty).
-   Nine chunks take ~45 min to cycle, so the warmer never asks Open-Meteo for the
-   whole 1,271-point grid at once. A chunk whose fetch failed is left alone for
-   2 h, and nothing is fetched while Open-Meteo has the server in cooldown. Each
-   chunk is mirrored to wind_basin_N.json, from the fresh fetch or else the
-   last-known copy. */
+/* Refresh at most ONE 150-point basin chunk per tick (150 Open-Meteo calls,
+   well under the 600-a-minute limit), so the 1,271-point grid is never asked for
+   at once. A chunk is due once a newer 00Z or 12Z GFS run is out (about 5 h after
+   the run: 05Z and 17Z), so each run is fetched once, in a ~45-minute sweep; the
+   06Z/18Z runs are skipped to keep the daily total near 2,500 of the server's
+   10,000 calls. A chunk whose fetch failed waits 30 min, and nothing is fetched
+   while Open-Meteo has the server in cooldown. Each chunk is mirrored to
+   wind_basin_N.json, from the fresh fetch or else the last-known copy. */
+function oyc_basin_run_ready( $now ) {
+	$lag = 5 * HOUR_IN_SECONDS;               // GFS 0.25° is complete ~4.5 h after the run
+	$cyc = 12 * HOUR_IN_SECONDS;              // 00Z and 12Z runs
+	return (int) ( floor( ( $now - $lag ) / $cyc ) * $cyc + $lag );
+}
 function oyc_warm_basin_chunk() {
-	$n    = oyc_basin_chunk_count();
-	$done = get_option( 'oyc_basin_warmed', array() ); // chunk => last successful fetch
-	$try  = get_option( 'oyc_basin_tried', array() );  // chunk => last attempt
-	$now  = time();
-	$pick = null;
-	$best = PHP_INT_MAX;
+	$n     = oyc_basin_chunk_count();
+	$done  = get_option( 'oyc_basin_warmed', array() ); // chunk => last successful fetch
+	$try   = get_option( 'oyc_basin_tried', array() );  // chunk => last attempt
+	$now   = time();
+	$ready = oyc_basin_run_ready( $now );
+	$pick  = null;
+	$best  = PHP_INT_MAX;
 	for ( $i = 0; $i < $n; $i++ ) {
 		$ok = isset( $done[ $i ] ) ? (int) $done[ $i ] : 0;
 		$at = isset( $try[ $i ] ) ? (int) $try[ $i ] : 0;
-		if ( $now - $ok < 12 * HOUR_IN_SECONDS || $now - $at < 2 * HOUR_IN_SECONDS ) { continue; }
+		if ( $ok >= $ready || $now - $at < 30 * MINUTE_IN_SECONDS ) { continue; }
 		if ( $ok < $best ) { $best = $ok; $pick = $i; }
 	}
 	if ( null === $pick || ( function_exists( 'oyc_om_cooling' ) && oyc_om_cooling() ) ) { return; }
