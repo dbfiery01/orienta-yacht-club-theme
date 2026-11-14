@@ -1989,7 +1989,7 @@ function wpRow(pin,i,ti){
 	else{var lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon),tw=legTWA([prev.lat,prev.lon],[pin.lat,pin.lon]); /* leg course (magnetic) + wind angle from the previous point */
 		dist='<span class="v">'+lb+'°M</span><span class="s">'+(i===0?lg.dist.toFixed(1)+' nm from you':'leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1))+'</span>'
 			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');
-		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt &middot; ETA '+etaText(pl.eta)+'</span>';}
+		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt'+(pl.sea>=0.03?' (seas &minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
 	var wind='<span class="s">'+(pin._fcWait?'Loading&hellip;':'No data')+'</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>'
@@ -2585,9 +2585,26 @@ document.getElementById('tgRace').addEventListener('change',function(){
    gets a planned speed made good from the forecast wind at the time the boat is
    expected there: leaving at the slider's hour, leg by leg. Upwind of the best
    VMG angle it tacks (VMG / cos of the course off the wind), likewise gybing
-   downwind; otherwise the polar speed at that wind angle. Under ~0.5 kt (or no
+   downwind; otherwise the polar speed at that wind angle, less the sea-state
+   loss (seaLoss) from the forecast waves. Under ~0.5 kt (or no
    wind reading) the ETA is left out rather than guessed. */
 function tiFor(ep){var b=0,bd=1e18;for(var i=0;i<TIMES.length;i++){var d=Math.abs(new Date(TIMES[i]).getTime()-ep);if(d<bd){bd=d;b=i;}}return b;}
+/* Sea-state speed loss. Polars are flat-water numbers; in a seaway a heavy
+   cruiser loses speed to pitching and added wave resistance, most of all
+   heading into it. Loss per foot of significant wave height: ~3.5% close-hauled,
+   ~2% reaching, ~1.2% running, scaled by steepness (a 7 s sea is the reference;
+   shorter = steeper = worse, longer swell = gentler), capped at 50%. So 8.5 ft at
+   7 s takes about 30% off upwind, 17% on a reach and 10% running. Waves come from
+   the wave layer's forecast at the leg midpoint, else the waypoints' own. */
+function seaLoss(a,b,ti,twa){
+	var r=null,mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+	try{r=readPoint(mid[0],mid[1],ti);}catch(e){}
+	if(!r||r.waveFt==null){var pb=pinAt(b)||pinAt(a);try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}}
+	if(!r||r.waveFt==null||!(r.waveFt>0.5))return 0;
+	var per=(r.wavePer>0)?r.wavePer:7,steep=Math.max(0.6,Math.min(1.4,7/per));
+	var c=twa<60?0.035:(twa<=110?0.035-(twa-60)/50*0.015:(twa<=150?0.02-(twa-110)/40*0.008:0.012));
+	return Math.min(0.5,r.waveFt*c*steep);
+}
 function routePlan(){
 	var W=window.OYCWM;if(!W||typeof W.polarBsp!=='function'||!TIMES.length)return null;
 	var pts=routePts();if(pts.length<2)return null;
@@ -2600,9 +2617,11 @@ function routePlan(){
 			else if(dn&&dn.vmg>0&&tw.twa>dn.twa)v=dn.vmg/Math.max(0.2,Math.abs(Math.cos(tw.twa*D)));
 			else v=W.polarBsp(tw.kt,tw.twa);
 		}
+		var sl=(v>0.5&&tw)?seaLoss(a,b,tiFor(t),tw.twa):0;
+		if(sl)v*=1-sl;
 		if(!(v>0.5)){ok=false;legs.push(null);continue;}
 		if(t>end)past=true;
-		var hrs=dist/v;t+=hrs*36e5;legs.push({v:v,hrs:hrs,eta:t});
+		var hrs=dist/v;t+=hrs*36e5;legs.push({v:v,hrs:hrs,eta:t,sea:sl});
 	}
 	return {legs:legs,ok:ok,eta:ok?t:null,hrs:ok?(t-curEpoch())/36e5:null,past:past,name:W.polarName||''};
 }
