@@ -1219,12 +1219,12 @@ function pointOfSail(t,kt){var u=45;try{if(LAY)u=layAng(kt).up;}catch(e){}return
 function pinAt(p){for(var k=0;k<pins.length;k++)if(pins[k].lat===p[0]&&pins[k].lon===p[1])return pins[k];return null;}
 function legTWA(a,b,ti){
 	if(ti==null)ti=curTi;
-	var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2],r=null;
-	try{r=readPoint(mid[0],mid[1],ti);}catch(e){}
-	if(!r||r.dir==null){ /* grid not loaded there: use the leg's end points' own forecasts */
-		var pb=pinAt(b)||pinAt(a);
-		try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}
-	}
+	/* the wind shown for the leg's end waypoint at the slider hour (its row and
+	   card), so the TWA matches the numbers on screen; else the map's forecast
+	   at the leg midpoint */
+	var mid=[(a[0]+b[0])/2,(a[1]+b[1])/2],r=null,pb=pinAt(b);
+	try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}
+	if(!r||r.dir==null){try{r=readPoint(mid[0],mid[1],ti);}catch(e){r=null;}}
 	if(!r||r.dir==null)return null;
 	return twaFrom(r.dir,brgTrue(a[0],a[1],b[0],b[1]),r.kt);
 }
@@ -1989,7 +1989,7 @@ function wpRow(pin,i,ti){
 	else{var lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon),tw=legTWA([prev.lat,prev.lon],[pin.lat,pin.lon]); /* leg course (magnetic) + wind angle from the previous point */
 		dist='<span class="v">'+lb+'°M</span><span class="s">'+(i===0?lg.dist.toFixed(1)+' nm from you':'leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1))+'</span>'
 			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');
-		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt'+(pl.sea>=0.03?' (seas &minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
+		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt in '+Math.round(pl.kt)+' kt wind'+(pl.ft>0.5?', '+pl.ft.toFixed(1)+' ft seas':'')+(pl.sea>=0.03?' (&minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
 	var wind='<span class="s">'+(pin._fcWait?'Loading&hellip;':'No data')+'</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>'
@@ -2594,38 +2594,59 @@ function tiFor(ep){var b=0,bd=1e18;for(var i=0;i<TIMES.length;i++){var d=Math.ab
    heading into it. Loss per foot of significant wave height: ~3.5% close-hauled,
    ~2% reaching, ~1.2% running, scaled by steepness (a 7 s sea is the reference;
    shorter = steeper = worse, longer swell = gentler), capped at 50%. So 8.5 ft at
-   7 s takes about 30% off upwind, 17% on a reach and 10% running. Waves come from
-   the wave layer's forecast at the leg midpoint, else the waypoints' own. */
-function seaLoss(a,b,ti,twa){
-	var r=null,mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-	try{r=readPoint(mid[0],mid[1],ti);}catch(e){}
-	if(!r||r.waveFt==null){var pb=pinAt(b)||pinAt(a);try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}}
+   7 s takes about 30% off upwind, 17% on a reach and 10% running. */
+function seaLossFor(r,twa){
 	if(!r||r.waveFt==null||!(r.waveFt>0.5))return 0;
 	var per=(r.wavePer>0)?r.wavePer:7,steep=Math.max(0.6,Math.min(1.4,7/per));
 	var c=twa<60?0.035:(twa<=110?0.035-(twa-60)/50*0.015:(twa<=150?0.02-(twa-110)/40*0.008:0.012));
 	return Math.min(0.5,r.waveFt*c*steep);
 }
+/* Wind + sea where the boat is: the map's forecast at that spot, else the
+   nearer end waypoint's own exact-point forecast (offshore, before the Atlantic
+   grid loads). */
+function planSample(lat,lon,ti,pa,pb){
+	var r=null;try{r=readPoint(lat,lon,ti);}catch(e){}
+	if(r&&r.kt!=null&&r.dir!=null&&r.waveFt!=null)return r;
+	var near=null,da=pa?distNM(lat,lon,pa.lat,pa.lon):1e9,db=pb?distNM(lat,lon,pb.lat,pb.lon):1e9;
+	near=(da<=db)?(pa||pb):(pb||pa);
+	var q=null;try{if(near)q=pinReading(near.lat,near.lon,ti,near.fc);}catch(e){}
+	if(!r||r.kt==null||r.dir==null)return q;
+	if(q&&r.waveFt==null){r.waveFt=q.waveFt;r.wavePer=q.wavePer;}
+	return r;
+}
+/* Planned speed made good on course crs in reading r: tack upwind of the best
+   VMG angle, gybe downwind of it, else the polar speed; less the sea loss. */
+function planSpeed(W,r,crs){
+	if(!r||r.kt==null||r.dir==null)return null;
+	var D=Math.PI/180,tw=twaFrom(r.dir,crs,r.kt),v;
+	var up=W.polarVmg?W.polarVmg(r.kt,true):null,dn=W.polarVmg?W.polarVmg(r.kt,false):null;
+	if(up&&up.vmg>0&&tw.twa<up.twa)v=up.vmg/Math.max(0.2,Math.cos(tw.twa*D));
+	else if(dn&&dn.vmg>0&&tw.twa>dn.twa)v=dn.vmg/Math.max(0.2,Math.abs(Math.cos(tw.twa*D)));
+	else v=W.polarBsp(r.kt,tw.twa);
+	var sl=seaLossFor(r,tw.twa);
+	return {v:v*(1-sl),sea:sl,kt:r.kt,twa:tw.twa,ft:r.waveFt};
+}
+/* Each leg's speed comes from the conditions SHOWN for its end waypoint at the
+   slider's hour (the same wind and sea as that waypoint's row and card), so the
+   numbers on screen and the speed agree; move the slider to plan another
+   departure/weather hour. Where a waypoint has no reading yet, the map's
+   forecast at the leg midpoint is used. ETA = slider hour + the legs' times. */
 function routePlan(){
 	var W=window.OYCWM;if(!W||typeof W.polarBsp!=='function'||!TIMES.length)return null;
 	var pts=routePts();if(pts.length<2)return null;
-	var t=curEpoch(),end=new Date(TIMES[TIMES.length-1]).getTime(),legs=[],ok=true,past=false,D=Math.PI/180;
+	var ti=curTi,t0=curEpoch(),t=t0,legs=[],ok=true;
 	for(var j=0;j<pts.length-1;j++){
-		var a=pts[j],b=pts[j+1],dist=distNM(a[0],a[1],b[0],b[1]),tw=ok?legTWA(a,b,tiFor(t)):null,v=null;
-		if(tw&&tw.kt!=null){
-			var up=W.polarVmg?W.polarVmg(tw.kt,true):null,dn=W.polarVmg?W.polarVmg(tw.kt,false):null;
-			if(up&&up.vmg>0&&tw.twa<up.twa)v=up.vmg/Math.max(0.2,Math.cos(tw.twa*D));
-			else if(dn&&dn.vmg>0&&tw.twa>dn.twa)v=dn.vmg/Math.max(0.2,Math.abs(Math.cos(tw.twa*D)));
-			else v=W.polarBsp(tw.kt,tw.twa);
-		}
-		var sl=(v>0.5&&tw)?seaLoss(a,b,tiFor(t),tw.twa):0;
-		if(sl)v*=1-sl;
-		if(!(v>0.5)){ok=false;legs.push(null);continue;}
-		if(t>end)past=true;
-		var hrs=dist/v;t+=hrs*36e5;legs.push({v:v,hrs:hrs,eta:t,sea:sl});
+		var a=pts[j],b=pts[j+1],dist=distNM(a[0],a[1],b[0],b[1]),pb=pinAt(b),r=null;
+		try{if(pb)r=pinReading(pb.lat,pb.lon,ti,pb.fc);}catch(e){r=null;}
+		if(!r||r.kt==null||r.dir==null)r=planSample((a[0]+b[0])/2,(a[1]+b[1])/2,ti,pinAt(a),pb);
+		var sp=ok?planSpeed(W,r,brgTrue(a[0],a[1],b[0],b[1])):null;
+		if(!sp||!(sp.v>0.5)){ok=false;legs.push(null);continue;}
+		var hrs=dist/sp.v;t+=hrs*36e5;
+		legs.push({v:sp.v,hrs:hrs,eta:t,sea:sp.sea,kt:sp.kt,ft:sp.ft,twa:sp.twa});
 	}
-	return {legs:legs,ok:ok,eta:ok?t:null,hrs:ok?(t-curEpoch())/36e5:null,past:past,name:W.polarName||''};
+	return {legs:legs,ok:ok,eta:ok?t:null,hrs:ok?(t-t0)/36e5:null,past:false,name:W.polarName||''};
 }
-function etaText(ms){var d=new Date(ms);return d.toLocaleDateString('en-US',{weekday:'short'})+' '+(d.getHours()%12||12)+(d.getMinutes()>=30?':30':'')+' '+(d.getHours()>=12?'PM':'AM');}
+function etaText(ms){var d=new Date(ms);return d.toLocaleDateString('en-US',{weekday:'short'})+' '+(d.getMonth()+1)+'/'+d.getDate()+' '+(d.getHours()%12||12)+(d.getMinutes()>=30?':30':'')+' '+(d.getHours()>=12?'PM':'AM');}
 function durText(h){var m=Math.round(h*60);if(m<60)return m+' min';var dd=Math.floor(m/1440),hh=Math.round((m-dd*1440)/60);if(hh===24){dd++;hh=0;}return (dd?dd+'d ':'')+hh+'h';}
 /* the planned leg that ENDS at waypoint i (legs run origin→Pt1 when routed from your boat) */
 function planLeg(P,i){if(!P)return null;var j=routeOrigin()?i:i-1;return j>=0?P.legs[j]:null;}
