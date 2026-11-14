@@ -194,6 +194,36 @@ function oyc_nn_ms( $v ) {
 	return is_numeric( $v ) && $v > 0 ? (int) floor( $v / 1000 ) : 0;
 }
 
+/* NAVCEN descriptions open with lines the popup already shows (the
+   "Waterway/General/Category" path, the notice number, "From: .. To: ..",
+   "Location:" and bare coordinates): drop those, keep the notice itself. */
+function oyc_nn_tidy( $text ) {
+	$out = array();
+	foreach ( preg_split( '/\r?\n/', (string) $text ) as $ln ) {
+		$t = trim( $ln );
+		if ( preg_match( '#^(General/|[^/]+/General/)#', $t )
+			|| preg_match( '/^\d+$/', $t )
+			|| preg_match( '/^From:\s*\d{4}-\d{2}-\d{2}/', $t )
+			|| preg_match( '/^Location:[\s\d.,°\-NSEW\/]*$/u', $t )
+			|| ( preg_match( '/\d/', $t ) && preg_match( '/^[\d\s.,°\'’"\-NSEW\/()]+$/u', $t ) ) ) {
+			continue;
+		}
+		$out[] = $ln;
+	}
+	return trim( implode( "\n", $out ) );
+}
+
+/* Is this point in the Sound? OYC_NN_BOX less Long Island's south-shore bays,
+   which share its longitudes: the Sound's southern edge steps north going east. */
+function oyc_nn_in_sound( $lat, $lon ) {
+	list( $s, $w, $n, $e ) = array_map( 'floatval', explode( ',', OYC_NN_BOX ) );
+	if ( $lat < $s || $lat > $n || $lon < $w || $lon > $e ) {
+		return false;
+	}
+	$south = $lon < -73.40 ? 40.76 : ( $lon < -72.70 ? 40.88 : 40.95 );
+	return $lat >= $south;
+}
+
 /** NAVCEN's own fields -> title, text, dates, id. Empty when not NAVCEN's layout. */
 function oyc_nn_navcen_fields( $p, $cat ) {
 	if ( isset( $p['TITLE'] ) || isset( $p['MSI_UID'] ) ) {
@@ -202,22 +232,29 @@ function oyc_nn_navcen_fields( $p, $cat ) {
 		$where = $parts[0] ? $parts[0] : ( isset( $p['WATERWAY_NAME'] ) ? $p['WATERWAY_NAME'] : '' );
 		$what  = ! empty( $p['TYPE'] ) ? $p['TYPE'] : ( ! empty( $p['SUB_CATEGORY'] ) ? $p['SUB_CATEGORY'] : $cat );
 		$text  = isset( $p['DESCRIPTION'] ) ? (string) $p['DESCRIPTION'] : '';
-		/* the description repeats the TITLE path and the notice number first */
-		$text = preg_replace( '/^[^\n]*\/[^\n]*\n\s*\d+\s*\n/', '', $text );
+		$to    = oyc_nn_ms( isset( $p['END_DATE'] ) ? $p['END_DATE'] : 0 );
+		/* the description's own "To:" date can be earlier than END_DATE (a
+		   July 4 fireworks zone listed until late December): use the earlier */
+		if ( preg_match( '/\bTo:\s*(\d{4}-\d{2}-\d{2})/', $text, $m ) ) {
+			$t2 = strtotime( $m[1] . ' 23:59:59 UTC' );
+			if ( $t2 && ( ! $to || $t2 < $to ) ) {
+				$to = $t2;
+			}
+		}
 		return array(
 			'id'    => ! empty( $p['MSI_UID'] ) ? 'Notice ' . $p['MSI_UID'] : '',
 			'cat'   => $cat . ( $what && 0 !== strcasecmp( $what, $cat ) ? ' · ' . $what : '' ),
 			'title' => $where ? $where : $what,
-			'text'  => $text,
+			'text'  => oyc_nn_tidy( $text ),
 			'from'  => oyc_nn_ms( isset( $p['BEGIN_DATE'] ) ? $p['BEGIN_DATE'] : 0 ),
-			'to'    => oyc_nn_ms( isset( $p['END_DATE'] ) ? $p['END_DATE'] : 0 ),
+			'to'    => $to,
 		);
 	}
 	if ( isset( $p['LLNR'] ) || isset( $p['DISCREP_STATUS'] ) || isset( $p['ATON_GROUP'] ) ) {
 		/* aid discrepancies and temporary changes: one buoy or light each */
 		$st = array();
 		foreach ( array( 'DISCREP_STATUS', 'DISCREP_CORR_STATUS', 'MSI_STATUS' ) as $k ) {
-			if ( ! empty( $p[ $k ] ) && ! preg_match( '/unreported/i', $p[ $k ] ) ) {
+			if ( ! empty( $p[ $k ] ) && ! preg_match( '/unreported|^approved$/i', trim( $p[ $k ] ) ) ) {
 				$st[] = $p[ $k ];
 			}
 		}
@@ -256,7 +293,7 @@ function oyc_nn_item( $f, $cat ) {
 	foreach ( $pts as $c ) {
 		$sx += $c[0];
 		$sy += $c[1];
-		if ( $c[1] >= $s && $c[1] <= $n && $c[0] >= $w && $c[0] <= $e ) {
+		if ( oyc_nn_in_sound( $c[1], $c[0] ) ) {
 			$in = true;
 		}
 	}
