@@ -384,6 +384,15 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .card.isfull .mapgrid .mapwrap{height:100%}
 }
 #oycwm .card.isfull .mapgrid{flex:1 1 auto;min-height:0}
+/* Layers drawer open (wider than phones): the floating waypoint/route card and the
+   target-speed badge move left of the drawer (262px + 10px gap), so neither is hidden
+   under it; they slide back when it closes. Phones keep the table under the slider. */
+#oycwm .mapgrid .wptab,#oycwm .mapgrid .rt-badge{transition:right .18s ease}
+#oycwm .card:not(.hasburger) .mapgrid.lyr-open.has-wp .wptab.collapsed{right:282px;max-width:calc(100% - 352px)}
+#oycwm .card:not(.hasburger) .mapgrid.lyr-open .rt-badge{right:282px}
+@media (min-width:761px) and (max-width:900px){
+	#oycwm .card:not(.hasburger) .mapgrid.lyr-open .wptab{right:280px;width:min(260px,calc(100% - 336px))}
+}
 #oycwm .card.isfull .wptab{max-height:none}
 #oycwm .card .foot{padding:10px 18px 16px;font-size:.72rem;color:var(--mute)}
 #oycwm .leaflet-control.velocity-control{background:rgba(11,42,74,.82);color:#fff;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:600}
@@ -853,6 +862,9 @@ function oyc_wind_map_html( $embed = false ) {
 						<?php endif; ?>
 						<label class="mbr-only" title="Members: show your boat to others on this map while the page is open"><input type="checkbox" id="tgShare"> Share my position</label>
 						<label><input type="checkbox" id="tgRace"> Race</label>
+						<?php if ( function_exists( 'oyc_race_tools_can_use' ) && oyc_race_tools_can_use() ) : ?>
+						<label title="Racers: polars and target speed, race log and the team race archive (the panel under the map)"><input type="checkbox" id="tgRaceTools"> Race tools</label>
+						<?php endif; ?>
 					</div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
@@ -3804,6 +3816,24 @@ loadLocal();
 map.whenReady(function(){setTimeout(drawGraticule,400);});
 })();
 
+/* ---------- Race tools layer (racers only) ----------
+   The Race tools panel under the map (and its target-speed badge on the map) show
+   only while Layers > Navigation > Race tools is ticked. The Race preset ticks it,
+   and My chart keeps it like any other layer. First visit: on only if the last
+   preset used was Race. */
+(function(){
+	var cb=document.getElementById('tgRaceTools'),root=document.getElementById('oycwm');
+	if(!cb||!root)return;
+	var st=null,pre=null;try{st=localStorage.getItem('oyc_wm_racetools');pre=localStorage.getItem('oyc_wm_preset');}catch(e){}
+	cb.checked=(st===null)?(pre==='race'):(st==='1');
+	function vis(){root.classList.toggle('rt-hide',!cb.checked);}
+	vis();
+	cb.addEventListener('change',function(){
+		vis();
+		try{localStorage.setItem('oyc_wm_racetools',cb.checked?'1':'0');}catch(e){}
+	});
+})();
+
 /* ---------- layer presets (Sail / Race / Fish / Cruise) + Layers drawer ----------
    A preset sets the main layer switches in one tap by ticking/unticking the real
    checkboxes (and firing their change events), so every layer's own wiring and
@@ -3812,10 +3842,10 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 (function(){
 	var bar=document.getElementById('presetBar'),drawer=document.getElementById('lyrDrawer'),btn=document.getElementById('lyrBtn');
 	if(!bar||!drawer||!btn)return;
-	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgNotice','tgRace','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
+	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgNotice','tgRace','tgRaceTools','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
 		sail:['tgChart','tgArrows','tgAnch','tgFuel','tgNotice'],
-		race:['tgChart','tgArrows','tgLay','tgRace','tgFleet'],
+		race:['tgChart','tgArrows','tgLay','tgRace','tgRaceTools','tgFleet'],
 		fish:['tgChart','tgCur','tgFish','tgFuel'],
 		cruise:['tgChart','tgArrows','tgAis','tgNotice','tgClubs','tgDine','tgFuel','tgAnch']
 	};
@@ -3893,6 +3923,9 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 	   visitor's last choice wins */
 	function setOpen(o,save){
 		drawer.hidden=!o;btn.setAttribute('aria-expanded',o?'true':'false');
+		/* the floating waypoint/route card (and target-speed badge) step left of the
+		   open drawer so both stay in view, and go back when it closes */
+		var g=document.getElementById('mapGrid');if(g)g.classList.toggle('lyr-open',o);
 		if(save){try{localStorage.setItem('oyc_wm_drawer',o?'1':'0');}catch(e){}}
 	}
 	var saved=null;try{saved=localStorage.getItem('oyc_wm_drawer');}catch(e){}
