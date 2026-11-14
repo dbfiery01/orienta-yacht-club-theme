@@ -188,15 +188,21 @@ function init(){
 	loadPolars();
 }
 function libBoats(){return (CFG.lib&&CFG.lib.boats)||[];}
-function libPolar(slug){var L=libBoats();for(var i=0;i<L.length;i++)if(L[i].id===slug)return {id:'lib:'+slug,name:L[i].name+' (class)',polar:L[i].polar,lib:true,cert:L[i].cert};return null;}
+function libPolar(slug){var L=libBoats();for(var i=0;i<L.length;i++)if(L[i].id===slug)return {id:'lib:'+slug,name:L[i].name+(L[i].est?' (estimated)':' (class)'),polar:L[i].polar,lib:true,cert:L[i].cert,est:L[i].est||''};return null;}
 function findPolar(id){if(id==null||id==='')return null;id=String(id);if(id.indexOf('lib:')===0)return libPolar(id.slice(4));var n=+id;for(var i=0;i<POLARS.length;i++)if(POLARS[i].id===n)return POLARS[i];return null;}
 /* hand the wind map's Layline angles ("My polars") the best-VMG angles of the chosen polars */
 function exposePolar(){
 	var P=selPolar&&selPolar.polar;
 	OYCWM.polarAngles=P?function(tws){var u=vmgTarget(P,tws,true),d=vmgTarget(P,tws,false);return (u&&d&&isFinite(u.vmg)&&isFinite(d.vmg))?{up:u.twa,gybe:d.twa}:null;}:null;
+	/* and the boat speed for a true wind speed + angle, for the chart's route
+	   leg speeds and ETA (wind-map.php routePlan) */
+	OYCWM.polarBsp=P?function(tws,twa){return polarSpeed(P,tws,twa);}:null;
+	OYCWM.polarVmg=P?function(tws,up){return vmgTarget(P,tws,up);}:null;
+	OYCWM.polarName=P?String(selPolar.name||''):'';
 	if(typeof OYCWM.layRefresh==='function')OYCWM.layRefresh();
+	if(typeof OYCWM.routeRefresh==='function')OYCWM.routeRefresh();
 }
-function libNote(){var n=$('rtLibNote');if(!n)return;if(selPolar&&selPolar.lib){n.hidden=false;n.textContent='Class polars from one ORC certificate ('+(selPolar.cert?'sail no. '+selPolar.cert:'ORC')+'). Your boat will differ with sails, bottom and trim: to refine, open Polars → Start from a class, scale or edit the table, and save it as your boat.';}else{n.hidden=true;n.textContent='';}}
+function libNote(){var n=$('rtLibNote');if(!n)return;if(selPolar&&selPolar.est){n.hidden=false;n.textContent=selPolar.est+' Treat target speeds and ETAs as a planning guide; to refine, open Polars → Start from a class, edit the table and save it as your boat.';return;}if(selPolar&&selPolar.lib){n.hidden=false;n.textContent='Class polars from one ORC certificate ('+(selPolar.cert?'sail no. '+selPolar.cert:'ORC')+'). Your boat will differ with sails, bottom and trim: to refine, open Polars → Start from a class, scale or edit the table, and save it as your boat.';}else{n.hidden=true;n.textContent='';}}
 function windLabel(){$('rtWindSrc').textContent=windOv?('your instruments: '+windOv.tws+' kt from '+Math.round(windOv.twdM)+'°M'):'forecast model at the boat';}
 
 function loadPolars(){
@@ -207,7 +213,7 @@ function renderPolars(){
 	var LB=libBoats();
 	sel.innerHTML='<option value="">— none —</option>'
 		+(POLARS.length?'<optgroup label="Saved boats">'+POLARS.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('')+'</optgroup>':'')
-		+(LB.length?'<optgroup label="Class polars (ORC)">'+LB.map(function(b){return '<option value="lib:'+esc(b.id)+'">'+esc(b.name)+'</option>';}).join('')+'</optgroup>':'');
+		+(LB.length?'<optgroup label="Class polars">'+LB.map(function(b){return '<option value="lib:'+esc(b.id)+'">'+esc(b.name)+'</option>';}).join('')+'</optgroup>':'');
 	if(findPolar(keep))sel.value=keep;else if(POLARS.length===1)sel.value=POLARS[0].id;
 	selPolar=findPolar(sel.value);libNote();exposePolar();
 	var L=$('rtPolarList');

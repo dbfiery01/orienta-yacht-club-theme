@@ -225,6 +225,16 @@ function oyc_om_note_status( $r ) {
 	elseif ( false !== strpos( $why, 'daily' ) )  { $wait = 3 * HOUR_IN_SECONDS; } // probe again every 3 h until the day resets
 	else                                          { $wait = 30 * MINUTE_IN_SECONDS; }
 	set_transient( 'oyc_om_cooldown', $now + $wait, $wait );
+	// Remember which limit tripped (minutely / hourly / daily / other) so the
+	// X-OYC-OM header says why, when diagnosing with curl.
+	$kind = ( false !== strpos( $why, 'minutely' ) ) ? 'minutely' : ( ( false !== strpos( $why, 'hourly' ) ) ? 'hourly' : ( ( false !== strpos( $why, 'daily' ) ) ? 'daily' : 'other' ) );
+	set_transient( 'oyc_om_cooldown_why', $kind, $wait );
+}
+function oyc_om_cooldown_header() {
+	if ( oyc_om_cooling() && ! headers_sent() ) {
+		$why = get_transient( 'oyc_om_cooldown_why' );
+		header( 'X-OYC-OM: cooldown' . ( $why ? '-' . $why : '' ) );
+	}
 }
 
 /* Fetch $url and store the raw JSON body under $key for $ttl. Also keeps a
@@ -264,7 +274,7 @@ function oyc_om_cached( $key, $url, $ttl, $stale_ttl = 6 * HOUR_IN_SECONDS ) {
 	if ( false !== $body ) { oyc_send_raw_json( $body ); }
 	$fresh = oyc_om_fetch_store( $key, $url, $ttl, $stale_ttl );
 	if ( is_string( $fresh ) && '' !== $fresh ) { oyc_send_raw_json( $fresh ); } // fetched now
-	if ( oyc_om_cooling() && ! headers_sent() ) { header( 'X-OYC-OM: cooldown' ); } // visible to curl when diagnosing
+	oyc_om_cooldown_header(); // visible to curl when diagnosing
 	$stale = get_transient( $key . '_st' );                                      // coalesced or failed
 	if ( false !== $stale ) { oyc_send_raw_json( $stale ); }
 	oyc_send_raw_json( '[]' );
@@ -284,6 +294,10 @@ function oyc_wind_local_spec() {
 	return array( 'oyc_wind_local', $url, 75 * MINUTE_IN_SECONDS );
 }
 function oyc_wind_local_proxy() {
+	if ( function_exists( 'oyc_is_staging_site' ) && oyc_is_staging_site() ) {   // shares live's allowance → read live's warmed copy
+		$b = oyc_live_mirror( 'wind_local', 30 * MINUTE_IN_SECONDS );
+		if ( '' !== $b ) { oyc_send_raw_json( $b ); }
+	}
 	list( $k, $u, $t ) = oyc_wind_local_spec();
 	oyc_om_cached( $k, $u, $t );
 }
@@ -301,11 +315,15 @@ function oyc_wind_radar_proxy() {
 /* BASIN wind field (Atlantic 3° grid), one client chunk per request so each
    stays small & separately cached. ?chunk=N — CH=150 MUST match the JS loadBasin
    chunk size.
-   The 3° GFS field only changes when GFS runs (every 6 h), so the warmer
-   (inc/weather-warm.php) refreshes it in the background one chunk per tick and
-   the copies are kept long: 12 h fresh, 48 h last-known. Fetching all nine
-   chunks at once on a cold 15-minute cache tripped Open-Meteo's free-tier rate
-   limits and left bands of the Atlantic map empty. */
+   Open-Meteo counts every grid point as a call, so the nine chunks are 1,271
+   calls — more than the free 600-a-minute allowance if they are fetched together.
+   So the field is fetched ONLY by the warmer (inc/weather-warm.php): one chunk
+   per 5-minute tick, once per 00Z and 12Z GFS run, mirrored to static files that
+   every visitor reads. Visitors never trigger an upstream fetch while any copy is
+   known, and staging (same server address, same allowance) never fetches at all:
+   it reads live's mirrored files. 8 forecast days, so a chunk fetched yesterday
+   still covers all 7 days of today's time axis (the series starts at local
+   midnight of the fetch day). */
 function oyc_basin_chunk_count() {
 	list( $lat ) = oyc_named_grid( 'basin' );
 	return (int) ceil( count( $lat ) / 150 );
@@ -317,8 +335,24 @@ function oyc_wind_basin_spec( $chunk ) {
 	if ( null === $cs ) { return null; }
 	$url = 'https://api.open-meteo.com/v1/forecast?latitude=' . $cs[0] . '&longitude=' . $cs[1]
 		. '&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
-		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-	return array( 'oyc_wind_basin_' . $chunk, $url, 12 * HOUR_IN_SECONDS, 48 * HOUR_IN_SECONDS );
+		. '&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=8&timezone=America%2FNew_York';
+	return array( 'oyc_wind_basin_' . $chunk, $url, 13 * HOUR_IN_SECONDS, 72 * HOUR_IN_SECONDS );
+}
+/* Staging shares live's Open-Meteo allowance, so it reads live's cron-warmed
+   static copy of a reading (a plain file on our own site: no Open-Meteo call)
+   and caches it for $ttl. Returns the JSON string, or '' if live has none. */
+function oyc_live_mirror( $name, $ttl ) {
+	$key  = 'oyc_lm_' . $name;
+	$body = get_transient( $key );
+	if ( is_string( $body ) && '' !== $body ) { return $body; }
+	$r = wp_remote_get( 'https://orientayachtclub.com/wp-content/uploads/oyc-weather/' . $name . '.json', array( 'timeout' => 10 ) );
+	$b = ( ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) ) ? (string) wp_remote_retrieve_body( $r ) : '';
+	if ( '' !== $b && ( '[' === $b[0] || '{' === $b[0] ) ) {
+		set_transient( $key, $b, $ttl );
+		if ( function_exists( 'oyc_weather_static_write' ) ) { oyc_weather_static_write( $name, $b ); } // staging's own static file, so its browsers skip this proxy
+		return $b;
+	}
+	return '';
 }
 add_action( 'wp_ajax_oyc_wind_basin',        'oyc_wind_basin_proxy' );
 add_action( 'wp_ajax_nopriv_oyc_wind_basin', 'oyc_wind_basin_proxy' );
@@ -327,7 +361,28 @@ function oyc_wind_basin_proxy() {
 	$spec  = oyc_wind_basin_spec( $chunk );
 	if ( null === $spec ) { oyc_send_raw_json( '[]' ); }
 	list( $key, $url, $ttl, $stale ) = $spec;
-	oyc_om_cached( $key, $url, $ttl, $stale );
+	if ( function_exists( 'oyc_is_staging_site' ) && oyc_is_staging_site() ) {
+		$b = oyc_live_mirror( 'wind_basin_' . $chunk, HOUR_IN_SECONDS );
+		oyc_send_raw_json( '' !== $b ? $b : '[]' );
+	}
+	foreach ( array( $key, $key . '_st' ) as $k ) {          // any known copy wins
+		$b = get_transient( $k );
+		if ( is_string( $b ) && '' !== $b ) { oyc_send_raw_json( $b ); }
+	}
+	/* Nothing known (cold cache, cron not running): fetch this one chunk, but at
+	   most one basin chunk per 30 s across all visitors, so a page load can never
+	   fire the whole grid at Open-Meteo. Otherwise '[]' and the browser falls back
+	   to its own spaced-out direct fetch. */
+	if ( false === get_transient( 'oyc_basin_gap' ) ) {
+		set_transient( 'oyc_basin_gap', 1, 30 );
+		$b = oyc_om_fetch_store( $key, $url, $ttl, $stale );
+		if ( is_string( $b ) && '' !== $b ) {
+			if ( function_exists( 'oyc_weather_static_write' ) ) { oyc_weather_static_write( 'wind_basin_' . $chunk, $b ); }
+			oyc_send_raw_json( $b );
+		}
+	}
+	oyc_om_cooldown_header();
+	oyc_send_raw_json( '[]' );
 }
 
 /* Wave field (Open-Meteo Marine) for the Wave tab, one client chunk per request.
