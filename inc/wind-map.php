@@ -3015,7 +3015,18 @@ function loadLocal(tries){
    Chunks are drawn as they arrive. Values are placed on the master time axis by
    TIMESTAMP, not by index: a cached chunk can come from an earlier GFS run whose
    series starts on the previous day. A chunk that never loads stays null (blank)
-   rather than being faked as calm air at 1013 mb. */
+   rather than being faked as calm air at 1013 mb.
+   Bands of open Atlantic used to come up empty (no barbs south of ~42N) when the
+   server copies were stale and every chunk fell through to the browser: three
+   150-point chunks at once, plus the local grid, run past Open-Meteo's 600 calls
+   a minute for one address, and the 1.5 s / 3 s retries landed inside the same
+   minute, so chunks 2-8 gave up. Now:
+   - the chunks covering the visible map load first;
+   - an older static copy (any age) is drawn straight away as a placeholder; it
+     is aligned by timestamp, so only hours it still covers show, and a fresh
+     copy replaces it when one arrives;
+   - direct Open-Meteo calls go one at a time, at most ~450 points a minute,
+     and a 429 waits for the next minute instead of retrying at once. */
 function loadBasin(){
 	if(BASIN.loaded||BASIN.loading||!TIMES.length)return; /* needs the local grid's time axis */
 	BASIN.loading=true;
@@ -3033,19 +3044,41 @@ function loadBasin(){
 		for(var k=0;k<list.length;k++){var h=list[k]&&list[k].hourly;if(!h||!h.time)continue;var gi=a+k;
 			BASIN.SP[gi]=align(h.wind_speed_10m,h.time);BASIN.DR[gi]=align(h.wind_direction_10m,h.time);
 			BASIN.PR[gi]=align(h.pressure_msl,h.time);BASIN.TP[gi]=align(h.temperature_2m,h.time);}}
-	/* browser direct fetch of this chunk's points — same grid slice/params as the
-	   proxy — for when the host can't reach Open-Meteo (keeps the national view alive) */
+	function json(r){return r&&r.ok?r.json():null;}
+	function soft(p){return p.then(json).catch(function(){return null;});}
+	/* static file of any age (the last-known copy), for a placeholder */
+	function anyStatic(idx){return STAT?soft(fetch(STAT+'wind_basin_'+idx+'.json',{cache:'no-store'})):Promise.resolve(null);}
+	/* fresh static (<=48 h) only — no proxy fallback here, the proxy is its own step */
+	function freshStatic(idx){if(!STAT)return Promise.resolve(null);
+		return fetch(STAT+'wind_basin_'+idx+'.json',{cache:'no-store'}).then(function(r){
+			if(!r.ok)return null;var lm=r.headers.get('last-modified');
+			if(lm&&(Date.now()-Date.parse(lm))>48*3600000)return null;return r.json();
+		}).catch(function(){return null;});}
+	/* Browser-direct Open-Meteo, one request at a time, paced to ~450 points a
+	   minute; a 429 waits out the minute and tries again (up to 4 times). */
+	var cq=Promise.resolve(),lastDirect=0;
+	function wait(ms){return new Promise(function(res){setTimeout(res,ms);});}
 	function clientChunk(a,b){
 		var u='https://api.open-meteo.com/v1/forecast?latitude='+BASIN.LAT.slice(a,b).join(',')+'&longitude='+BASIN.LON.slice(a,b).join(',')
 			+'&hourly=wind_speed_10m,wind_direction_10m,pressure_msl,temperature_2m'
 			+'&wind_speed_unit=ms&temperature_unit=fahrenheit&precipitation_unit=inch&temporal_resolution=hourly_3&forecast_days=7&timezone=America%2FNew_York';
-		return fetchT(u,30000).then(function(r){if(!r.ok)throw new Error('b '+r.status);return r.json();});
+		function attempt(n){
+			var gap=Math.max(0,lastDirect+20000-Date.now());
+			return wait(gap).then(function(){lastDirect=Date.now();return fetchT(u,30000);}).then(function(r){
+				if(r.status===429&&n<4)return wait(61000).then(function(){return attempt(n+1);});
+				return json(r);
+			},function(){return n<2?wait(3000).then(function(){return attempt(n+1);}):null;});
+		}
+		var p=cq.then(function(){return attempt(0);});
+		cq=p.catch(function(){});
+		return p.catch(function(){return null;});
 	}
 	/* redraw at most every 250 ms as chunks land; switch to the basin view on the first one */
+	var have={};
 	function progress(){if(!timer)timer=setTimeout(paint,250);}
 	function paint(){timer=null;
 		var done=got+failed>=chunks.length;
-		if(got){buildFrames(BASIN);BASIN.loaded=true;}
+		if(Object.keys(have).length){buildFrames(BASIN);BASIN.loaded=true;}
 		if(done)BASIN.loading=false;
 		BASIN.note=done?(failed?'Some Atlantic data is unavailable right now, so those areas are blank':''):'Loading Atlantic data… '+(got+failed)+' of '+chunks.length;
 		if(activeGrid===BASIN&&mode!=='radar'){
@@ -3053,20 +3086,28 @@ function loadBasin(){
 			refreshOverlays();drawField();drawHL(BASIN,curTi);setFoot();
 		}else maybeSwitchGrid();
 	}
-	function fetchChunk(idx,tries){
+	function put(idx,arr){store(chunks[idx][0],arr);have[idx]=1;progress();}
+	function fetchChunk(idx){
 		var a=chunks[idx][0],b=chunks[idx][1];
-		return statFetch('wind_basin_'+idx,'oyc_wind_basin&chunk='+idx,48*60,12000)
-			.then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
-			.then(function(arr){return valid(arr)?arr:clientChunk(a,b);})
-			.then(function(arr){if(!valid(arr))throw new Error('chunk');store(a,arr);got++;progress();})
-			.catch(function(){
-				if(tries<2)return new Promise(function(res){setTimeout(res,1500*(tries+1));}).then(function(){return fetchChunk(idx,tries+1);});
-				failed++;progress();
-			});
+		return freshStatic(idx).then(function(arr){
+			if(valid(arr)){put(idx,arr);return true;}
+			/* placeholder from an older copy while the fresh one is fetched */
+			var older=anyStatic(idx).then(function(o){if(valid(o)&&!have[idx])put(idx,o);});
+			return older.then(function(){return soft(fetchT(AJAX+'?action=oyc_wind_basin&chunk='+idx,12000));})
+				.then(function(p){if(valid(p)){put(idx,p);return true;}return clientChunk(a,b);})
+				.then(function(c){if(c===true)return true;if(valid(c)){put(idx,c);return true;}return !!have[idx];});
+		}).catch(function(){return !!have[idx];})
+		.then(function(ok){if(ok)got++;else failed++;progress();});
 	}
+	/* visible chunks first: each chunk is a band of ~3.7 grid rows across the whole
+	   basin, so order by how far the band's middle latitude is from the map centre */
+	var order=chunks.map(function(c,i){return i;});
+	try{var clat=map.getCenter().lat;
+		order.sort(function(x,y){function d(i){return Math.abs(BASIN.LAT[Math.floor((chunks[i][0]+chunks[i][1]-1)/2)]-clat);}return d(x)-d(y);});
+	}catch(e){}
 	function pump(){
-		if(ci>=chunks.length)return Promise.resolve();
-		var batch=[];for(var n=0;n<CONC&&ci<chunks.length;n++,ci++)batch.push(fetchChunk(ci,0));
+		if(ci>=order.length)return Promise.resolve();
+		var batch=[];for(var n=0;n<CONC&&ci<order.length;n++,ci++)batch.push(fetchChunk(order[ci]));
 		return Promise.all(batch).then(pump);
 	}
 	if(chooseGrid()===BASIN)setFoot();
