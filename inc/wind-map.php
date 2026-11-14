@@ -711,13 +711,9 @@ function oyc_wind_map_html( $embed = false ) {
 			<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
 			<div class="presetbar" id="presetBar">
 				<div class="presets" role="group" aria-label="Layer presets">
-					<button type="button" class="pre-b" data-preset="sail" aria-pressed="false">Sail</button>
-					<button type="button" class="pre-b" data-preset="race" aria-pressed="false">Race</button>
-					<button type="button" class="pre-b" data-preset="fish" aria-pressed="false">Fish</button>
-					<button type="button" class="pre-b" data-preset="cruise" aria-pressed="false">Cruise</button>
 					<button type="button" class="pre-b pre-mine" data-preset="mine" aria-pressed="false" title="Your saved map setup">My chart</button>
 				</div>
-				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view and map position as My chart">Save as My chart</button>
+				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view, map position and boat polars as My chart">Save as My chart</button>
 				<button type="button" class="lyr-btn" id="lyrBtn" aria-expanded="true" aria-controls="lyrDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>Layers</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
@@ -3992,7 +3988,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 	}
 })();
 
-/* ---------- layer presets (Sail / Race / Fish / Cruise) + Layers drawer ----------
+/* ---------- My chart + Layers drawer ----------
    A preset sets the main layer switches in one tap by ticking/unticking the real
    checkboxes (and firing their change events), so every layer's own wiring and
    saved state work exactly as if the user had clicked. My location, Share my
@@ -4002,10 +3998,9 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 	if(!bar||!drawer||!btn)return;
 	var MANAGED=['tgArrows','tgIso','tgRadarOv','tgTemp','tgPrecip','tgWave','tgCur','tgGulf','tgLay','tgFleet','tgAis','tgRace','tgRaceTools','tgChart','tgClubs','tgDine','tgFuel','tgAnch','tgFish'];
 	var PRESETS={
-		sail:['tgChart','tgArrows','tgAnch','tgFuel'],
-		race:['tgChart','tgArrows','tgLay','tgRace','tgRaceTools','tgFleet'],
-		fish:['tgChart','tgCur','tgFish','tgFuel'],
-		cruise:['tgChart','tgArrows','tgAis','tgClubs','tgDine','tgFuel','tgAnch']
+		/* the Sail / Race / Fish / Cruise buttons were removed (v1.7.448): each of
+		   their layers is its own switch in the Layers drawer, and My chart keeps
+		   the visitor's own mix */
 	};
 	/* "My chart": the visitor's own saved setup (layers incl. Animated / Wind
 	   color, the view tab, and the map centre + zoom), kept in this browser. */
@@ -4026,6 +4021,8 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 		var view='tabWind';VIEWS.forEach(function(v){var b=document.getElementById(v);if(b&&b.getAttribute('aria-selected')==='true')view=v;});
 		var c=null,z=null,lm=window.OYCWM&&window.OYCWM.map;try{var ll=lm.getCenter();c=[+ll.lat.toFixed(4),+ll.lng.toFixed(4)];z=lm.getZoom();}catch(e){}
 		mine={layers:on,view:view,c:c,z:z};
+		/* racers: the boat polars picked in Race tools ride along with My chart */
+		var ps=document.getElementById('rtPolarSel');if(ps)mine.polar=ps.value||'';
 		try{localStorage.setItem(MINE_KEY,JSON.stringify(mine));localStorage.setItem('oyc_wm_preset','mine');}catch(e){}
 		syncMine();mark();
 		var sv=document.getElementById('mineSave');
@@ -4036,6 +4033,12 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 		applying=true;
 		EXTRA.forEach(function(id){var cb=document.getElementById(id);if(cb&&cb.checked!==(mine.layers.indexOf(id)>=0)){cb.checked=!cb.checked;cb.dispatchEvent(new Event('change',{bubbles:true}));}});
 		applying=false;
+		if(typeof mine.polar==='string'){
+			/* race-tools.js reads oyc_rt_polar (JSON) when its polar list loads */
+			try{if(mine.polar)localStorage.setItem('oyc_rt_polar',JSON.stringify(mine.polar));else localStorage.removeItem('oyc_rt_polar');}catch(e){}
+			var ps=document.getElementById('rtPolarSel');
+			if(ps&&ps.value!==mine.polar&&[].some.call(ps.options,function(o){return o.value===mine.polar;})){ps.value=mine.polar;ps.dispatchEvent(new Event('change',{bubbles:true}));}
+		}
 		var tb=document.getElementById(mine.view||'tabWind');
 		if(tb&&tb.getAttribute('aria-selected')!=='true')tb.click();
 		var lm=window.OYCWM&&window.OYCWM.map;if(!lm||!mine.c||!mine.z)return;
