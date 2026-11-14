@@ -519,7 +519,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .nn-ic{transform:translate(-50%,-50%);width:22px;height:22px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 #oycwm .nn-ic svg{display:block}
 .pin-pop .nn-cat{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:#b25d00;font-weight:700}
-.pin-pop .nn-txt{display:block;margin-top:4px;max-height:180px;overflow:auto;line-height:1.4}
+.pin-pop .nn-txt{display:block;margin-top:4px;max-height:180px;overflow:auto;line-height:1.4;white-space:pre-line}
 .pin-pop .nn-you{display:block;margin-top:4px}
 .pin-pop .nn-src{display:block;margin-top:6px;font-size:.72rem;color:#5d6d7e}
 #oycwm .layers select{font:inherit;font-size:.74rem;border:1px solid var(--line);border-radius:6px;padding:1px 4px;background:#fff;color:var(--ink)}
@@ -3749,7 +3749,7 @@ function drawNotices(){
 		var pop=function(){
 			var h=(it.cat?'<span class="nn-cat">'+xmlEsc(it.cat)+'</span><br>':'')+'<b>'+xmlEsc(it.title||'Notice')+'</b>';
 			var f=nnDate(it.from),to=nnDate(it.to);
-			if(f||to)h+='<br>'+(f?xmlEsc(f):'')+(to?' &rarr; '+xmlEsc(to):'');
+			if(f||to)h+='<br>'+(f&&!to?'Since ':'')+(f?xmlEsc(f):'')+(to?' &rarr; '+xmlEsc(to):'');
 			if(it.text&&it.text!==it.title)h+='<span class="nn-txt">'+xmlEsc(it.text)+'</span>';
 			if(myLoc)h+='<span class="nn-you">From you '+magBrg(myLoc.lat,myLoc.lon,it.lat,it.lon)+'°M · '+distNM(myLoc.lat,myLoc.lon,it.lat,it.lon).toFixed(1)+' nm</span>';
 			h+='<span class="nn-src">Coast Guard District 1 Local Notice to Mariners'+(it.id?' · '+xmlEsc(it.id):'')+(NN.t?' · checked '+new Date(NN.t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'')+' · <a href="https://www.navcen.uscg.gov/msi" target="_blank" rel="noopener">NAVCEN</a>. Not for navigation.</span>';
