@@ -2514,6 +2514,24 @@ function updateBoatInfo(){
 	el.classList.toggle('min',boatMin);el.classList.add('on');
 	layoutLeftStack();
 }
+/* Race course ETA from the chosen polars (Race tools): each leg's speed from the
+   wind and sea at the mark it sails TO, at the slider's hour (the same reading
+   as that mark's card), tacking/gybing via best VMG, less the sea-state loss.
+   Start = the slider's hour. null without polars or with a leg too light. */
+function racePlan(pts){
+	var W=window.OYCWM;if(!W||typeof W.polarBsp!=='function'||!pts||pts.length<2)return null;
+	var t0=curEpoch(),t=t0,legs=[];
+	for(var i=0;i<pts.length-1;i++){
+		var a=pts[i],b=pts[i+1],d=distNM(a[0],a[1],b[0],b[1]),r=null;
+		try{r=readPoint(b[0],b[1],curTi);}catch(e){r=null;}
+		var sp=planSpeed(W,r,brgTrue(a[0],a[1],b[0],b[1]));
+		if(!sp||!(sp.v>0.5))return {legs:legs,ok:false,name:W.polarName||''};
+		var h=d/sp.v;t+=h*36e5;legs.push({v:sp.v,hrs:h,eta:t,sea:sp.sea});
+	}
+	return {legs:legs,ok:true,eta:t,hrs:(t-t0)/36e5,name:W.polarName||''};
+}
+function clockText(ms){var d=new Date(ms),m=d.getMinutes();return (d.getHours()%12||12)+':'+(m<10?'0':'')+m+' '+(d.getHours()>=12?'PM':'AM');}
+var RACEPLAN=null;
 function renderRaceSheet(){
 	var el=document.getElementById('raceSheet');if(!el)return;
 	var cb=document.getElementById('tgRace');
@@ -2524,7 +2542,8 @@ function renderRaceSheet(){
 		h+='<div class="rs-card'+(mn?' min':'')+'" data-i="'+i+'"><div class="rs-h"><span class="rs-badge">'+seq[i]+'</span><span class="rs-nm">'+m.buoy+'</span>'+cardMinBtn(mn)+'</div>'
 			+'<div class="rs-body"><div class="rs-ll">'+fmtRaceLL(m.lat,m.lon)+'</div>'
 			+'<div class="rs-ww">'+raceWindWave(m.lat,m.lon)+'</div>'
-			+(nx?'<div class="rs-leg">&rarr; '+seq[i+1]+': '+raceLegLine([m.lat,m.lon],[nx.lat,nx.lon])+'</div>':'')
+			+(nx?'<div class="rs-leg">&rarr; '+seq[i+1]+': '+raceLegLine([m.lat,m.lon],[nx.lat,nx.lon])
+				+((RACEPLAN&&RACEPLAN.legs[i])?'<br><b>'+RACEPLAN.legs[i].v.toFixed(1)+' kt'+(RACEPLAN.legs[i].sea>=0.03?' (seas &minus;'+Math.round(RACEPLAN.legs[i].sea*100)+'%)':'')+' &middot; '+durText(RACEPLAN.legs[i].hrs)+' &middot; at '+seq[i+1]+' '+clockText(RACEPLAN.legs[i].eta)+'</b>':'')+'</div>':'')
 			+'</div></div>';
 	}
 	el.innerHTML=h;el.classList.add('on');
@@ -2552,7 +2571,7 @@ function plotCourse(str){
 	var seqKey=seq.join('');if(seqKey!==raceSeqKey){raceLegOff={};rsMin={};raceSeqKey=seqKey;legDragLine=null;}  /* new course → forget dragged-aside labels + collapse state */
 	for(var i=0;i<seq.length;i++){var m=MARKS[seq[i]];if(m)pts.push([m.lat,m.lon]);else bad.push(seq[i]);}
 	racePts=pts;if(typeof drawLaylines==='function')drawLaylines();
-	if(pts.length<2){if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';renderRaceSheet();return;}
+	if(pts.length<2){RACEPLAN=null;if(info)info.textContent=seq.length?'Enter at least two marks (A–J).':'';renderRaceSheet();return;}
 	L.polyline(pts,{color:'#b5362a',weight:2.5,opacity:.85,dashArray:'6 4',interactive:false}).addTo(raceCourseLayer);
 	/* pull the tidal-current predictions so legs can show set/drift even when the
 	   Current overlay isn't on; re-plots once they arrive */
@@ -2566,7 +2585,10 @@ function plotCourse(str){
 		var lm=L.marker(lpos,{icon:L.divIcon({className:'race-leg',html:'<div class="rl-wrap" title="Drag aside · double-tap to snap back">'+legLabelHTML(a,b,d,mid)+'</div>',iconSize:[0,0]}),interactive:false,keyboard:false,zIndexOffset:710}).addTo(raceCourseLayer);
 		makeLegDraggable(lm,i,mid);
 	}
-	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'+(bad.length?'  ·  unknown: '+bad.join(','):'');
+	RACEPLAN=racePlan(pts);
+	if(info)info.textContent=seq.join(' – ')+'  ·  '+tot.toFixed(1)+' nm'
+		+(RACEPLAN?(RACEPLAN.ok?'  ·  finish '+clockText(RACEPLAN.eta)+' ('+durText(RACEPLAN.hrs)+')'+(RACEPLAN.name?' · '+RACEPLAN.name:''):'  ·  ETA needs wind on every leg'):'')
+		+(bad.length?'  ·  unknown: '+bad.join(','):'');
 	renderRaceSheet();drawWindDial();
 }
 document.getElementById('tgRace').addEventListener('change',function(){
@@ -3930,7 +3952,7 @@ window.OYCWM={
 	/* race-tools.js sets polarAngles(tws)->{up,gybe} for the chosen polars, then calls this */
 	polarAngles:null,
 	/* race-tools.js calls this when the polars change: leg speeds + ETA */
-	routeRefresh:function(){if(pins.length)refreshRoute();},
+	routeRefresh:function(){if(pins.length)refreshRoute();replotRace();},
 	layRefresh:function(){layUI();if(LAY.mode==='polar'){drawLaylines();replotRace();updateBoatInfo();}},
 	magvar:MAGVAR,
 	boat:function(){return myLoc?{lat:myLoc.lat,lon:myLoc.lon,sog:mySpeedKt,cog:myHeading}:null;},
