@@ -906,7 +906,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="presets" role="group" aria-label="Layer presets">
 					<button type="button" class="pre-b pre-mine" data-preset="mine" aria-pressed="false" title="Your saved map setup">My Chart</button>
 				</div>
-				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view, map position and boat polars as My Chart">Save as My Chart</button>
+				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view, map position and boat polars as My Chart">Save</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 			<button type="button" class="fsbtn" id="oycwmFs" title="Full screen" aria-label="Full screen"></button>
@@ -5296,7 +5296,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 			if(PRESETS.mine.indexOf('tgRace')>=0&&PRESETS.mine.indexOf('tgRaceTools')<0&&document.getElementById('tgRaceTools'))PRESETS.mine.push('tgRaceTools');}
 		else delete PRESETS.mine;
 		var mb=bar.querySelector('.pre-mine');if(mb)mb.classList.toggle('empty',!mine);
-		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Save':'Save as My Chart';
+		var sv=document.getElementById('mineSave');if(sv)sv.textContent='Save';
 	}
 	function saveMine(){
 		var on=MANAGED.concat(EXTRA).filter(function(id){var cb=document.getElementById(id);return cb&&cb.checked;});
