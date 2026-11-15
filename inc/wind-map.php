@@ -2210,8 +2210,9 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
 
 /* ── Safe water: land and shoal check on every leg, and Autoroute ──────────
    Reads the "safe water" chart tiles (inc/enc-cache.php, OYC_ENC_SAFE_FT): NOAA's
-   chart drawn with its safety contour at the boat's draft + 5 ft, rounded up to
-   the next charted contour (6, 12, 18, 30 or 60 ft), the way a chartplotter does.
+   chart drawn with its safety contour at the boat's draft + 4 ft, rounded up to
+   the next contour we cache (6, 10, 12, 18, 30 or 60 ft; on older charts with
+   only 6/12 ft contours NOAA uses the 12 ft line for 10).
    Land is transparent, water shallower than the contour (and drying banks) is
    tinted, deeper water is white. Every leg inside the chart area (Chesapeake to
    Cape Cod) is sampled pixel by pixel as waypoints are connected; a leg over land
@@ -2220,9 +2221,9 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    waypoints and offers them to approve or reject; when it can't find a way, it
    asks Claude, and checks Claude's waypoints the same way. Not for navigation:
    rocks, wrecks and buoys are not checked. */
-var SAFE_FT=[6,12,18,30,60],SAFE_MARGIN=5,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
+var SAFE_FT=[6,10,12,18,30,60],SAFE_MARGIN=4,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
 function boatDraft(){var d=6;try{var v=parseFloat(localStorage.getItem(DRAFT_KEY));if(isFinite(v)&&v>=1&&v<=25)d=v;}catch(e){}return d;}
-function safeFt(){var need=boatDraft()+SAFE_MARGIN;for(var i=0;i<SAFE_FT.length;i++)if(SAFE_FT[i]>=need-0.01)return SAFE_FT[i];return 60;}
+function safeFt(){var need=boatDraft()+SAFE_MARGIN;for(var i=0;i<SAFE_FT.length;i++)if(SAFE_FT[i]>=need-0.01)return SAFE_FT[i];return 60;}/* Brad 2026-11-15: draft + 4 ft, next contour up */
 function swVar(){return 's'+safeFt();}
 function swIn(lat,lon){return lat>=SAFE_AREA[0]&&lat<=SAFE_AREA[2]&&lon>=SAFE_AREA[1]&&lon<=SAFE_AREA[3];}
 function swTS(z){return z<=ENC_HIRES_MAX?512:256;}

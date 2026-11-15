@@ -56,8 +56,8 @@ define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
 define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
 /* The "safe water" layers s6..s60 and h6..h60 (never shown on the map). The
    passage checker and Autoroute in inc/wind-map.php read their pixels to find
-   land and water shallower than the boat's safety depth (draft + 5 ft). NOAA
-   draws them with the safety contour at that depth (6, 12, 18, 30 or 60 ft,
+   land and water shallower than the boat's safety depth (draft + 4 ft). NOAA
+   draws them with the safety contour at that depth (6, 10, 12, 18, 30 or 60 ft,
    the charted contours; NOAA itself would pick the next deeper contour), and
    only the base and standard chart categories, so soundings and labels are
    left out: land is transparent, water shallower than the contour (and drying
@@ -68,7 +68,7 @@ define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParame
    the real contours where they exist and are empty elsewhere. The page uses h
    where it has chart and s everywhere else. Zooms 11-13 only. Must match
    SAFE_FT in inc/wind-map.php. */
-define( 'OYC_ENC_SAFE_FT', '6,12,18,30,60' );
+define( 'OYC_ENC_SAFE_FT', '6,10,12,18,30,60' );
 define( 'OYC_ENC_SAFE_ZOOMS', '11,12,13' );
 
 /** A tile variant we serve: '' (chart), 'd' (detail) or 's<ft>' (safe water). Anything else → false. */
@@ -110,6 +110,9 @@ function oyc_enc_safe_params( $v ) {
 	preg_match( '/^([a-z]+)(\d+)$/', (string) $v, $mm );
 	$k = $mm[1];
 	$m = round( (int) $mm[2] * 0.3048, 2 );
+	if ( 10 === (int) $mm[2] ) {
+		$m = 3; // 10 ft: NOAA uses the next contour at or deeper than this, so ask for 3 m (9.8 ft), the metric charts' contour, rather than 3.05 m, which would jump to 5 m.
+	}
 	$p = array();
 	if ( 's' === $k || 'h' === $k ) {
 		$p[] = '{"name":"DisplayCategory","value":"1,2"}';
