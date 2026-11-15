@@ -694,6 +694,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .passcard.on{display:flex}
 #oycwm .passcard.offmode,#oycwm .mapwrap.headsup .passcard{display:none !important}
 #oycwm .card:not(.hasburger) .mapgrid.lyr-open .passcard{right:282px}
+#oycwm .card:not(.hasburger) .mapgrid.lyr-open .passfab{right:282px;transition:right .18s ease}
 #oycwm .mapgrid.has-wp .passcard{top:64px;max-height:calc(100% - 74px)}
 #oycwm .pc-hd{display:flex;align-items:center;gap:8px;padding:9px 10px 8px 12px;border-bottom:1px solid rgba(255,255,255,.12);flex:none}
 #oycwm .pc-hd .pc-ttl{font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:.72rem;color:#fff}
@@ -703,7 +704,18 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-ib:hover{background:rgba(255,255,255,.2)}
 #oycwm .pc-ib:focus-visible,#oycwm .pc-btn:focus-visible{outline:2px solid #d4a851;outline-offset:2px}
 #oycwm .pc-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
-#oycwm .passcard.min .pc-body{display:none}
+#oycwm .passcard.min{display:none !important}   /* minimized = the glyph at the chart's lower right */
+/* Passage brief glyph: always on the chart (lower right, above the compass); opens the brief */
+#oycwm .passfab{position:absolute;z-index:997;right:10px;bottom:96px;height:40px;min-width:40px;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(11,42,74,.95);color:#f3e2b8;
+	box-shadow:0 2px 10px rgba(0,0,0,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;font:inherit;-webkit-tap-highlight-color:transparent}
+#oycwm .passfab:hover{background:#0b2a4a;border-color:#d4a851}
+#oycwm .passfab:focus-visible{outline:2px solid #d4a851;outline-offset:2px}
+#oycwm .passfab svg{display:block;flex:none}
+#oycwm .passfab .pf-star{position:absolute;top:-4px;right:-3px;font-size:11px;line-height:1;color:#d4a851;text-shadow:0 0 3px rgba(0,0,0,.6)}
+#oycwm .passfab .pf-lbl{display:none;font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums}
+#oycwm .passfab.act .pf-lbl:not(:empty){display:inline}
+#oycwm .passfab.act{border-color:#d4a851}
+#oycwm .passfab.hide,#oycwm .passfab.offmode,#oycwm .mapwrap.headsup .passfab{display:none !important}
 #oycwm .pc-route{font-weight:700;color:#fff;font-size:.8rem}
 #oycwm .pc-route small{display:block;font-weight:500;color:#9fc3da;font-size:.68rem;margin-top:1px}
 #oycwm .pc-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -831,6 +843,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-rec p{margin:0}
 #oycwm .pc-mini{display:none;font-weight:700;color:#d4a851;font-size:.7rem;white-space:nowrap;font-variant-numeric:tabular-nums}
 #oycwm .passcard.min .pc-mini{display:inline}
+#oycwm .pin-co .co-pass{font-size:.7rem;color:#16324a;text-align:center;margin:0 0 3px;line-height:1.35}
+#oycwm .pin-co .co-pass b{font-weight:800}
+#oycwm .pin-co .co-pass .pc-tag{display:inline-block;margin-left:4px;font-size:.6rem;font-weight:800;padding:0 4px;border-radius:3px;background:#f3e2b8;color:#6b4a10}
+#oycwm .pin-co .co-pass.warn,#oycwm .wpt td .s.pass.warn{color:#b3261e}
+#oycwm .wpt td .s.pass{color:#5a4a2a}
+[data-theme="dark"] #oycwm .pin-co .co-pass{color:#dce8f2}
+[data-theme="dark"] #oycwm .wpt td .s.pass{color:#d9c79d}
 #oycwm .pc-hd .pc-ttl{white-space:nowrap}
 @media (max-width:760px){#oycwm .passcard.min .pc-chip{display:none}}
 </style>
@@ -1045,6 +1064,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="racesheet" id="raceSheet" aria-label="Race course details"></div>
 			</div>
 			<aside class="passcard" id="passCard" aria-label="Offshore passage brief" aria-live="polite"></aside>
+			<button type="button" class="passfab" id="passFab" title="Passage brief: route your waypoints and ask Claude" aria-label="Open the passage brief" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M11 3v13H4.5L11 3z" fill="currentColor"/><path d="M12.5 6.5c3.2 2.4 5 5.6 5.5 9.5h-5.5V6.5z" fill="currentColor" opacity=".75"/><path d="M3 18.5h18l-2.2 2.5H5.2L3 18.5z" fill="currentColor"/></svg><span class="pf-star" aria-hidden="true">✦</span><span class="pf-lbl" id="passFabLbl"></span></button>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -1948,7 +1968,14 @@ function pinContent(pin,ti){
 		:'<div class="co-leg">Start</div>';
 	/* live bearing + distance from the viewer's GPS, when "My location" is on */
 	var youLine = myLoc ? '<div class="co-you">From you &middot; '+magBrg(myLoc.lat,myLoc.lon,lat,lon)+'&deg;M &middot; '+distNM(myLoc.lat,myLoc.lon,lat,lon).toFixed(1)+' nm</div>' : '';
-	var pe=passEtaFor(pin);   /* Passage brief ETA here, while its run is current */
+	var pe=passEtaFor(pin),pl=passLegFor(pin);   /* Passage brief ETA + the leg into here, while its run is current */
+	if(pl){var mt=passMotorTag(pl),cft=pl.cf.easy+pl.cf.lively+pl.cf.rough;
+		legLine='<div class="co-leg">Leg '+pad3(pl.brgM)+'&deg;M &middot; '+pl.nm.toFixed(1)+' nm</div><div class="co-pass">'
+			+(pl.tws==null?'Wind beyond the forecast':pEsc(pLegWind(pl))+' &middot; TWA '+Math.round(pl.twa)+'&deg;')
+			+'<br>'+pEsc(pl.pos)+' &middot; <b>'+pl.bsp.toFixed(1)+' kt</b>'+(mt?'<span class="pc-tag">'+mt+'</span>':'')
+			+(pl.seaMax!=null?' &middot; seas to '+Math.round(pl.seaMax)+' ft':'')
+			+(cft>0?'<br>'+pCfTxt(pl.cf)+(pl.upH>=2?' &middot; '+Math.round(pl.upH)+' h to windward':''):'')+'</div>'
+			+(pl.nm<0.5?'<div class="co-pass warn">Almost on top of the previous point: you can delete one.</div>':'');}
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
 		+(pin.name?'<div class="co-nm">'+pEsc(pin.name)+'</div>':'')
 		+legLine
@@ -2165,8 +2192,12 @@ function wpRow(pin,i,ti){
 	var dist,pe=passEtaFor(pin);
 	if(!prev)dist='<span class="v">Start</span><span class="s">'+pin.lat.toFixed(3)+', '+pin.lon.toFixed(3)+'</span>'+(pe?'<span class="s eta">Depart '+pEsc(pWhen(pe))+'</span>':'');
 	else{var lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon),tw=legTWA([prev.lat,prev.lon],[pin.lat,pin.lon]); /* leg course (magnetic) + wind angle from the previous point */
+		var pl=passLegFor(pin);if(pl)tw=null;   /* a current passage run's leg replaces the slider-hour wind angle */
 		dist='<span class="v">'+lb+'°M</span><span class="s">'+(i===0?lg.dist.toFixed(1)+' nm from you':'leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1))+'</span>'
 			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');
+		if(pl){var mt=passMotorTag(pl);
+			dist+='<span class="s pass">'+(pl.twa!=null?'TWA '+Math.round(pl.twa)+'° · ':'')+pEsc(pl.pos)+' '+pl.bsp.toFixed(1)+' kt'+(mt?' · '+(mt==='MOTOR-SAIL'?'motor':mt.toLowerCase()):'')+'</span>'
+				+'<span class="s pass">'+(pl.seaMax!=null?'seas '+Math.round(pl.seaMax)+' ft · ':'')+(function(c){var t=c.easy+c.lively+c.rough;return t?Math.round(100*c.easy/t)+'% easy'+(c.rough>0.5?' · '+Math.round(c.rough)+' h rough':''):'';})(pl.cf)+'</span>';}
 		if(pe)dist+='<span class="s eta pass">Passage ETA '+pEsc(pWhen(pe))+'</span>';
 		var pl=pe?null:planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt in '+Math.round(pl.kt)+' kt wind'+(pl.ft>0.5?', '+pl.ft.toFixed(1)+' ft seas':'')+(pl.sea>=0.03?' (&minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
 	var wind='<span class="s">'+(pin._fcWait?'Loading&hellip;':'No data')+'</span>',sea='';
@@ -3542,6 +3573,7 @@ function setMode(m){
 	document.getElementById('chartLayers').style.display=m==='charts'?'flex':'none';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
 	var pcd=document.getElementById('passCard');if(pcd)pcd.classList.toggle('offmode',m!=='wind');
+	var pfb=document.getElementById('passFab');if(pfb)pfb.classList.toggle('offmode',m!=='wind');
 	/* satellite & charts = standalone NOAA images; swap the interactive map for the image panel */
 	var isImg=(m==='sat'||m==='charts');
 	document.getElementById('map').style.display=isImg?'none':'';
@@ -3819,6 +3851,10 @@ function passCur(){
 }
 /* that run's ETA at one of My waypoints (departure time at the first point) */
 function passEtaFor(pin){var r=passCur();if(!r)return null;for(var i=0;i<r.wps.length;i++)if(r.wps[i].pid===pin.id)return i===0?r.depart:r.legs[i-1].end;return null;}
+/* that run's leg ENDING at one of My waypoints (null for the start): course, wind, sailing, seas, comfort */
+function passLegFor(pin){var r=passCur();if(!r)return null;for(var i=1;i<r.wps.length;i++)if(r.wps[i].pid===pin.id)return r.legs[i-1];return null;}
+/* motor share of a leg as a short tag */
+function passMotorTag(l){var mf=l.h?l.motorH/l.h:0;return mf>0.5?'MOTOR-SAIL':mf>0.15?'MOTOR '+Math.round(mf*100)+'%':'';}
 /* My waypoints changed (added, moved, removed, reordered): re-route quietly so the
    ETAs follow; Claude's written brief is kept but marked out of date. */
 function passPinsChanged(){
@@ -4290,7 +4326,7 @@ function renderPassCard(){
 	var rw=r?r.wps:W,via=rw&&rw.length>2?(rw.length===3&&rw[1].race?'via The Race':(rw.length-2)+' waypoint'+(rw.length>3?'s':'')+' between'):'';
 	var h='<div class="pc-hd" id="pcHd"><span class="pc-ttl">Passage brief</span><span class="pc-chip">✦ Claude</span><span class="pc-sp"></span>'
 		+(PASS.picking?'<span class="pc-mini">Tap the chart: '+(PASS.picking==='from'?'start':'finish')+'</span>':r?'<span class="pc-mini">'+Math.round(r.nm)+' nm · ETA '+pWhen(r.eta)+'</span>':'')
-		+'<button type="button" class="pc-ib" id="pcMin" aria-label="Collapse passage brief" aria-expanded="true">–</button>'
+		+'<button type="button" class="pc-ib" id="pcMin" aria-label="Minimize passage brief" title="Minimize to the chart button" aria-expanded="true">–</button>'
 		+'<button type="button" class="pc-ib" id="pcX" aria-label="Close passage brief">×</button></div><div class="pc-body">';
 	h+='<details class="pc-sec pc-sec-plan"'+(open?' open':'')+'><summary><h4>Plan</h4><span>'+pEsc(W0)+' → '+pEsc(W1)+' · '+pEsc(pWhenLong(dep))+'</span><b>Edit</b></summary><div class="pc-plan">'
 		+'<p class="pc-note pc-wide">'+(W?'Your '+np+' waypoint'+(np===1?'':'s')+(boat?', from your boat':'')+', in order. Tap the chart to add one; drag a waypoint or a table row to change it. The ETAs go onto your waypoints.':'The passage is your waypoints. Tap the chart to drop them, set a start and finish here, or load the Bermuda route.')+'</p>';
@@ -4323,18 +4359,7 @@ function renderPassCard(){
 		if(g){gl='The Race '+pWhen(g.t);if(g.v!=null)gl+=' · '+(Math.abs(g.v)<0.3?'near slack':g.v<0?'ebb '+Math.abs(g.v).toFixed(1)+' kt, fair':'flood '+g.v.toFixed(1)+' kt, foul')+(g.slack?' (slack '+pWhen(g.slack)+')':'');else gl+=' · tide unavailable';}
 		h+='<div class="pc-sec"><h4>Departure'+(g?' &amp; tidal gate':'')+'</h4>'+pEsc(pWhenLong(r.depart))+' from '+pEsc(r0)+(gl?' · '+pEsc(gl):'');
 		if(r.best&&Math.abs(r.best.depart-r.depart)>=3*36e5&&r.best.score<r.score-2)h+='<div class="pc-best">Better window: leave <b>'+pEsc(pWhenLong(r.best.depart))+'</b> → ETA '+pEsc(pWhen(r.best.eta))+' <button type="button" class="pc-link" id="pcUseBest">Use</button></div>';
-		h+='</div><div class="pc-sec"><h4>Legs</h4><ol class="pc-legs">';
-		r.legs.forEach(function(l,i){
-			var mf=l.h?l.motorH/l.h:0;
-			h+='<li class="pc-leg'+(l.gs?' gs':'')+'" data-leg="'+i+'" tabindex="0"><div class="pc-lh"><span class="pc-n">'+(i+1)+'</span>'+pEsc(l.from)+' → '+pEsc(l.to)+'<span class="pc-eta" title="'+pEsc('Arrive at '+l.to+' '+pWhenLong(l.end)+' ET')+'"><small>ETA '+pEsc(l.to)+'</small>'+pEsc(pWhen(l.end))+'</span></div>'
-				+(l.nm<0.5?'<p class="pc-note warn">'+pEsc(l.from)+' and '+pEsc(l.to)+' are almost on top of each other. You can delete one.</p>':'')
-				+'<dl class="pc-lg"><dt>Course</dt><dd><b>'+pad3(l.brgM)+'°M</b> · '+Math.round(l.nm)+' nm</dd>'
-				+'<dt>Wind</dt><dd>'+(l.tws==null?'beyond the forecast':pLegWind(l)+' · TWA '+Math.round(l.twa)+'°')+'</dd>'
-				+'<dt>Sailing</dt><dd>'+pEsc(l.pos)+' · <b>'+l.bsp.toFixed(1)+' kt</b>'+(mf>0.5?'<span class="pc-tag motor">MOTOR-SAIL</span>':mf>0.15?'<span class="pc-tag motor">MOTOR '+Math.round(mf*100)+'%</span>':'')+'</dd>'
-				+(l.seaMax!=null?'<dt>Seas</dt><dd>to '+Math.round(l.seaMax)+' ft</dd>':'')
-				+(l.cf.easy+l.cf.lively+l.cf.rough>0?'<dt>Comfort</dt><dd>'+pCfTxt(l.cf)+(l.upH>=2?' · '+Math.round(l.upH)+' h to windward':'')+'</dd>':'')+'</dl></li>';
-		});
-		h+='</ol></div>';
+		h+='</div><p class="pc-note">Each leg’s course, wind, sailing, seas, comfort and ETA are on your waypoints: tap a waypoint or see the table.</p>';
 		var s=r.gs,sl='';
 		if(s.inT){sl='North wall '+s.nWall.toFixed(1)+'°N, south wall '+s.sWall.toFixed(1)+'°N where you cross, near '+Math.abs(s.lon).toFixed(0)+'°W (NOAA).';
 			sl+=' In the Stream '+pWhen(s.inT)+'–'+pWhen(s.outT)+(s.dir!=null?', wind '+card(s.dir)+' to '+Math.round(s.kt)+' kt':'')+'.';
@@ -4364,9 +4389,19 @@ function renderPassCard(){
 	PASS.scrollTo=null;
 	if(qf){var qa=document.getElementById('pcQ');if(qa&&!qa.disabled){qa.focus();qa.selectionStart=qa.selectionEnd=qa.value.length;}}
 	if(c._min)passSetMin(true);
+	passFabSync();
 }
 function passRaceHTML(){return '<div class="pc-pt pc-wide pc-racetip"><span class="pc-pv">This route leaves Long Island Sound. Go through The Race?<small>Adds it to your waypoints; the router times the tidal current there.</small></span><span class="pc-yn"><button type="button" class="pc-y" data-race="y">✓ Add The Race</button><button type="button" class="pc-n" data-race="n">✕ No thanks</button></span></div>';}
-function passSetMin(m){var c=document.getElementById('passCard'),b=document.getElementById('pcMin');if(!c)return;c._min=m;c.classList.toggle('min',m);
+/* the glyph: shows whenever the card isn't open full; its label carries the picking prompt or the run's ETA */
+function passFabSync(){
+	var f=document.getElementById('passFab'),c=document.getElementById('passCard');if(!f||!c)return;
+	var on=c.classList.contains('on'),open=on&&!c._min;
+	f.classList.toggle('hide',open);f.classList.toggle('act',on);f.setAttribute('aria-expanded',open?'true':'false');
+	var r=on?passCur():null,lb=document.getElementById('passFabLbl');
+	if(lb)lb.textContent=PASS.picking?('Tap the chart: '+(PASS.picking==='from'?'start':'finish')):PASS.busy?'Routing…':r?('ETA '+pWhen(r.eta)):'';
+	f.setAttribute('aria-label',open?'Passage brief is open':(on?'Open the passage brief'+(r?', ETA '+pWhen(r.eta):''):'Open the passage brief'));
+}
+function passSetMin(m){var c=document.getElementById('passCard'),b=document.getElementById('pcMin');if(!c)return;c._min=m;c.classList.toggle('min',m);passFabSync();
 	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
 function drawPassRoute(){
 	passLayer.clearLayers();
@@ -4395,14 +4430,14 @@ function passFit(){
 }
 document.getElementById('tgPassage').addEventListener('change',function(){
 	var c=document.getElementById('passCard');
-	if(this.checked){c.classList.add('on');passSetMin(window.matchMedia('(max-width:760px)').matches);   /* phones open on the summary row */
+	if(this.checked){c.classList.add('on');passSetMin(false);
 		renderPassCard();drawPassRoute();passFit();var w=passWps();if(w&&(!PASS.res||PASS.res.key!==passRouteKey(w)))passBuild();else rerenderCallouts();}
-	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();rerenderCallouts();}   /* passage ETAs off the waypoints */
+	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();rerenderCallouts();passFabSync();}   /* passage ETAs off the waypoints */
 });
 document.getElementById('passCard').addEventListener('click',function(e){
 	var t=e.target,c=this;
 	if(t.closest('#pcX')){var cb=document.getElementById('tgPassage');cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));return;}
-	if(t.closest('#pcMin')||(t.closest('#pcHd')&&c.classList.contains('min')&&!t.closest('.pc-ib'))){passSetMin(!c._min);return;}
+	if(t.closest('#pcMin')){passSetMin(true);try{document.getElementById('passFab').focus();}catch(e3){}return;}
 	if(t.closest('.pc-sec-plan summary')){setTimeout(function(){var d=c.querySelector('.pc-sec-plan');c._planOpen=!!(d&&d.open);},0);return;}
 	if(t.closest('#pcRun')||t.closest('#pcRerun')){
 		var di=document.getElementById('pcDep'),fl=document.getElementById('pcFloor');
@@ -4432,6 +4467,16 @@ document.getElementById('passCard').addEventListener('change',function(e){
 	var t=e.target;
 	if(t.getAttribute&&t.getAttribute('data-choose')){if(t.value)passChoose(t.getAttribute('data-choose'),t.value);}
 });
+/* glyph: opens the brief (turning it on if it's off), or brings a minimized one back */
+(function(){var f=document.getElementById('passFab');if(!f)return;
+	if(L.DomEvent){L.DomEvent.disableClickPropagation(f);}
+	f.addEventListener('click',function(){
+		var cb=document.getElementById('tgPassage'),c=document.getElementById('passCard');
+		if(PASS.picking){PASS.picking=null;map.getContainer().classList.remove('pass-picking');c._pickMin=false;}
+		if(!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));}
+		else{passSetMin(false);renderPassCard();}
+	});
+	passFabSync();})();
 document.getElementById('passCard').addEventListener('input',function(e){if(e.target.id==='pcQ')PASS.chatDraft=e.target.value;});
 document.getElementById('passCard').addEventListener('keydown',function(e){
 	if(e.target.id==='pcQ'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();passChatSend(e.target.value);return;}if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pc-leg')){e.preventDefault();e.target.click();}});
