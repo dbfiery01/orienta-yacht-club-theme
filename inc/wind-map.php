@@ -4248,9 +4248,11 @@ function passWps(){
    (My boat to ~0.5 nm, so GPS jitter doesn't count as a change) */
 function passRouteKey(w){var s=w.map(function(q){return q.boat?'b'+q.lat.toFixed(2)+','+q.lon.toFixed(2):q.lat.toFixed(4)+','+q.lon.toFixed(4)+q.n;}).join('|'),h=0;
 	for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;}return 'r'+(h>>>0).toString(36);}
-/* the Passage brief run, when the card is open and the run still matches the waypoints */
+/* the Passage brief run, while it still matches the waypoints. Its ETAs and leg
+   details stay on the waypoint cards and table whether or not the brief is open
+   (Brad, 2026-11-15); the run is kept up to date from My waypoints either way. */
 function passCur(){
-	if(typeof PASS==='undefined'||!PASS.res)return null;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on'))return null;
+	if(typeof PASS==='undefined'||!PASS.res)return null;
 	var w=passWps();return (w&&passRouteKey(w)===PASS.res.key)?PASS.res:null;
 }
 /* that run's ETA at one of My waypoints (departure time at the first point) */
@@ -4261,11 +4263,14 @@ function passLegFor(pin){var r=passCur();if(!r)return null;for(var i=1;i<r.wps.l
 function passMotorTag(l){var mf=l.h?l.motorH/l.h:0;return mf>0.5?'MOTOR-SAIL':mf>0.15?'MOTOR '+Math.round(mf*100)+'%':'';}
 /* My waypoints changed (added, moved, removed, reordered): re-route quietly so the
    ETAs follow; Claude's written brief is kept but marked out of date. */
+var passPinsWait=null;
 function passPinsChanged(){
-	if(typeof PASS==='undefined'||PASS.applying)return;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on'))return;
+	if(typeof PASS==='undefined'){clearTimeout(passPinsWait);passPinsWait=setTimeout(passPinsChanged,500);return;}   /* waypoints restored before the planner is set up */
+	if(PASS.applying)return;
 	clearTimeout(PASS.reT);
 	PASS.reT=setTimeout(function(){
 		var w=passWps(),k=w?passRouteKey(w):'';
+		if(!PASS.res&&w&&!PASS.busy){passBuild({quiet:true});return;}   /* first run, brief open or not */
 		if(PASS.res&&PASS.res.key!==k){
 			if(PASS.busy){PASS.dirty=true;return;}
 			if(w){passBuild({quiet:true});return;}
@@ -4749,7 +4754,6 @@ function renderPassCard(){
 			+'<select class="pc-choose" data-choose="'+k+'" aria-label="'+(k==='from'?'Start':'Finish')+' at a destination">'+passChooseOpts(k)+'</select>')+'</div>';});
 	if(W&&W.length>2)h+='<div class="pc-pt pc-wide"><span class="pc-pl">Via</span><span class="pc-pv">'+W.slice(1,-1).map(function(q){return pEsc(q.n);}).join(' → ')+'</span></div>';
 	var rt=passRaceTip(W);
-	if(rt>=0)h+=passRaceHTML();
 	if(PASS.bmAsk)h+='<div class="pc-pt pc-wide pc-bm"><span class="pc-pv">Load the Bermuda route (OYC, The Race, Gulf Stream crossing, St. George’s) in place of your '+np+' waypoint'+(np===1?'':'s')+', or after them?</span><span class="pc-yn"><button type="button" class="pc-y" data-bm="replace">Replace</button><button type="button" class="pc-y" data-bm="append">Add after</button><button type="button" class="pc-n" data-bm="no">Cancel</button></span></div>';
 	else h+='<div class="pc-wide"><button type="button" class="pc-link" id="pcBermuda">Load Bermuda route</button></div>';
 	h+=''
@@ -4760,7 +4764,6 @@ function renderPassCard(){
 		+'<div class="pc-acts"><button type="button" class="pc-btn pri" id="pcRun"'+(PASS.busy||!W?' disabled':'')+'>'+(PASS.busy?'Routing…':'Route it')+'</button></div></details>';
 	if(PASS.status)h+='<div class="pc-status"><span class="pc-spin" aria-hidden="true"></span>'+pEsc(PASS.status)+'</div>';
 	else if(stale&&W)h+='<div class="pc-status">Your waypoints changed: re-routing…</div>';
-	if(r&&!open&&rt>=0)h+=passRaceHTML();
 	if(r){
 		var sm=passSummary(r),v=PASS.ai&&PASS.ai.verdict?{lvl:PASS.ai.verdict.level,tag:PASS.ai.verdict.tag}:sm.verdict,vt=PASS.ai&&PASS.ai.verdict?PASS.ai.verdict.text:(r.flags.filter(function(f){return f.s>=2;}).map(function(f){return f.txt;}).join('. ')||'No red flags on this run of the forecast.');
 		var r0=r.wps[0].n,r1=r.wps[r.wps.length-1].n;
@@ -4817,6 +4820,7 @@ function passSetMin(m){var c=document.getElementById('passCard'),b=document.getE
 	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
 function drawPassRoute(){
 	passLayer.clearLayers();
+	var pc=document.getElementById('passCard');if(!pc||!pc.classList.contains('on')){map.removeLayer(passLayer);return;}   /* map ETA labels only with the brief open; cards and table always */
 	/* the route is My waypoints' own line; a current run adds ETA labels beside them */
 	var r=passCur(),WP=r?r.wps:null;if(!WP&&!(PASS.prop&&PASS.prop.all)){passLayer.addTo(map);return;}
 	/* where the boat is every 12 h of the passage */
