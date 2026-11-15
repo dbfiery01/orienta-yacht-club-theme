@@ -769,6 +769,15 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-note{margin:6px 0 0;font-size:.68rem;color:#9fc3da}
 #oycwm .pc-note.warn{color:#f3c879}
 #oycwm .pc-plan .pc-wide{grid-column:1/-1}
+#oycwm .pc-pt{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 8px;min-height:36px;box-sizing:border-box}
+#oycwm .pc-pt.on{border-color:#d4a851;background:rgba(212,168,81,.14)}
+#oycwm .pc-pl{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;color:#9fc3da;font-weight:700;width:44px;flex:none}
+#oycwm .pc-pv{flex:1;min-width:0;font-size:.74rem;color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+#oycwm .pc-pv small{display:block;font-weight:500;color:#9fc3da;font-size:.64rem}
+#oycwm .pc-pt .pc-link{flex:none;white-space:nowrap}
+#oycwm .pc-plan label.pc-chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:.72rem;color:#dbe9f3;font-weight:600}
+#oycwm .pc-plan label.pc-chk input{width:auto;min-height:0}
+#oycwm .leaflet-container.pass-picking,#oycwm .leaflet-container.pass-picking .leaflet-interactive{cursor:crosshair}
 #oycwm .pc-plan input::-webkit-calendar-picker-indicator{filter:invert(1)}
 #oycwm .pass-lbl.tick{background:rgba(255,255,255,.88);color:#0b2a4a;font-size:10px;padding:1px 4px}
 #oycwm .pc-reclist{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
@@ -1943,6 +1952,7 @@ function drawRouteLine(){
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
+	if(typeof PASS!=='undefined'&&PASS.route==='pins'&&!PASS.busy){var pc=document.getElementById('passCard');if(pc&&pc.classList.contains('on')){setTimeout(function(){renderPassCard();if(!PASS.res)drawPassRoute();},0);}}
 	advanceNextWp();
 	drawRouteLine();
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
@@ -2253,7 +2263,7 @@ window.addEventListener('resize',wpFit);
 	body.addEventListener('click',function(e){if(Date.now()-lastEnd<400)e.stopPropagation();},true);
 	body.addEventListener('contextmenu',function(e){if(wpDrag||pend)e.preventDefault();});
 })();
-map.on('click',function(e){if(mode==='radar')return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
+map.on('click',function(e){if(typeof passPick==='function'&&passPick(e))return;/* passage brief start/finish pick */if(mode==='radar')return;var rc=document.getElementById('tgRace');if(rc&&rc.checked)return;/* Race on → map taps don't drop waypoints */addPin(e.latlng.lat,((e.latlng.lng+540)%360)-180);});
 /* explicit "✕ Remove" in a callout (event-delegated so it survives popup re-renders) */
 map.getContainer().addEventListener('click',function(e){
 	var btn=e.target.closest?e.target.closest('.co-x[data-wp]'):null;
@@ -3693,8 +3703,60 @@ var PASS={
 	ROUTES:{bermuda:{to:"Bermuda · St. George’s",short:"St. George’s",
 		wps:[{n:'OYC',lat:40.930,lon:-73.720},{n:'The Race',lat:41.230,lon:-72.090,race:true},{n:'Gulf Stream crossing',lat:38.4,lon:-70.0,gs:true},{n:"St. George’s",lat:32.37,lon:-64.68}]}},
 	TIDE_ST:'LIS1017',TIDE:null,TIDE_KEY:'',SEAS:null,SEAS_KEY:'',
-	res:null,ai:null,busy:false,status:'',route:'bermuda',departMs:null
+	res:null,ai:null,busy:false,status:'',route:'bermuda',departMs:null,
+	/* The Race (tidal gate): current applies to any route that passes within 8 nm of it */
+	RACE:{lat:41.230,lon:-72.090},
+	/* route sources: 'bermuda' preset, 'pins' = the waypoints on the chart, 'custom' = start/finish tapped on the chart */
+	custom:{from:{n:'OYC',lat:40.930,lon:-73.720},to:{n:"St. George’s",lat:32.37,lon:-64.68},viaRace:true},picking:null
 };
+(function(){try{var j=JSON.parse(localStorage.getItem('oyc_pass_route')||'null');if(!j)return;
+	if(j.route==='pins'||j.route==='custom'||j.route==='bermuda')PASS.route=j.route;
+	var ok=function(q){return q&&isFinite(q.lat)&&isFinite(q.lon)&&Math.abs(q.lat)<=85;};
+	if(j.custom&&ok(j.custom.from)&&ok(j.custom.to)){PASS.custom.from=j.custom.from;PASS.custom.to=j.custom.to;PASS.custom.viaRace=j.custom.viaRace!==false;}}catch(e){}})();
+function passSaveRoute(){try{localStorage.setItem('oyc_pass_route',JSON.stringify({route:PASS.route,custom:PASS.custom}));}catch(e){}}
+/* known places, so a tapped point near one gets its name */
+var PASS_PLACES=[{n:'OYC',lat:40.930,lon:-73.720},{n:"St. George’s",lat:32.37,lon:-64.68},{n:'The Race',lat:41.230,lon:-72.090},{n:'Newport',lat:41.485,lon:-71.325},{n:'Block Island',lat:41.17,lon:-71.58},{n:'Montauk',lat:41.07,lon:-71.93},{n:'Cape May',lat:38.93,lon:-74.90},{n:'Norfolk',lat:36.95,lon:-76.33},{n:'Beaufort NC',lat:34.70,lon:-76.66}];
+function pLL(lat,lon){return Math.abs(lat).toFixed(2)+'°'+(lat>=0?'N':'S')+' '+Math.abs(lon).toFixed(2)+'°'+(lon<=0?'W':'E');}
+function passPlaceName(lat,lon){for(var i=0;i<PASS_PLACES.length;i++){var q=PASS_PLACES[i];if(distNM(lat,lon,q.lat,q.lon)<3)return q.n;}return pLL(lat,lon);}
+/* does a leg from a (inside Long Island Sound) to b (out past it) have to go through The Race? */
+function pInSound(q){return q.lat>40.75&&q.lat<41.4&&q.lon<-72.15&&q.lon>-74.05;}
+function pOutside(q){return q.lon>-72.05||q.lat<40.75;}
+/* the active route as waypoints [{n,lat,lon}]; null when it isn't complete yet */
+function passWps(){
+	if(PASS.route==='pins'){
+		if(typeof pins==='undefined')return null;
+		var o=(typeof routeOrigin==='function')?routeOrigin():null,out=o?[{n:'My boat',lat:o.lat,lon:o.lon}]:[];
+		pins.forEach(function(p,k){out.push({n:'WP '+(k+1),lat:p.lat,lon:p.lon});});
+		return out.length>=2?out:null;
+	}
+	if(PASS.route==='custom'){
+		var C=PASS.custom,a={n:C.from.n,lat:C.from.lat,lon:C.from.lon},b={n:C.to.n,lat:C.to.lat,lon:C.to.lon};
+		if(distNM(a.lat,a.lon,b.lat,b.lon)<1)return null;
+		var w=[a];
+		if(C.viaRace&&((pInSound(a)&&pOutside(b))||(pInSound(b)&&pOutside(a))))w.push({n:'The Race',lat:PASS.RACE.lat,lon:PASS.RACE.lon,race:true});
+		w.push(b);return w;
+	}
+	return PASS.ROUTES.bermuda.wps;
+}
+function passRouteKey(w){if(PASS.route==='bermuda')return 'bermuda';var s=w.map(function(q){return q.lat.toFixed(2)+','+q.lon.toFixed(2);}).join('|'),h=0;
+	for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;}return 'r'+(h>>>0).toString(36);}
+/* chart tap while picking a start/finish: called first by the map click handler */
+function passPick(e){
+	if(!PASS.picking)return false;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on')){PASS.picking=null;return false;}
+	var lat=e.latlng.lat,lon=((e.latlng.lng+540)%360)-180,k=PASS.picking;
+	PASS.custom[k]={n:passPlaceName(lat,lon),lat:+lat.toFixed(4),lon:+lon.toFixed(4)};
+	PASS.picking=null;PASS.res=null;PASS.ai=null;passSaveRoute();
+	map.getContainer().classList.remove('pass-picking');
+	c._planOpen=true;if(c._pickMin){c._pickMin=false;passSetMin(false);}
+	renderPassCard();drawPassRoute();return true;
+}
+function passStartPick(k){
+	var c=document.getElementById('passCard');PASS.picking=k;c._planOpen=true;
+	map.getContainer().classList.add('pass-picking');
+	/* phones: drop the bottom sheet to its summary row so the chart is free to tap */
+	if(window.matchMedia('(max-width:760px)').matches&&!c._min){c._pickMin=true;passSetMin(true);}
+	renderPassCard();
+}
 var passLayer=L.layerGroup();
 function pEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function pTz(ms,o){try{return new Date(ms).toLocaleString('en-US',Object.assign({timeZone:'America/New_York'},o));}catch(e){return new Date(ms).toLocaleString('en-US',o);}}
@@ -3751,8 +3813,7 @@ function gsWallLat(list,lon){if(!list||!list.length)return null;var b=null,bd=1/
 /* step the boat along the route from departMs. Returns per-leg results + flags. */
 function passRun(wps,departMs){
 	var STEP=0.5,FL=PASS.floor,t=departMs,pos={lat:wps[0].lat,lon:wps[0].lon},legs=[],track=[{lat:pos.lat,lon:pos.lon,t:t}],noFc=0,gate=null,maxKt=0,gs={};
-	var racePt=null;wps.forEach(function(w){if(w.race)racePt=w;});
-	var nWall=(typeof GSW!=='undefined'&&GSW)?gsWallLat(GSW.north,-70):null,sWall=(typeof GSW!=='undefined'&&GSW)?gsWallLat(GSW.south,-70):null;
+	var RP=PASS.RACE,raceMin=1/0,raceT=null,hasW=(typeof GSW!=='undefined'&&GSW),nWall=null,sWall=null,anyWall=false;
 	for(var i=0;i<wps.length-1;i++){
 		var to=wps[i+1],rem=distNM(pos.lat,pos.lon,to.lat,to.lon),legNm=rem,brg0=brgTrue(pos.lat,pos.lon,to.lat,to.lon);
 		var L0={from:wps[i].n,to:to.n,nm:legNm,brgM:(brg0+pMag(pos.lon))%360,start:t,h:0,motorH:0,su:0,sv:0,n:0,ktMin:1/0,ktMax:0,twaS:0,how:{},seaMax:null,noFc:0,gs:!!to.gs};
@@ -3764,21 +3825,23 @@ function passRun(wps,departMs){
 				L0.ks=(L0.ks||0)+w.kt;if(L0.d0==null)L0.d0=w.dir;L0.d1=w.dir;L0.ktMin=Math.min(L0.ktMin,w.kt);L0.ktMax=Math.max(L0.ktMax,w.kt);maxKt=Math.max(maxKt,w.kt);}
 			else{eff=0;L0.noFc++;noFc++;}
 			var motor=eff<FL,sog=Math.max(eff,FL);
-			/* tidal current through The Race: within 8 nm either side of it */
-			if(racePt&&distNM(pos.lat,pos.lon,racePt.lat,racePt.lon)<8){var c=tideAt(t);if(c!=null){var set=c>=0?255:73;sog=Math.max(2,sog+Math.abs(c)*Math.cos((brg-set)*Math.PI/180));}}
+			/* tidal current through The Race: within 8 nm either side of it, on any route */
+			var dR=distNM(pos.lat,pos.lon,RP.lat,RP.lon);if(dR<raceMin){raceMin=dR;raceT=t;}
+			if(dR<8){var c=tideAt(t);if(c!=null){var set=c>=0?255:73;sog=Math.max(2,sog+Math.abs(c)*Math.cos((brg-set)*Math.PI/180));}}
 			var d=Math.min(rem,sog*STEP),dt=d/sog;
 			var sea=seasAt(pos.lat,pos.lon,t);if(sea!=null)L0.seaMax=Math.max(L0.seaMax==null?0:L0.seaMax,sea);
-			/* Gulf Stream: note the wind as the boat crosses between the walls */
-			if(nWall!=null&&sWall!=null&&pos.lat<=nWall&&pos.lat>=sWall){if(gs.inT==null)gs.inT=t;gs.outT=t+dt*36e5;if(w){gs.kt=Math.max(gs.kt||0,w.kt);gs.dirs=(gs.dirs||[]).concat([w.dir]);}}
+			/* Gulf Stream: note the wind as the boat crosses between the walls (walls taken at the boat's longitude) */
+			var nw=hasW?gsWallLat(GSW.north,pos.lon):null,sw=hasW?gsWallLat(GSW.south,pos.lon):null;if(nw!=null)anyWall=true;
+			if(nw!=null&&sw!=null&&pos.lat<=nw&&pos.lat>=sw){if(gs.inT==null){gs.inT=t;nWall=nw;sWall=sw;gs.lon=pos.lon;}gs.outT=t+dt*36e5;if(w){gs.kt=Math.max(gs.kt||0,w.kt);gs.dirs=(gs.dirs||[]).concat([w.dir]);}}
 			pos=pDest(pos.lat,pos.lon,brg,d);t+=dt*36e5;rem-=d;L0.h+=dt;if(motor)L0.motorH+=dt;if(how)L0.how[how]=(L0.how[how]||0)+dt;
 			track.push({lat:pos.lat,lon:pos.lon,t:t});
 		}
 		pos={lat:to.lat,lon:to.lon};L0.end=t;
-		if(to.race){var cv=tideAt(t);gate={t:t,v:cv,slack:nextSlack(t)};}
 		if(L0.n){L0.tws=L0.ks/L0.n;L0.twd=(Math.atan2(-L0.su,-L0.sv)*180/Math.PI+360)%360;L0.ktAvg=null;L0.twa=L0.twaS/L0.n;}
 		L0.bsp=L0.nm/L0.h;var hw='';Object.keys(L0.how).forEach(function(k){if(L0.how[k]>L0.h*0.4)hw=k;});L0.pos=L0.twa==null?'—':pPos(L0.twa,hw);
 		legs.push(L0);
 	}
+	if(raceMin<8&&raceT!=null){var cv=tideAt(raceT);gate={t:raceT,v:cv,slack:nextSlack(raceT)};}
 	var tot=legs.reduce(function(a,l){return a+l.nm;},0),hrs=(t-departMs)/36e5,mot=legs.reduce(function(a,l){return a+l.motorH;},0);
 	var arrW=windAtTime(wps[wps.length-1].lat,wps[wps.length-1].lon,t-6*36e5);
 	var flags=[];
@@ -3791,7 +3854,7 @@ function passRun(wps,departMs){
 	if(mot>hrs*0.4)flags.push({k:'motor',s:1,txt:'Light air: about '+Math.round(mot)+' h of motor-sailing'});
 	if(noFc)flags.push({k:'fc',s:1,txt:'Last '+Math.round(noFc*STEP)+' h run past the 7-day forecast (assumed '+PASS.floor+' kt)'});
 	var score=hrs+0.4*mot+flags.reduce(function(a,f){return a+(f.k==='fc'||f.k==='motor'?0:f.s*4);},0);
-	return {depart:departMs,eta:t,nm:tot,hrs:hrs,motorH:mot,legs:legs,track:track,gate:gate,gs:{nWall:nWall,sWall:sWall,inT:gs.inT,outT:gs.outT,kt:gs.kt,dir:gs.dirs?gs.dirs[Math.floor(gs.dirs.length/2)]:null},arr:arrW,maxKt:maxKt,seaMax:seaMax||null,flags:flags,score:score,noFcH:noFc*STEP};
+	return {depart:departMs,eta:t,nm:tot,hrs:hrs,motorH:mot,legs:legs,track:track,gate:gate,gs:{nWall:nWall,sWall:sWall,lon:gs.lon,avail:!!(hasW&&anyWall),inT:gs.inT,outT:gs.outT,kt:gs.kt,dir:gs.dirs?gs.dirs[Math.floor(gs.dirs.length/2)]:null},arr:arrW,maxKt:maxKt,seaMax:seaMax||null,flags:flags,score:score,noFcH:noFc*STEP};
 }
 /* try departures 3 h apart from 24 h before to 72 h after the chosen time (not in the past, inside the forecast) */
 function passScan(wps,base){
@@ -3839,14 +3902,15 @@ function passLoadSeas(wps,cb){
 }
 function passBuild(){
 	if(PASS.busy)return;PASS.busy=true;PASS.ai=null;
-	var R=PASS.ROUTES[PASS.route],wps=R.wps;
+	var wps=passWps();
+	if(!wps){PASS.busy=false;PASS.status='';PASS.res=null;renderPassCard();return;}
 	function st(s){PASS.status=s;renderPassCard();}
 	if(!TIMES.length){st('Waiting for the wind forecast…');var t0=Date.now();(function w(){if(TIMES.length||Date.now()-t0>60000){PASS.busy=false;passBuild();return;}setTimeout(w,800);})();PASS.busy=true;return;}
 	if(PASS.departMs==null){var n=new Date();n.setMinutes(0,0,0);PASS.departMs=n.getTime()+36e5;}
 	st('Loading the Atlantic wind field…');
-	passWaitBasin(function(){st('Tide at The Race, Gulf Stream and seas…');
+	passWaitBasin(function(){st('Tides, Gulf Stream and seas…');
 		var left=3;function one(){if(--left)return;st('Routing…');setTimeout(function(){
-			var r=passRun(wps,PASS.departMs);r.best=passScan(wps,PASS.departMs);r.route=R;PASS.res=r;PASS.busy=false;PASS.status='';
+			var r=passRun(wps,PASS.departMs);r.best=passScan(wps,PASS.departMs);r.wps=wps;r.key=passRouteKey(wps);PASS.res=r;PASS.busy=false;PASS.status='';
 			renderPassCard();drawPassRoute();passLog(r,'chosen');if(r.best&&Math.abs(r.best.depart-r.depart)>=3*36e5)passLog(passRun(wps,r.best.depart),'best');if(!PASS.rec)passLoadRecord();},30);}
 		passLoadTide(PASS.departMs,one);passLoadSeas(wps,one);
 		if(typeof loadGSWall==='function')loadGSWall(one);else one();
@@ -3854,12 +3918,12 @@ function passBuild(){
 }
 /* compact facts for Claude: only computed numbers, so the brief can't invent any */
 function passFacts(r){
-	return {boat:PASS.boat,route:r.route.wps.map(function(w){return w.n;}).join(' -> '),motoring_floor_kt:PASS.floor,
+	return {boat:PASS.boat,route:r.wps.map(function(w){return w.n;}).join(' -> '),motoring_floor_kt:PASS.floor,
 		depart:pWhenLong(r.depart)+' ET',eta:pWhenLong(r.eta)+' ET',distance_nm:Math.round(r.nm),hours:Math.round(r.hrs),motor_hours:Math.round(r.motorH),
 		legs:r.legs.map(function(l){return {leg:l.from+' -> '+l.to,course_mag:Math.round(l.brgM),nm:Math.round(l.nm),wind:l.tws==null?'beyond forecast':pLegWind(l),
 			twa:l.twa==null?null:Math.round(l.twa),point_of_sail:l.pos,avg_speed_kt:+l.bsp.toFixed(1),motor_hours:Math.round(l.motorH),max_seas_ft:l.seaMax==null?null:Math.round(l.seaMax),eta:pWhenLong(l.end)+' ET'};}),
 		race_gate:r.gate&&r.gate.v!=null?{at:pWhenLong(r.gate.t)+' ET',current_kt:+r.gate.v.toFixed(1),state:Math.abs(r.gate.v)<0.3?'near slack':r.gate.v<0?'ebb (fair, sets 073)':'flood (foul, sets 255)',next_slack:r.gate.slack?pWhenLong(r.gate.slack)+' ET':null}:null,
-		gulf_stream:r.gs.nWall!=null?{north_wall_lat:r.gs.nWall,south_wall_lat:r.gs.sWall,in_stream:r.gs.inT?pWhenLong(r.gs.inT)+' to '+pWhenLong(r.gs.outT)+' ET':null,wind:r.gs.dir!=null?card(r.gs.dir)+' up to '+Math.round(r.gs.kt)+' kt':null}:null,
+		gulf_stream:r.gs.inT!=null?{north_wall_lat:r.gs.nWall,south_wall_lat:r.gs.sWall,in_stream:r.gs.inT?pWhenLong(r.gs.inT)+' to '+pWhenLong(r.gs.outT)+' ET':null,wind:r.gs.dir!=null?card(r.gs.dir)+' up to '+Math.round(r.gs.kt)+' kt':null}:null,
 		arrival_wind:r.arr?card(r.arr.dir)+' '+Math.round(r.arr.kt)+' kt':null,max_wind_kt:Math.round(r.maxKt),max_seas_ft:r.seaMax==null?null:Math.round(r.seaMax),
 		flags:r.flags.map(function(f){return f.txt;}),
 		best_departure:r.best?{depart:pWhenLong(r.best.depart)+' ET',eta:pWhenLong(r.best.eta)+' ET',hours:Math.round(r.best.hrs)}:null,
@@ -3875,16 +3939,16 @@ function passAskClaude(){
 }
 /* ── window accuracy: log each forward-looking window (members), show the verified track record ── */
 function passSamples(r){
-	var out=[],nW=r.gs.nWall,sW=r.gs.sWall,last=-1e15;
+	var out=[],hasW=(typeof GSW!=='undefined'&&GSW),last=-1e15;
 	r.track.forEach(function(p,i){if(p.t-last<3*36e5&&i!==r.track.length-1)return;last=p.t;
 		var w=windAtTime(p.lat,p.lon,p.t),sea=seasAt(p.lat,p.lon,p.t);
-		out.push({t:Math.round(p.t),lat:p.lat,lon:p.lon,kt:w?+w.kt.toFixed(1):null,dir:w?Math.round(w.dir):null,sea:sea==null?null:+sea.toFixed(1),gs:(nW!=null&&sW!=null&&p.lat<=nW&&p.lat>=sW)});});
+		out.push({t:Math.round(p.t),lat:p.lat,lon:p.lon,kt:w?+w.kt.toFixed(1):null,dir:w?Math.round(w.dir):null,sea:sea==null?null:+sea.toFixed(1),gs:(function(){var nW=hasW?gsWallLat(GSW.north,p.lon):null,sW=hasW?gsWallLat(GSW.south,p.lon):null;return nW!=null&&sW!=null&&p.lat<=nW&&p.lat>=sW;})()});});
 	return out;
 }
 function passLog(r,kind){
 	if(!PB_LOGGED||!r||r.noFcH>0)return;
 	var fd=new FormData();fd.append('action','oyc_passage_log');fd.append('nonce',PB_NONCE);
-	fd.append('window',JSON.stringify({route:PASS.route,kind:kind,run:TIMES[0]||'',floor:PASS.floor,depart:Math.round(r.depart),eta:Math.round(r.eta),verdict:passVerdict(r).lvl,samples:passSamples(r)}));
+	fd.append('window',JSON.stringify({route:r.key||PASS.route,kind:kind,run:TIMES[0]||'',floor:PASS.floor,depart:Math.round(r.depart),eta:Math.round(r.eta),verdict:passVerdict(r).lvl,samples:passSamples(r)}));
 	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).catch(function(){});
 }
 function passLoadRecord(verify){
@@ -3908,35 +3972,48 @@ function passRecordHTML(){
 	return h;
 }
 function passGpx(){
-	var r=PASS.res;if(!r)return;var w=r.route.wps,x='<'+'?xml version="1.0" encoding="UTF-8"?'+'>\n<gpx version="1.1" creator="OYC Passage brief" xmlns="http://www.topografix.com/GPX/1/1">\n<rte><name>OYC to '+pEsc(r.route.short)+'</name>\n';
+	var r=PASS.res;if(!r)return;var w=r.wps,nm=w[0].n+' to '+w[w.length-1].n,x='<'+'?xml version="1.0" encoding="UTF-8"?'+'>\n<gpx version="1.1" creator="OYC Passage brief" xmlns="http://www.topografix.com/GPX/1/1">\n<rte><name>'+pEsc(nm)+'</name>\n';
 	w.forEach(function(p,i){var eta=i===0?r.depart:r.legs[i-1].end;x+='<rtept lat="'+p.lat.toFixed(5)+'" lon="'+p.lon.toFixed(5)+'"><name>'+pEsc(p.n)+'</name><desc>'+(i===0?'Depart ':'ETA ')+pEsc(pWhenLong(eta))+' ET</desc></rtept>\n';});
-	x+='</rte>\n</gpx>\n';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x],{type:'application/gpx+xml'}));a.download='oyc-passage-'+r.route.short.replace(/[^A-Za-z]+/g,'-').toLowerCase()+'.gpx';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+	x+='</rte>\n</gpx>\n';var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x],{type:'application/gpx+xml'}));a.download='oyc-passage-'+w[w.length-1].n.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()+'.gpx';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
 }
 function pLocalInput(ms){var d=new Date(ms),p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
 function renderPassCard(){
 	var c=document.getElementById('passCard');if(!c)return;
-	var R=PASS.ROUTES[PASS.route],r=PASS.res,dep=PASS.departMs||Date.now();
-	var open=!r||c._planOpen;
+	var r=PASS.res,dep=PASS.departMs||Date.now(),W=passWps(),C=PASS.custom,np=(typeof pins!=='undefined')?pins.length:0;
+	var open=!r||c._planOpen||!!PASS.picking,W0=W?W[0].n:'—',W1=W?W[W.length-1].n:'—';
+	var rw=r?r.wps:W,via=rw&&rw.length>2?(rw.length===3&&rw[1].race?'via The Race':(rw.length-2)+' waypoint'+(rw.length>3?'s':'')+' between'):'';
 	var h='<div class="pc-hd" id="pcHd"><span class="pc-ttl">Passage brief</span><span class="pc-chip">✦ Claude</span><span class="pc-sp"></span>'
-		+(r?'<span class="pc-mini">'+Math.round(r.nm)+' nm · ETA '+pWhen(r.eta)+'</span>':'')
+		+(PASS.picking?'<span class="pc-mini">Tap the chart: '+(PASS.picking==='from'?'start':'finish')+'</span>':r?'<span class="pc-mini">'+Math.round(r.nm)+' nm · ETA '+pWhen(r.eta)+'</span>':'')
 		+'<button type="button" class="pc-ib" id="pcMin" aria-label="Collapse passage brief" aria-expanded="true">–</button>'
 		+'<button type="button" class="pc-ib" id="pcX" aria-label="Close passage brief">×</button></div><div class="pc-body">';
-	h+='<details class="pc-sec pc-sec-plan"'+(open?' open':'')+'><summary><h4>Plan</h4><span>'+pEsc(pWhenLong(dep))+' · '+PASS.boat+'</span><b>Edit</b></summary><div class="pc-plan">'
-		+'<label>From<select disabled><option>Mamaroneck (OYC)</option></select></label>'
-		+'<label>To<select id="pcTo"><option value="bermuda">'+R.to+'</option></select></label>'
+	h+='<details class="pc-sec pc-sec-plan"'+(open?' open':'')+'><summary><h4>Plan</h4><span>'+pEsc(W0)+' → '+pEsc(W1)+' · '+pEsc(pWhenLong(dep))+'</span><b>Edit</b></summary><div class="pc-plan">'
+		+'<label class="pc-wide">Route<select id="pcRoute"><option value="bermuda"'+(PASS.route==='bermuda'?' selected':'')+'>OYC → Bermuda (preset)</option>'
+			+'<option value="pins"'+(PASS.route==='pins'?' selected':'')+'>My waypoints'+(np?' ('+np+')':'')+'</option>'
+			+'<option value="custom"'+(PASS.route==='custom'?' selected':'')+'>Pick start &amp; finish on the chart</option></select></label>';
+	if(PASS.route==='custom'){
+		['from','to'].forEach(function(k){var q=C[k],on=PASS.picking===k;
+			h+='<div class="pc-pt pc-wide'+(on?' on':'')+'"><span class="pc-pl">'+(k==='from'?'Start':'Finish')+'</span><span class="pc-pv">'+(on?'Tap the chart…':pEsc(q.n)+(q.n.indexOf('°')<0?'<small>'+pLL(q.lat,q.lon)+'</small>':''))+'</span>'
+				+'<button type="button" class="pc-link" data-pick="'+k+'">'+(on?'Cancel':'Set on chart')+'</button></div>';});
+		h+='<label class="pc-wide pc-chk"><input type="checkbox" id="pcViaRace"'+(C.viaRace?' checked':'')+'> Leave the Sound through The Race</label>';
+	}else if(PASS.route==='pins'){
+		h+='<p class="pc-note pc-wide">'+(W?'Routes '+W0+' → '+W1+' through your '+np+' waypoint'+(np===1?'':'s')+(W[0].n==='My boat'?', from your boat':'')+', in order. Tap the chart to add more; drag one to move it.':'Tap the chart to drop at least two waypoints (or one, with My location and Route from my boat on). They’re routed in order.')+'</p>';
+	}
+	h+=''
 		+'<label>Depart (ET)<input type="datetime-local" id="pcDep" value="'+pLocalInput(dep)+'" step="3600"></label>'
 		+'<label>Motor below<input type="number" id="pcFloor" min="0" max="9" step="0.5" value="'+PASS.floor+'"></label>'
 		+'<label class="pc-wide">Boat<select disabled><option>'+PASS.boat+' (polars)</option></select></label></div>'
-		+'<div class="pc-acts"><button type="button" class="pc-btn pri" id="pcRun"'+(PASS.busy?' disabled':'')+'>'+(PASS.busy?'Routing…':'Route it')+'</button></div></details>';
+		+(PASS.route!=='bermuda'?'<p class="pc-note">Legs are straight lines: use My waypoints to route around land.</p>':'')
+		+'<div class="pc-acts"><button type="button" class="pc-btn pri" id="pcRun"'+(PASS.busy||!W?' disabled':'')+'>'+(PASS.busy?'Routing…':'Route it')+'</button></div></details>';
 	if(PASS.status)h+='<div class="pc-status"><span class="pc-spin" aria-hidden="true"></span>'+pEsc(PASS.status)+'</div>';
 	if(r){
 		var sm=passSummary(r),v=PASS.ai&&PASS.ai.verdict?{lvl:PASS.ai.verdict.level,tag:PASS.ai.verdict.tag}:sm.verdict,vt=PASS.ai&&PASS.ai.verdict?PASS.ai.verdict.text:(r.flags.filter(function(f){return f.s>=2;}).map(function(f){return f.txt;}).join('. ')||'No red flags on this run of the forecast.');
-		h+='<div class="pc-route">Mamaroneck (OYC) → '+R.to+'<small>'+PASS.boat+' · depart '+pEsc(pWhenLong(r.depart))+' ET · via The Race</small></div>'
+		var r0=r.wps[0].n,r1=r.wps[r.wps.length-1].n;
+		h+='<div class="pc-route">'+pEsc(r0==='OYC'?'Mamaroneck (OYC)':r0)+' → '+pEsc(r1==="St. George’s"?'Bermuda · St. George’s':r1)+'<small>'+PASS.boat+' · depart '+pEsc(pWhenLong(r.depart))+' ET'+(via?' · '+via:'')+'</small></div>'
 			+'<div class="pc-kpis"><div class="pc-kpi"><b>'+Math.round(r.nm)+'</b><span>nm</span></div><div class="pc-kpi"><b>'+pDur(r.hrs)+'</b><span>Underway</span></div><div class="pc-kpi"><b>'+pWhen(r.eta)+'</b><span>ETA ET</span></div></div>'
 			+'<div class="pc-verdict '+pEsc(v.lvl)+'"><span class="pc-vb">'+pEsc(v.tag)+'</span><span>'+pEsc(vt)+'</span></div>';
 		var g=r.gate,gl='';
 		if(g){gl='The Race '+pWhen(g.t);if(g.v!=null)gl+=' · '+(Math.abs(g.v)<0.3?'near slack':g.v<0?'ebb '+Math.abs(g.v).toFixed(1)+' kt, fair':'flood '+g.v.toFixed(1)+' kt, foul')+(g.slack?' (slack '+pWhen(g.slack)+')':'');else gl+=' · tide unavailable';}
-		h+='<div class="pc-sec"><h4>Departure &amp; tidal gate</h4>'+pEsc(pWhenLong(r.depart))+' from OYC · '+pEsc(gl);
+		h+='<div class="pc-sec"><h4>Departure'+(g?' &amp; tidal gate':'')+'</h4>'+pEsc(pWhenLong(r.depart))+' from '+pEsc(r0)+(gl?' · '+pEsc(gl):'');
 		if(r.best&&Math.abs(r.best.depart-r.depart)>=3*36e5&&r.best.score<r.score-2)h+='<div class="pc-best">Better window: leave <b>'+pEsc(pWhenLong(r.best.depart))+'</b> → ETA '+pEsc(pWhen(r.best.eta))+' <button type="button" class="pc-link" id="pcUseBest">Use</button></div>';
 		h+='</div><div class="pc-sec"><h4>Legs</h4><ol class="pc-legs">';
 		r.legs.forEach(function(l,i){
@@ -3949,9 +4026,10 @@ function renderPassCard(){
 		});
 		h+='</ol></div>';
 		var s=r.gs,sl='';
-		if(s.nWall!=null){sl='North wall '+s.nWall.toFixed(1)+'°N'+(s.sWall!=null?', south wall '+s.sWall.toFixed(1)+'°N':'')+' near 70°W (NOAA).';
-			if(s.inT)sl+=' In the Stream '+pWhen(s.inT)+'–'+pWhen(s.outT)+(s.dir!=null?', wind '+card(s.dir)+' to '+Math.round(s.kt)+' kt':'')+'.';
+		if(s.inT){sl='North wall '+s.nWall.toFixed(1)+'°N, south wall '+s.sWall.toFixed(1)+'°N where you cross, near '+Math.abs(s.lon).toFixed(0)+'°W (NOAA).';
+			sl+=' In the Stream '+pWhen(s.inT)+'–'+pWhen(s.outT)+(s.dir!=null?', wind '+card(s.dir)+' to '+Math.round(s.kt)+' kt':'')+'.';
 			var wac=r.flags.some(function(f){return f.k==='gs';});sl+=wac?' Wind against current: expect steep seas.':' No wind against the current.';}
+		else if(s.avail)sl='This route doesn’t cross the Gulf Stream (NOAA wall analysis).';
 		else sl='Gulf Stream wall analysis unavailable right now.';
 		h+='<div class="pc-sec"><h4>Gulf Stream</h4>'+pEsc(sl)+'</div>';
 		var watch=PASS.ai&&PASS.ai.watch&&PASS.ai.watch.length?PASS.ai.watch:r.flags.map(function(f){return f.txt;});
@@ -3974,22 +4052,23 @@ function passSetMin(m){var c=document.getElementById('passCard'),b=document.getE
 	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
 function drawPassRoute(){
 	passLayer.clearLayers();
-	var R=PASS.ROUTES[PASS.route],ll=R.wps.map(function(w){return [w.lat,w.lon];});
+	var r=PASS.res,WP=r?r.wps:passWps();if(!WP){passLayer.addTo(map);return;}
+	var ll=WP.map(function(w){return [w.lat,w.lon];});
 	L.polyline(ll,{color:'#0b2a4a',weight:6,opacity:.35,interactive:false}).addTo(passLayer);
 	L.polyline(ll,{color:'#d4a851',weight:3,dashArray:'8 6',interactive:false}).addTo(passLayer);
-	var r=PASS.res;
 	/* where the boat is every 12 h of the passage */
 	if(r){var next=r.depart+12*36e5;r.track.forEach(function(p){if(p.t>=next&&p.t<r.eta-3*36e5){var lab=next;next+=12*36e5;
 		L.circleMarker([p.lat,p.lon],{radius:3.5,color:'#fff',weight:1.5,fillColor:'#0b2a4a',fillOpacity:1}).bindTooltip(pWhen(lab),{permanent:true,direction:'left',offset:[-6,0],className:'pass-lbl tick'}).addTo(passLayer);}});}
-	R.wps.forEach(function(w,i){
-		var last=i===R.wps.length-1,eta=r?(i===0?r.depart:r.legs[i-1].end):null;
+	WP.forEach(function(w,i){
+		var last=i===WP.length-1,eta=r?(i===0?r.depart:r.legs[i-1].end):null;
 		L.circleMarker([w.lat,w.lon],{radius:w.gs?7:5,color:'#fff',weight:2,fillColor:w.gs?'#c2491f':'#d4a851',fillOpacity:1})
 			.bindTooltip(pEsc(w.n)+(eta&&i>0?' · '+pWhen(eta):''),{permanent:true,direction:(i===0||last)?'left':'right',offset:[(i===0||last)?-8:8,0],className:'pass-lbl'+(w.gs?' gs':'')}).addTo(passLayer);
 	});
 	passLayer.addTo(map);
 }
 function passFit(){
-	var b=L.latLngBounds(PASS.ROUTES[PASS.route].wps.map(function(w){return [w.lat,w.lon];})),phone=window.matchMedia('(max-width:760px)').matches;
+	var WP=PASS.res?PASS.res.wps:passWps();if(!WP)return;
+	var b=L.latLngBounds(WP.map(function(w){return [w.lat,w.lon];})),phone=window.matchMedia('(max-width:760px)').matches;
 	var g=document.getElementById('mapGrid'),lyr=g&&g.classList.contains('lyr-open');
 	try{map.fitBounds(b,phone?{paddingTopLeft:[40,30],paddingBottomRight:[20,70]}:{paddingTopLeft:[60,40],paddingBottomRight:[(lyr?640:380),40]});}catch(e){}
 }
@@ -3997,7 +4076,7 @@ document.getElementById('tgPassage').addEventListener('change',function(){
 	var c=document.getElementById('passCard');
 	if(this.checked){c.classList.add('on');passSetMin(window.matchMedia('(max-width:760px)').matches);   /* phones open on the summary row */
 		renderPassCard();drawPassRoute();passFit();if(!PASS.res)passBuild();}
-	else{c.classList.remove('on');map.removeLayer(passLayer);passLayer.clearLayers();}
+	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();}
 });
 document.getElementById('passCard').addEventListener('click',function(e){
 	var t=e.target,c=this;
@@ -4011,12 +4090,18 @@ document.getElementById('passCard').addEventListener('click',function(e){
 		if(t.closest('#pcRerun')){PASS.TIDE_KEY='';PASS.SEAS_KEY='';}
 		c._planOpen=false;passBuild();return;}
 	if(t.closest('#pcUseBest')&&PASS.res&&PASS.res.best){PASS.departMs=PASS.res.best.depart;c._planOpen=false;passBuild();return;}
+	var pk=t.closest('[data-pick]');if(pk){var k=pk.getAttribute('data-pick');if(PASS.picking===k){PASS.picking=null;map.getContainer().classList.remove('pass-picking');if(c._pickMin){c._pickMin=false;passSetMin(false);}renderPassCard();}else passStartPick(k);return;}
 	if(t.closest('#pcAsk')){passAskClaude();return;}
 	if(t.closest('#pcGpx')){passGpx();return;}
 	if(t.closest('#pcRecCheck')){PASS.recLoading=false;passLoadRecord(true);return;}
 	var lg=t.closest('.pc-leg');
-	if(lg){var i=+lg.getAttribute('data-leg'),w=PASS.ROUTES[PASS.route].wps,a=w[i],z=w[i+1],ph=window.matchMedia('(max-width:760px)').matches;
+	if(lg){var i=+lg.getAttribute('data-leg'),w=PASS.res?PASS.res.wps:passWps(),a=w[i],z=w[i+1],ph=window.matchMedia('(max-width:760px)').matches;
 		try{map.fitBounds([[a.lat,a.lon],[z.lat,z.lon]],{paddingTopLeft:[60,40],paddingBottomRight:[ph?20:380,ph?200:40]});}catch(e2){}}
+});
+document.getElementById('passCard').addEventListener('change',function(e){
+	var t=e.target;
+	if(t.id==='pcRoute'){PASS.route=t.value;PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();passFit();}
+	else if(t.id==='pcViaRace'){PASS.custom.viaRace=t.checked;PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();}
 });
 document.getElementById('passCard').addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pc-leg')){e.preventDefault();e.target.click();}});
 document.getElementById('tgCur').addEventListener('change',function(){

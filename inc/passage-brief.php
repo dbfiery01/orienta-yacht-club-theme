@@ -69,6 +69,7 @@ function oyc_passage_brief_ajax() {
 	$system = "You write offshore passage briefs for members of a yacht club in Mamaroneck, NY. "
 		. "You are given the output of a polar router that has already stepped the boat through the GFS wind forecast, "
 		. "plus The Race tidal current, the NOAA Gulf Stream wall analysis and forecast seas. "
+		. "The member picks the route (a preset, their own waypoints, or a start and finish); race_gate and gulf_stream are null when the route does not pass them. "
 		. "Use only the numbers provided: never invent wind speeds, times, distances or hazards that are not in the data. "
 		. "Write for an experienced cruising sailor, in plain English, without markdown. "
 		. "verdict.level is go (no concerns), watch (go, but with named concerns) or hold (wait for a better window). "
