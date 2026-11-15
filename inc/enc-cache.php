@@ -54,6 +54,46 @@ define( 'OYC_ENC_VER', 4 );
    through. Cached under oyc-enc/d/. Must match encDetail in inc/wind-map.php. */
 define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
 define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
+/* The "safe water" layers s6..s60 and h6..h60 (never shown on the map). The
+   passage checker and Autoroute in inc/wind-map.php read their pixels to find
+   land and water shallower than the boat's safety depth (draft + 5 ft). NOAA
+   draws them with the safety contour at that depth (6, 12, 18, 30 or 60 ft,
+   the charted contours; NOAA itself would pick the next deeper contour), and
+   only the base and standard chart categories, so soundings and labels are
+   left out: land is transparent, water shallower than the contour (and drying
+   areas) is tinted, deeper water is white.
+   s = the chart NOAA picks for the scale. Some approach-scale charts carry only
+   coarse depth areas (parts of Fishers Island Sound read "shallow" at any
+   contour), so h = harbour-scale charts only (IntendedUsage "5"), which have
+   the real contours where they exist and are empty elsewhere. The page uses h
+   where it has chart and s everywhere else. Zooms 11-13 only. Must match
+   SAFE_FT in inc/wind-map.php. */
+define( 'OYC_ENC_SAFE_FT', '6,12,18,30,60' );
+define( 'OYC_ENC_SAFE_ZOOMS', '11,12,13' );
+
+/** A tile variant we serve: '' (chart), 'd' (detail) or 's<ft>' (safe water). Anything else → false. */
+function oyc_enc_variant( $v ) {
+	$v = (string) $v;
+	if ( '' === $v || 'd' === $v ) {
+		return $v;
+	}
+	if ( preg_match( '/^([sh])(\d{1,2})$/', $v, $m ) && in_array( (int) $m[2], array_map( 'intval', explode( ',', OYC_ENC_SAFE_FT ) ), true ) ) {
+		return $m[1] . (int) $m[2];
+	}
+	return false;
+}
+
+/** Is $v a safe-water variant (s12, h12, ...)? */
+function oyc_enc_is_safe( $v ) {
+	return in_array( substr( (string) $v, 0, 1 ), array( 's', 'h' ), true );
+}
+
+/** NOAA display settings for a safe-water variant (contour in metres). */
+function oyc_enc_safe_params( $v ) {
+	$m = round( (int) substr( $v, 1 ) * 0.3048, 2 );
+	return '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"DisplayCategory","value":"1,2"},{"name":"ShallowContour","value":' . $m . '},{"name":"SafetyContour","value":' . $m . '},{"name":"DeepContour","value":' . $m . '},{"name":"SafetyDepth","value":' . $m . '}'
+		. ( 'h' === substr( $v, 0, 1 ) ? ',{"name":"IntendedUsage","value":"5"}' : '' ) . ']}}}';
+}
 
 function oyc_enc_dir() {
 	$u = wp_upload_dir();
@@ -97,15 +137,18 @@ function oyc_enc_wms_url( $z, $x, $y, $v = '' ) {
 		'width'       => $px,
 		'height'      => $px,
 		'bbox'        => implode( ',', $bbox ),
-	) + ( 'd' === $v ? array( 'display_params' => rawurlencode( OYC_ENC_DETAIL ) ) : array() ), OYC_ENC_WMS );
+	) + ( 'd' === $v ? array( 'display_params' => rawurlencode( OYC_ENC_DETAIL ) ) : ( oyc_enc_is_safe( $v ) ? array( 'display_params' => rawurlencode( oyc_enc_safe_params( $v ) ) ) : array() ) ), OYC_ENC_WMS );
 }
 
 function oyc_enc_file( $z, $x, $y, $v = '' ) {
-	return oyc_enc_dir() . ( 'd' === $v ? '/d' : '' ) . "/$z/$x/$y.png";
+	return oyc_enc_dir() . ( '' !== (string) $v ? '/' . $v : '' ) . "/$z/$x/$y.png";
 }
 
 /** Is (z, v) a layer/zoom we serve? */
 function oyc_enc_zoom_ok( $z, $v ) {
+	if ( oyc_enc_is_safe( $v ) ) {
+		return in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_SAFE_ZOOMS ) ), true );
+	}
 	return 'd' === $v ? in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_DETAIL_ZOOMS ) ), true ) : ( $z >= 9 && $z <= 17 );
 }
 
@@ -171,9 +214,9 @@ function oyc_enc_tile() {
 	$z = isset( $_GET['z'] ) ? (int) $_GET['z'] : -1;
 	$x = isset( $_GET['x'] ) ? (int) $_GET['x'] : -1;
 	$y = isset( $_GET['y'] ) ? (int) $_GET['y'] : -1;
-	$v = ( isset( $_GET['v'] ) && 'd' === $_GET['v'] ) ? 'd' : '';
+	$v = oyc_enc_variant( isset( $_GET['v'] ) ? sanitize_key( wp_unslash( $_GET['v'] ) ) : '' );
 	$n = $z >= 0 && $z < 30 ? ( 1 << $z ) : 0;
-	if ( ! oyc_enc_zoom_ok( $z, $v ) || $x < 0 || $y < 0 || $x >= $n || $y >= $n ) {
+	if ( false === $v || ! oyc_enc_zoom_ok( $z, $v ) || $x < 0 || $y < 0 || $x >= $n || $y >= $n ) {
 		status_header( 400 );
 		exit;
 	}

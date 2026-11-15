@@ -310,6 +310,29 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .route-btns button,#oycwm .route-btns a{display:inline-flex;text-decoration:none;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:999px;cursor:pointer;font-size:.74rem;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #oycwm .route-btns button:hover,#oycwm .route-btns a:hover{background:var(--harbor);border-color:var(--harbor)}
 #oycwm .route-btns .rb-clear{background:#fff;color:var(--navy)}
+/* Autoroute: red with a count when a leg crosses land or shoal water */
+#oycwm .route-btns .rb-auto{background:#fff;color:var(--navy)}
+#oycwm .route-btns .rb-auto:hover{background:#eef4fa;color:var(--navy)}
+#oycwm .route-btns .rb-auto.warn{background:#c0392b;border-color:#c0392b;color:#fff}
+#oycwm .route-btns .rb-auto.warn:hover{background:#a93226;border-color:#a93226;color:#fff}
+#oycwm .arpanel{background:#0b2a4a;color:#fff;padding:10px 12px;font-size:.74rem;line-height:1.4;border-bottom:1px solid var(--line)}
+#oycwm .arpanel[hidden]{display:none}
+#oycwm .ar-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#oycwm .ar-x{border:0;background:none;color:#dbe9f3;font-size:18px;line-height:1;cursor:pointer;padding:0 4px}
+#oycwm .ar-list{margin:0 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:8px}
+#oycwm .ar-list li>span:first-child{display:block;margin-bottom:4px}
+#oycwm .ar-list li.ok>span:first-child{color:#9fe0b4}
+#oycwm .ar-list li.no>span:first-child{opacity:.6;text-decoration:line-through}
+#oycwm .ar-note{margin:0 0 8px;color:#dbe9f3;font-size:.68rem;display:flex;gap:6px;align-items:center}
+#oycwm .wpt .s.sw-bad,#oycwm .co-sw.sw-bad{color:#c0392b;font-weight:700;white-space:normal}
+#oycwm .wpt .s.sw-shoal,#oycwm .co-sw.sw-shoal{color:#b9600f;font-weight:700;white-space:normal}
+#oycwm .co-sw{display:block;font-size:.72rem;margin-top:2px}
+[data-theme="dark"] #oycwm .wpt .s.sw-bad{color:#ff8a7a}
+[data-theme="dark"] #oycwm .wpt .s.sw-shoal{color:#f5b041}
+#oycwm .lyr-draft{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:.8rem}
+#oycwm .lyr-draft label{font-weight:700}
+#oycwm .lyr-draft input{width:62px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--panel);color:var(--ink)}
+#oycwm .lyr-draft .hint{flex-basis:100%;align-self:auto}
 #oycwm .route-btns .rb-clear:hover{background:#eef4fa;color:var(--navy)}
 /* Passage table: each waypoint's card as a row in a side table beside the map
    (stacked under it on narrow screens). Hidden until the first waypoint; the route
@@ -630,7 +653,7 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .wptab.wp-below.wp-img{display:none}
 	#oycwm .wptab.wp-below .routebar{padding:6px 10px;gap:6px}
 	#oycwm .wptab.wp-below .route-info{flex-basis:100%}
-	#oycwm .wptab.wp-below .route-btns{flex-wrap:nowrap;gap:4px;margin-left:0;width:100%;justify-content:space-between}
+	#oycwm .wptab.wp-below .route-btns{flex-wrap:wrap;gap:4px;margin-left:0;width:100%;justify-content:flex-start}   /* wraps: Autoroute made it six buttons */
 	#oycwm .wptab.wp-below .route-btns button,#oycwm .wptab.wp-below .route-btns a{padding:6px 8px;font-size:.66rem}
 	#oycwm .wptab.wp-below .wpt tbody tr{padding:6px 10px 6px 18px}
 	#oycwm .wptab.wp-below .wpt-foot{padding:5px 10px}
@@ -772,6 +795,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-chg li.no{opacity:.55}
 #oycwm .pc-chg small{color:#9fc3da}
 #oycwm .pc-chg span:not(.pc-yn){display:block;color:#dbe9f3;font-size:.68rem;margin-top:2px}
+#oycwm .pc-chg span.pc-swwarn{color:#ffb4a8;font-weight:700}
 #oycwm .pc-yn{display:flex;gap:6px}
 #oycwm .pc-yn button{flex:1;font:inherit;font-size:.68rem;font-weight:700;border-radius:6px;padding:4px 6px;min-height:30px;cursor:pointer;background:transparent;color:#dbe9f3;border:1px solid rgba(255,255,255,.25)}
 #oycwm .pc-yn .pc-y.on{background:#5fbf7f;border-color:#5fbf7f;color:#0b2a4a}
@@ -1031,6 +1055,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<?php endif; ?>
 						<label title="Offshore passage brief: Long Island Sound to Bermuda routed through the forecast with Shannon 43 polars, The Race tide and the Gulf Stream, plus a written brief from Claude"><input type="checkbox" id="tgPassage"> Passage brief</label>
 					</div>
+					<div class="lyr-draft"><label for="boatDraft">My draft</label><input type="number" id="boatDraft" min="1" max="25" step="0.5" inputmode="decimal" value="6"> ft<span class="hint" id="draftNote"></span></div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day, on unless you switch it off; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
 				<div class="layers lyr-sec" id="poiLayers">
@@ -1078,10 +1103,12 @@ function oyc_wind_map_html( $embed = false ) {
 					<button type="button" id="rbExport" title="Download the route + forecast as GPX (for your chartplotter) and CSV">&#8681;&nbsp;Save route</button>
 					<a id="rbGrib" href="<?php echo $oyc_ajax; ?>?action=oyc_grib" rel="nofollow" title="Latest NOAA GFS forecast for western Long Island Sound as a GRIB2 file: 10 m wind, gusts and sea-level pressure, 0-48 h. Opens in OpenCPN, XyGrib, PredictWind Offshore, Expedition, qtVlm and most GRIB viewers. The first download after a new model run can take a few seconds.">&#8681;&nbsp;GRIB</a>
 					<button type="button" class="rb-tog mbr-only" id="rbFromBoat" aria-pressed="false" title="Start the route from your live GPS position (turns on My location)">From my boat</button>
+					<button type="button" class="rb-auto" id="rbAuto" title="Check the legs for land and shallow water and fix them">Autoroute</button>
 					<button type="button" class="rb-clear" id="rbClear" title="Remove all waypoints">Clear</button>
 					<button type="button" class="rb-tog" id="rbToggle" aria-expanded="false" aria-controls="wpTab" title="Hide or show the waypoint table">Show table</button>
 				</div>
 			</div>
+			<div class="arpanel" id="arPanel" hidden aria-live="polite"></div>
 			<div class="wpt-wrap">
 				<table class="wpt">
 					<thead><tr><th class="n">#</th><th>Dist (nm)</th><th>Wind</th><th>Seas &middot; precip</th><th class="x"><span class="sr">Remove</span></th></tr></thead>
@@ -1979,6 +2006,7 @@ function pinContent(pin,ti){
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
 		+(pin.name?'<div class="co-nm">'+pEsc(pin.name)+'</div>':'')
 		+legLine
+		+swNote(pin,'co-sw')
 		+(pe?'<div class="co-eta">'+(i===0&&!routeOrigin()?'Depart ':'Passage ETA ')+pEsc(pWhen(pe))+'</div>':'')
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
 		+'<div class="co-ll">'+ll+'</div>'+youLine;
@@ -2033,6 +2061,7 @@ function refreshRoute(){
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
 	updateRouteBar();
 	renderWpTable();
+	swSchedule();   /* land / shoal check on every leg */
 }
 /* re-render only the callout text for every pin (numbers don't change on a move) */
 function rerenderCallouts(){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));renderWpTable();}
@@ -2092,7 +2121,7 @@ function addPin(lat,lon,opt){
 	   a move, so re-render callouts only (no setIcon, which would churn the icon). */
 	m.on('dragstart',function(){pin._dragging=true;pin.fc=null;hoverTip.style.display='none';}); /* drop the old-spot forecast so callouts fall back to grid at the new spot */
 	m.on('drag',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin.popup.setLatLng(ll);drawRouteLine();rerenderCallouts();updateRouteBar();}); /* live: line + distances update as you drag */
-	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;pinUnname(pin);drawRouteLine();rerenderCallouts();updateRouteBar();savePins();passPinsChanged();loadPinFC(pin);}); /* pull the exact-point forecast for the new spot */
+	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;pinUnname(pin);drawRouteLine();rerenderCallouts();updateRouteBar();savePins();passPinsChanged();swSchedule();loadPinFC(pin);}); /* pull the exact-point forecast for the new spot */
 	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
@@ -2178,6 +2207,314 @@ function loadPins(list){
 }
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();drawLegLabels();drawLaylines();updateBoatInfo();}
 
+/* ── Safe water: land and shoal check on every leg, and Autoroute ──────────
+   Reads the "safe water" chart tiles (inc/enc-cache.php, OYC_ENC_SAFE_FT): NOAA's
+   chart drawn with its safety contour at the boat's draft + 5 ft, rounded up to
+   the next charted contour (6, 12, 18, 30 or 60 ft), the way a chartplotter does.
+   Land is transparent, water shallower than the contour (and drying banks) is
+   tinted, deeper water is white. Every leg inside the chart area (Chesapeake to
+   Cape Cod) is sampled pixel by pixel as waypoints are connected; a leg over land
+   or shoal water turns red/orange and its waypoint says why. Autoroute searches a
+   grid of the same pixels for the shortest way round, simplifies it to a few
+   waypoints and offers them to approve or reject; when it can't find a way, it
+   asks Claude, and checks Claude's waypoints the same way. Not for navigation:
+   rocks, wrecks and buoys are not checked. */
+var SAFE_FT=[6,12,18,30,60],SAFE_MARGIN=5,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
+function boatDraft(){var d=6;try{var v=parseFloat(localStorage.getItem(DRAFT_KEY));if(isFinite(v)&&v>=1&&v<=25)d=v;}catch(e){}return d;}
+function safeFt(){var need=boatDraft()+SAFE_MARGIN;for(var i=0;i<SAFE_FT.length;i++)if(SAFE_FT[i]>=need-0.01)return SAFE_FT[i];return 60;}
+function swVar(){return 's'+safeFt();}
+function swIn(lat,lon){return lat>=SAFE_AREA[0]&&lat<=SAFE_AREA[2]&&lon>=SAFE_AREA[1]&&lon<=SAFE_AREA[3];}
+function swTS(z){return z<=ENC_HIRES_MAX?512:256;}
+function swPx(lat,lon,z){var n=Math.pow(2,z)*swTS(z),s=Math.sin(lat*Math.PI/180);return [(lon+180)/360*n,(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n];}
+function swLL(gx,gy,z){var n=Math.pow(2,z)*swTS(z),m=Math.PI-2*Math.PI*gy/n;return [180/Math.PI*Math.atan(Math.sinh(m)),gx/n*360-180];}
+/* pixels per nautical mile at this latitude and zoom */
+function swPxNm(lat,z){var a=swPx(lat,0,z),b=swPx(lat+1/60,0,z);return Math.abs(a[1]-b[1]);}
+/* leg length → zoom: harbour detail for short legs, fewer tiles for long ones */
+function swZoom(nm){return nm<=12?13:(nm<=40?12:11);}
+/* pixel colour → 0 deep enough · 1 too shallow / drying · 2 land · 3 line, symbol or label.
+   h (harbour-scale charts) wins wherever it has chart; s (the chart for the scale) elsewhere. */
+function swCode(px,j){var r=px[j],g=px[j+1],b=px[j+2];
+	if(px[j+3]<110)return 2;
+	if(r>=236&&g>=236&&b>=236)return 0;
+	if(Math.abs(r-175)<26&&Math.abs(g-205)<22&&Math.abs(b-225)<22)return 1;
+	if(Math.abs(r-214)<16&&Math.abs(g-219)<16&&Math.abs(b-201)<16)return 1;
+	return 3;}
+function swClassify(ps,ph,t){
+	var n=t.n*t.n,o=new Uint8Array(n),water=0;
+	for(var i=0,j=0;i<n;i++,j+=4){var c=(ph&&ph[j+3]>=110)?swCode(ph,j):(ps?swCode(ps,j):2);if(c<2)water++;o[i]=c;}
+	t.empty=water<20;   /* no water at all: inland, or no chart here */
+	return o;
+}
+var SWT={},SWT_N=0;
+/* one variant's pixels (cache, then our server fetching from NOAA), or null */
+function swImg(v,z,x,y,n){
+	var urls=[];if(ENC_CACHE)urls.push(ENC_CACHE+'/'+v+'/'+z+'/'+x+'/'+y+'.png?cv='+ENC_VER);
+	urls.push(ENC_AJAX+'?action=oyc_enc_tile&z='+z+'&x='+x+'&y='+y+'&v='+v+'&cv='+ENC_VER);
+	return new Promise(function(res){var i=0;
+		function next(){if(i>=urls.length){res(null);return;}var im=new Image();
+			im.onload=function(){try{var c=document.createElement('canvas');c.width=c.height=n;var g=c.getContext('2d');g.drawImage(im,0,0,n,n);res(g.getImageData(0,0,n,n).data);}catch(e){res(null);}};
+			im.onerror=next;im.src=urls[i++];}
+		next();});
+}
+function swTile(v,z,x,y){
+	var k=v+'/'+z+'/'+x+'/'+y,t=SWT[k];if(t)return t.p;
+	if(++SWT_N>900){SWT={};SWT_N=1;}   /* keep memory bounded */
+	t=SWT[k]={d:null,n:swTS(z),empty:false,fail:false};
+	t.p=Promise.all([swImg(v,z,x,y,t.n),swImg('h'+v.slice(1),z,x,y,t.n)]).then(function(r){
+		if(!r[0]&&!r[1]){t.fail=true;return t;}
+		t.d=swClassify(r[0],r[1],t);return t;});
+	return t.p;
+}
+function swLoad(v,z,keys){return Promise.all(keys.map(function(k){return swTile(v,z,k[0],k[1]);}));}
+/* code at a global pixel: 0-3 as above, -1 not loaded / failed, -2 no chart data */
+function swAt(v,z,gx,gy){var T=swTS(z),x=Math.floor(gx/T),y=Math.floor(gy/T),t=SWT[v+'/'+z+'/'+x+'/'+y];
+	if(!t||!t.d)return -1;if(t.empty)return -2;return t.d[Math.floor(gy-y*T)*T+Math.floor(gx-x*T)];}
+function swTilesFor(pts,z){var T=swTS(z),seen={},out=[];pts.forEach(function(p){var x=Math.floor(p[0]/T),y=Math.floor(p[1]/T),k=x+','+y;if(!seen[k]){seen[k]=1;out.push([x,y]);}});return out;}
+/* What's at one point: Promise of 0 safe · 1 shallow · 2 land · -1 unknown */
+function swPoint(lat,lon){
+	if(!swIn(lat,lon))return Promise.resolve(-1);
+	var v=swVar(),z=13,p=swPx(lat,lon,z);
+	return swLoad(v,z,swTilesFor([p],z)).then(function(){var c=swAt(v,z,p[0],p[1]);return c===3?0:(c<0?-1:c);});
+}
+/* One leg a→b ({lat,lon}). Resolves {st:'ok'|'land'|'shallow'|'skip', runs:[{k,a:[lat,lon],b:[lat,lon]}]} */
+function swCheckLeg(a,b,v){
+	v=v||swVar();
+	if(!swIn(a.lat,a.lon)||!swIn(b.lat,b.lon))return Promise.resolve({st:'skip',runs:[]});
+	var nm=distNM(a.lat,a.lon,b.lat,b.lon);if(nm<0.02)return Promise.resolve({st:'ok',runs:[]});
+	var z=swZoom(nm),p=swPx(a.lat,a.lon,z),q=swPx(b.lat,b.lon,z),len=Math.hypot(q[0]-p[0],q[1]-p[1]),n=Math.max(2,Math.ceil(len/0.7)),S=[];
+	for(var i=0;i<=n;i++)S.push([p[0]+(q[0]-p[0])*i/n,p[1]+(q[1]-p[1])*i/n]);
+	var keys=swTilesFor(S,z);if(keys.length>160)return Promise.resolve({st:'skip',runs:[]});
+	return swLoad(v,z,keys).then(function(){
+		var ppn=swPxNm(a.lat,z),endS=0.12*ppn,endL=3,runs=[],cur=null;
+		S.forEach(function(s,i){
+			var d=Math.min(i,n-i)*len/n,c=swAt(v,z,s[0],s[1]),k=null;
+			if(c===2&&d>endL)k='land';else if(c===1&&d>endS)k='shallow';
+			if(cur&&(k!==cur.k)){if(cur.n>=(cur.k==='land'?2:3))runs.push(cur);cur=null;}
+			if(k){if(!cur)cur={k:k,a:swLL(s[0],s[1],z),n:0};cur.b=swLL(s[0],s[1],z);cur.n++;}
+		});
+		if(cur&&cur.n>=(cur.k==='land'?2:3))runs.push(cur);
+		return {st:runs.some(function(r){return r.k==='land';})?'land':(runs.length?'shallow':'ok'),runs:runs};
+	});
+}
+/* ── the check on My waypoints, re-run (debounced) whenever the route changes ── */
+var SW={res:null,key:'',busy:false,timer:0,fix:null,layer:L.layerGroup().addTo(map),prev:L.layerGroup().addTo(map)};
+function swLegs(){var o=routeOrigin(),L2=[],prev=o?{lat:o.lat,lon:o.lon,id:'o'}:null;
+	pins.forEach(function(p){if(prev)L2.push({a:prev,b:p,toId:p.id});prev=p;});return L2;}
+function swKey(){return swVar()+'|'+swLegs().map(function(l){return l.a.lat.toFixed(5)+','+l.a.lon.toFixed(5)+'>'+l.b.lat.toFixed(5)+','+l.b.lon.toFixed(5);}).join(';')+'|'+pins.map(function(p){return p.lat.toFixed(5)+','+p.lon.toFixed(5);}).join(';');}
+function swSchedule(){clearTimeout(SW.timer);SW.timer=setTimeout(swRun,450);}
+function swRun(){
+	if(pins.some(function(p){return p._dragging;})){swSchedule();return;}
+	var key=swKey();if(key===SW.key&&SW.res)return;SW.key=key;
+	var legs=swLegs(),v=swVar();SW.running=!!pins.length;
+	if(SW.fix&&!SW.fix.busy){SW.fix=null;SW.prev.clearLayers();swPanel();}   /* the route changed: old fixes no longer fit */
+	if(!pins.length){SW.res=null;swDraw();swUI();return;}
+	Promise.all([Promise.all(legs.map(function(l){return swCheckLeg(l.a,l.b,v);})),Promise.all(pins.map(function(p){return swPoint(p.lat,p.lon);}))]).then(function(r){
+		if(SW.key!==key)return;   /* the route changed while this ran */
+		var res={legs:{},pins:{},n:0,ft:safeFt()};
+		legs.forEach(function(l,i){res.legs[l.toId]=r[0][i];if(r[0][i].st==='land'||r[0][i].st==='shallow')res.n++;});
+		pins.forEach(function(p,i){res.pins[p.id]=r[1][i];if(r[1][i]===2)res.n++;});
+		SW.res=res;SW.running=false;swDraw();swUI();
+		if(SW.wantAuto){SW.wantAuto=false;SW.fix=null;swAutoroute();}   /* Autoroute was clicked while this ran */
+	});
+}
+function swDraw(){
+	SW.layer.clearLayers();var r=SW.res;if(!r)return;
+	Object.keys(r.legs).forEach(function(id){r.legs[id].runs.forEach(function(u){
+		var col=u.k==='land'?'#d7263d':'#e67e22';
+		L.polyline([u.a,u.b],{color:col,weight:7,opacity:.55,lineCap:'round',interactive:false}).addTo(SW.layer);
+		L.circleMarker(u.a,{radius:4,color:col,weight:2,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(SW.layer);});});
+}
+/* the warning line for the leg into a pin (and the pin itself) */
+function swNote(pin,cls){
+	var r=SW.res;if(!r)return '';var h='',l=r.legs[pin.id],c=r.pins[pin.id];
+	if(c===2)h+='<span class="'+cls+' sw-bad">&#9888; This point is on land</span>';
+	if(l&&l.st==='land')h+='<span class="'+cls+' sw-bad">&#9888; Leg crosses land &middot; Autoroute</span>';
+	else if(l&&l.st==='shallow')h+='<span class="'+cls+' sw-shoal">&#9888; Leg crosses water under '+r.ft+' ft &middot; Autoroute</span>';
+	return h;
+}
+function swUI(){
+	var b=document.getElementById('rbAuto');
+	if(b){var n=SW.res?SW.res.n:0;b.classList.toggle('warn',n>0);b.innerHTML=n?'&#9888;&nbsp;Autoroute ('+n+')':'Autoroute';
+		b.title=n?('Fix '+n+' leg'+(n>1?'s':'')+' that cross land or water under '+safeFt()+' ft'):'Check the legs for land and water under '+safeFt()+' ft (draft '+boatDraft()+' ft + '+SAFE_MARGIN+')';}
+	for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));
+	renderWpTable();swPanel();
+}
+/* ── Autoroute ── */
+function swHeap(){var a=[],f=null;return {push:function(i,p){a.push([p,i]);var k=a.length-1;while(k>0){var q=(k-1)>>1;if(a[q][0]<=a[k][0])break;var t=a[q];a[q]=a[k];a[k]=t;k=q;}},
+	pop:function(){var top=a[0],e=a.pop();if(a.length){a[0]=e;var k=0;for(;;){var l=2*k+1,r=l+1,m=k;if(l<a.length&&a[l][0]<a[m][0])m=l;if(r<a.length&&a[r][0]<a[m][0])m=r;if(m===k)break;var t=a[m];a[m]=a[k];a[k]=t;k=m;}}return top[1];},
+	size:function(){return a.length;}};}
+/* Build a blocked/free grid over the box around a→b (pad in nm), at zoom z.
+   Resolves {W,H,f,x0,y0,z,blk:Uint8Array (0 free,1 shallow,2 land), ok} */
+function swGrid(a,b,padNm,v,z){
+	var p=swPx(a.lat,a.lon,z),q=swPx(b.lat,b.lon,z),pad=padNm*swPxNm((a.lat+b.lat)/2,z);
+	var x0=Math.min(p[0],q[0])-pad,x1=Math.max(p[0],q[0])+pad,y0=Math.min(p[1],q[1])-pad,y1=Math.max(p[1],q[1])+pad,T=swTS(z);
+	var keys=[];for(var tx=Math.floor(x0/T);tx<=Math.floor(x1/T);tx++)for(var ty=Math.floor(y0/T);ty<=Math.floor(y1/T);ty++)keys.push([tx,ty]);
+	if(keys.length>220)return Promise.resolve(null);
+	return swLoad(v,z,keys).then(function(){
+		var f=Math.max(1,Math.ceil(Math.max(x1-x0,y1-y0)/650)),W=Math.ceil((x1-x0)/f),H=Math.ceil((y1-y0)/f),blk=new Uint8Array(W*H);
+		for(var cy=0;cy<H;cy++)for(var cx=0;cx<W;cx++){var worst=0;
+			for(var sy=0;sy<f&&worst<2;sy++)for(var sx=0;sx<f;sx++){var c=swAt(v,z,x0+cx*f+sx+.5,y0+cy*f+sy+.5);
+				if(c===2||c<0){worst=2;break;}if(c===1)worst=1;}
+			blk[cy*W+cx]=worst;}
+		return {W:W,H:H,f:f,x0:x0,y0:y0,z:z,blk:blk};
+	});
+}
+function swCell(G,lat,lon){var p=swPx(lat,lon,G.z);return [Math.max(0,Math.min(G.W-1,Math.floor((p[0]-G.x0)/G.f))),Math.max(0,Math.min(G.H-1,Math.floor((p[1]-G.y0)/G.f)))];}
+function swCellLL(G,cx,cy){return swLL(G.x0+(cx+.5)*G.f,G.y0+(cy+.5)*G.f,G.z);}
+/* shortest water path a→b on the grid, simplified to turning points ([lat,lon] list, ends excluded), or null */
+function swPath(G,a,b,clNm){
+	var W=G.W,H=G.H,N=W*H,src=G.blk,blk=new Uint8Array(N),i,x,y;
+	/* keep clNm (0.05 nm ≈ 90 m, else 0.025) off land and shoal water: grow blocked cells by the clearance */
+	var cl=Math.max(1,Math.round((clNm||0.05)*swPxNm((a.lat+b.lat)/2,G.z)/G.f)),opened=new Uint8Array(N);
+	for(y=0;y<H;y++)for(x=0;x<W;x++){if(!src[y*W+x])continue;
+		for(var dy=-cl;dy<=cl;dy++)for(var dx=-cl;dx<=cl;dx++){var X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<W&&Y<H)blk[Y*W+X]=1;}}
+	var s=swCell(G,a.lat,a.lon),t=swCell(G,b.lat,b.lon);
+	/* waypoints often sit in a shallow harbour or on the shore: open a small circle round each end, but never through land */
+	[s,t].forEach(function(e){var r=Math.max(2,Math.round(0.15*swPxNm(a.lat,G.z)/G.f));
+		for(var dy=-r;dy<=r;dy++)for(var dx=-r;dx<=r;dx++){var X=e[0]+dx,Y=e[1]+dy;if(X<0||Y<0||X>=W||Y>=H||dx*dx+dy*dy>r*r)continue;if(src[Y*W+X]!==2){blk[Y*W+X]=0;opened[Y*W+X]=1;}}
+		blk[e[1]*W+e[0]]=0;});
+	var si=s[1]*W+s[0],ti=t[1]*W+t[0],g=new Float32Array(N).fill(Infinity),par=new Int32Array(N).fill(-1),done=new Uint8Array(N),h=swHeap();
+	g[si]=0;h.push(si,0);var DX=[1,-1,0,0,1,1,-1,-1],DY=[0,0,1,-1,1,-1,1,-1],DC=[1,1,1,1,1.4142,1.4142,1.4142,1.4142],tx=t[0],ty=t[1],found=false,it=0;
+	while(h.size()){var c=h.pop();if(done[c])continue;done[c]=1;if(c===ti){found=true;break;}if(++it>900000)break;
+		var cx=c%W,cy=(c-cx)/W;
+		for(var k=0;k<8;k++){var nx=cx+DX[k],ny=cy+DY[k];if(nx<0||ny<0||nx>=W||ny>=H)continue;var ni=ny*W+nx;if(blk[ni]||done[ni])continue;
+			var ng=g[c]+DC[k];if(ng<g[ni]){g[ni]=ng;par[ni]=c;var ddx=Math.abs(nx-tx),ddy=Math.abs(ny-ty);h.push(ni,ng+Math.max(ddx,ddy)+0.4142*Math.min(ddx,ddy));}}}
+	if(!found)return null;
+	var path=[];for(var u=ti;u>=0;u=par[u])path.push(u);path.reverse();
+	function clear(i1,i2){var x1=i1%W,y1=(i1-x1)/W,x2=i2%W,y2=(i2-x2)/W,n=Math.max(Math.abs(x2-x1),Math.abs(y2-y1))*2;
+		for(var j=1;j<n;j++){var X=Math.round(x1+(x2-x1)*j/n),Y=Math.round(y1+(y2-y1)*j/n);if(blk[Y*W+X])return false;}return true;}
+	/* string-pull: from each turning point, go straight to the farthest point still in clear water */
+	var out=[],at=0;
+	while(at<path.length-1){var best=at+1;for(var j=path.length-1;j>at+1;j--){if(clear(path[at],path[j])){best=j;break;}}
+		if(best<path.length-1)out.push(best);at=best;}
+	/* tidy up: drop any turning point whose neighbours see each other without crossing
+	   land or shoal water (the clearance relaxed), shortest hops first */
+	function open2(i1,i2){var x1=i1%W,y1=(i1-x1)/W,x2=i2%W,y2=(i2-x2)/W,n=Math.max(Math.abs(x2-x1),Math.abs(y2-y1))*2;
+		for(var j=1;j<n;j++){var X=Math.round(x1+(x2-x1)*j/n),Y=Math.round(y1+(y2-y1)*j/n),q=Y*W+X;if(src[q]&&!opened[q])return false;}return true;}
+	var V=[si].concat(out.map(function(j){return path[j];}),[ti]),changed=true;
+	while(changed&&V.length>2){changed=false;var bestK=-1,bestD=Infinity;
+		for(var k=1;k<V.length-1;k++){if(!open2(V[k-1],V[k+1]))continue;var xa=V[k-1]%W,xb=V[k]%W,d=Math.hypot(xb-xa,(V[k]-xb)/W-(V[k-1]-xa)/W);if(d<bestD){bestD=d;bestK=k;}}
+		if(bestK>0){V.splice(bestK,1);changed=true;}}
+	return V.slice(1,-1).slice(0,8).map(function(c){var X=c%W;return swCellLL(G,X,(c-X)/W);});
+}
+/* nearest clear water to a point (for a waypoint on land), or null */
+function swNearestWater(lat,lon,v){
+	var z=13,ppn=swPxNm(lat,z),p=swPx(lat,lon,z),R=Math.round(1.5*ppn),S=[];
+	for(var dy=-R;dy<=R;dy+=8)for(var dx=-R;dx<=R;dx+=8)S.push([p[0]+dx,p[1]+dy]);
+	return swLoad(v,z,swTilesFor(S,z)).then(function(){
+		for(var r=2;r<=R;r+=2){var best=null;
+			for(var a=0;a<64;a++){var an=a/64*2*Math.PI,x=p[0]+r*Math.cos(an),y=p[1]+r*Math.sin(an);
+				if(swAt(v,z,x,y)!==0)continue;var ok=true;   /* and some room around it */
+				for(var b=0;b<8&&ok;b++){var bn=b/8*2*Math.PI;if(swAt(v,z,x+5*Math.cos(bn),y+5*Math.sin(bn))!==0)ok=false;}
+				if(ok){best=[x,y];break;}}
+			if(best)return swLL(best[0],best[1],z);}
+		return null;});
+}
+/* a coarse text picture of the grid for Claude: # land · ~ too shallow · . deep enough */
+function swAscii(G){
+	var cw=Math.max(1,Math.ceil(G.W/64)),ch=Math.max(1,Math.ceil(G.H/44)),rows=[];
+	for(var y=0;y<G.H;y+=ch){var s='';for(var x=0;x<G.W;x+=cw){var w=0;
+		for(var yy=y;yy<Math.min(G.H,y+ch);yy++)for(var xx=x;xx<Math.min(G.W,x+cw);xx++)w=Math.max(w,G.blk[yy*G.W+xx]);
+		s+=w===2?'#':(w===1?'~':'.');}rows.push(s);}
+	var nw=swLL(G.x0,G.y0,G.z),se=swLL(G.x0+G.W*G.f,G.y0+G.H*G.f,G.z);
+	return {north:+nw[0].toFixed(4),south:+se[0].toFixed(4),west:+nw[1].toFixed(4),east:+se[1].toFixed(4),rows:rows};
+}
+function swAskClaude(a,b,G,v,why){
+	if(!PB_AJAX_OK||!PB_LOGGED)return Promise.resolve({err:PB_LOGGED?'Claude isn’t switched on for this site.':'Sign in to let Claude try this leg.'});
+	var fd=new FormData();fd.append('action','oyc_autoroute_ai');fd.append('nonce',PB_NONCE);
+	fd.append('leg',JSON.stringify({from:{lat:+a.lat.toFixed(4),lon:+a.lon.toFixed(4)},to:{lat:+b.lat.toFixed(4),lon:+b.lon.toFixed(4)},safety_ft:safeFt(),draft_ft:boatDraft(),problem:why,grid:G?swAscii(G):null}));
+	var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},100000);
+	return fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin',signal:ctl.signal}).then(function(x){clearTimeout(tm);return x.json();}).then(function(j){
+		if(!j||!j.ok)return {err:(j&&j.msg)||'Claude couldn’t answer just now.'};
+		var pts=(j.waypoints||[]).filter(function(w){return isFinite(w.lat)&&isFinite(w.lon);}).slice(0,8).map(function(w){return [+w.lat,+w.lon];});
+		if(!pts.length)return {err:j.note||'Claude didn’t find a way round either.'};
+		var seq=[a].concat(pts.map(function(p){return {lat:p[0],lon:p[1]};}),[b]);
+		return Promise.all(seq.slice(1).map(function(q,i){return swCheckLeg(seq[i],q,v);})).then(function(rs){
+			var bad=rs.filter(function(r){return r.st==='land'||r.st==='shallow';}).length;
+			return bad?{err:'Claude’s route still crosses '+(rs.some(function(r){return r.st==='land';})?'land':'shoal water')+'. Add a waypoint by hand.'}:{pts:pts,note:j.note||''};});
+	}).catch(function(){return {err:'Couldn’t reach Claude just now.'};});
+}
+/* fix one bad leg: grid search, a wider search, then Claude */
+function swFixLeg(a,b,v,why){
+	var nm=distNM(a.lat,a.lon,b.lat,b.lon),z=swZoom(nm),lastG=null;
+	function tryPad(pad,zz){return swGrid(a,b,pad,v,zz).then(function(G){if(!G)return null;lastG=G;return swPath(G,a,b,0.05)||swPath(G,a,b,0.025);});}
+	return tryPad(Math.max(1.2,0.35*nm),z)
+		.then(function(p){return p||tryPad(Math.max(4,1.0*nm),Math.max(11,z-1));})
+		.then(function(p){
+			if(p){var seq=[a].concat(p.map(function(q){return {lat:q[0],lon:q[1]};}),[b]);
+				return Promise.all(seq.slice(1).map(function(q,i){return swCheckLeg(seq[i],q,v);})).then(function(rs){
+					if(rs.every(function(r){return r.st==='ok'||r.st==='skip';}))return {pts:p,src:'auto'};
+					return swAskClaude(a,b,lastG,v,why).then(function(c){return c.pts?{pts:c.pts,src:'claude',note:c.note}:{err:c.err};});});}
+			return swAskClaude(a,b,lastG,v,why).then(function(c){return c.pts?{pts:c.pts,src:'claude',note:c.note}:{err:c.err};});
+		});
+}
+function swAutoroute(){
+	if(SW.fix&&SW.fix.busy)return;
+	var r=SW.res,v=swVar();
+	/* the leg check is still loading chart tiles (a long route takes a while the first time): say so, and go on when it's done */
+	if(!r||SW.running||SW.key!==swKey()){SW.wantAuto=true;SW.fix={busy:true,items:[],msg:'',checking:true};swPanel();if(!SW.running)swRun();return;}
+	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft). Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
+	SW.fix={busy:true,items:[],msg:''};swPanel();
+	var legs=swLegs(),jobs=[];
+	pins.forEach(function(p){if(r.pins[p.id]===2)jobs.push(swNearestWater(p.lat,p.lon,v).then(function(ll){
+		return ll?{kind:'move',pin:p,to:ll,why:'Point '+(pins.indexOf(p)+1)+' is on land: move it to the nearest clear water',st:null}:{kind:'none',why:'Point '+(pins.indexOf(p)+1)+' is on land and there’s no clear water close by. Move it by hand.'};}));});
+	legs.forEach(function(l){var c=r.legs[l.toId];if(!c||(c.st!=='land'&&c.st!=='shallow'))return;
+		if(r.pins[l.b.id]===2||(l.a.id&&r.pins[l.a.id]===2))return;   /* fix the point first */
+		var why=c.st==='land'?'crosses land':'crosses water under '+r.ft+' ft';
+		var lbl='Leg '+(l.a.id==='o'?'from you':pins.indexOf(l.a)+1)+'→'+(pins.indexOf(l.b)+1);
+		jobs.push(swFixLeg(l.a,l.b,v,why).then(function(f){
+			if(!f.pts)return {kind:'none',why:lbl+' '+why+'. '+(f.err||'No way round found.')};
+			var extra=0,seq=[[l.a.lat,l.a.lon]].concat(f.pts,[[l.b.lat,l.b.lon]]);for(var i=1;i<seq.length;i++)extra+=distNM(seq[i-1][0],seq[i-1][1],seq[i][0],seq[i][1]);
+			extra-=distNM(l.a.lat,l.a.lon,l.b.lat,l.b.lon);
+			return {kind:'add',before:l.b,from:l.a,pts:f.pts,src:f.src,st:null,
+				why:lbl+' '+why+': add '+f.pts.length+' waypoint'+(f.pts.length>1?'s':'')+' round it (+'+extra.toFixed(1)+' nm)'+(f.src==='claude'?' · suggested by Claude'+(f.note?': '+f.note:''):'')};}));});
+	Promise.all(jobs).then(function(items){SW.fix={busy:false,items:items,msg:''};swPanel();swPrev();});
+}
+function swPrev(){
+	SW.prev.clearLayers();var F=SW.fix;if(!F)return;
+	F.items.forEach(function(it){if(it.st===false)return;
+		if(it.kind==='add'){var seq=[[it.from.lat,it.from.lon]].concat(it.pts,[[it.before.lat,it.before.lon]]);
+			L.polyline(seq,{color:'#8e44ad',weight:it.st?4:2.5,opacity:.9,dashArray:it.st?null:'6 5',interactive:false}).addTo(SW.prev);
+			it.pts.forEach(function(p){L.circleMarker(p,{radius:5,color:'#8e44ad',weight:2,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(SW.prev);});}
+		else if(it.kind==='move'){L.polyline([[it.pin.lat,it.pin.lon],it.to],{color:'#8e44ad',weight:2,dashArray:'3 4',interactive:false}).addTo(SW.prev);
+			L.circleMarker(it.to,{radius:6,color:'#8e44ad',weight:2,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(SW.prev);}});
+}
+function swPanel(){
+	var el=document.getElementById('arPanel');if(!el)return;var F=SW.fix;
+	if(!F){el.hidden=true;el.innerHTML='';return;}
+	el.hidden=false;var h='<div class="ar-h"><b>Autoroute</b><button type="button" class="ar-x" data-ar="x" aria-label="Close Autoroute">&times;</button></div>';
+	if(F.busy)h+='<p class="ar-note"><span class="pc-spin" aria-hidden="true"></span>'+(F.checking?'Checking your legs against the chart&hellip; (the first time on a long route takes up to a minute)':'Finding a way round&hellip;')+'</p>';
+	else if(F.msg)h+='<p class="ar-note">'+pEsc(F.msg)+'</p>';
+	else{var nOk=0;h+='<ol class="ar-list">';
+		F.items.forEach(function(it,k){if(it.st===true)nOk++;
+			h+='<li class="'+(it.st===true?'ok':it.st===false?'no':'')+'"><span>'+pEsc(it.why)+'</span>'
+				+(it.kind==='none'?'':'<span class="pc-yn"><button type="button" class="pc-y'+(it.st===true?' on':'')+'" data-ara="'+k+'" aria-pressed="'+(it.st===true)+'">✓ Approve</button><button type="button" class="pc-n'+(it.st===false?' on':'')+'" data-arr="'+k+'" aria-pressed="'+(it.st===false)+'">✕ Reject</button></span>')+'</li>';});
+		h+='</ol><p class="ar-note">Purple on the chart. Checked against land and the '+safeFt()+' ft depth contour (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft; set your draft in Layers). Rocks, wrecks and buoys aren’t checked: look at the chart. Not for navigation.</p>'
+			+'<div class="pc-acts"><button type="button" class="pc-btn pri" data-ar="ok"'+(nOk?'':' disabled')+'>Apply '+(nOk?nOk+' approved':'approved')+'</button><button type="button" class="pc-btn" data-ar="x">Dismiss</button></div>';}
+	el.innerHTML=h;
+}
+function swApply(){
+	var F=SW.fix;if(!F)return;SW.fix=null;SW.prev.clearLayers();
+	F.items.forEach(function(it){if(it.st!==true)return;
+		if(it.kind==='move'&&!it.pin._gone)movePin(it.pin,it.to[0],it.to[1],it.pin.name);
+		else if(it.kind==='add'&&!it.before._gone){it.pts.forEach(function(p){addPin(p[0],p[1],{at:pins.indexOf(it.before)});});}});
+	swPanel();swSchedule();
+}
+document.addEventListener('click',function(e){
+	var t=e.target.closest&&e.target.closest('#arPanel [data-ar],#arPanel [data-ara],#arPanel [data-arr],#rbAuto');if(!t)return;
+	if(t.id==='rbAuto'){swAutoroute();return;}
+	var F=SW.fix;
+	if(t.hasAttribute('data-ar')){if(t.getAttribute('data-ar')==='ok')swApply();else{SW.fix=null;SW.prev.clearLayers();swPanel();}return;}
+	if(!F)return;var k=+(t.getAttribute('data-ara')||t.getAttribute('data-arr')),it=F.items[k];if(!it)return;
+	var v=t.hasAttribute('data-ara');it.st=(it.st===v)?null:v;swPanel();swPrev();
+});
+/* Draft (Layers): saved in this browser; changes the depth the legs are checked against */
+(function(){var inp=document.getElementById('boatDraft');if(!inp)return;
+	function note(){var n=document.getElementById('draftNote');if(n)n.textContent='Legs are checked for land and water under '+safeFt()+' ft (draft + '+SAFE_MARGIN+' ft, next charted depth).';}
+	inp.value=boatDraft();note();
+	inp.addEventListener('change',function(){var d=parseFloat(inp.value);if(!isFinite(d)||d<1||d>25){inp.value=boatDraft();return;}
+		try{localStorage.setItem(DRAFT_KEY,String(d));}catch(e){}note();SW.key='';SW.fix=null;SW.prev.clearLayers();swPanel();swSchedule();});})();
+
 /* ---------- waypoint table: the pins' cards as rows beside the map ----------
    Each row shows the same reading as that pin's card (pinReading at the slider's
    frame), re-rendered wherever the cards are. The table appears with the first
@@ -2208,6 +2545,7 @@ function wpRow(pin,i,ti){
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
 	if(pin.name)dist='<span class="s nm">'+pEsc(pin.name)+'</span>'+dist;
+	dist+=swNote(pin,'s');
 	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag the row to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
@@ -4176,6 +4514,12 @@ function passChatFacts(r){
 	f.route_waypoints=r.wps.map(function(q,i){return {index:i,name:q.n,lat:+q.lat.toFixed(3),lon:+q.lon.toFixed(3)};});
 	f.alternatives=passAlts(r);
 	f.alternatives_note='Alternatives were run through the same router and forecast. Dogleg waypoints are not checked against land or shipping lanes.';
+	/* the chart check on My waypoints (land, and water under the boat's safety depth) */
+	if(SW.res){f.chart_check={safety_depth_ft:SW.res.ft,draft_ft:boatDraft(),problems:[]};
+		pins.forEach(function(p,i){var l=SW.res.legs[p.id],c=SW.res.pins[p.id];
+			if(c===2)f.chart_check.problems.push('waypoint '+(i+1)+' is on land');
+			if(l&&(l.st==='land'||l.st==='shallow'))f.chart_check.problems.push('the leg into waypoint '+(i+1)+' crosses '+(l.st==='land'?'land':'water under '+SW.res.ft+' ft'));});
+		f.chart_check.note='Problems can be fixed with the Autoroute button. Any waypoint you suggest is checked against the chart before the member applies it.';}
 	r.chatFacts=f;return f;
 }
 /* Claude's suggested changes, one by one: each waypoint add / move / remove and a new
@@ -4193,6 +4537,8 @@ function passPropose(pr){
 	var dep=null;if(pr.depart){var m=String(pr.depart).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);if(m){var d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime();if(isFinite(d)&&Math.abs(d-r.depart)>=36e5)dep={ms:d,why:String(pr.depart_why||'').slice(0,300),st:null};}}
 	if(!ch.length&&!dep)return;
 	PASS.prop={summary:String(pr.summary||'').slice(0,400),changes:ch,dep:dep};
+	/* check every suggested point against the chart: land or shoal water is flagged on the card */
+	ch.forEach(function(c){if(c.action==='remove')return;swPoint(c.lat,c.lon).then(function(k){if(k===2||k===1){c.sw=k;if(PASS.prop&&PASS.prop.changes===ch)renderPassCard();}});});
 	passPropRun();drawPassRoute();
 }
 /* route + departure with the given changes applied (filter picks which) */
@@ -4218,7 +4564,7 @@ function passPropHTML(){
 	var h='<div class="pc-prop"><h4>Claude suggests</h4>'+(P.summary?'<p>'+pEsc(P.summary)+'</p>':'')+'<ol class="pc-chg">';
 	P.changes.forEach(function(c,k){var tgt=r.wps[c.at];
 		var what=c.action==='add'?'Add <b>'+pEsc(c.n)+'</b> after '+pEsc(tgt.n):c.action==='move'?'Move <b>'+pEsc(tgt.n)+'</b>':'Remove <b>'+pEsc(tgt.n)+'</b>';
-		h+='<li class="'+(c.st===true?'ok':c.st===false?'no':'')+'"><div>'+what+(c.action!=='remove'?' <small>'+pLL(c.lat,c.lon)+'</small>':'')+(c.why?'<span>'+pEsc(c.why)+'</span>':'')+'</div>'+yn(c,k)+'</li>';});
+		h+='<li class="'+(c.st===true?'ok':c.st===false?'no':'')+'"><div>'+what+(c.action!=='remove'?' <small>'+pLL(c.lat,c.lon)+'</small>':'')+(c.why?'<span>'+pEsc(c.why)+'</span>':'')+(c.sw?'<span class="pc-swwarn">&#9888; This point is '+(c.sw===2?'on land':'in water under '+safeFt()+' ft')+' on the chart</span>':'')+'</div>'+yn(c,k)+'</li>';});
 	if(P.dep)h+='<li class="'+(P.dep.st===true?'ok':P.dep.st===false?'no':'')+'"><div>Leave <b>'+pEsc(pWhenLong(P.dep.ms))+' ET</b> instead'+(P.dep.why?'<span>'+pEsc(P.dep.why)+'</span>':'')+'</div>'+yn(P.dep,'d')+'</li>';
 	h+='</ol><table class="pc-cmp"><tr><th></th><td>Now</td><td>All</td><td>Approved'+(nOk?' ('+nOk+')':'')+'</td></tr>'
 		+row('Distance',function(x){return Math.round(x.nm)+' nm';})+row('Underway',function(x){return pDur(x.hrs);})+row('ETA',function(x){return pWhen(x.eta);})

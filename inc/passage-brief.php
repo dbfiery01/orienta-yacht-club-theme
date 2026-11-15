@@ -449,6 +449,135 @@ function oyc_passage_chat_ajax() {
 	wp_send_json( array( 'ok' => true, 'answer' => sanitize_textarea_field( (string) $out['answer'] ), 'proposal' => $proposal ) );
 }
 
+/* Autoroute's fallback (inc/wind-map.php swAskClaude): when the chart grid
+   search can't find a way round land or shoal water for one leg, Claude gets
+   the leg's ends, the boat's safety depth and a coarse text picture of the
+   chart around it (# land, ~ shallower than the safety depth, . deep enough;
+   rows north to south) and returns a few waypoints. The page checks them
+   against the chart before offering them. Members only; counts toward the
+   same daily limit as questions to Claude. */
+add_action( 'wp_ajax_oyc_autoroute_ai', 'oyc_autoroute_ai_ajax' );
+add_action( 'wp_ajax_nopriv_oyc_autoroute_ai', 'oyc_autoroute_ai_ajax' );
+function oyc_autoroute_ai_ajax() {
+	if ( ! is_user_logged_in() ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Sign in to let Claude try this leg.' ) );
+	}
+	if ( ! check_ajax_referer( 'oyc_passage_brief', 'nonce', false ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'This page has expired. Reload it and try again.' ) );
+	}
+	$key = oyc_passage_brief_key();
+	if ( '' === $key ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Claude isn’t switched on for this site yet.' ) );
+	}
+	$raw = isset( $_POST['leg'] ) ? wp_unslash( $_POST['leg'] ) : '';
+	$leg = json_decode( $raw, true );
+	if ( ! is_array( $leg ) || strlen( $raw ) > 20000 || ! isset( $leg['from']['lat'], $leg['from']['lon'], $leg['to']['lat'], $leg['to']['lon'] ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'The leg didn’t come through. Try again.' ) );
+	}
+	$uid       = get_current_user_id();
+	$count_key = 'oyc_pc_n_' . $uid . '_' . gmdate( 'Ymd' );
+	$count     = (int) get_transient( $count_key );
+	if ( $count >= 60 ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'That’s today’s limit of requests to Claude. It resets tomorrow.' ) );
+	}
+	$ll   = function ( $p ) {
+		return array( 'lat' => round( max( -85, min( 85, (float) $p['lat'] ) ), 4 ), 'lon' => round( max( -180, min( 180, (float) $p['lon'] ) ), 4 ) );
+	};
+	$facts = array(
+		'from'      => $ll( $leg['from'] ),
+		'to'        => $ll( $leg['to'] ),
+		'safety_ft' => (int) ( $leg['safety_ft'] ?? 12 ),
+		'draft_ft'  => (float) ( $leg['draft_ft'] ?? 6 ),
+		'problem'   => sanitize_text_field( (string) ( $leg['problem'] ?? '' ) ),
+	);
+	$g = isset( $leg['grid'] ) && is_array( $leg['grid'] ) ? $leg['grid'] : null;
+	if ( $g && isset( $g['rows'] ) && is_array( $g['rows'] ) ) {
+		$rows = array();
+		foreach ( array_slice( $g['rows'], 0, 60 ) as $r ) {
+			$rows[] = substr( preg_replace( '/[^#~.]/', '', (string) $r ), 0, 80 );
+		}
+		$facts['chart'] = array(
+			'north' => (float) ( $g['north'] ?? 0 ),
+			'south' => (float) ( $g['south'] ?? 0 ),
+			'west'  => (float) ( $g['west'] ?? 0 ),
+			'east'  => (float) ( $g['east'] ?? 0 ),
+			'rows'  => $rows,
+		);
+	}
+	$system = 'You help members of Orienta Yacht Club (Mamaroneck, NY) plan routes on a chart. One leg of a member’s route runs straight from "from" to "to" and ' . $facts['problem'] . '. '
+		. 'Suggest up to 6 intermediate waypoints, in order from "from" to "to", so that every straight segment between consecutive points stays in water at least safety_ft deep and well clear of land. '
+		. 'Use the chart picture when it is given: it spans north..south latitude (first row is north) and west..east longitude, evenly spaced; # is land, ~ is water shallower than safety_ft, . is deep enough. '
+		. 'Use your own knowledge of the coast (Long Island Sound, Block Island Sound, the Race, Fishers Island, Plum Gut, the New York and New England coast) to choose the usual channels and passes. '
+		. 'Prefer the shortest sensible route a cruising sailor would take, with few waypoints. If no route is possible, return an empty list and say why in note. '
+		. 'note is one short sentence naming the pass or channel used. Every waypoint you return is checked against the chart before the member sees it.' . "\n\nLeg (JSON):\n" . wp_json_encode( $facts );
+	$schema = array(
+		'type'                 => 'object',
+		'properties'           => array(
+			'waypoints' => array(
+				'type'  => 'array',
+				'items' => array(
+					'type'                 => 'object',
+					'properties'           => array( 'lat' => array( 'type' => 'number' ), 'lon' => array( 'type' => 'number' ) ),
+					'required'             => array( 'lat', 'lon' ),
+					'additionalProperties' => false,
+				),
+			),
+			'note'      => array( 'type' => 'string' ),
+		),
+		'required'             => array( 'waypoints', 'note' ),
+		'additionalProperties' => false,
+	);
+	$resp = wp_remote_post(
+		'https://api.anthropic.com/v1/messages',
+		array(
+			'timeout' => 90,
+			'headers' => array(
+				'content-type'      => 'application/json',
+				'x-api-key'         => $key,
+				'anthropic-version' => '2026-10-21',
+				'anthropic-beta'    => 'server-side-fallback-2026-07-01',
+			),
+			'body'    => wp_json_encode( array(
+				'model'         => 'claude-opus-5-5',
+				'max_tokens'    => 8000,
+				'fallbacks'     => 'default',
+				'output_config' => array(
+					'effort' => 'medium',
+					'format' => array( 'type' => 'json_schema', 'schema' => $schema ),
+				),
+				'system'        => $system,
+				'messages'      => array( array( 'role' => 'user', 'content' => 'Find a way round for this leg.' ) ),
+			) ),
+		)
+	);
+	if ( is_wp_error( $resp ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Couldn’t reach Claude just now. Try again in a minute.' ) );
+	}
+	$code = (int) wp_remote_retrieve_response_code( $resp );
+	$json = json_decode( wp_remote_retrieve_body( $resp ), true );
+	if ( 200 !== $code || ! is_array( $json ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => ( 429 === $code || 529 === $code ) ? 'Claude is busy right now. Try again in a minute.' : 'Claude couldn’t answer just now.' ) );
+	}
+	$text = '';
+	foreach ( (array) ( $json['content'] ?? array() ) as $block ) {
+		if ( isset( $block['type'] ) && 'text' === $block['type'] ) {
+			$text .= (string) $block['text'];
+		}
+	}
+	$out = json_decode( $text, true );
+	if ( ! is_array( $out ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Claude’s reply came back incomplete. Try again.' ) );
+	}
+	$wps = array();
+	foreach ( array_slice( (array) ( $out['waypoints'] ?? array() ), 0, 8 ) as $p ) {
+		if ( isset( $p['lat'], $p['lon'] ) && is_numeric( $p['lat'] ) && is_numeric( $p['lon'] ) && abs( $p['lat'] ) <= 85 && abs( $p['lon'] ) <= 180 ) {
+			$wps[] = array( 'lat' => round( (float) $p['lat'], 5 ), 'lon' => round( (float) $p['lon'], 5 ) );
+		}
+	}
+	set_transient( $count_key, $count + 1, DAY_IN_SECONDS );
+	wp_send_json( array( 'ok' => true, 'waypoints' => $wps, 'note' => sanitize_text_field( (string) ( $out['note'] ?? '' ) ) ) );
+}
+
 /* ======================================================================
  * Window accuracy log
  *
