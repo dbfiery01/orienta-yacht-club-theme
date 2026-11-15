@@ -813,6 +813,16 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-plan label.pc-chk input{width:auto;min-height:0}
 #oycwm .leaflet-container.pass-picking,#oycwm .leaflet-container.pass-picking .leaflet-interactive{cursor:crosshair}
 #oycwm .pc-plan input::-webkit-calendar-picker-indicator{filter:invert(1)}
+#oycwm .pass-eta-mk{background:none;border:0}
+#oycwm .pass-eta-mk .pass-lbl{display:inline-block;white-space:nowrap;pointer-events:none}
+#oycwm .pin-co .co-nm{font-size:.78rem;font-weight:800;color:var(--navy);text-align:center;margin:0 18px 1px}
+#oycwm .pin-co .co-eta{font-size:.74rem;font-weight:800;color:#8a6420;text-align:center;margin:0 0 2px}
+#oycwm .wpt td .s.nm{font-weight:800;color:var(--navy)}
+#oycwm .wpt td .s.eta.pass{color:#8a6420;font-weight:700}
+[data-theme="dark"] #oycwm .pin-co .co-nm,[data-theme="dark"] #oycwm .wpt td .s.nm{color:#f0eadd}
+[data-theme="dark"] #oycwm .pin-co .co-eta,[data-theme="dark"] #oycwm .wpt td .s.eta.pass{color:#e2c07a}
+#oycwm .pc-racetip .pc-pv,#oycwm .pc-bm .pc-pv{flex:1 1 100%;white-space:normal}
+#oycwm .pc-racetip .pc-pv small{display:block;font-weight:400;opacity:.8}
 #oycwm .pass-lbl.tick{background:rgba(255,255,255,.88);color:#0b2a4a;font-size:10px;padding:1px 4px}
 #oycwm .pc-reclist{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
 #oycwm .pc-reclist li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.05);border-left:3px solid #4caf50}
@@ -1938,8 +1948,11 @@ function pinContent(pin,ti){
 		:'<div class="co-leg">Start</div>';
 	/* live bearing + distance from the viewer's GPS, when "My location" is on */
 	var youLine = myLoc ? '<div class="co-you">From you &middot; '+magBrg(myLoc.lat,myLoc.lon,lat,lon)+'&deg;M &middot; '+distNM(myLoc.lat,myLoc.lon,lat,lon).toFixed(1)+' nm</div>' : '';
+	var pe=passEtaFor(pin);   /* Passage brief ETA here, while its run is current */
 	var hd='<div class="co-x" data-wp="'+pin.id+'" role="button" tabindex="0" title="Remove point" aria-label="Remove point">✕</div>'
+		+(pin.name?'<div class="co-nm">'+pEsc(pin.name)+'</div>':'')
 		+legLine
+		+(pe?'<div class="co-eta">'+(i===0&&!routeOrigin()?'Depart ':'Passage ETA ')+pEsc(pWhen(pe))+'</div>':'')
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
 		+'<div class="co-ll">'+ll+'</div>'+youLine;
 	if(!s)return '<div class="pin-co">'+hd+'<div class="co-row">'+(pin._fcWait?'Loading forecast&hellip;':'No data here')+'</div></div>';
@@ -1986,7 +1999,8 @@ function drawRouteLine(){
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
-	if(typeof PASS!=='undefined'&&PASS.route!=='bermuda'&&!PASS.busy){var pc=document.getElementById('passCard');if(pc&&pc.classList.contains('on')){setTimeout(function(){renderPassCard();if(!PASS.res&&PASS.route==='pins')drawPassRoute();},0);}}
+	savePins();   /* My waypoints are kept in this browser */
+	passPinsChanged();   /* the Passage brief routes these same waypoints */
 	advanceNextWp();
 	drawRouteLine();
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
@@ -2029,14 +2043,16 @@ function loadPinFC(pin,tries){
 			refreshRoute(); /* leg wind angles, speeds and ETA use this point's forecast too */
 		}).catch(retry);
 }
-function addPin(lat,lon){
+/* opt: name (e.g. "The Race"), race / gs flags, at = position in the route (default: the end) */
+function addPin(lat,lon,opt){
+	opt=opt||{};
 	var m=L.marker([lat,lon],{icon:wpIcon(wpBadge(pins.length)),keyboard:false,zIndexOffset:800,draggable:true,autoPan:true}).addTo(map);
 	/* closeButton:false — removal is the explicit "✕ Remove" control in the callout,
 	   NOT closing the popup. Removal is deliberately decoupled from the marker click
 	   and popup-close so grabbing a marker to DRAG it can never delete it. */
 	var p=L.popup({autoClose:false,closeOnClick:false,closeButton:false,autoPan:false,maxWidth:360,className:'pin-pop'}).setLatLng([lat,lon]);
-	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null,id:++pinSeq};
-	pins.push(pin);
+	var pin={marker:m,popup:p,lat:lat,lon:lon,fc:null,id:++pinSeq,name:opt.name||null,race:!!opt.race,gs:!!opt.gs,nLat:lat,nLon:lon};
+	if(opt.at!=null&&opt.at>=0&&opt.at<pins.length)pins.splice(opt.at,0,pin);else pins.push(pin);
 	p.setContent(pinContent(pin,curTi)); /* grid placeholder until the point forecast arrives */
 	m.bindPopup(p);
 	wireCardDrag(pin);
@@ -2049,7 +2065,7 @@ function addPin(lat,lon){
 	   a move, so re-render callouts only (no setIcon, which would churn the icon). */
 	m.on('dragstart',function(){pin._dragging=true;pin.fc=null;hoverTip.style.display='none';}); /* drop the old-spot forecast so callouts fall back to grid at the new spot */
 	m.on('drag',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin.popup.setLatLng(ll);drawRouteLine();rerenderCallouts();updateRouteBar();}); /* live: line + distances update as you drag */
-	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;drawRouteLine();rerenderCallouts();updateRouteBar();loadPinFC(pin);}); /* pull the exact-point forecast for the new spot */
+	m.on('dragend',function(ev){var ll=ev.target.getLatLng();pin.lat=ll.lat;pin.lon=((ll.lng+540)%360)-180;pin._dragging=false;pinUnname(pin);drawRouteLine();rerenderCallouts();updateRouteBar();savePins();passPinsChanged();loadPinFC(pin);}); /* pull the exact-point forecast for the new spot */
 	hoverTip.style.display='none'; /* clear the cursor readout left by the drop tap/move */
 	refreshRoute();
 	loadPinFC(pin);
@@ -2116,6 +2132,23 @@ function wireCardDrag(pin){
 	p.on('contentupdate',function(){requestAnimationFrame(function(){coLead(pin);});});
 }
 function removePin(pin){if(pin._gone)return;pin._gone=true;pin._dragging=false;try{if(pin.marker.dragging&&pin.marker.dragging.disable)pin.marker.dragging.disable();}catch(e){}map.removeLayer(pin.marker);map.closePopup(pin.popup);pins=pins.filter(function(x){return x!==pin;});refreshRoute();}
+/* a named point (The Race, St. George's…) dragged well away from its spot loses the name */
+function pinUnname(pin){if(pin.name&&distNM(pin.lat,pin.lon,pin.nLat,pin.nLon)>2){pin.name=null;pin.race=false;pin.gs=false;}}
+/* move a waypoint (start/finish picks, Claude's approved moves) */
+function movePin(pin,lat,lon,name){
+	pin.lat=lat;pin.lon=lon;pin.nLat=lat;pin.nLon=lon;pin.fc=null;pin.name=name||null;
+	pin.race=!!name&&name==='The Race';pin.gs=false;
+	pin.marker.setLatLng([lat,lon]);pin.popup.setLatLng([lat,lon]);
+	refreshRoute();loadPinFC(pin);
+}
+/* My waypoints survive a reload: kept in this browser (like My chart) */
+var PINS_KEY='oyc_wm_pins',pinsLoading=false;
+function savePins(){if(pinsLoading)return;try{localStorage.setItem(PINS_KEY,JSON.stringify(pins.map(function(p){var o={lat:+p.lat.toFixed(5),lon:+p.lon.toFixed(5)};if(p.name)o.n=p.name;if(p.race)o.race=1;if(p.gs)o.gs=1;return o;})));}catch(e){}}
+function loadPins(list){
+	pinsLoading=true;
+	try{(list||[]).slice(0,60).forEach(function(q){if(q&&isFinite(q.lat)&&isFinite(q.lon)&&Math.abs(q.lat)<=85)addPin(+q.lat,+q.lon,{name:q.n?String(q.n).slice(0,40):null,race:!!q.race,gs:!!q.gs});});}catch(e){}
+	pinsLoading=false;savePins();
+}
 function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],ti));renderWpTable();drawLegLabels();drawLaylines();updateBoatInfo();}
 
 /* ---------- waypoint table: the pins' cards as rows beside the map ----------
@@ -2129,12 +2162,13 @@ function wpRow(pin,i,ti){
 	   pressure remain on the point's map card (and in the CSV export). */
 	var s=pinReading(pin.lat,pin.lon,ti,pin.fc),lg=legInfo(pin);
 	var prev=(i===0)?routeOrigin():pins[i-1]; /* Pt 1 is the start unless the route runs from your boat */
-	var dist;
-	if(!prev)dist='<span class="v">Start</span><span class="s">'+pin.lat.toFixed(3)+', '+pin.lon.toFixed(3)+'</span>';
+	var dist,pe=passEtaFor(pin);
+	if(!prev)dist='<span class="v">Start</span><span class="s">'+pin.lat.toFixed(3)+', '+pin.lon.toFixed(3)+'</span>'+(pe?'<span class="s eta">Depart '+pEsc(pWhen(pe))+'</span>':'');
 	else{var lb=magBrg(prev.lat,prev.lon,pin.lat,pin.lon),tw=legTWA([prev.lat,prev.lon],[pin.lat,pin.lon]); /* leg course (magnetic) + wind angle from the previous point */
 		dist='<span class="v">'+lb+'°M</span><span class="s">'+(i===0?lg.dist.toFixed(1)+' nm from you':'leg '+lg.dist.toFixed(1)+' · total '+cumFromStart(pin).toFixed(1))+'</span>'
 			+(tw?'<span class="s twa">TWA '+Math.round(tw.twa)+'°'+(tw.side?' '+tw.side:'')+'</span>':'');
-		var pl=planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt in '+Math.round(pl.kt)+' kt wind'+(pl.ft>0.5?', '+pl.ft.toFixed(1)+' ft seas':'')+(pl.sea>=0.03?' (&minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
+		if(pe)dist+='<span class="s eta pass">Passage ETA '+pEsc(pWhen(pe))+'</span>';
+		var pl=pe?null:planLeg(WPPLAN,i);if(pl)dist+='<span class="s eta">'+pl.v.toFixed(1)+' kt in '+Math.round(pl.kt)+' kt wind'+(pl.ft>0.5?', '+pl.ft.toFixed(1)+' ft seas':'')+(pl.sea>=0.03?' (&minus;'+Math.round(pl.sea*100)+'%)':'')+' &middot; ETA '+etaText(pl.eta)+'</span>';}
 	var wind='<span class="s">'+(pin._fcWait?'Loading&hellip;':'No data')+'</span>',sea='';
 	if(s){
 		wind='<span class="v">'+Math.round(s.kt)+' kt '+card(s.dir)+'</span><span class="s">'+(s.gust!=null?'g'+Math.round(s.gust)+' · ':'')+Math.round(s.dir)+'°</span>'
@@ -2142,6 +2176,7 @@ function wpRow(pin,i,ti){
 		var pc=(s.pop!=null)?Math.round(s.pop)+'% rain':(s.precip!=null?s.precip.toFixed(2)+'" rain':'—'); /* " not " in": fits 260px */
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
+	if(pin.name)dist='<span class="s nm">'+pEsc(pin.name)+'</span>'+dist;
 	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag the row to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }
@@ -2826,6 +2861,8 @@ function updateRouteBar(){
 	var info=(pins.length===1)
 		?(o?('1 waypoint · '+distNM(o.lat,o.lon,pins[0].lat,pins[0].lon).toFixed(1)+' nm from you'):'Start set · tap the map for the next point')
 		:(pins.length+' waypoints · '+routeTotalFromWP1().toFixed(1)+' nm'+(o?' from you':''));
+	var PR=passCur();   /* a current Passage brief run replaces the slider-hour ETA */
+	if(PR){info+=' · Passage ETA '+pWhen(PR.eta)+' ('+pDur(PR.hrs)+')';document.getElementById('routeInfo').textContent=info;return;}
 	var P=pins.length>1||routeOrigin()?routePlan():null;
 	if(P)info+=P.ok?(' · ETA '+etaText(P.eta)+' ('+durText(P.hrs)+(P.past?', past the forecast':'')+')'+(P.name?' · '+P.name:'')):' · ETA needs wind on every leg';
 	document.getElementById('routeInfo').textContent=info;
@@ -3735,21 +3772,27 @@ var PASS={
 	   [1.9,3.1,4.3,5.5,6.3,6.9,7.4,8.0,8.3],
 	   [1.6,2.6,3.7,4.8,5.7,6.4,6.9,7.6,8.1],
 	   [1.4,2.4,3.4,4.5,5.4,6.0,6.6,7.3,7.8]],
-	ROUTES:{bermuda:{to:"Bermuda · St. George’s",short:"St. George’s",
-		wps:[{n:'OYC',lat:40.930,lon:-73.720},{n:'The Race',lat:41.230,lon:-72.090,race:true},{n:'Gulf Stream crossing',lat:38.4,lon:-70.0,gs:true},{n:"St. George’s",lat:32.37,lon:-64.68}]}},
+	/* "Load Bermuda route" drops these as My waypoints */
+	BERMUDA:[{n:'OYC',lat:40.930,lon:-73.720},{n:'The Race',lat:41.230,lon:-72.090,race:true},{n:'Gulf Stream crossing',lat:38.4,lon:-70.0,gs:true},{n:"St. George’s",lat:32.37,lon:-64.68}],
 	TIDE_ST:'LIS1017',TIDE:null,TIDE_KEY:'',SEAS:null,SEAS_KEY:'',
-	res:null,ai:null,busy:false,status:'',route:'bermuda',departMs:null,
+	res:null,ai:null,busy:false,status:'',departMs:null,
 	/* The Race (tidal gate): current applies to any route that passes within 8 nm of it */
 	RACE:{lat:41.230,lon:-72.090},
-	/* route sources: 'bermuda' preset, 'pins' = the waypoints on the chart, 'custom' = start/finish tapped on the chart */
-	custom:{from:{n:'OYC',lat:40.930,lon:-73.720},to:{n:"St. George’s",lat:32.37,lon:-64.68},viaRace:true,via:[]},picking:null
+	/* the passage IS My waypoints (pins): Pt 1 → … → last, or from My boat. picking = 'from'/'to' while a start/finish tap is awaited */
+	picking:null
 };
-(function(){try{var j=JSON.parse(localStorage.getItem('oyc_pass_route')||'null');if(!j)return;
-	if(j.route==='pins'||j.route==='custom'||j.route==='bermuda')PASS.route=j.route;
-	var ok=function(q){return q&&isFinite(q.lat)&&isFinite(q.lon)&&Math.abs(q.lat)<=85;};
-	if(j.custom&&ok(j.custom.from)&&ok(j.custom.to)){PASS.custom.from=j.custom.from;PASS.custom.to=j.custom.to;PASS.custom.viaRace=j.custom.viaRace!==false;
-		if(Array.isArray(j.custom.via))PASS.custom.via=j.custom.via.filter(ok).slice(0,10);}}catch(e){}})();
-function passSaveRoute(){try{localStorage.setItem('oyc_pass_route',JSON.stringify({route:PASS.route,custom:PASS.custom}));}catch(e){}}
+/* Restore My waypoints. Once only: a start/finish route saved by the old planner
+   (oyc_pass_route) becomes waypoints, with The Race if it was routed that way. */
+(function(){
+	var saved=null,old=null;try{saved=JSON.parse(localStorage.getItem(PINS_KEY)||'null');old=JSON.parse(localStorage.getItem('oyc_pass_route')||'null');}catch(e){}
+	if(!Array.isArray(saved)&&old&&old.route==='custom'&&old.custom&&old.custom.from&&old.custom.to){
+		var C=old.custom,w=[C.from].concat(Array.isArray(C.via)?C.via:[]).concat([C.to]);
+		if(C.viaRace!==false){for(var j=0;j<w.length-1;j++){if((pInSound(w[j])&&pOutside(w[j+1]))||(pOutside(w[j])&&pInSound(w[j+1]))){w.splice(j+1,0,{n:'The Race',lat:PASS.RACE.lat,lon:PASS.RACE.lon,race:1});break;}}}
+		saved=w.map(function(q){return {lat:q.lat,lon:q.lon,n:(q.n&&q.n.indexOf('°')<0&&!/^WP \d/.test(q.n))?q.n:null,race:q.race?1:0};});
+	}
+	try{localStorage.removeItem('oyc_pass_route');}catch(e){}
+	if(Array.isArray(saved)&&saved.length)loadPins(saved);
+})();
 /* known places, so a tapped point near one gets its name */
 var PASS_PLACES=[{n:'OYC',lat:40.930,lon:-73.720},{n:"St. George’s",lat:32.37,lon:-64.68},{n:'The Race',lat:41.230,lon:-72.090},{n:'Newport',lat:41.485,lon:-71.325},{n:'Block Island',lat:41.17,lon:-71.58},{n:'Montauk',lat:41.07,lon:-71.93},{n:'Cape May',lat:38.93,lon:-74.90},{n:'Norfolk',lat:36.95,lon:-76.33},{n:'Beaufort NC',lat:34.70,lon:-76.66}];
 function pLL(lat,lon){return Math.abs(lat).toFixed(2)+'°'+(lat>=0?'N':'S')+' '+Math.abs(lon).toFixed(2)+'°'+(lon<=0?'W':'E');}
@@ -3757,57 +3800,94 @@ function passPlaceName(lat,lon){for(var i=0;i<PASS_PLACES.length;i++){var q=PASS
 /* does a leg from a (inside Long Island Sound) to b (out past it) have to go through The Race? */
 function pInSound(q){return q.lat>40.75&&q.lat<41.4&&q.lon<-72.15&&q.lon>-74.05;}
 function pOutside(q){return q.lon>-72.05||q.lat<40.75;}
-/* the active route as waypoints [{n,lat,lon}]; null when it isn't complete yet */
+/* the passage as waypoints [{n,lat,lon,pid}]: My boat (when the route runs from it) then
+   My waypoints in order; null until there are two points */
 function passWps(){
-	if(PASS.route==='pins'){
-		if(typeof pins==='undefined')return null;
-		var o=(typeof routeOrigin==='function')?routeOrigin():null,out=o?[{n:'My boat',lat:o.lat,lon:o.lon}]:[];
-		pins.forEach(function(p,k){out.push({n:'WP '+(k+1),lat:p.lat,lon:p.lon});});
-		return out.length>=2?out:null;
-	}
-	if(PASS.route==='custom'){
-		var C=PASS.custom,a={n:C.from.n,lat:C.from.lat,lon:C.from.lon},b={n:C.to.n,lat:C.to.lat,lon:C.to.lon};
-		if(distNM(a.lat,a.lon,b.lat,b.lon)<1)return null;
-		var w=[a],V=(C.via||[]).map(function(q){return {n:q.n,lat:q.lat,lon:q.lon};}),nx=V[0]||b,pv=V.length?V[V.length-1]:a;
-		if(C.viaRace&&((pInSound(a)&&pOutside(nx))))w.push({n:'The Race',lat:PASS.RACE.lat,lon:PASS.RACE.lon,race:true});
-		w=w.concat(V);
-		if(C.viaRace&&V.length&&pOutside(pv)&&pInSound(b))w.push({n:'The Race',lat:PASS.RACE.lat,lon:PASS.RACE.lon,race:true});
-		else if(C.viaRace&&!V.length&&pInSound(b)&&pOutside(a))w.push({n:'The Race',lat:PASS.RACE.lat,lon:PASS.RACE.lon,race:true});
-		w.push(b);return w;
-	}
-	return PASS.ROUTES.bermuda.wps;
+	if(typeof pins==='undefined')return null;
+	var o=(typeof routeOrigin==='function')?routeOrigin():null,out=o?[{n:'My boat',lat:o.lat,lon:o.lon,boat:true}]:[];
+	pins.forEach(function(p,k){out.push({n:p.name||('WP '+(k+1)),lat:p.lat,lon:p.lon,race:!!p.race,gs:!!p.gs,pid:p.id});});
+	return out.length>=2?out:null;
 }
-function passRouteKey(w){if(PASS.route==='bermuda')return 'bermuda';var s=w.map(function(q){return q.lat.toFixed(2)+','+q.lon.toFixed(2);}).join('|'),h=0;
+/* fingerprint of a route: a run is "current" while the waypoints still match it
+   (My boat to ~0.5 nm, so GPS jitter doesn't count as a change) */
+function passRouteKey(w){var s=w.map(function(q){return q.boat?'b'+q.lat.toFixed(2)+','+q.lon.toFixed(2):q.lat.toFixed(4)+','+q.lon.toFixed(4)+q.n;}).join('|'),h=0;
 	for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;}return 'r'+(h>>>0).toString(36);}
+/* the Passage brief run, when the card is open and the run still matches the waypoints */
+function passCur(){
+	if(typeof PASS==='undefined'||!PASS.res)return null;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on'))return null;
+	var w=passWps();return (w&&passRouteKey(w)===PASS.res.key)?PASS.res:null;
+}
+/* that run's ETA at one of My waypoints (departure time at the first point) */
+function passEtaFor(pin){var r=passCur();if(!r)return null;for(var i=0;i<r.wps.length;i++)if(r.wps[i].pid===pin.id)return i===0?r.depart:r.legs[i-1].end;return null;}
+/* My waypoints changed (added, moved, removed, reordered): re-route quietly so the
+   ETAs follow; Claude's written brief is kept but marked out of date. */
+function passPinsChanged(){
+	if(typeof PASS==='undefined'||PASS.applying)return;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on'))return;
+	clearTimeout(PASS.reT);
+	PASS.reT=setTimeout(function(){
+		var w=passWps(),k=w?passRouteKey(w):'';
+		if(PASS.res&&PASS.res.key!==k){
+			if(PASS.busy){PASS.dirty=true;return;}
+			if(w){passBuild({quiet:true});return;}
+			PASS.res=null;PASS.prop=null;
+		}
+		if(!PASS.busy){renderPassCard();drawPassRoute();}
+	},900);
+}
+/* The Race: when a leg leaves (or enters) the Sound and no waypoint is at The Race,
+   the planner offers it. Returns the waypoint index to add it after, or -1. */
+function passRaceTip(w){
+	if(!w||PASS.raceNo===passRouteKey(w))return -1;
+	for(var i=0;i<w.length;i++)if(distNM(w[i].lat,w[i].lon,PASS.RACE.lat,PASS.RACE.lon)<3)return -1;
+	for(var j=0;j<w.length-1;j++)if((pInSound(w[j])&&pOutside(w[j+1]))||(pOutside(w[j])&&pInSound(w[j+1])))return j;
+	return -1;
+}
+/* index in pins for "after route waypoint j" (j = the My boat point → the front) */
+function passPinAfter(w,j){var id=w[j]&&w[j].pid;if(id==null)return 0;for(var k=0;k<pins.length;k++)if(pins[k].id===id)return k+1;return pins.length;}
+function passPinOf(w,j){var id=w[j]&&w[j].pid;if(id==null)return null;for(var k=0;k<pins.length;k++)if(pins[k].id===id)return pins[k];return null;}
+function passAddRace(){
+	var w=passWps(),j=passRaceTip(w);if(j<0)return;
+	addPin(PASS.RACE.lat,PASS.RACE.lon,{name:'The Race',race:true,at:passPinAfter(w,j)});
+}
+/* set the start (Pt 1) or finish (last waypoint) from a tap or a destination: moves
+   that waypoint, or adds one when there isn't one to move. Other waypoints stay. */
+function passSetEnd(k,lat,lon,name){
+	var nm=(name&&name.indexOf('°')<0)?name:null;
+	if(k==='from'){if(routeFromBoat)setFromBoat(false);if(pins.length)movePin(pins[0],lat,lon,nm);else addPin(lat,lon,{name:nm,race:nm==='The Race'});}
+	else{var need=routeOrigin()?1:2;if(pins.length>=need)movePin(pins[pins.length-1],lat,lon,nm);else addPin(lat,lon,{name:nm,race:nm==='The Race'});}
+}
+/* "Load Bermuda route": the preset as My waypoints (replace them, or add after) */
+function passLoadBermuda(how){
+	PASS.bmAsk=false;PASS.applying=true;
+	if(how==='replace'){while(pins.length)removePin(pins[0]);}
+	PASS.BERMUDA.forEach(function(q){addPin(q.lat,q.lon,{name:q.n,race:!!q.race,gs:!!q.gs});});
+	PASS.applying=false;PASS.res=null;PASS.ai=null;
+	var c=document.getElementById('passCard');if(c)c._planOpen=false;
+	passFit();passBuild();
+}
 /* chart tap while picking a start/finish: called first by the map click handler */
 function passPick(e){
 	if(!PASS.picking)return false;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on')){PASS.picking=null;return false;}
 	var lat=e.latlng.lat,lon=((e.latlng.lng+540)%360)-180,k=PASS.picking;
-	PASS.custom[k]={n:passPlaceName(lat,lon),lat:+lat.toFixed(4),lon:+lon.toFixed(4)};PASS.custom.via=[];   /* new start/finish: drop in-between waypoints from the old route */
-	PASS.picking=null;PASS.res=null;PASS.ai=null;passSaveRoute();
-	map.getContainer().classList.remove('pass-picking');
+	PASS.picking=null;map.getContainer().classList.remove('pass-picking');
+	passSetEnd(k,+lat.toFixed(4),+lon.toFixed(4),passPlaceName(lat,lon));   /* your other waypoints stay */
 	c._planOpen=true;if(c._pickMin){c._pickMin=false;passSetMin(false);}
 	renderPassCard();drawPassRoute();return true;
 }
-/* Start/Finish list: the preset destinations and the member's own waypoints */
-function passChooseOpts(){
-	var h='<option value="">Choose a destination or waypoint…</option><optgroup label="Destinations">';
-	PASS_PLACES.forEach(function(q,i){if(q.n!=='The Race')h+='<option value="p:'+i+'">'+pEsc(q.n)+'</option>';});
+/* Start/Finish list: the preset destinations (and My boat as a start) */
+function passChooseOpts(k){
+	var h='<option value="">Choose a destination…</option><optgroup label="Destinations">';
+	PASS_PLACES.forEach(function(q,i){h+='<option value="p:'+i+'">'+pEsc(q.n)+'</option>';});
 	h+='</optgroup>';
-	var o=(typeof routeOrigin==='function')?routeOrigin():null,np=(typeof pins!=='undefined')?pins.length:0;
-	if(o||np){h+='<optgroup label="My waypoints">';if(o)h+='<option value="b">My boat ('+pLL(o.lat,o.lon)+')</option>';
-		for(var k=0;k<np;k++)h+='<option value="w:'+k+'">WP '+(k+1)+' · '+pLL(pins[k].lat,pins[k].lon)+'</option>';h+='</optgroup>';}
-	else h+='<optgroup label="My waypoints"><option disabled>None yet: tap the chart to drop one</option></optgroup>';
+	if(k==='from')h+='<optgroup label="Live"><option value="b">My boat (GPS)</option></optgroup>';
 	return h;
 }
 function passChoose(k,v){
-	var q=null;
-	if(v==='b'){var o=routeOrigin();if(o)q={n:'My boat',lat:o.lat,lon:o.lon};}
-	else if(v.charAt(0)==='p'){var pl=PASS_PLACES[+v.slice(2)];if(pl)q={n:pl.n,lat:pl.lat,lon:pl.lon};}
-	else if(v.charAt(0)==='w'){var i=+v.slice(2),pn=pins[i];if(pn)q={n:'WP '+(i+1),lat:+pn.lat.toFixed(4),lon:+pn.lon.toFixed(4)};}
-	if(!q)return;
-	PASS.custom[k]=q;PASS.custom.via=[];PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();
-	var c=document.getElementById('passCard');c._planOpen=true;renderPassCard();drawPassRoute();passFit();
+	PASS.picking=null;map.getContainer().classList.remove('pass-picking');
+	var c=document.getElementById('passCard');c._planOpen=true;
+	if(v==='b'){if(k==='from')setFromBoat(true);}
+	else if(v.charAt(0)==='p'){var pl=PASS_PLACES[+v.slice(2)];if(pl)passSetEnd(k,pl.lat,pl.lon,pl.n);}
+	renderPassCard();drawPassRoute();passFit();
 }
 function passStartPick(k){
 	var c=document.getElementById('passCard');PASS.picking=k;c._planOpen=true;
@@ -3973,8 +4053,11 @@ function passLoadSeas(wps,cb){
 			PASS.SEAS={t0:t0,pts:pts.map(function(p,i){return {lat:p.lat,lon:p.lon,h:(arr[i]&&arr[i].hourly.wave_height)||[]};})};PASS.SEAS_KEY=key;})
 		.catch(function(){PASS.SEAS=null;}).then(cb);
 }
-function passBuild(){
-	if(PASS.busy)return;PASS.busy=true;PASS.ai=null;
+/* opt.quiet: a re-run after My waypoints changed. Keeps Claude's brief (marked out of
+   date) and the chat, and doesn't log the window for the track record. */
+function passBuild(opt){
+	var quiet=!!(opt&&opt.quiet);
+	if(PASS.busy)return;PASS.busy=true;if(!quiet){PASS.ai=null;PASS.aiStale=false;}
 	var wps=passWps();
 	if(!wps){PASS.busy=false;PASS.status='';PASS.res=null;renderPassCard();return;}
 	function st(s){PASS.status=s;renderPassCard();}
@@ -3983,8 +4066,14 @@ function passBuild(){
 	st('Loading the Atlantic wind field…');
 	passWaitBasin(function(){st('Tides, Gulf Stream and seas…');
 		var left=3;function one(){if(--left)return;st('Routing…');setTimeout(function(){
-			var r=passRun(wps,PASS.departMs);r.best=passScan(wps,PASS.departMs);r.wps=wps;r.key=passRouteKey(wps);PASS.res=r;PASS.chat=PASS.chatKeep||[];PASS.chatKeep=null;PASS.chatErr='';PASS.prop=null;PASS.busy=false;PASS.status='';
-			renderPassCard();drawPassRoute();passLog(r,'chosen');if(r.best&&Math.abs(r.best.depart-r.depart)>=3*36e5)passLog(passRun(wps,r.best.depart),'best');if(!PASS.rec)passLoadRecord();},30);}
+			wps=passWps()||wps;   /* the waypoints may have moved while the data loaded */
+			var r=passRun(wps,PASS.departMs);r.best=passScan(wps,PASS.departMs);r.wps=wps;r.key=passRouteKey(wps);PASS.res=r;
+			if(quiet){if(PASS.ai)PASS.aiStale=true;}else{PASS.chat=PASS.chatKeep||[];PASS.chatKeep=null;}
+			PASS.chatErr='';PASS.prop=null;PASS.busy=false;PASS.status='';
+			renderPassCard();drawPassRoute();rerenderCallouts();   /* ETAs onto My waypoints' cards, table and route bar */
+			if(!quiet){passLog(r,'chosen');if(r.best&&Math.abs(r.best.depart-r.depart)>=3*36e5)passLog(passRun(wps,r.best.depart),'best');}
+			if(!PASS.rec)passLoadRecord();
+			if(PASS.dirty){PASS.dirty=false;passPinsChanged();}},30);}
 		passLoadTide(PASS.departMs,one);passLoadSeas(wps,one);
 		if(typeof loadGSWall==='function')loadGSWall(one);else one();
 	});
@@ -4007,7 +4096,7 @@ function passAskClaude(){
 	var r=PASS.res;if(!r||PASS.aiBusy)return;PASS.aiBusy=true;PASS.aiErr='';PASS.scrollTo='#pcTake';renderPassCard();
 	var fd=new FormData();fd.append('action','oyc_passage_brief');fd.append('nonce',PB_NONCE);fd.append('facts',JSON.stringify(passFacts(r)));
 	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).then(function(x){return x.json();}).then(function(j){
-		if(j&&j.ok&&j.brief)PASS.ai=j.brief;else PASS.aiErr=(j&&j.msg)||'Claude couldn’t write the brief just now.';
+		if(j&&j.ok&&j.brief){PASS.ai=j.brief;PASS.aiStale=false;}else PASS.aiErr=(j&&j.msg)||'Claude couldn’t write the brief just now.';
 	}).catch(function(){PASS.aiErr='Claude couldn’t write the brief just now.';}).then(function(){PASS.aiBusy=false;PASS.scrollTo='#pcTake';renderPassCard();});
 }
 /* ── conversation with Claude about this passage ──
@@ -4112,11 +4201,17 @@ function passPropApply(ok){
 	var acc=P.changes.filter(function(c){return c.st===true;}).map(lbl),rej=P.changes.filter(function(c){return c.st!==true;}).map(lbl);
 	if(P.dep)(P.dep.st===true?acc:rej).push('leave '+pWhenLong(P.dep.ms)+' ET');
 	if(!ok||!acc.length){PASS.chat.push({role:'user',text:'(Dismissed the suggestions'+(rej.length?': '+rej.join('; '):'')+'.)'});renderPassCard();drawPassRoute();return;}
-	var w=P.mine.wps,a=w[0],b=w[w.length-1];
-	PASS.route='custom';PASS.custom={from:{n:a.n,lat:a.lat,lon:a.lon},to:{n:b.n,lat:b.lat,lon:b.lon},viaRace:w.some(function(q){return q.race;}),
-		via:w.slice(1,-1).filter(function(q){return !q.race;}).map(function(q){return {n:q.n,lat:q.lat,lon:q.lon};})};
-	PASS.departMs=P.mine.depart;passSaveRoute();
-	PASS.chatKeep=PASS.chat.concat([{role:'user',text:'(Applied: '+acc.join('; ')+(rej.length?'. Rejected: '+rej.join('; '):'')+'. The route has been re-run.)'}]);
+	/* approved changes edit My waypoints: adds first (positions taken before anything
+	   moves), then moves, then removes; every change is matched to its waypoint */
+	var W=r.wps,ok2=P.changes.filter(function(c){return c.st===true;}),cur={};PASS.applying=true;
+	ok2.forEach(function(c){if(c.action!=='add')return;
+		var rc=distNM(c.lat,c.lon,PASS.RACE.lat,PASS.RACE.lon)<3,off=cur[c.at]||0;cur[c.at]=off+1;
+		addPin(rc?PASS.RACE.lat:c.lat,rc?PASS.RACE.lon:c.lon,{name:rc?'The Race':c.n,race:rc,at:passPinAfter(W,c.at)+off});});
+	ok2.forEach(function(c){if(c.action!=='move')return;var pn=passPinOf(W,c.at);if(pn)movePin(pn,c.lat,c.lon,c.n);});
+	ok2.forEach(function(c){if(c.action!=='remove')return;var pn=passPinOf(W,c.at);if(pn)removePin(pn);});
+	PASS.applying=false;
+	PASS.departMs=P.mine.depart;
+	PASS.chatKeep=PASS.chat.concat([{role:'user',text:'(Applied to my waypoints: '+acc.join('; ')+(rej.length?'. Rejected: '+rej.join('; '):'')+'. The route has been re-run.)'}]);
 	PASS.res=null;passBuild();
 }
 var PASS_CHIPS=['Recommend the best route for comfort and safety','How comfortable will this passage be?','Would another route or point of sail be more comfortable?','What’s the roughest stretch, and when?'];
@@ -4158,7 +4253,7 @@ function passSamples(r){
 function passLog(r,kind){
 	if(!PB_LOGGED||!r||r.noFcH>0)return;
 	var fd=new FormData();fd.append('action','oyc_passage_log');fd.append('nonce',PB_NONCE);
-	fd.append('window',JSON.stringify({route:r.key||PASS.route,kind:kind,run:TIMES[0]||'',floor:PASS.floor,depart:Math.round(r.depart),eta:Math.round(r.eta),verdict:passVerdict(r).lvl,samples:passSamples(r)}));
+	fd.append('window',JSON.stringify({route:r.key||'pins',kind:kind,run:TIMES[0]||'',floor:PASS.floor,depart:Math.round(r.depart),eta:Math.round(r.eta),verdict:passVerdict(r).lvl,samples:passSamples(r)}));
 	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).catch(function(){});
 }
 function passLoadRecord(verify){
@@ -4189,7 +4284,8 @@ function passGpx(){
 function pLocalInput(ms){var d=new Date(ms),p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
 function renderPassCard(){
 	var c=document.getElementById('passCard');if(!c)return;
-	var r=PASS.res,dep=PASS.departMs||Date.now(),W=passWps(),C=PASS.custom,np=(typeof pins!=='undefined')?pins.length:0;
+	var r=PASS.res,dep=PASS.departMs||Date.now(),W=passWps(),np=(typeof pins!=='undefined')?pins.length:0,boat=!!routeOrigin();
+	var stale=!!(r&&(!W||passRouteKey(W)!==r.key));
 	var open=!r||c._planOpen||!!PASS.picking,W0=W?W[0].n:'—',W1=W?W[W.length-1].n:'—';
 	var rw=r?r.wps:W,via=rw&&rw.length>2?(rw.length===3&&rw[1].race?'via The Race':(rw.length-2)+' waypoint'+(rw.length>3?'s':'')+' between'):'';
 	var h='<div class="pc-hd" id="pcHd"><span class="pc-ttl">Passage brief</span><span class="pc-chip">✦ Claude</span><span class="pc-sp"></span>'
@@ -4197,26 +4293,26 @@ function renderPassCard(){
 		+'<button type="button" class="pc-ib" id="pcMin" aria-label="Collapse passage brief" aria-expanded="true">–</button>'
 		+'<button type="button" class="pc-ib" id="pcX" aria-label="Close passage brief">×</button></div><div class="pc-body">';
 	h+='<details class="pc-sec pc-sec-plan"'+(open?' open':'')+'><summary><h4>Plan</h4><span>'+pEsc(W0)+' → '+pEsc(W1)+' · '+pEsc(pWhenLong(dep))+'</span><b>Edit</b></summary><div class="pc-plan">'
-		+'<label class="pc-wide">Route<select id="pcRoute"><option value="bermuda"'+(PASS.route==='bermuda'?' selected':'')+'>OYC → Bermuda (preset)</option>'
-			+'<option value="pins"'+(PASS.route==='pins'?' selected':'')+'>My waypoints'+(np?' ('+np+')':'')+'</option>'
-			+'<option value="custom"'+(PASS.route==='custom'?' selected':'')+'>Choose start &amp; finish</option></select></label>';
-	if(PASS.route==='custom'){
-		['from','to'].forEach(function(k){var q=C[k],on=PASS.picking===k;
-			h+='<div class="pc-pt pc-wide'+(on?' on':'')+'"><span class="pc-pl">'+(k==='from'?'Start':'Finish')+'</span><span class="pc-pv">'+(on?'Tap the chart…':pEsc(q.n)+(q.n.indexOf('°')<0?'<small>'+pLL(q.lat,q.lon)+'</small>':''))+'</span>'
-				+'<button type="button" class="pc-link" data-pick="'+k+'">'+(on?'Cancel':'Set on chart')+'</button>'
-				+'<select class="pc-choose" data-choose="'+k+'" aria-label="'+(k==='from'?'Start':'Finish')+' from a destination or waypoint">'+passChooseOpts()+'</select></div>';});
-		if(C.via&&C.via.length)h+='<div class="pc-pt pc-wide"><span class="pc-pl">Via</span><span class="pc-pv">'+C.via.map(function(q){return pEsc(q.n);}).join(' → ')+'</span><button type="button" class="pc-link" id="pcViaClr">Clear</button></div>';
-		h+='<label class="pc-wide pc-chk"><input type="checkbox" id="pcViaRace"'+(C.viaRace?' checked':'')+'> Leave the Sound through The Race</label>';
-	}else if(PASS.route==='pins'){
-		h+='<p class="pc-note pc-wide">'+(W?'Routes '+W0+' → '+W1+' through your '+np+' waypoint'+(np===1?'':'s')+(W[0].n==='My boat'?', from your boat':'')+', in order. Tap the chart to add more; drag one to move it.':'Tap the chart to drop at least two waypoints (or one, with My location and Route from my boat on). They’re routed in order.')+'</p>';
-	}
+		+'<p class="pc-note pc-wide">'+(W?'Your '+np+' waypoint'+(np===1?'':'s')+(boat?', from your boat':'')+', in order. Tap the chart to add one; drag a waypoint or a table row to change it. The ETAs go onto your waypoints.':'The passage is your waypoints. Tap the chart to drop them, set a start and finish here, or load the Bermuda route.')+'</p>';
+	['from','to'].forEach(function(k){var on=PASS.picking===k,q=W?(k==='from'?W[0]:W[W.length-1]):(k==='from'&&np?{n:pins[0].name||'WP 1',lat:pins[0].lat,lon:pins[0].lon}:null);
+		var fixed=k==='from'&&boat;   /* routing from your boat: the start is your GPS position */
+		h+='<div class="pc-pt pc-wide'+(on?' on':'')+'"><span class="pc-pl">'+(k==='from'?'Start':'Finish')+'</span><span class="pc-pv">'+(on?'Tap the chart…':q?pEsc(q.n)+(q.n.indexOf('°')<0?'<small>'+pLL(q.lat,q.lon)+'</small>':''):'Not set')+'</span>'
+			+(fixed?'<span class="pc-note">From my boat is on</span>':'<button type="button" class="pc-link" data-pick="'+k+'">'+(on?'Cancel':'Set on chart')+'</button>'
+			+'<select class="pc-choose" data-choose="'+k+'" aria-label="'+(k==='from'?'Start':'Finish')+' at a destination">'+passChooseOpts(k)+'</select>')+'</div>';});
+	if(W&&W.length>2)h+='<div class="pc-pt pc-wide"><span class="pc-pl">Via</span><span class="pc-pv">'+W.slice(1,-1).map(function(q){return pEsc(q.n);}).join(' → ')+'</span></div>';
+	var rt=passRaceTip(W);
+	if(rt>=0)h+=passRaceHTML();
+	if(PASS.bmAsk)h+='<div class="pc-pt pc-wide pc-bm"><span class="pc-pv">Load the Bermuda route (OYC, The Race, Gulf Stream crossing, St. George’s) in place of your '+np+' waypoint'+(np===1?'':'s')+', or after them?</span><span class="pc-yn"><button type="button" class="pc-y" data-bm="replace">Replace</button><button type="button" class="pc-y" data-bm="append">Add after</button><button type="button" class="pc-n" data-bm="no">Cancel</button></span></div>';
+	else h+='<div class="pc-wide"><button type="button" class="pc-link" id="pcBermuda">Load Bermuda route</button></div>';
 	h+=''
 		+'<label>Depart (ET)<input type="datetime-local" id="pcDep" value="'+pLocalInput(dep)+'" step="3600"></label>'
 		+'<label>Motor below<input type="number" id="pcFloor" min="0" max="9" step="0.5" value="'+PASS.floor+'"></label>'
 		+'<label class="pc-wide">Boat<select disabled><option>'+PASS.boat+' (polars)</option></select></label></div>'
-		+(PASS.route!=='bermuda'?'<p class="pc-note">Legs are straight lines: use My waypoints to route around land.</p>':'')
+		+'<p class="pc-note">Legs are straight lines between your waypoints: add waypoints to route around land.</p>'
 		+'<div class="pc-acts"><button type="button" class="pc-btn pri" id="pcRun"'+(PASS.busy||!W?' disabled':'')+'>'+(PASS.busy?'Routing…':'Route it')+'</button></div></details>';
 	if(PASS.status)h+='<div class="pc-status"><span class="pc-spin" aria-hidden="true"></span>'+pEsc(PASS.status)+'</div>';
+	else if(stale&&W)h+='<div class="pc-status">Your waypoints changed: re-routing…</div>';
+	if(r&&!open&&rt>=0)h+=passRaceHTML();
 	if(r){
 		var sm=passSummary(r),v=PASS.ai&&PASS.ai.verdict?{lvl:PASS.ai.verdict.level,tag:PASS.ai.verdict.tag}:sm.verdict,vt=PASS.ai&&PASS.ai.verdict?PASS.ai.verdict.text:(r.flags.filter(function(f){return f.s>=2;}).map(function(f){return f.txt;}).join('. ')||'No red flags on this run of the forecast.');
 		var r0=r.wps[0].n,r1=r.wps[r.wps.length-1].n;
@@ -4250,6 +4346,7 @@ function renderPassCard(){
 		if(!watch.length)watch=['Nothing flagged. Re-run before you go: the forecast updates every 6 hours.'];
 		h+='<div class="pc-sec"><h4>Watch</h4><ul class="pc-list">'+watch.map(function(w){return '<li>'+pEsc(w)+'</li>';}).join('')+'</ul></div>';
 		h+='<div class="pc-sec" id="pcTake"><h4>'+(PASS.ai?'Claude’s take':'Summary')+'</h4><div class="pc-ai"><p>'+pEsc(PASS.ai?PASS.ai.take:sm.text)+'</p></div>';
+		if(PASS.ai&&PASS.aiStale)h+='<p class="pc-note warn">Your waypoints changed since Claude wrote this. The numbers above are up to date.</p><div class="pc-acts" style="margin-top:6px"><button type="button" class="pc-btn" id="pcAsk"'+(PASS.aiBusy?' disabled':'')+'>'+(PASS.aiBusy?'Claude is writing…':'✦ Refresh Claude’s brief')+'</button></div>';
 		if(!PASS.ai){
 			if(PB_AJAX_OK)h+='<div class="pc-acts" style="margin-top:8px"><button type="button" class="pc-btn pri" id="pcAsk"'+(PASS.aiBusy?' disabled':'')+'>'+(PASS.aiBusy?'Claude is writing…':'✦ Ask Claude for the brief')+'</button></div>';
 			else h+='<p class="pc-note">'+(PB_LOGGED?'Claude brief isn’t switched on for this site yet.'+(PB_ADMIN?' Add the API key in WP Admin → Settings → Passage brief.':''):'Sign in to ask Claude for a written brief.')+'</p>';
@@ -4268,21 +4365,20 @@ function renderPassCard(){
 	if(qf){var qa=document.getElementById('pcQ');if(qa&&!qa.disabled){qa.focus();qa.selectionStart=qa.selectionEnd=qa.value.length;}}
 	if(c._min)passSetMin(true);
 }
+function passRaceHTML(){return '<div class="pc-pt pc-wide pc-racetip"><span class="pc-pv">This route leaves Long Island Sound. Go through The Race?<small>Adds it to your waypoints; the router times the tidal current there.</small></span><span class="pc-yn"><button type="button" class="pc-y" data-race="y">✓ Add The Race</button><button type="button" class="pc-n" data-race="n">✕ No thanks</button></span></div>';}
 function passSetMin(m){var c=document.getElementById('passCard'),b=document.getElementById('pcMin');if(!c)return;c._min=m;c.classList.toggle('min',m);
 	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
 function drawPassRoute(){
 	passLayer.clearLayers();
-	var r=PASS.res,WP=r?r.wps:passWps();if(!WP){passLayer.addTo(map);return;}
-	var ll=WP.map(function(w){return [w.lat,w.lon];});
-	L.polyline(ll,{color:'#0b2a4a',weight:6,opacity:.35,interactive:false}).addTo(passLayer);
-	L.polyline(ll,{color:'#d4a851',weight:3,dashArray:'8 6',interactive:false}).addTo(passLayer);
+	/* the route is My waypoints' own line; a current run adds ETA labels beside them */
+	var r=passCur(),WP=r?r.wps:null;if(!WP&&!(PASS.prop&&PASS.prop.all)){passLayer.addTo(map);return;}
 	/* where the boat is every 12 h of the passage */
-	if(r){var next=r.depart+12*36e5;r.track.forEach(function(p){if(p.t>=next&&p.t<r.eta-3*36e5){var lab=next;next+=12*36e5;
+	if(r&&r.track){var next=r.depart+12*36e5;r.track.forEach(function(p){if(p.t>=next&&p.t<r.eta-3*36e5){var lab=next;next+=12*36e5;
 		L.circleMarker([p.lat,p.lon],{radius:3.5,color:'#fff',weight:1.5,fillColor:'#0b2a4a',fillOpacity:1}).bindTooltip(pWhen(lab),{permanent:true,direction:'left',offset:[-6,0],className:'pass-lbl tick'}).addTo(passLayer);}});}
-	WP.forEach(function(w,i){
-		var last=i===WP.length-1,eta=r?(i===0?r.depart:r.legs[i-1].end):null;
-		L.circleMarker([w.lat,w.lon],{radius:w.gs?7:5,color:'#fff',weight:2,fillColor:w.gs?'#c2491f':'#d4a851',fillOpacity:1})
-			.bindTooltip(pEsc(w.n)+(eta&&i>0?' · '+pWhen(eta):''),{permanent:true,direction:(i===0||last)?'left':'right',offset:[(i===0||last)?-8:8,0],className:'pass-lbl'+(w.gs?' gs':'')}).addTo(passLayer);
+	if(WP)WP.forEach(function(w,i){
+		var eta=i===0?r.depart:r.legs[i-1].end,t=(i===0?'Depart ':'')+pWhen(eta);
+		if(!/^WP \d/.test(w.n))t=pEsc(w.n)+' · '+t;
+		L.marker([w.lat,w.lon],{icon:L.divIcon({className:'pass-eta-mk',html:'<span class="pass-lbl'+(w.gs?' gs':'')+'">'+t+'</span>',iconSize:[1,1],iconAnchor:w.boat?[-18,24]:[-16,9]}),interactive:false,keyboard:false,zIndexOffset:700}).addTo(passLayer);
 	});
 	if(PASS.prop&&PASS.prop.all){var PP=PASS.prop;
 		L.polyline(PP.all.wps.map(function(w){return [w.lat,w.lon];}),{color:'#b48cff',weight:2,dashArray:'4 6',opacity:.8,interactive:false}).addTo(passLayer);
@@ -4300,8 +4396,8 @@ function passFit(){
 document.getElementById('tgPassage').addEventListener('change',function(){
 	var c=document.getElementById('passCard');
 	if(this.checked){c.classList.add('on');passSetMin(window.matchMedia('(max-width:760px)').matches);   /* phones open on the summary row */
-		renderPassCard();drawPassRoute();passFit();if(!PASS.res)passBuild();}
-	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();}
+		renderPassCard();drawPassRoute();passFit();var w=passWps();if(w&&(!PASS.res||PASS.res.key!==passRouteKey(w)))passBuild();else rerenderCallouts();}
+	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();rerenderCallouts();}   /* passage ETAs off the waypoints */
 });
 document.getElementById('passCard').addEventListener('click',function(e){
 	var t=e.target,c=this;
@@ -4322,7 +4418,9 @@ document.getElementById('passCard').addEventListener('click',function(e){
 	var pj=t.closest('[data-pr]');if(pj){passPropMark(pj.getAttribute('data-pr'),false);return;}
 	if(t.closest('#pcPropOk')){passPropApply(true);return;}
 	if(t.closest('#pcPropNo')){passPropApply(false);return;}
-	if(t.closest('#pcViaClr')){PASS.custom.via=[];PASS.res=null;PASS.ai=null;passSaveRoute();c._planOpen=true;renderPassCard();drawPassRoute();return;}
+	if(t.closest('#pcBermuda')){if(pins.length){PASS.bmAsk=true;c._planOpen=true;renderPassCard();}else passLoadBermuda('append');return;}
+	var bm=t.closest('[data-bm]');if(bm){var hw=bm.getAttribute('data-bm');if(hw==='no'){PASS.bmAsk=false;renderPassCard();}else passLoadBermuda(hw);return;}
+	var rc=t.closest('[data-race]');if(rc){if(rc.getAttribute('data-race')==='y')passAddRace();else{var rw=passWps();PASS.raceNo=rw?passRouteKey(rw):'';renderPassCard();}return;}
 	if(t.closest('#pcSend')){var qa=document.getElementById('pcQ');if(qa)passChatSend(qa.value);return;}
 	if(t.closest('#pcGpx')){passGpx();return;}
 	if(t.closest('#pcRecCheck')){PASS.recLoading=false;passLoadRecord(true);return;}
@@ -4332,9 +4430,7 @@ document.getElementById('passCard').addEventListener('click',function(e){
 });
 document.getElementById('passCard').addEventListener('change',function(e){
 	var t=e.target;
-	if(t.id==='pcRoute'){PASS.route=t.value;PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();passFit();}
-	else if(t.getAttribute&&t.getAttribute('data-choose')){if(t.value)passChoose(t.getAttribute('data-choose'),t.value);}
-	else if(t.id==='pcViaRace'){PASS.custom.viaRace=t.checked;PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();}
+	if(t.getAttribute&&t.getAttribute('data-choose')){if(t.value)passChoose(t.getAttribute('data-choose'),t.value);}
 });
 document.getElementById('passCard').addEventListener('input',function(e){if(e.target.id==='pcQ')PASS.chatDraft=e.target.value;});
 document.getElementById('passCard').addEventListener('keydown',function(e){
