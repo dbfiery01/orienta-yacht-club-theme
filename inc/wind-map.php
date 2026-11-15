@@ -3783,7 +3783,7 @@ function passRouteKey(w){if(PASS.route==='bermuda')return 'bermuda';var s=w.map(
 function passPick(e){
 	if(!PASS.picking)return false;var c=document.getElementById('passCard');if(!c||!c.classList.contains('on')){PASS.picking=null;return false;}
 	var lat=e.latlng.lat,lon=((e.latlng.lng+540)%360)-180,k=PASS.picking;
-	PASS.custom[k]={n:passPlaceName(lat,lon),lat:+lat.toFixed(4),lon:+lon.toFixed(4)};
+	PASS.custom[k]={n:passPlaceName(lat,lon),lat:+lat.toFixed(4),lon:+lon.toFixed(4)};PASS.custom.via=[];   /* new start/finish: drop in-between waypoints from the old route */
 	PASS.picking=null;PASS.res=null;PASS.ai=null;passSaveRoute();
 	map.getContainer().classList.remove('pass-picking');
 	c._planOpen=true;if(c._pickMin){c._pickMin=false;passSetMin(false);}
@@ -3806,7 +3806,7 @@ function passChoose(k,v){
 	else if(v.charAt(0)==='p'){var pl=PASS_PLACES[+v.slice(2)];if(pl)q={n:pl.n,lat:pl.lat,lon:pl.lon};}
 	else if(v.charAt(0)==='w'){var i=+v.slice(2),pn=pins[i];if(pn)q={n:'WP '+(i+1),lat:+pn.lat.toFixed(4),lon:+pn.lon.toFixed(4)};}
 	if(!q)return;
-	PASS.custom[k]=q;PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();
+	PASS.custom[k]=q;PASS.custom.via=[];PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();
 	var c=document.getElementById('passCard');c._planOpen=true;renderPassCard();drawPassRoute();passFit();
 }
 function passStartPick(k){
