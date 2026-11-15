@@ -2305,7 +2305,7 @@ function swSchedule(){clearTimeout(SW.timer);SW.timer=setTimeout(swRun,450);}
 function swRun(){
 	if(pins.some(function(p){return p._dragging;})){swSchedule();return;}
 	var key=swKey();if(key===SW.key&&SW.res)return;SW.key=key;
-	var legs=swLegs(),v=swVar();
+	var legs=swLegs(),v=swVar();SW.running=!!pins.length;
 	if(SW.fix&&!SW.fix.busy){SW.fix=null;SW.prev.clearLayers();swPanel();}   /* the route changed: old fixes no longer fit */
 	if(!pins.length){SW.res=null;swDraw();swUI();return;}
 	Promise.all([Promise.all(legs.map(function(l){return swCheckLeg(l.a,l.b,v);})),Promise.all(pins.map(function(p){return swPoint(p.lat,p.lon);}))]).then(function(r){
@@ -2313,7 +2313,8 @@ function swRun(){
 		var res={legs:{},pins:{},n:0,ft:safeFt()};
 		legs.forEach(function(l,i){res.legs[l.toId]=r[0][i];if(r[0][i].st==='land'||r[0][i].st==='shallow')res.n++;});
 		pins.forEach(function(p,i){res.pins[p.id]=r[1][i];if(r[1][i]===2)res.n++;});
-		SW.res=res;swDraw();swUI();
+		SW.res=res;SW.running=false;swDraw();swUI();
+		if(SW.wantAuto){SW.wantAuto=false;SW.fix=null;swAutoroute();}   /* Autoroute was clicked while this ran */
 	});
 }
 function swDraw(){
@@ -2449,7 +2450,9 @@ function swFixLeg(a,b,v,why){
 }
 function swAutoroute(){
 	if(SW.fix&&SW.fix.busy)return;
-	var r=SW.res,v=swVar();if(!r){swRun();return;}
+	var r=SW.res,v=swVar();
+	/* the leg check is still loading chart tiles (a long route takes a while the first time): say so, and go on when it's done */
+	if(!r||SW.running||SW.key!==swKey()){SW.wantAuto=true;SW.fix={busy:true,items:[],msg:'',checking:true};swPanel();if(!SW.running)swRun();return;}
 	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft). Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
 	SW.fix={busy:true,items:[],msg:''};swPanel();
 	var legs=swLegs(),jobs=[];
@@ -2480,7 +2483,7 @@ function swPanel(){
 	var el=document.getElementById('arPanel');if(!el)return;var F=SW.fix;
 	if(!F){el.hidden=true;el.innerHTML='';return;}
 	el.hidden=false;var h='<div class="ar-h"><b>Autoroute</b><button type="button" class="ar-x" data-ar="x" aria-label="Close Autoroute">&times;</button></div>';
-	if(F.busy)h+='<p class="ar-note"><span class="pc-spin" aria-hidden="true"></span>Finding a way round&hellip;</p>';
+	if(F.busy)h+='<p class="ar-note"><span class="pc-spin" aria-hidden="true"></span>'+(F.checking?'Checking your legs against the chart&hellip; (the first time on a long route takes up to a minute)':'Finding a way round&hellip;')+'</p>';
 	else if(F.msg)h+='<p class="ar-note">'+pEsc(F.msg)+'</p>';
 	else{var nOk=0;h+='<ol class="ar-list">';
 		F.items.forEach(function(it,k){if(it.st===true)nOk++;
