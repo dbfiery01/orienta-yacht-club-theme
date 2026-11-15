@@ -98,7 +98,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .layers input{accent-color:var(--harbor)}
 #oycwm .layers .hint{color:var(--faint);font-size:.74rem;align-self:center}
 /* ---- layer presets + Layers drawer (weather page Chart tab) ---- */
-#oycwm .presetbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:2px 18px 10px}
+#oycwm .presetbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:8px 12px;padding:2px 18px 10px}
 #oycwm .presets{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 #oycwm .pre-b{border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.85rem;font-weight:600;padding:0 18px;min-height:40px;cursor:pointer}
 #oycwm .pre-b:last-child{border-right:0}
@@ -902,11 +902,11 @@ function oyc_wind_map_html( $embed = false ) {
 			</div>
 			<!-- layer presets + the Layers drawer toggle (the drawer itself sits over the map) -->
 			<div class="presetbar" id="presetBar">
-				<div class="presets" role="group" aria-label="Layer presets">
-					<button type="button" class="pre-b pre-mine" data-preset="mine" aria-pressed="false" title="Your saved map setup">My chart</button>
-				</div>
-				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view, map position and boat polars as My chart">Save as My chart</button>
 				<button type="button" class="lyr-btn" id="lyrBtn" aria-expanded="true" aria-controls="lyrDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg>Layers</button>
+				<div class="presets" role="group" aria-label="Layer presets">
+					<button type="button" class="pre-b pre-mine" data-preset="mine" aria-pressed="false" title="Your saved map setup">My Chart</button>
+				</div>
+				<button type="button" class="mine-save" id="mineSave" title="Save the current layers, view, map position and boat polars as My Chart">Save as My Chart</button>
 			</div>
 			<span class="st" id="st">Loading&hellip;</span>
 			<button type="button" class="fsbtn" id="oycwmFs" title="Full screen" aria-label="Full screen"></button>
@@ -5296,7 +5296,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 			if(PRESETS.mine.indexOf('tgRace')>=0&&PRESETS.mine.indexOf('tgRaceTools')<0&&document.getElementById('tgRaceTools'))PRESETS.mine.push('tgRaceTools');}
 		else delete PRESETS.mine;
 		var mb=bar.querySelector('.pre-mine');if(mb)mb.classList.toggle('empty',!mine);
-		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Save':'Save as My chart';
+		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Save':'Save as My Chart';
 	}
 	function saveMine(){
 		var on=MANAGED.concat(EXTRA).filter(function(id){var cb=document.getElementById(id);return cb&&cb.checked;});
