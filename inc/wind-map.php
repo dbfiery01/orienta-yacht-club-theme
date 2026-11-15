@@ -1704,7 +1704,7 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
    is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
 /* chart shading contour variants (5 ft): same display_params the server uses */
-var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>;
+var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CAP=<?php echo wp_json_encode( defined( 'OYC_ENC_BIG_PX' ) ? oyc_enc_safe_params( 'ca' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CYP=<?php echo wp_json_encode( defined( 'OYC_ENC_BIG_PX' ) ? oyc_enc_safe_params( 'cy' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_BIG_PX=<?php echo (int) ( defined( 'OYC_ENC_BIG_PX' ) ? OYC_ENC_BIG_PX : 0 ); ?>;
 /* cache version: changes whenever the cached tiles are thrown away, so browsers
    don't keep showing tiles from an older chart style (they cache them a week) */
 var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
@@ -1726,7 +1726,50 @@ if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:12,zI
    hides them at these scales, and approach charts there are flat blue with
    none), see cx in OYC_ENC_CHART_FT. Not pre-loaded: tiles come from NOAA and
    our server caches them in the background. */
-if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:13,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
+if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:ENC_BIG_PX?14:13,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
+/* Zoom 13 (Brad, 2026-11-15, preview option 5): fewer, larger soundings and
+   darker depth contours. Each tile is the approach-scale chart (ca5, every
+   sounding, but far fewer than the harbour charts), with the harbour chart (cy5)
+   filled in wherever the approach chart is only a flat blue area (Fishers Island
+   Sound), both drawn ENC_BIG_PX wide and enlarged to 256 so text is ~1.4x; then
+   the grey contour lines and labels are drawn in a stronger blue. Pixels can only
+   be read from our own cache, so a tile not cached yet shows NOAA's approach
+   chart as it is and our server caches both in the background. */
+var encZ13=null;
+if(ENC_CV&&ENC_BIG_PX&&ENC_CAP){
+	var encBigUrl=function(v,c,dp){var o=20037508.342789244,sz=2*o/Math.pow(2,c.z),x0=-o+c.x*sz,y1=o-c.y*sz;
+		return ENC_WMS+'?service=WMS&request=GetMap&version=1.3.0&layers=2,3,4,5,6,7&styles=&format=image%2Fpng&transparent=true&crs=EPSG%3A3857&width='+ENC_BIG_PX+'&height='+ENC_BIG_PX
+			+'&bbox='+[x0,y1-sz,x0+sz,y1].join(',')+'&display_params='+encodeURIComponent(dp);};
+	var encImg=function(src,cors){return new Promise(function(res){var im=new Image();if(cors)im.crossOrigin='anonymous';im.onload=function(){res(im);};im.onerror=function(){res(null);};im.src=src;});};
+	var encCached=function(v,c){return ENC_CACHE?ENC_CACHE+'/'+v+'/'+c.z+'/'+c.x+'/'+c.y+'.png?cv='+ENC_VER:'';};
+	var encAjax=function(v,c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+'&v='+v+'&cv='+ENC_VER;};
+	var EncZ13=L.GridLayer.extend({
+		createTile:function(c,done){
+			var cv=document.createElement('canvas');cv.width=cv.height=256;var va='ca'+ENC_CV.slice(1),vy='cy'+ENC_CV.slice(1);
+			Promise.all([encImg(encCached(va,c)),encImg(encCached(vy,c))]).then(function(r){
+				var g=cv.getContext('2d');
+				if(!r[0]){   /* not cached: NOAA's approach chart as it is, cache both in the background */
+					if(ENC_CACHE){encWarm(encAjax(va,c));encWarm(encAjax(vy,c));}
+					return encImg(encBigUrl(va,c,ENC_CAP)).then(function(im){if(im){g.imageSmoothingQuality='high';g.drawImage(im,0,0,256,256);}done(null,cv);});
+				}
+				if(!r[1]&&ENC_CACHE)encWarm(encAjax(vy,c));
+				g.imageSmoothingQuality='high';g.drawImage(r[0],0,0,256,256);
+				var A=g.getImageData(0,0,256,256),a=A.data,h=null;
+				if(r[1]){var t=document.createElement('canvas');t.width=t.height=256;var tg=t.getContext('2d');tg.imageSmoothingQuality='high';tg.drawImage(r[1],0,0,256,256);h=tg.getImageData(0,0,256,256).data;}
+				for(var j=0;j<a.length;j+=4){
+					/* the approach chart's flat blue (no soundings) → the harbour chart there */
+					if(h&&a[j+3]>200&&Math.abs(a[j]-175)<14&&Math.abs(a[j+1]-205)<14&&Math.abs(a[j+2]-225)<14){a[j]=h[j];a[j+1]=h[j+1];a[j+2]=h[j+2];a[j+3]=h[j+3];}
+					/* depth contours (NOAA's light grey lines and labels) in a stronger blue */
+					var R=a[j],G=a[j+1],B=a[j+2];
+					if(a[j+3]>100&&R>=125&&R<230&&Math.abs(R-G)<5&&Math.abs(G-B)<5){a[j]=40;a[j+1]=95;a[j+2]=160;}
+				}
+				g.putImageData(A,0,0);done(null,cv);
+			});
+			return cv;
+		}});
+	encZ13=new EncZ13({minZoom:13,maxZoom:13,zIndex:4,keepBuffer:4});
+	encLayer.addLayer(encZ13);
+}
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water

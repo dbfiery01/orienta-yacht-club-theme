@@ -80,7 +80,7 @@ function oyc_enc_variant( $v ) {
 	if ( preg_match( '/^(s|h)(\d{1,2})$/', $v, $m ) && in_array( (int) $m[2], array_map( 'intval', explode( ',', OYC_ENC_SAFE_FT ) ), true ) ) {
 		return $m[1] . (int) $m[2];
 	}
-	if ( preg_match( '/^(c|cd|ch|cx)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
+	if ( preg_match( '/^(c|cd|ch|cx|ca|cy)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
 		return $m[1] . (int) $m[2];
 	}
 	return false;
@@ -93,7 +93,7 @@ function oyc_enc_is_safe( $v ) {
 
 /** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-12), cx5 (harbour charts with every sounding, zoom 13+). */
 function oyc_enc_is_contour( $v ) {
-	return (bool) preg_match( '/^c[dhx]?\d/', (string) $v );
+	return (bool) preg_match( '/^c[dhxay]?\d/', (string) $v );
 }
 
 /* The chart on the map is drawn with NOAA's shallow/safety/deep contours all
@@ -108,6 +108,14 @@ function oyc_enc_is_contour( $v ) {
    with HonorScamin 1 (every sounding drawn) sits on top at zoom 13-17.
    The home-waters warmer keeps c5 / cd5 loaded; wind-map.php reads this. */
 define( 'OYC_ENC_CHART_FT', 5 );
+/* Zoom 13 (Brad, 2026-11-15, preview option 5): fewer, larger soundings. ca5 =
+   approach-scale charts with every sounding (far fewer than harbour charts),
+   cy5 = harbour charts with every sounding, both rendered OYC_ENC_BIG_PX wide
+   and enlarged to 256 on the map, so text is ~1.4x. The page shows ca5 and,
+   where an approach chart only has a flat blue area (Fishers Island Sound),
+   cy5's soundings and contours instead; depth contours are drawn darker blue.
+   See encZ13 in inc/wind-map.php. */
+define( 'OYC_ENC_BIG_PX', 184 );
 
 /** NOAA display settings for a safe-water or contour variant (contour in metres). */
 function oyc_enc_safe_params( $v ) {
@@ -124,10 +132,13 @@ function oyc_enc_safe_params( $v ) {
 	foreach ( array( 'ShallowContour', 'SafetyContour', 'DeepContour', 'SafetyDepth' ) as $n ) {
 		$p[] = '{"name":"' . $n . '","value":' . $m . '}';
 	}
-	if ( 'h' === $k || 'ch' === $k || 'cx' === $k ) {
+	if ( 'h' === $k || 'ch' === $k || 'cx' === $k || 'cy' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"5"}';
 	}
-	if ( 'cx' === $k ) {
+	if ( 'ca' === $k ) {
+		$p[] = '{"name":"IntendedUsage","value":"4"}';
+	}
+	if ( 'cx' === $k || 'ca' === $k || 'cy' === $k ) {
 		$p[] = '{"name":"HonorScamin","value":1}';
 	} elseif ( 'cd' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"4"}';
@@ -165,6 +176,9 @@ function oyc_enc_wms_url( $z, $x, $y, $v = '' ) {
 	$size = 2 * $o / ( 1 << $z );
 	$bbox = array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size );
 	$px   = $z <= OYC_ENC_HIRES_MAX ? 512 : 256;
+	if ( preg_match( '/^c[ay]\d/', (string) $v ) ) {
+		$px = OYC_ENC_BIG_PX; // drawn at 256 on the map: text 1.4x
+	}
 	return add_query_arg( array(
 		'service'     => 'WMS',
 		'request'     => 'GetMap',
@@ -192,6 +206,9 @@ function oyc_enc_zoom_ok( $z, $v ) {
 	if ( oyc_enc_is_contour( $v ) ) {
 		if ( 0 === strpos( $v, 'ch' ) ) {
 			return $z >= 10 && $z <= 12;
+		}
+		if ( 0 === strpos( $v, 'ca' ) || 0 === strpos( $v, 'cy' ) ) {
+			return 13 === (int) $z;
 		}
 		if ( 0 === strpos( $v, 'cx' ) ) {
 			return $z >= 13 && $z <= 17;
