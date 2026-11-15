@@ -769,12 +769,13 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-note{margin:6px 0 0;font-size:.68rem;color:#9fc3da}
 #oycwm .pc-note.warn{color:#f3c879}
 #oycwm .pc-plan .pc-wide{grid-column:1/-1}
-#oycwm .pc-pt{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 8px;min-height:36px;box-sizing:border-box}
+#oycwm .pc-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 8px;min-height:36px;box-sizing:border-box}
 #oycwm .pc-pt.on{border-color:#d4a851;background:rgba(212,168,81,.14)}
 #oycwm .pc-pl{font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;color:#9fc3da;font-weight:700;width:44px;flex:none}
 #oycwm .pc-pv{flex:1;min-width:0;font-size:.74rem;color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis}
 #oycwm .pc-pv small{display:block;font-weight:500;color:#9fc3da;font-size:.64rem}
 #oycwm .pc-pt .pc-link{flex:none;white-space:nowrap}
+#oycwm .pc-plan .pc-pt select.pc-choose{flex:1 1 100%;min-height:30px;font-size:.7rem;padding:3px 6px}
 #oycwm .pc-plan label.pc-chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:.72rem;color:#dbe9f3;font-weight:600}
 #oycwm .pc-plan label.pc-chk input{width:auto;min-height:0}
 #oycwm .leaflet-container.pass-picking,#oycwm .leaflet-container.pass-picking .leaflet-interactive{cursor:crosshair}
@@ -1952,7 +1953,7 @@ function drawRouteLine(){
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
-	if(typeof PASS!=='undefined'&&PASS.route==='pins'&&!PASS.busy){var pc=document.getElementById('passCard');if(pc&&pc.classList.contains('on')){setTimeout(function(){renderPassCard();if(!PASS.res)drawPassRoute();},0);}}
+	if(typeof PASS!=='undefined'&&PASS.route!=='bermuda'&&!PASS.busy){var pc=document.getElementById('passCard');if(pc&&pc.classList.contains('on')){setTimeout(function(){renderPassCard();if(!PASS.res&&PASS.route==='pins')drawPassRoute();},0);}}
 	advanceNextWp();
 	drawRouteLine();
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
@@ -3750,6 +3751,26 @@ function passPick(e){
 	c._planOpen=true;if(c._pickMin){c._pickMin=false;passSetMin(false);}
 	renderPassCard();drawPassRoute();return true;
 }
+/* Start/Finish list: the preset destinations and the member's own waypoints */
+function passChooseOpts(){
+	var h='<option value="">Choose a destination or waypoint…</option><optgroup label="Destinations">';
+	PASS_PLACES.forEach(function(q,i){if(q.n!=='The Race')h+='<option value="p:'+i+'">'+pEsc(q.n)+'</option>';});
+	h+='</optgroup>';
+	var o=(typeof routeOrigin==='function')?routeOrigin():null,np=(typeof pins!=='undefined')?pins.length:0;
+	if(o||np){h+='<optgroup label="My waypoints">';if(o)h+='<option value="b">My boat ('+pLL(o.lat,o.lon)+')</option>';
+		for(var k=0;k<np;k++)h+='<option value="w:'+k+'">WP '+(k+1)+' · '+pLL(pins[k].lat,pins[k].lon)+'</option>';h+='</optgroup>';}
+	else h+='<optgroup label="My waypoints"><option disabled>None yet: tap the chart to drop one</option></optgroup>';
+	return h;
+}
+function passChoose(k,v){
+	var q=null;
+	if(v==='b'){var o=routeOrigin();if(o)q={n:'My boat',lat:o.lat,lon:o.lon};}
+	else if(v.charAt(0)==='p'){var pl=PASS_PLACES[+v.slice(2)];if(pl)q={n:pl.n,lat:pl.lat,lon:pl.lon};}
+	else if(v.charAt(0)==='w'){var i=+v.slice(2),pn=pins[i];if(pn)q={n:'WP '+(i+1),lat:+pn.lat.toFixed(4),lon:+pn.lon.toFixed(4)};}
+	if(!q)return;
+	PASS.custom[k]=q;PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();
+	var c=document.getElementById('passCard');c._planOpen=true;renderPassCard();drawPassRoute();passFit();
+}
 function passStartPick(k){
 	var c=document.getElementById('passCard');PASS.picking=k;c._planOpen=true;
 	map.getContainer().classList.add('pass-picking');
@@ -3989,11 +4010,12 @@ function renderPassCard(){
 	h+='<details class="pc-sec pc-sec-plan"'+(open?' open':'')+'><summary><h4>Plan</h4><span>'+pEsc(W0)+' → '+pEsc(W1)+' · '+pEsc(pWhenLong(dep))+'</span><b>Edit</b></summary><div class="pc-plan">'
 		+'<label class="pc-wide">Route<select id="pcRoute"><option value="bermuda"'+(PASS.route==='bermuda'?' selected':'')+'>OYC → Bermuda (preset)</option>'
 			+'<option value="pins"'+(PASS.route==='pins'?' selected':'')+'>My waypoints'+(np?' ('+np+')':'')+'</option>'
-			+'<option value="custom"'+(PASS.route==='custom'?' selected':'')+'>Pick start &amp; finish on the chart</option></select></label>';
+			+'<option value="custom"'+(PASS.route==='custom'?' selected':'')+'>Choose start &amp; finish</option></select></label>';
 	if(PASS.route==='custom'){
 		['from','to'].forEach(function(k){var q=C[k],on=PASS.picking===k;
 			h+='<div class="pc-pt pc-wide'+(on?' on':'')+'"><span class="pc-pl">'+(k==='from'?'Start':'Finish')+'</span><span class="pc-pv">'+(on?'Tap the chart…':pEsc(q.n)+(q.n.indexOf('°')<0?'<small>'+pLL(q.lat,q.lon)+'</small>':''))+'</span>'
-				+'<button type="button" class="pc-link" data-pick="'+k+'">'+(on?'Cancel':'Set on chart')+'</button></div>';});
+				+'<button type="button" class="pc-link" data-pick="'+k+'">'+(on?'Cancel':'Set on chart')+'</button>'
+				+'<select class="pc-choose" data-choose="'+k+'" aria-label="'+(k==='from'?'Start':'Finish')+' from a destination or waypoint">'+passChooseOpts()+'</select></div>';});
 		h+='<label class="pc-wide pc-chk"><input type="checkbox" id="pcViaRace"'+(C.viaRace?' checked':'')+'> Leave the Sound through The Race</label>';
 	}else if(PASS.route==='pins'){
 		h+='<p class="pc-note pc-wide">'+(W?'Routes '+W0+' → '+W1+' through your '+np+' waypoint'+(np===1?'':'s')+(W[0].n==='My boat'?', from your boat':'')+', in order. Tap the chart to add more; drag one to move it.':'Tap the chart to drop at least two waypoints (or one, with My location and Route from my boat on). They’re routed in order.')+'</p>';
@@ -4101,6 +4123,7 @@ document.getElementById('passCard').addEventListener('click',function(e){
 document.getElementById('passCard').addEventListener('change',function(e){
 	var t=e.target;
 	if(t.id==='pcRoute'){PASS.route=t.value;PASS.picking=null;map.getContainer().classList.remove('pass-picking');PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();passFit();}
+	else if(t.getAttribute&&t.getAttribute('data-choose')){if(t.value)passChoose(t.getAttribute('data-choose'),t.value);}
 	else if(t.id==='pcViaRace'){PASS.custom.viaRace=t.checked;PASS.res=null;PASS.ai=null;passSaveRoute();this._planOpen=true;renderPassCard();drawPassRoute();}
 });
 document.getElementById('passCard').addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pc-leg')){e.preventDefault();e.target.click();}});
