@@ -976,10 +976,6 @@ function oyc_wind_map_html( $embed = false ) {
 
 		<div class="legend" id="legend" style="display:none">0 kt <span class="sc" id="scale"></span> 40+ kt</div>
 
-		<div class="barbhint" id="barbHint" style="display:none">
-			<svg width="30" height="26" viewBox="-15 -20 30 26" aria-hidden="true"><circle r="2.1" fill="#0b2a4a"/><g transform="rotate(225)"><line x1="0" y1="0" x2="0" y2="-15" stroke="#0b2a4a" stroke-width="1.7"/><line x1="0" y1="-15" x2="8" y2="-18" stroke="#0b2a4a" stroke-width="1.7"/><line x1="0" y1="-10.5" x2="4.5" y2="-12" stroke="#0b2a4a" stroke-width="1.7"/></g></svg>
-			<span>Wind barbs: the staff points the direction the <b>wind comes from</b>; feathers give the speed (half&nbsp;=&nbsp;5, full&nbsp;=&nbsp;10, pennant&nbsp;=&nbsp;50&nbsp;kt).</span>
-		</div>
 
 		<div class="ctrl" id="ctrlBar">
 			<button id="play" title="Play/pause">&#9654;</button>
@@ -1093,7 +1089,7 @@ function oyc_wind_map_html( $embed = false ) {
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
-				<div class="tiphelp collapsed" id="tipHelp"><button type="button" class="tip-tog" id="tipTog" aria-expanded="false" aria-controls="tipText" title="Show map tips"><span class="tip-sign" aria-hidden="true">+</span><span class="tip-lbl">Map tips</span></button><span class="tip-txt" id="tipText">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row up or down to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point.</span></div>
+				<div class="tiphelp collapsed" id="tipHelp"><button type="button" class="tip-tog" id="tipTog" aria-expanded="false" aria-controls="tipText" title="Show map tips"><span class="tip-sign" aria-hidden="true">+</span><span class="tip-lbl">Map tips</span></button><span class="tip-txt" id="tipText">Click the map anywhere to plot a route (your first point is the start, or tap From my boat), then tap Show table for every point&rsquo;s forecast (drag a row up or down to change the order). Drag a point to move it. Tap a point to show its card, then drag the card anywhere (double-tap it to snap back). Use &#10005; on a card or in the table to remove a point. Wind barbs: the staff points the direction the <b>wind comes from</b>; feathers give the speed (half&nbsp;=&nbsp;5, full&nbsp;=&nbsp;10, pennant&nbsp;=&nbsp;50&nbsp;kt).</span></div>
 			</div>
 		</div>
 		<aside class="wptab collapsed" id="wpTab" aria-label="Passage waypoints"><?php /* starts hidden: only the summary bar + buttons show until "Show table" */ ?>
@@ -1693,9 +1689,9 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy
    zoom 12, so tiles at zoom <= ENC_HIRES_MAX (12) are requested at 2x pixels
    (more detail, but text and symbols draw half-size). From zoom 13 in, 1x, so
    soundings and labels are full size and readable. Shown from zoom 9 in.
-   Depths shallower than about 30 m are shaded light blue by NOAA (close to the
-   street map's water colour) and deeper water white; that is NOAA's standard
-   chart colouring, so most of Long Island Sound reads blue. The "NOAA chart"
+   Only water shallower than 5 ft is shaded light blue; deeper water is white
+   with its soundings (variant c5 / cd5, see OYC_ENC_CHART_FT; NOAA's default
+   would shade everything under ~30 m, most of the Sound). The "NOAA chart"
    chip toggles it (wired with the POI chips below). Not for navigation. */
 /* Tiles come from our own server's cache first (inc/enc-cache.php): the static
    PNG in uploads/oyc-enc, else admin-ajax oyc_enc_tile (fetches from NOAA once
@@ -1707,6 +1703,8 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
    and sits over the normal chart; offshore, where those charts don't exist, it
    is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
+/* chart shading contour variants (5 ft): same display_params the server uses */
+var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>;
 /* cache version: changes whenever the cached tiles are thrown away, so browsers
    don't keep showing tiles from an older chart style (they cache them a week) */
 var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
@@ -1718,9 +1716,12 @@ var EncWMS=L.TileLayer.WMS.extend({
 	ajaxUrl:function(c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+(this.options.encVar?'&v='+this.options.encVar:'')+'&cv='+ENC_VER;},
 	getTileUrl:function(c){return ENC_CACHE?(ENC_CACHE+(this.options.encVar?'/'+this.options.encVar:'')+'/'+c.z+'/'+c.x+'/'+c.y+'.png?cv='+ENC_VER):this.noaaUrl(c);}});
 function encOpts(o){return L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',keepBuffer:4},o);}
-var encBase=new EncWMS(ENC_WMS,encOpts({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'}));
+var encBase=new EncWMS(ENC_WMS,encOpts(L.extend({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'},ENC_CV?{encVar:ENC_CV,display_params:ENC_CP}:{})));
 var encLayer=L.layerGroup([encBase]);
-if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:11,zIndex:3,encVar:'d',display_params:ENC_DETAIL})));
+if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:11,zIndex:3,encVar:ENC_CV?'cd'+ENC_CV.slice(1):'d',display_params:ENC_CV?ENC_CDP:ENC_DETAIL})));
+/* harbour-scale charts on top at zoom 10-12: approach charts (e.g. Fishers
+   Island Sound) shade all their water blue whatever the contour */
+if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:12,zIndex:4,encVar:'ch'+ENC_CV.slice(1),display_params:ENC_CHP})));
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water
