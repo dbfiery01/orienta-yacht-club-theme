@@ -853,11 +853,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pass-eta-mk{background:none;border:0}
 #oycwm .pass-eta-mk .pass-lbl{display:inline-block;white-space:nowrap;pointer-events:none}
 #oycwm .pin-co .co-nm{font-size:.78rem;font-weight:800;color:var(--navy);text-align:center;margin:0 18px 1px}
-#oycwm .pin-co .co-eta{font-size:.74rem;font-weight:800;color:#8a6420;text-align:center;margin:0 0 2px}
+#oycwm .pin-co .co-eta{font-size:.74rem;font-weight:800;color:#7a5410;text-align:center;margin:0 0 2px}
 #oycwm .wpt td .s.nm{font-weight:800;color:var(--navy)}
 #oycwm .wpt td .s.eta.pass{color:#8a6420;font-weight:700}
-[data-theme="dark"] #oycwm .pin-co .co-nm,[data-theme="dark"] #oycwm .wpt td .s.nm{color:#f0eadd}
-[data-theme="dark"] #oycwm .pin-co .co-eta,[data-theme="dark"] #oycwm .wpt td .s.eta.pass{color:#e2c07a}
+[data-theme="dark"] #oycwm .wpt td .s.nm{color:#f0eadd}   /* the map card stays a white card in dark mode: dark ink there */
+[data-theme="dark"] #oycwm .wpt td .s.eta.pass{color:#e2c07a}
 #oycwm .pc-racetip .pc-pv,#oycwm .pc-bm .pc-pv{flex:1 1 100%;white-space:normal}
 #oycwm .pc-racetip .pc-pv small{display:block;font-weight:400;opacity:.8}
 #oycwm .pass-lbl.tick{background:rgba(255,255,255,.88);color:#0b2a4a;font-size:10px;padding:1px 4px}
@@ -868,12 +868,11 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-rec p{margin:0}
 #oycwm .pc-mini{display:none;font-weight:700;color:#d4a851;font-size:.7rem;white-space:nowrap;font-variant-numeric:tabular-nums}
 #oycwm .passcard.min .pc-mini{display:inline}
-#oycwm .pin-co .co-pass{font-size:.7rem;color:#16324a;text-align:center;margin:0 0 3px;line-height:1.35}
+#oycwm .pin-co .co-pass{font-size:.7rem;color:#0b2a4a;text-align:center;margin:0 0 3px;line-height:1.35}
 #oycwm .pin-co .co-pass b{font-weight:800}
 #oycwm .pin-co .co-pass .pc-tag{display:inline-block;margin-left:4px;font-size:.6rem;font-weight:800;padding:0 4px;border-radius:3px;background:#f3e2b8;color:#6b4a10}
 #oycwm .pin-co .co-pass.warn,#oycwm .wpt td .s.pass.warn{color:#b3261e}
 #oycwm .wpt td .s.pass{color:#5a4a2a}
-[data-theme="dark"] #oycwm .pin-co .co-pass{color:#dce8f2}
 [data-theme="dark"] #oycwm .wpt td .s.pass{color:#d9c79d}
 #oycwm .pc-hd .pc-ttl{white-space:nowrap}
 @media (max-width:760px){#oycwm .passcard.min .pc-chip{display:none}}
