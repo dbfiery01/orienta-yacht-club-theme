@@ -4820,17 +4820,11 @@ function passSetMin(m){var c=document.getElementById('passCard'),b=document.getE
 	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
 function drawPassRoute(){
 	passLayer.clearLayers();
-	var pc=document.getElementById('passCard');if(!pc||!pc.classList.contains('on')){map.removeLayer(passLayer);return;}   /* map ETA labels only with the brief open; cards and table always */
-	/* the route is My waypoints' own line; a current run adds ETA labels beside them */
-	var r=passCur(),WP=r?r.wps:null;if(!WP&&!(PASS.prop&&PASS.prop.all)){passLayer.addTo(map);return;}
-	/* where the boat is every 12 h of the passage */
-	if(r&&r.track){var next=r.depart+12*36e5;r.track.forEach(function(p){if(p.t>=next&&p.t<r.eta-3*36e5){var lab=next;next+=12*36e5;
-		L.circleMarker([p.lat,p.lon],{radius:3.5,color:'#fff',weight:1.5,fillColor:'#0b2a4a',fillOpacity:1}).bindTooltip(pWhen(lab),{permanent:true,direction:'left',offset:[-6,0],className:'pass-lbl tick'}).addTo(passLayer);}});}
-	if(WP)WP.forEach(function(w,i){
-		var eta=i===0?r.depart:r.legs[i-1].end,t=(i===0?'Depart ':'')+pWhen(eta);
-		if(!/^WP \d/.test(w.n))t=pEsc(w.n)+' · '+t;
-		L.marker([w.lat,w.lon],{icon:L.divIcon({className:'pass-eta-mk',html:'<span class="pass-lbl'+(w.gs?' gs':'')+'">'+t+'</span>',iconSize:[1,1],iconAnchor:w.boat?[-18,24]:[-16,9]}),interactive:false,keyboard:false,zIndexOffset:700}).addTo(passLayer);
-	});
+	var pc=document.getElementById('passCard');if(!pc||!pc.classList.contains('on')){map.removeLayer(passLayer);return;}   /* suggestions only with the brief open */
+	/* Opening the brief doesn't change the chart (Brad, 2026-11-15): no ETA labels or
+	   12-hour marks on the map; the ETAs and leg details are on the waypoint cards
+	   and table. Only Claude's suggested changes are drawn, while they wait for approval. */
+	if(!(PASS.prop&&PASS.prop.all)){map.removeLayer(passLayer);return;}
 	if(PASS.prop&&PASS.prop.all){var PP=PASS.prop;
 		L.polyline(PP.all.wps.map(function(w){return [w.lat,w.lon];}),{color:'#b48cff',weight:2,dashArray:'4 6',opacity:.8,interactive:false}).addTo(passLayer);
 		if(PP.changes.some(function(c){return c.st===true;}))L.polyline(PP.mine.wps.map(function(w){return [w.lat,w.lon];}),{color:'#b48cff',weight:4,opacity:.9,interactive:false}).addTo(passLayer);
