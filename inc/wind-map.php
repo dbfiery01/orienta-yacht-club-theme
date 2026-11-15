@@ -3687,6 +3687,7 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 var PB_AJAX_OK=<?php echo wp_json_encode( function_exists( 'oyc_passage_brief_ai_ready' ) && oyc_passage_brief_ai_ready() ); ?>;
 var PB_NONCE=<?php echo wp_json_encode( function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'oyc_passage_brief' ) : '' ); ?>;
 var PB_LOGGED=<?php echo wp_json_encode( is_user_logged_in() ); ?>;
+var PB_ADMIN=<?php echo wp_json_encode( current_user_can( 'manage_options' ) ); ?>;
 var PASS={
 	boat:'Shannon 43',floor:6.5,
 	/* Shannon 43 polars: boat speed (kt), rows = TWA°, columns = TWS kt */
@@ -4060,7 +4061,7 @@ function renderPassCard(){
 		h+='<div class="pc-sec"><h4>'+(PASS.ai?'Claude’s take':'Summary')+'</h4><div class="pc-ai"><p>'+pEsc(PASS.ai?PASS.ai.take:sm.text)+'</p></div>';
 		if(!PASS.ai){
 			if(PB_AJAX_OK)h+='<div class="pc-acts" style="margin-top:8px"><button type="button" class="pc-btn pri" id="pcAsk"'+(PASS.aiBusy?' disabled':'')+'>'+(PASS.aiBusy?'Claude is writing…':'✦ Ask Claude for the brief')+'</button></div>';
-			else h+='<p class="pc-note">'+(PB_LOGGED?'Claude brief isn’t switched on for this site yet.':'Sign in to ask Claude for a written brief.')+'</p>';
+			else h+='<p class="pc-note">'+(PB_LOGGED?'Claude brief isn’t switched on for this site yet.'+(PB_ADMIN?' Add the API key in WP Admin → Settings → Passage brief.':''):'Sign in to ask Claude for a written brief.')+'</p>';
 			if(PASS.aiErr)h+='<p class="pc-note warn">'+pEsc(PASS.aiErr)+'</p>';
 		}
 		h+='</div>'+passRecordHTML()+'<div class="pc-acts"><button type="button" class="pc-btn" id="pcGpx">Save GPX</button><button type="button" class="pc-btn" id="pcRerun"'+(PASS.busy?' disabled':'')+'>Re-run forecast</button></div>'
