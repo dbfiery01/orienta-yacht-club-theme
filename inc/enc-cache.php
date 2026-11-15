@@ -453,7 +453,26 @@ function oyc_enc_fi() {
 	if ( ! isset( $fmts[ $fk ] ) ) {
 		$fk = 'xml';
 	}
-	$key  = 'oyc_enc_fi_' . md5( round( $lat, 5 ) . ',' . round( $lon, 5 ) . $fk );
+	/* p = display settings as in oyc_enc_probe (Name:value,..., ';' for commas),
+	   e.g. IntendedUsage:5,HonorScamin:1 to ask the harbour charts with every
+	   sounding; r = radius in metres (10-2000, default 50). */
+	$dp = '';
+	$pr = isset( $_GET['p'] ) && is_string( $_GET['p'] ) ? sanitize_text_field( wp_unslash( $_GET['p'] ) ) : '';
+	if ( '' !== $pr ) {
+		$ps = array();
+		foreach ( explode( ',', $pr ) as $pair ) {
+			$kv = explode( ':', $pair, 2 );
+			if ( 2 === count( $kv ) && preg_match( '/^[A-Za-z]{2,40}$/', $kv[0] ) && preg_match( '/^[0-9.;]{1,20}$/', $kv[1] ) ) {
+				$v    = str_replace( ';', ',', $kv[1] );
+				$ps[] = '{"name":"' . $kv[0] . '","value":' . ( 'IntendedUsage' === $kv[0] || false !== strpos( $v, ',' ) ? '"' . $v . '"' : $v ) . '}';
+			}
+		}
+		if ( $ps ) {
+			$dp = '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[' . implode( ',', $ps ) . ']}}}';
+		}
+	}
+	$rad  = isset( $_GET['r'] ) ? max( 10, min( 2000, absint( $_GET['r'] ) ) ) : 50;
+	$key  = 'oyc_enc_fi_' . md5( round( $lat, 5 ) . ',' . round( $lon, 5 ) . $fk . $dp . $rad );
 	$out  = get_transient( $key );
 	if ( ! $out ) {
 		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
@@ -463,7 +482,7 @@ function oyc_enc_fi() {
 		$o  = 20037508.342789244;
 		$x  = $lon * $o / 180;
 		$y  = log( tan( ( 90 + $lat ) * M_PI / 360 ) ) * $o / M_PI;
-		$h  = 50; // metres each side: 101 px at ~1 m
+		$h  = $rad / cos( deg2rad( $lat ) ); // ground metres each side → Web Mercator
 		$url = add_query_arg( array(
 			'service'      => 'WMS',
 			'request'      => 'GetFeatureInfo',
@@ -478,13 +497,14 @@ function oyc_enc_fi() {
 			'i'            => 50,
 			'j'            => 50,
 			'info_format'  => $fmts[ $fk ],
-			'feature_count' => 50,
-		), OYC_ENC_WMS );
+			'feature_count' => 500,
+		) + ( $dp ? array( 'display_params' => rawurlencode( $dp ) ) : array() ), OYC_ENC_WMS );
 		$r   = wp_remote_get( $url, array( 'timeout' => 15 ) );
 		$out = is_wp_error( $r ) ? array( 'error' => $r->get_error_message() ) : array(
 			'code' => wp_remote_retrieve_response_code( $r ),
 			'type' => wp_remote_retrieve_header( $r, 'content-type' ),
-			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 20000 ),
+			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 300000 ),
+			'display_params' => $dp,
 		);
 		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
 	}
