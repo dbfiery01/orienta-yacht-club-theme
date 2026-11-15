@@ -329,6 +329,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .co-sw{display:block;font-size:.72rem;margin-top:2px}
 [data-theme="dark"] #oycwm .wpt .s.sw-bad{color:#ff8a7a}
 [data-theme="dark"] #oycwm .wpt .s.sw-shoal{color:#f5b041}
+#oycwm .leg-hit{cursor:copy}
 #oycwm .lyr-draft{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:.8rem}
 #oycwm .lyr-draft label{font-weight:700}
 #oycwm .lyr-draft input{width:62px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--panel);color:var(--ink)}
@@ -1975,7 +1976,7 @@ function pinReading(lat,lon,ti,fc){
    WP1's leg is measured from Buoy 42; every later waypoint's leg is measured
    from the previous waypoint. Deleting a waypoint re-numbers the rest and
    recomputes the legs + route line. */
-var routeLayer=L.layerGroup().addTo(map);
+var routeLayer=L.layerGroup().addTo(map),legHitLayer=L.layerGroup().addTo(map);   /* legHitLayer: see drawLegHits */
 function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
 /* First point is the Start (leg measured from Buoy 42); later points are
    Waypoint 1..n, each leg measured from the previous point. */
@@ -2063,11 +2064,32 @@ function drawLegLabels(){
 }
 function drawRouteLine(){
 	var pts=routePts();
-	if(pts.length<2){routeLayer.clearLayers();routeLine=null;legLayer.clearLayers();return;}
+	if(pts.length<2){routeLayer.clearLayers();routeLine=null;legLayer.clearLayers();legHitLayer.clearLayers();return;}
 	if(routeLine&&routeLayer.hasLayer(routeLine)){routeLine.setLatLngs(pts);}
 	else{routeLayer.clearLayers();routeLine=L.polyline(pts,{color:'#0b2a4a',weight:2,opacity:.7,dashArray:'5 5',interactive:false}).addTo(routeLayer);}
+	drawLegHits(pts);
 	drawLegLabels();
 	drawLaylines();
+}
+/* Click a leg of the route line to put a new waypoint there, between its two
+   points (Brad, 2026-11-15). Each leg gets a wide invisible line to click; the
+   new point goes on the line under the click, and can be dragged from there. */
+function drawLegHits(pts){
+	legHitLayer.clearLayers();
+	if(pins.some(function(p){return p._dragging;}))return;
+	var o=routeOrigin()?1:0;
+	for(var k=0;k<pts.length-1;k++)(function(k){
+		var a=pts[k],b=pts[k+1],at=k+1-o;   /* index in pins of the leg's end point */
+		L.polyline([a,b],{color:'#0b2a4a',weight:18,opacity:0,className:'leg-hit',bubblingMouseEvents:false})
+			.bindTooltip('Click to add a waypoint here',{sticky:true,direction:'top',offset:[0,-8]})
+			.on('click',function(e){
+				L.DomEvent.stop(e);
+				if(typeof PASS!=='undefined'&&PASS.picking){passPick(e);return;}
+				var rc=document.getElementById('tgRace');if(mode==='radar'||(rc&&rc.checked))return;
+				var A=map.latLngToLayerPoint(a),B=map.latLngToLayerPoint(b),P=L.LineUtil.closestPointOnSegment(map.latLngToLayerPoint(e.latlng),A,B),ll=map.layerPointToLatLng(P);
+				addPin(ll.lat,((ll.lng+540)%360)-180,{at:Math.max(0,at)});
+			}).addTo(legHitLayer);
+	})(k);
 }
 /* redraw the route line + re-number markers + refresh every callout (indices moved) */
 function refreshRoute(){
