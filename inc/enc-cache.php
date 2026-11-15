@@ -372,6 +372,64 @@ function oyc_enc_probe() {
 	wp_send_json( $out );
 }
 
+/* admin-ajax oyc_enc_src: one-off download of NOAA's official ENC chart files
+   for a state (charts.noaa.gov/ENCs/<ST>_ENCs.zip; CT, NY or RI) into
+   uploads/oyc-enc-src/, so the soundings can be read out of them and turned
+   into the map's own sounding data (Brad, 2026-11-15: soundings at every
+   zoom, consistent across the Sound). The download runs in WP-Cron, never in
+   the visitor's request; asking again within 30 days just reports the file.
+   Answers: {file, url, bytes, time} | {queued} | {running} | {error}. */
+define( 'OYC_ENC_SRC_STATES', 'CT,NY,RI' );
+function oyc_enc_src_dir() {
+	return trailingslashit( wp_upload_dir()['basedir'] ) . 'oyc-enc-src';
+}
+add_action( 'wp_ajax_oyc_enc_src', 'oyc_enc_src' );
+add_action( 'wp_ajax_nopriv_oyc_enc_src', 'oyc_enc_src' );
+function oyc_enc_src() {
+	$st = isset( $_GET['st'] ) && is_string( $_GET['st'] ) ? strtoupper( sanitize_key( wp_unslash( $_GET['st'] ) ) ) : '';
+	if ( ! in_array( $st, explode( ',', OYC_ENC_SRC_STATES ), true ) ) {
+		wp_send_json( array( 'error' => 'st must be one of ' . OYC_ENC_SRC_STATES ), 400 );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	$f = oyc_enc_src_dir() . '/' . $st . '_ENCs.zip';
+	if ( file_exists( $f ) && time() - filemtime( $f ) < 30 * DAY_IN_SECONDS && empty( $_GET['refresh'] ) ) {
+		wp_send_json( array(
+			'file'  => basename( $f ),
+			'url'   => set_url_scheme( trailingslashit( wp_upload_dir()['baseurl'] ) . 'oyc-enc-src/' . basename( $f ) ),
+			'bytes' => filesize( $f ),
+			'time'  => gmdate( 'c', filemtime( $f ) ),
+		) );
+	}
+	if ( get_transient( 'oyc_enc_src_run_' . $st ) ) {
+		wp_send_json( array( 'running' => 1, 'last' => get_option( 'oyc_enc_src_status', '' ) ) );
+	}
+	if ( ! wp_next_scheduled( 'oyc_enc_src_fetch', array( $st ) ) ) {
+		wp_schedule_single_event( time(), 'oyc_enc_src_fetch', array( $st ) );
+		spawn_cron();
+	}
+	wp_send_json( array( 'queued' => 1, 'last' => get_option( 'oyc_enc_src_status', '' ) ) );
+}
+add_action( 'oyc_enc_src_fetch', 'oyc_enc_src_fetch' );
+function oyc_enc_src_fetch( $st ) {
+	if ( ! in_array( $st, explode( ',', OYC_ENC_SRC_STATES ), true ) || get_transient( 'oyc_enc_src_run_' . $st ) ) {
+		return;
+	}
+	set_transient( 'oyc_enc_src_run_' . $st, 1, 15 * MINUTE_IN_SECONDS );
+	@set_time_limit( 900 ); // phpcs:ignore
+	wp_mkdir_p( oyc_enc_src_dir() );
+	$f   = oyc_enc_src_dir() . '/' . $st . '_ENCs.zip';
+	$tmp = $f . '.part';
+	$r   = wp_remote_get( 'https://charts.noaa.gov/ENCs/' . $st . '_ENCs.zip', array( 'timeout' => 600, 'stream' => true, 'filename' => $tmp ) );
+	$ok  = ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) && file_exists( $tmp ) && filesize( $tmp ) > 100000 && 'PK' === file_get_contents( $tmp, false, null, 0, 2 );
+	if ( $ok ) {
+		rename( $tmp, $f );
+	} else {
+		@unlink( $tmp );
+	}
+	update_option( 'oyc_enc_src_status', gmdate( 'c' ) . ' ' . $st . ': ' . ( $ok ? 'ok ' . filesize( $f ) : ( is_wp_error( $r ) ? $r->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code( $r ) ) ), false );
+	delete_transient( 'oyc_enc_src_run_' . $st );
+}
+
 /* admin-ajax oyc_enc_sd: read-only test of NOAA's ENC Direct map services
    (encdirect.noaa.gov), which serve chart features such as soundings as data,
    so the map could draw its own soundings at any zoom (Brad, 2026-11-15:
