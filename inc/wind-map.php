@@ -653,7 +653,7 @@ function oyc_wind_map_html( $embed = false ) {
 	#oycwm .wptab.wp-below.wp-img{display:none}
 	#oycwm .wptab.wp-below .routebar{padding:6px 10px;gap:6px}
 	#oycwm .wptab.wp-below .route-info{flex-basis:100%}
-	#oycwm .wptab.wp-below .route-btns{flex-wrap:nowrap;gap:4px;margin-left:0;width:100%;justify-content:space-between}
+	#oycwm .wptab.wp-below .route-btns{flex-wrap:wrap;gap:4px;margin-left:0;width:100%;justify-content:flex-start}   /* wraps: Autoroute made it six buttons */
 	#oycwm .wptab.wp-below .route-btns button,#oycwm .wptab.wp-below .route-btns a{padding:6px 8px;font-size:.66rem}
 	#oycwm .wptab.wp-below .wpt tbody tr{padding:6px 10px 6px 18px}
 	#oycwm .wptab.wp-below .wpt-foot{padding:5px 10px}
@@ -2361,16 +2361,16 @@ function swGrid(a,b,padNm,v,z){
 function swCell(G,lat,lon){var p=swPx(lat,lon,G.z);return [Math.max(0,Math.min(G.W-1,Math.floor((p[0]-G.x0)/G.f))),Math.max(0,Math.min(G.H-1,Math.floor((p[1]-G.y0)/G.f)))];}
 function swCellLL(G,cx,cy){return swLL(G.x0+(cx+.5)*G.f,G.y0+(cy+.5)*G.f,G.z);}
 /* shortest water path a→b on the grid, simplified to turning points ([lat,lon] list, ends excluded), or null */
-function swPath(G,a,b){
+function swPath(G,a,b,clNm){
 	var W=G.W,H=G.H,N=W*H,src=G.blk,blk=new Uint8Array(N),i,x,y;
-	/* keep ~40 m off anything blocked: grow blocked cells by the clearance */
-	var cl=Math.max(1,Math.round(0.022*swPxNm((a.lat+b.lat)/2,G.z)/G.f));
+	/* keep clNm (0.05 nm ≈ 90 m, else 0.025) off land and shoal water: grow blocked cells by the clearance */
+	var cl=Math.max(1,Math.round((clNm||0.05)*swPxNm((a.lat+b.lat)/2,G.z)/G.f)),opened=new Uint8Array(N);
 	for(y=0;y<H;y++)for(x=0;x<W;x++){if(!src[y*W+x])continue;
 		for(var dy=-cl;dy<=cl;dy++)for(var dx=-cl;dx<=cl;dx++){var X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<W&&Y<H)blk[Y*W+X]=1;}}
 	var s=swCell(G,a.lat,a.lon),t=swCell(G,b.lat,b.lon);
 	/* waypoints often sit in a shallow harbour or on the shore: open a small circle round each end, but never through land */
 	[s,t].forEach(function(e){var r=Math.max(2,Math.round(0.15*swPxNm(a.lat,G.z)/G.f));
-		for(var dy=-r;dy<=r;dy++)for(var dx=-r;dx<=r;dx++){var X=e[0]+dx,Y=e[1]+dy;if(X<0||Y<0||X>=W||Y>=H||dx*dx+dy*dy>r*r)continue;if(src[Y*W+X]!==2)blk[Y*W+X]=0;}
+		for(var dy=-r;dy<=r;dy++)for(var dx=-r;dx<=r;dx++){var X=e[0]+dx,Y=e[1]+dy;if(X<0||Y<0||X>=W||Y>=H||dx*dx+dy*dy>r*r)continue;if(src[Y*W+X]!==2){blk[Y*W+X]=0;opened[Y*W+X]=1;}}
 		blk[e[1]*W+e[0]]=0;});
 	var si=s[1]*W+s[0],ti=t[1]*W+t[0],g=new Float32Array(N).fill(Infinity),par=new Int32Array(N).fill(-1),done=new Uint8Array(N),h=swHeap();
 	g[si]=0;h.push(si,0);var DX=[1,-1,0,0,1,1,-1,-1],DY=[0,0,1,-1,1,-1,1,-1],DC=[1,1,1,1,1.4142,1.4142,1.4142,1.4142],tx=t[0],ty=t[1],found=false,it=0;
@@ -2386,7 +2386,15 @@ function swPath(G,a,b){
 	var out=[],at=0;
 	while(at<path.length-1){var best=at+1;for(var j=path.length-1;j>at+1;j--){if(clear(path[at],path[j])){best=j;break;}}
 		if(best<path.length-1)out.push(best);at=best;}
-	return out.slice(0,10).map(function(j){var X=path[j]%W;return swCellLL(G,X,(path[j]-X)/W);});
+	/* tidy up: drop any turning point whose neighbours see each other without crossing
+	   land or shoal water (the clearance relaxed), shortest hops first */
+	function open2(i1,i2){var x1=i1%W,y1=(i1-x1)/W,x2=i2%W,y2=(i2-x2)/W,n=Math.max(Math.abs(x2-x1),Math.abs(y2-y1))*2;
+		for(var j=1;j<n;j++){var X=Math.round(x1+(x2-x1)*j/n),Y=Math.round(y1+(y2-y1)*j/n),q=Y*W+X;if(src[q]&&!opened[q])return false;}return true;}
+	var V=[si].concat(out.map(function(j){return path[j];}),[ti]),changed=true;
+	while(changed&&V.length>2){changed=false;var bestK=-1,bestD=Infinity;
+		for(var k=1;k<V.length-1;k++){if(!open2(V[k-1],V[k+1]))continue;var xa=V[k-1]%W,xb=V[k]%W,d=Math.hypot(xb-xa,(V[k]-xb)/W-(V[k-1]-xa)/W);if(d<bestD){bestD=d;bestK=k;}}
+		if(bestK>0){V.splice(bestK,1);changed=true;}}
+	return V.slice(1,-1).slice(0,8).map(function(c){var X=c%W;return swCellLL(G,X,(c-X)/W);});
 }
 /* nearest clear water to a point (for a waypoint on land), or null */
 function swNearestWater(lat,lon,v){
@@ -2428,7 +2436,7 @@ function swAskClaude(a,b,G,v,why){
 /* fix one bad leg: grid search, a wider search, then Claude */
 function swFixLeg(a,b,v,why){
 	var nm=distNM(a.lat,a.lon,b.lat,b.lon),z=swZoom(nm),lastG=null;
-	function tryPad(pad,zz){return swGrid(a,b,pad,v,zz).then(function(G){if(!G)return null;lastG=G;return swPath(G,a,b);});}
+	function tryPad(pad,zz){return swGrid(a,b,pad,v,zz).then(function(G){if(!G)return null;lastG=G;return swPath(G,a,b,0.05)||swPath(G,a,b,0.025);});}
 	return tryPad(Math.max(1.2,0.35*nm),z)
 		.then(function(p){return p||tryPad(Math.max(4,1.0*nm),Math.max(11,z-1));})
 		.then(function(p){
