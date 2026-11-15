@@ -56,7 +56,7 @@ define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
 define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
 /* The "safe water" layers s6..s60 and h6..h60 (never shown on the map). The
    passage checker and Autoroute in inc/wind-map.php read their pixels to find
-   land and water shallower than the boat's safety depth (10 ft). NOAA
+   land and water shallower than the boat's safety depth (draft + 4 ft). NOAA
    draws them with the safety contour at that depth (6, 10, 12, 18, 30 or 60 ft,
    the charted contours; NOAA itself would pick the next deeper contour), and
    only the base and standard chart categories, so soundings and labels are

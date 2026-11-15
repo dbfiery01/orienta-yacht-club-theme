@@ -2210,8 +2210,9 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
 
 /* ── Safe water: land and shoal check on every leg, and Autoroute ──────────
    Reads the "safe water" chart tiles (inc/enc-cache.php, OYC_ENC_SAFE_FT): NOAA's
-   chart drawn with its safety contour at 10 ft (SAFE_MIN; on older charts with
-   only 6/12 ft contours NOAA uses the 12 ft line).
+   chart drawn with its safety contour at the boat's draft + 4 ft, rounded up to
+   the next contour we cache (6, 10, 12, 18, 30 or 60 ft; on older charts with
+   only 6/12 ft contours NOAA uses the 12 ft line for 10).
    Land is transparent, water shallower than the contour (and drying banks) is
    tinted, deeper water is white. Every leg inside the chart area (Chesapeake to
    Cape Cod) is sampled pixel by pixel as waypoints are connected; a leg over land
@@ -2220,9 +2221,9 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    waypoints and offers them to approve or reject; when it can't find a way, it
    asks Claude, and checks Claude's waypoints the same way. Not for navigation:
    rocks, wrecks and buoys are not checked. */
-var SAFE_FT=[6,10,12,18,30,60],SAFE_MIN=10,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
+var SAFE_FT=[6,10,12,18,30,60],SAFE_MARGIN=4,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
 function boatDraft(){var d=6;try{var v=parseFloat(localStorage.getItem(DRAFT_KEY));if(isFinite(v)&&v>=1&&v<=25)d=v;}catch(e){}return d;}
-function safeFt(){return SAFE_MIN;}/* Brad 2026-11-15: warn for water under 10 ft */
+function safeFt(){var need=boatDraft()+SAFE_MARGIN;for(var i=0;i<SAFE_FT.length;i++)if(SAFE_FT[i]>=need-0.01)return SAFE_FT[i];return 60;}/* Brad 2026-11-15: draft + 4 ft, next contour up */
 function swVar(){return 's'+safeFt();}
 function swIn(lat,lon){return lat>=SAFE_AREA[0]&&lat<=SAFE_AREA[2]&&lon>=SAFE_AREA[1]&&lon<=SAFE_AREA[3];}
 function swTS(z){return z<=ENC_HIRES_MAX?512:256;}
@@ -2336,7 +2337,7 @@ function swNote(pin,cls){
 function swUI(){
 	var b=document.getElementById('rbAuto');
 	if(b){var n=SW.res?SW.res.n:0;b.classList.toggle('warn',n>0);b.innerHTML=n?'&#9888;&nbsp;Autoroute ('+n+')':'Autoroute';
-		b.title=n?('Fix '+n+' leg'+(n>1?'s':'')+' that cross land or water under '+safeFt()+' ft'):'Check the legs for land and water under '+safeFt()+' ft';}
+		b.title=n?('Fix '+n+' leg'+(n>1?'s':'')+' that cross land or water under '+safeFt()+' ft'):'Check the legs for land and water under '+safeFt()+' ft (draft '+boatDraft()+' ft + '+SAFE_MARGIN+')';}
 	for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));
 	renderWpTable();swPanel();
 }
@@ -2454,7 +2455,7 @@ function swAutoroute(){
 	var r=SW.res,v=swVar();
 	/* the leg check is still loading chart tiles (a long route takes a while the first time): say so, and go on when it's done */
 	if(!r||SW.running||SW.key!==swKey()){SW.wantAuto=true;SW.fix={busy:true,items:[],msg:'',checking:true};swPanel();if(!SW.running)swRun();return;}
-	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs. Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
+	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft). Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
 	SW.fix={busy:true,items:[],msg:''};swPanel();
 	var legs=swLegs(),jobs=[];
 	pins.forEach(function(p){if(r.pins[p.id]===2)jobs.push(swNearestWater(p.lat,p.lon,v).then(function(ll){
@@ -2490,7 +2491,7 @@ function swPanel(){
 		F.items.forEach(function(it,k){if(it.st===true)nOk++;
 			h+='<li class="'+(it.st===true?'ok':it.st===false?'no':'')+'"><span>'+pEsc(it.why)+'</span>'
 				+(it.kind==='none'?'':'<span class="pc-yn"><button type="button" class="pc-y'+(it.st===true?' on':'')+'" data-ara="'+k+'" aria-pressed="'+(it.st===true)+'">✓ Approve</button><button type="button" class="pc-n'+(it.st===false?' on':'')+'" data-arr="'+k+'" aria-pressed="'+(it.st===false)+'">✕ Reject</button></span>')+'</li>';});
-		h+='</ol><p class="ar-note">Purple on the chart. Checked against land and the '+safeFt()+' ft depth contour. Rocks, wrecks and buoys aren’t checked: look at the chart. Not for navigation.</p>'
+		h+='</ol><p class="ar-note">Purple on the chart. Checked against land and the '+safeFt()+' ft depth contour (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft; set your draft in Layers). Rocks, wrecks and buoys aren’t checked: look at the chart. Not for navigation.</p>'
 			+'<div class="pc-acts"><button type="button" class="pc-btn pri" data-ar="ok"'+(nOk?'':' disabled')+'>Apply '+(nOk?nOk+' approved':'approved')+'</button><button type="button" class="pc-btn" data-ar="x">Dismiss</button></div>';}
 	el.innerHTML=h;
 }
@@ -2511,7 +2512,7 @@ document.addEventListener('click',function(e){
 });
 /* Draft (Layers): saved in this browser; changes the depth the legs are checked against */
 (function(){var inp=document.getElementById('boatDraft');if(!inp)return;
-	function note(){var n=document.getElementById('draftNote');if(n)n.textContent='Legs are checked for land and water under '+safeFt()+' ft.';}
+	function note(){var n=document.getElementById('draftNote');if(n)n.textContent='Legs are checked for land and water under '+safeFt()+' ft (draft + '+SAFE_MARGIN+' ft, next charted depth).';}
 	inp.value=boatDraft();note();
 	inp.addEventListener('change',function(){var d=parseFloat(inp.value);if(!isFinite(d)||d<1||d>25){inp.value=boatDraft();return;}
 		try{localStorage.setItem(DRAFT_KEY,String(d));}catch(e){}note();SW.key='';SW.fix=null;SW.prev.clearLayers();swPanel();swSchedule();});})();
