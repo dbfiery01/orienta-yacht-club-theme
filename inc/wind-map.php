@@ -721,7 +721,8 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-leg.gs{border-color:rgba(232,104,60,.55)}
 #oycwm .pc-lh{display:flex;align-items:center;gap:6px;font-weight:700;color:#fff}
 #oycwm .pc-n{flex:none;width:18px;height:18px;border-radius:50%;background:#d4a851;color:#1b1203;font-size:.64rem;font-weight:800;display:flex;align-items:center;justify-content:center}
-#oycwm .pc-lh .pc-eta{margin-left:auto;font-weight:800;color:#d4a851;font-variant-numeric:tabular-nums;white-space:nowrap}
+#oycwm .pc-lh .pc-eta{margin-left:auto;font-weight:800;color:#d4a851;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;line-height:1.15}
+#oycwm .pc-lh .pc-eta small{display:block;font-size:.58rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#9fc3da;max-width:110px;overflow:hidden;text-overflow:ellipsis}
 #oycwm .pc-lg{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:1px;margin-top:4px;font-variant-numeric:tabular-nums}
 #oycwm .pc-lg dt{color:#9fc3da}
 #oycwm .pc-lg dd{margin:0;color:#eaf4fb}
@@ -4229,7 +4230,8 @@ function renderPassCard(){
 		h+='</div><div class="pc-sec"><h4>Legs</h4><ol class="pc-legs">';
 		r.legs.forEach(function(l,i){
 			var mf=l.h?l.motorH/l.h:0;
-			h+='<li class="pc-leg'+(l.gs?' gs':'')+'" data-leg="'+i+'" tabindex="0"><div class="pc-lh"><span class="pc-n">'+(i+1)+'</span>'+pEsc(l.from)+' → '+pEsc(l.to)+'<span class="pc-eta">'+pEsc(pWhen(l.end))+'</span></div>'
+			h+='<li class="pc-leg'+(l.gs?' gs':'')+'" data-leg="'+i+'" tabindex="0"><div class="pc-lh"><span class="pc-n">'+(i+1)+'</span>'+pEsc(l.from)+' → '+pEsc(l.to)+'<span class="pc-eta" title="'+pEsc('Arrive at '+l.to+' '+pWhenLong(l.end)+' ET')+'"><small>ETA '+pEsc(l.to)+'</small>'+pEsc(pWhen(l.end))+'</span></div>'
+				+(l.nm<0.5?'<p class="pc-note warn">'+pEsc(l.from)+' and '+pEsc(l.to)+' are almost on top of each other. You can delete one.</p>':'')
 				+'<dl class="pc-lg"><dt>Course</dt><dd><b>'+pad3(l.brgM)+'°M</b> · '+Math.round(l.nm)+' nm</dd>'
 				+'<dt>Wind</dt><dd>'+(l.tws==null?'beyond the forecast':pLegWind(l)+' · TWA '+Math.round(l.twa)+'°')+'</dd>'
 				+'<dt>Sailing</dt><dd>'+pEsc(l.pos)+' · <b>'+l.bsp.toFixed(1)+' kt</b>'+(mf>0.5?'<span class="pc-tag motor">MOTOR-SAIL</span>':mf>0.15?'<span class="pc-tag motor">MOTOR '+Math.round(mf*100)+'%</span>':'')+'</dd>'
