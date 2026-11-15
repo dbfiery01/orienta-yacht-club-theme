@@ -45,14 +45,14 @@ define( 'OYC_ENC_HOME_ZOOMS', '9,10,11,12,13,14,15,16' );   // every zoom the ch
    cached tiles are thrown away. */
 define( 'OYC_ENC_HIRES_MAX', 12 );
 define( 'OYC_ENC_VER', 4 );
-/* The "detail" chart layer. Zoomed out (zoom 10-11) NOAA draws its small-scale
+/* The "detail" chart layer (zoom 9-12). Zoomed out NOAA draws its small-scale
    charts, where Long Island Sound is one flat light-blue area that looks just
    like the street map. Asking for the approach-scale charts only (ENC usage
    band 4, display_params IntendedUsage "4") gives white deep water, blue
    shallows and soundings there. Those charts don't cover open ocean, so this is
    a second layer over the normal one: where it is empty the normal chart shows
    through. Cached under oyc-enc/d/. Must match encDetail in inc/wind-map.php. */
-define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
+define( 'OYC_ENC_DETAIL_ZOOMS', '9,10,11,12' );
 define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
 /* The "safe water" layers s6..s60 and h6..h60 (never shown on the map). The
    passage checker and Autoroute in inc/wind-map.php read their pixels to find
@@ -80,7 +80,7 @@ function oyc_enc_variant( $v ) {
 	if ( preg_match( '/^(s|h)(\d{1,2})$/', $v, $m ) && in_array( (int) $m[2], array_map( 'intval', explode( ',', OYC_ENC_SAFE_FT ) ), true ) ) {
 		return $m[1] . (int) $m[2];
 	}
-	if ( preg_match( '/^(c|cd|ch|cx)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
+	if ( preg_match( '/^(c|cd|ch|cx|ce)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
 		return $m[1] . (int) $m[2];
 	}
 	return false;
@@ -91,13 +91,13 @@ function oyc_enc_is_safe( $v ) {
 	return (bool) preg_match( '/^[sh]\d/', (string) $v );
 }
 
-/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-12), cx5 (harbour charts with every sounding, zoom 13+). */
+/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 9-12, under the map's own soundings), ch5 (harbour charts, zoom 10-11, no longer drawn), ce5 (approach charts with every sounding, zoom 13), cx5 (harbour charts with every sounding, zoom 13+). */
 function oyc_enc_is_contour( $v ) {
-	return (bool) preg_match( '/^c[dhx]?\d/', (string) $v );
+	return (bool) preg_match( '/^c[dhxe]?\d/', (string) $v );
 }
 
 /* The chart on the map is drawn with NOAA's shallow/safety/deep contours all
-   at 5 ft (variant c5, and cd5 for the zoom 10-11 detail layer), so only water
+   at 5 ft (variant c5, and cd5 for the zoom 9-12 detail layer), so only water
    shallower than 5 ft is shaded blue and everything deeper is white with its
    soundings (Brad, 2026-11-15). Approach-scale cells (e.g. Fishers Island
    Sound) still draw flat blue at any contour, so at zoom 10-12 a harbour-band
@@ -108,6 +108,19 @@ function oyc_enc_is_contour( $v ) {
    with HonorScamin 1 (every sounding drawn) sits on top at zoom 13-17.
    The home-waters warmer keeps c5 / cd5 loaded; wind-map.php reads this. */
 define( 'OYC_ENC_CHART_FT', 5 );
+/* Soundings by zoom (Brad, 2026-11-15): soundings at every zoom, the same
+   across the Sound, fewer as you zoom out with the shallowest always shown.
+     z9-12    c5 for land and names, under the map's own chart background
+              (assets/chartbg, tools/build-chartbg.py: white water, blue under
+              5 ft, grey contours, rocks) and its own soundings
+              (assets/soundings, tools/build-soundings.py), both drawn from
+              NOAA's ENC files, inside SND_BOX. NOAA's charts at these scales
+              show much of the Sound as one flat blue sheet (Brad wanted it the
+              same at every zoom).
+     z13      ce5 = approach charts with every sounding, cx5 where those are
+              flat blue (Fishers Island Sound): encMix in inc/wind-map.php
+     z14+     cx5 = harbour charts with every sounding */
+
 
 /** NOAA display settings for a safe-water or contour variant (contour in metres). */
 function oyc_enc_safe_params( $v ) {
@@ -127,7 +140,10 @@ function oyc_enc_safe_params( $v ) {
 	if ( 'h' === $k || 'ch' === $k || 'cx' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"5"}';
 	}
-	if ( 'cx' === $k ) {
+	if ( 'ce' === $k ) {
+		$p[] = '{"name":"IntendedUsage","value":"4"}';
+	}
+	if ( 'cx' === $k || 'ce' === $k ) {
 		$p[] = '{"name":"HonorScamin","value":1}';
 	} elseif ( 'cd' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"4"}';
@@ -191,10 +207,13 @@ function oyc_enc_zoom_ok( $z, $v ) {
 	}
 	if ( oyc_enc_is_contour( $v ) ) {
 		if ( 0 === strpos( $v, 'ch' ) ) {
-			return $z >= 10 && $z <= 12;
+			return $z >= 10 && $z <= 11;
+		}
+		if ( 0 === strpos( $v, 'ce' ) ) {
+			return 13 === (int) $z;
 		}
 		if ( 0 === strpos( $v, 'cx' ) ) {
-			return $z >= 13 && $z <= 17;
+			return $z >= 12 && $z <= 17;
 		}
 		return 0 === strpos( $v, 'cd' ) ? in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_DETAIL_ZOOMS ) ), true ) : ( $z >= 9 && $z <= 17 );
 	}
@@ -354,6 +373,311 @@ function oyc_enc_probe() {
 	wp_send_json( $out );
 }
 
+/* admin-ajax oyc_enc_src: one-off download of NOAA's official ENC chart files
+   for a state (charts.noaa.gov/ENCs/<ST>_ENCs.zip; CT, NY or RI) into
+   uploads/oyc-enc-src/, so the soundings can be read out of them and turned
+   into the map's own sounding data (Brad, 2026-11-15: soundings at every
+   zoom, consistent across the Sound). The download runs in WP-Cron, never in
+   the visitor's request; asking again within 30 days just reports the file.
+   Answers: {file, url, bytes, time} | {queued} | {running} | {error}. */
+define( 'OYC_ENC_SRC_STATES', 'CT,NY,RI' );
+function oyc_enc_src_dir() {
+	return trailingslashit( wp_upload_dir()['basedir'] ) . 'oyc-enc-src';
+}
+add_action( 'wp_ajax_oyc_enc_src', 'oyc_enc_src' );
+add_action( 'wp_ajax_nopriv_oyc_enc_src', 'oyc_enc_src' );
+function oyc_enc_src() {
+	$st = isset( $_GET['st'] ) && is_string( $_GET['st'] ) ? strtoupper( sanitize_key( wp_unslash( $_GET['st'] ) ) ) : '';
+	if ( ! in_array( $st, explode( ',', OYC_ENC_SRC_STATES ), true ) ) {
+		wp_send_json( array( 'error' => 'st must be one of ' . OYC_ENC_SRC_STATES ), 400 );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	$f = oyc_enc_src_dir() . '/' . $st . '_ENCs.zip';
+	if ( file_exists( $f ) && time() - filemtime( $f ) < 30 * DAY_IN_SECONDS && empty( $_GET['refresh'] ) ) {
+		wp_send_json( array(
+			'file'  => basename( $f ),
+			'url'   => set_url_scheme( trailingslashit( wp_upload_dir()['baseurl'] ) . 'oyc-enc-src/' . basename( $f ) ),
+			'bytes' => filesize( $f ),
+			'time'  => gmdate( 'c', filemtime( $f ) ),
+		) );
+	}
+	if ( get_transient( 'oyc_enc_src_run_' . $st ) ) {
+		wp_send_json( array( 'running' => 1, 'last' => get_option( 'oyc_enc_src_status', '' ) ) );
+	}
+	if ( ! wp_next_scheduled( 'oyc_enc_src_fetch', array( $st ) ) ) {
+		wp_schedule_single_event( time(), 'oyc_enc_src_fetch', array( $st ) );
+		spawn_cron();
+	}
+	wp_send_json( array( 'queued' => 1, 'last' => get_option( 'oyc_enc_src_status', '' ) ) );
+}
+add_action( 'oyc_enc_src_fetch', 'oyc_enc_src_fetch' );
+function oyc_enc_src_fetch( $st ) {
+	if ( ! in_array( $st, explode( ',', OYC_ENC_SRC_STATES ), true ) || get_transient( 'oyc_enc_src_run_' . $st ) ) {
+		return;
+	}
+	set_transient( 'oyc_enc_src_run_' . $st, 1, 15 * MINUTE_IN_SECONDS );
+	@set_time_limit( 900 ); // phpcs:ignore
+	wp_mkdir_p( oyc_enc_src_dir() );
+	$f   = oyc_enc_src_dir() . '/' . $st . '_ENCs.zip';
+	$tmp = $f . '.part';
+	$r   = wp_remote_get( 'https://charts.noaa.gov/ENCs/' . $st . '_ENCs.zip', array( 'timeout' => 600, 'stream' => true, 'filename' => $tmp ) );
+	$ok  = ! is_wp_error( $r ) && 200 === (int) wp_remote_retrieve_response_code( $r ) && file_exists( $tmp ) && filesize( $tmp ) > 100000 && 'PK' === file_get_contents( $tmp, false, null, 0, 2 );
+	if ( $ok ) {
+		rename( $tmp, $f );
+	} else {
+		@unlink( $tmp );
+	}
+	update_option( 'oyc_enc_src_status', gmdate( 'c' ) . ' ' . $st . ': ' . ( $ok ? 'ok ' . filesize( $f ) : ( is_wp_error( $r ) ? $r->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code( $r ) ) ), false );
+	delete_transient( 'oyc_enc_src_run_' . $st );
+}
+
+/* admin-ajax oyc_enc_sd: read-only test of NOAA's ENC Direct map services
+   (encdirect.noaa.gov), which serve chart features such as soundings as data,
+   so the map could draw its own soundings at any zoom (Brad, 2026-11-15:
+   soundings at every zoom, consistent across the Sound). svc = overview |
+   general | coastal | approach | harbour | berthing. Without layer: the
+   service's layer list. With layer (number) and bbox=s,w,n,e (inside
+   OYC_ENC_AREA, at most 0.2 degrees a side): up to 2000 features of that
+   layer. Shares the probe's 10-second lock; answers cached 1 hour. */
+add_action( 'wp_ajax_oyc_enc_sd', 'oyc_enc_sd' );
+add_action( 'wp_ajax_nopriv_oyc_enc_sd', 'oyc_enc_sd' );
+function oyc_enc_sd() {
+	/* svc = a service path under the ENC Direct REST root, e.g.
+	   encdirect/enc_approach (letters, digits, _ and one /), or "" / a folder
+	   name with list=1 to list what is there. */
+	$svc  = isset( $_GET['svc'] ) && is_string( $_GET['svc'] ) ? wp_unslash( $_GET['svc'] ) : '';
+	if ( ! preg_match( '#^[A-Za-z0-9_]{0,60}(/[A-Za-z0-9_]{1,60})?$#', $svc ) ) {
+		wp_send_json( array( 'error' => 'svc: a service path like encdirect/enc_approach' ), 400 );
+	}
+	$host  = isset( $_GET['host'] ) && 'charttools' === $_GET['host'] ? 'https://gis.charttools.noaa.gov/arcgis/rest/services/' : 'https://encdirect.noaa.gov/arcgis/rest/services/';
+	$base  = $host . $svc . '/MapServer';
+	$layer = isset( $_GET['layer'] ) && is_string( $_GET['layer'] ) && '' !== $_GET['layer'] ? absint( $_GET['layer'] ) : -1;
+	if ( ! empty( $_GET['list'] ) ) {
+		$url = add_query_arg( array( 'f' => 'json' ), $host . $svc );
+	} elseif ( $layer < 0 ) {
+		$url = add_query_arg( array( 'f' => 'json' ), $base . '/layers' );
+	} else {
+		$b = isset( $_GET['bbox'] ) && is_string( $_GET['bbox'] ) ? array_map( 'floatval', explode( ',', wp_unslash( $_GET['bbox'] ) ) ) : array();
+		list( $as, $aw, $an, $ae ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+		if ( 4 !== count( $b ) || $b[0] >= $b[2] || $b[1] >= $b[3] || $b[2] - $b[0] > 0.2 || $b[3] - $b[1] > 0.2 || $b[0] < $as || $b[2] > $an || $b[1] < $aw || $b[3] > $ae ) {
+			wp_send_json( array( 'error' => 'bbox=s,w,n,e inside the chart area, at most 0.2 degrees a side' ), 400 );
+		}
+		$url = add_query_arg( array(
+			'where'          => '1=1',
+			'geometry'       => $b[1] . ',' . $b[0] . ',' . $b[3] . ',' . $b[2],
+			'geometryType'   => 'esriGeometryEnvelope',
+			'inSR'           => 4326,
+			'outSR'          => 4326,
+			'spatialRel'     => 'esriSpatialRelIntersects',
+			'outFields'      => '*',
+			'returnGeometry' => 'true',
+			'resultRecordCount' => 2000,
+			'f'              => 'json',
+		), $base . '/' . $layer . '/query' );
+	}
+	$key = 'oyc_enc_sd_' . md5( $url );
+	$out = get_transient( $key );
+	if ( ! $out ) {
+		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
+			wp_send_json( array( 'wait' => 'try again in 10 seconds' ), 429 );
+		}
+		set_transient( 'oyc_enc_probe_lock', 1, 10 );
+		$r   = wp_remote_get( $url, array( 'timeout' => 15 ) );
+		$out = is_wp_error( $r ) ? array( 'error' => $r->get_error_message() ) : array(
+			'code' => wp_remote_retrieve_response_code( $r ),
+			'type' => wp_remote_retrieve_header( $r, 'content-type' ),
+			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 400000 ),
+		);
+		set_transient( $key, $out, HOUR_IN_SECONDS );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	wp_send_json( $out );
+}
+
+/* admin-ajax oyc_enc_fi: read-only test of NOAA's GetFeatureInfo at one point
+   (lat, lon inside OYC_ENC_AREA; fmt = xml | html | json), to see whether the
+   chart server can give the depth area (DRVAL1-DRVAL2) and soundings at a
+   waypoint. Shares the probe's 10-second lock; answers cached 10 minutes. */
+add_action( 'wp_ajax_oyc_enc_fi', 'oyc_enc_fi' );
+add_action( 'wp_ajax_nopriv_oyc_enc_fi', 'oyc_enc_fi' );
+function oyc_enc_fi() {
+	$lat = isset( $_GET['lat'] ) ? (float) $_GET['lat'] : 0;
+	$lon = isset( $_GET['lon'] ) ? (float) $_GET['lon'] : 0;
+	list( $s, $w, $n, $e ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+	if ( $lat < $s || $lat > $n || $lon < $w || $lon > $e ) {
+		wp_send_json( array( 'error' => 'outside the chart area' ), 400 );
+	}
+	$fmts = array( 'xml' => 'text/xml', 'html' => 'text/html', 'json' => 'application/json', 'plain' => 'text/plain' );
+	$fk   = isset( $_GET['fmt'] ) && is_string( $_GET['fmt'] ) ? sanitize_key( wp_unslash( $_GET['fmt'] ) ) : 'xml';
+	if ( ! isset( $fmts[ $fk ] ) ) {
+		$fk = 'xml';
+	}
+	/* p = display settings as in oyc_enc_probe (Name:value,..., ';' for commas),
+	   e.g. IntendedUsage:5,HonorScamin:1 to ask the harbour charts with every
+	   sounding; r = radius in metres (10-2000, default 50). */
+	$dp = '';
+	$pr = isset( $_GET['p'] ) && is_string( $_GET['p'] ) ? sanitize_text_field( wp_unslash( $_GET['p'] ) ) : '';
+	if ( '' !== $pr ) {
+		$ps = array();
+		foreach ( explode( ',', $pr ) as $pair ) {
+			$kv = explode( ':', $pair, 2 );
+			if ( 2 === count( $kv ) && preg_match( '/^[A-Za-z]{2,40}$/', $kv[0] ) && preg_match( '/^[0-9.;]{1,20}$/', $kv[1] ) ) {
+				$v    = str_replace( ';', ',', $kv[1] );
+				$ps[] = '{"name":"' . $kv[0] . '","value":' . ( 'IntendedUsage' === $kv[0] || false !== strpos( $v, ',' ) ? '"' . $v . '"' : $v ) . '}';
+			}
+		}
+		if ( $ps ) {
+			$dp = '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[' . implode( ',', $ps ) . ']}}}';
+		}
+	}
+	$rad  = isset( $_GET['r'] ) ? max( 10, min( 2000, absint( $_GET['r'] ) ) ) : 50;
+	$key  = 'oyc_enc_fi_' . md5( round( $lat, 5 ) . ',' . round( $lon, 5 ) . $fk . $dp . $rad );
+	$out  = get_transient( $key );
+	if ( ! $out ) {
+		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
+			wp_send_json( array( 'wait' => 'try again in 10 seconds' ), 429 );
+		}
+		set_transient( 'oyc_enc_probe_lock', 1, 10 );
+		$o  = 20037508.342789244;
+		$x  = $lon * $o / 180;
+		$y  = log( tan( ( 90 + $lat ) * M_PI / 360 ) ) * $o / M_PI;
+		$h  = $rad / cos( deg2rad( $lat ) ); // ground metres each side → Web Mercator
+		$url = add_query_arg( array(
+			'service'      => 'WMS',
+			'request'      => 'GetFeatureInfo',
+			'version'      => '1.3.0',
+			'layers'       => OYC_ENC_LAYERS,
+			'query_layers' => OYC_ENC_LAYERS,
+			'styles'       => '',
+			'crs'          => 'EPSG:3857',
+			'bbox'         => implode( ',', array( $x - $h, $y - $h, $x + $h, $y + $h ) ),
+			'width'        => 101,
+			'height'       => 101,
+			'i'            => 50,
+			'j'            => 50,
+			'info_format'  => $fmts[ $fk ],
+			'feature_count' => 500,
+		) + ( $dp ? array( 'display_params' => rawurlencode( $dp ) ) : array() ), OYC_ENC_WMS );
+		$r   = wp_remote_get( $url, array( 'timeout' => 15 ) );
+		$out = is_wp_error( $r ) ? array( 'error' => $r->get_error_message() ) : array(
+			'code' => wp_remote_retrieve_response_code( $r ),
+			'type' => wp_remote_retrieve_header( $r, 'content-type' ),
+			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 300000 ),
+			'display_params' => $dp,
+		);
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	wp_send_json( $out );
+}
+
+/* admin-ajax oyc_enc_depth: the charted depth at a waypoint (Brad, 2026-11-15:
+   "the depth should come from the soundings"). One NOAA GetFeatureInfo query
+   around the point (OYC_ENC_DEP_R metres each side) returns the chart features
+   there: the nearest sounding (SOUNDG) and the depth area (DEPARE, DRVAL1-2) of
+   the most detailed chart. Load: each point (rounded to ~10 m) is asked once and
+   kept 30 days; only ONE query runs at a time across the whole site (a 12 s
+   lock), with an 8 s timeout, and a page asking while another runs gets
+   {busy:1} and retries a few seconds later. &raw=1 returns NOAA's answer as-is. */
+define( 'OYC_ENC_DEP_R', 300 );
+add_action( 'wp_ajax_oyc_enc_depth', 'oyc_enc_depth' );
+add_action( 'wp_ajax_nopriv_oyc_enc_depth', 'oyc_enc_depth' );
+function oyc_enc_depth() {
+	header( 'X-Robots-Tag: noindex' );
+	$lat = isset( $_GET['lat'] ) ? round( (float) $_GET['lat'], 4 ) : 0;
+	$lon = isset( $_GET['lon'] ) ? round( (float) $_GET['lon'], 4 ) : 0;
+	list( $s, $w, $n, $e ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+	if ( $lat < $s || $lat > $n || $lon < $w || $lon > $e ) {
+		wp_send_json( array( 'none' => 1 ) );
+	}
+	$raw = ! empty( $_GET['raw'] );
+	$key = 'oyc_dep_' . md5( $lat . ',' . $lon . '|' . OYC_ENC_DEP_R . ( $raw ? '|raw' : '' ) );
+	$out = get_transient( $key );
+	if ( false !== $out ) {
+		header( 'Cache-Control: public, max-age=86400' );
+		wp_send_json( $out );
+	}
+	if ( get_transient( 'oyc_enc_dep_lock' ) ) {
+		header( 'Cache-Control: no-store' );
+		wp_send_json( array( 'busy' => 1 ) );
+	}
+	set_transient( 'oyc_enc_dep_lock', 1, 12 );
+	$o  = 20037508.342789244;
+	$x  = $lon * $o / 180;
+	$y  = log( tan( ( 90 + $lat ) * M_PI / 360 ) ) * $o / M_PI;
+	$h  = OYC_ENC_DEP_R / cos( deg2rad( $lat ) ); // ground metres → Web Mercator metres
+	$px = 61;
+	$url = add_query_arg( array(
+		'service'       => 'WMS',
+		'request'       => 'GetFeatureInfo',
+		'version'       => '1.3.0',
+		'layers'        => OYC_ENC_LAYERS,
+		'query_layers'  => OYC_ENC_LAYERS,
+		'styles'        => '',
+		'crs'           => 'EPSG:3857',
+		'bbox'          => implode( ',', array( $x - $h, $y - $h, $x + $h, $y + $h ) ),
+		'width'         => $px,
+		'height'        => $px,
+		'i'             => 30,
+		'j'             => 30,
+		'info_format'   => 'text/xml',
+		'feature_count' => 200,
+	), OYC_ENC_WMS );
+	$r = wp_remote_get( $url, array( 'timeout' => 8 ) );
+	delete_transient( 'oyc_enc_dep_lock' );
+	if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
+		header( 'Cache-Control: no-store' );
+		wp_send_json( array( 'error' => 1 ) );
+	}
+	$body = (string) wp_remote_retrieve_body( $r );
+	if ( $raw ) {
+		$out = array( 'body' => mb_substr( $body, 0, 60000 ) );
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
+		wp_send_json( $out );
+	}
+	$out = oyc_enc_depth_parse( $body, $lat, $lon );
+	set_transient( $key, $out, 30 * DAY_IN_SECONDS );
+	header( 'Cache-Control: public, max-age=86400' );
+	wp_send_json( $out );
+}
+
+/** Pull the depth area and the soundings out of NOAA's GetFeatureInfo XML. Depths in metres. */
+function oyc_enc_depth_parse( $body, $lat, $lon ) {
+	$area  = null;
+	$snd   = array();
+	$types = array();
+	if ( preg_match_all( '/<Feature\b([^>]*)>(.*?)<\/Feature>/s', $body, $fm, PREG_SET_ORDER ) ) {
+		foreach ( $fm as $f ) {
+			$acr = preg_match( '/acronym="(\w+)"/', $f[1], $m ) ? $m[1] : '';
+			$sc  = preg_match( '/cscl="(\d+)"/', $f[1], $m ) ? (int) $m[1] : 0;
+			$types[ $acr ] = true;
+			$a = array();
+			if ( preg_match_all( '/<Attribute\b[^>]*acronym="(\w+)"[^>]*value="([^"]*)"/', $f[2], $am, PREG_SET_ORDER ) ) {
+				foreach ( $am as $x ) {
+					$a[ $x[1] ] = html_entity_decode( $x[2] );
+				}
+			}
+			if ( 'DEPARE' === $acr && isset( $a['DRVAL1'] ) && ( ! $area || ( $sc && $sc < $area['scale'] ) ) ) {
+				$area = array( 'min' => (float) $a['DRVAL1'], 'max' => isset( $a['DRVAL2'] ) && '' !== $a['DRVAL2'] ? (float) $a['DRVAL2'] : null, 'scale' => $sc );
+			}
+			if ( 'SOUNDG' === $acr || isset( $a['DEPTH'] ) ) {
+				/* a sounding: depth, and its position if NOAA gives one */
+				$d = isset( $a['DEPTH'] ) ? $a['DEPTH'] : ( isset( $a['VALSOU'] ) ? $a['VALSOU'] : null );
+				$p = null;
+				foreach ( array( 'geometry', 'GEOMETRY', 'coordinates', 'position' ) as $g ) {
+					if ( isset( $a[ $g ] ) && preg_match( '/(-?\d+\.\d+)[ ,]+(-?\d+\.\d+)/', $a[ $g ], $m ) ) {
+						$p = array( (float) $m[1], (float) $m[2] );
+					}
+				}
+				if ( null !== $d && is_numeric( $d ) ) {
+					$snd[] = array( 'm' => (float) $d, 'scale' => $sc, 'pos' => $p );
+				}
+			}
+		}
+	}
+	return array( 'area' => $area, 'soundings' => array_slice( $snd, 0, 40 ), 'types' => array_keys( $types ), 'r' => OYC_ENC_DEP_R );
+}
+
 /* ── Background: pre-load home waters, prune old tiles ───────────────────── */
 
 add_filter( 'cron_schedules', function ( $s ) {
@@ -406,12 +730,16 @@ function oyc_enc_home_tiles() {
 	foreach ( array_map( 'intval', explode( ',', OYC_ENC_HOME_ZOOMS ) ) as $z ) {
 		for ( $x = oyc_enc_tile_x( $w, $z ); $x <= oyc_enc_tile_x( $e, $z ); $x++ ) {
 			for ( $y = oyc_enc_tile_y( $n, $z ); $y <= oyc_enc_tile_y( $s, $z ); $y++ ) {
+				// what the map shows (see "Soundings by zoom"): c5 everywhere,
+				// ce5 + cx5 at 13
 				$out[] = array( $z, $x, $y, 'c' . OYC_ENC_CHART_FT );
-				if ( oyc_enc_zoom_ok( $z, 'd' ) ) {
-					$out[] = array( $z, $x, $y, 'cd' . OYC_ENC_CHART_FT );
+				foreach ( array( 'ce' ) as $k ) {
+					if ( oyc_enc_zoom_ok( $z, $k . OYC_ENC_CHART_FT ) ) {
+						$out[] = array( $z, $x, $y, $k . OYC_ENC_CHART_FT );
+					}
 				}
-				if ( oyc_enc_zoom_ok( $z, 'ch' . OYC_ENC_CHART_FT ) ) {
-					$out[] = array( $z, $x, $y, 'ch' . OYC_ENC_CHART_FT );
+				if ( 13 === $z ) {   // cx5 fills in where zoom-13 approach charts are flat blue
+					$out[] = array( $z, $x, $y, 'cx' . OYC_ENC_CHART_FT );
 				}
 			}
 		}
