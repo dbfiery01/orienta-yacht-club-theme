@@ -1728,15 +1728,25 @@ if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:12,zI
    showing through. Retry a failed tile up to 5 times with growing back-off,
    and keep the previous zoom's chart tiles on screen until the new level's
    have actually loaded, so a zoom never uncovers the street map. */
+/* Server load: a tile missing from the cache used to go straight to admin-ajax,
+   so one map view of a new chart style sent dozens of PHP requests at once, each
+   waiting on NOAA, and filled every PHP worker (site down 2026-11-15). Now a
+   missing tile is shown from NOAA directly, and our server is asked to cache it
+   in the background, at most ENC_WARM_MAX requests at a time per visitor. */
+var encWarmQ=[],encWarmN=0,ENC_WARM_MAX=2;
+function encWarm(u){if(encWarmQ.length>=60)encWarmQ.shift();encWarmQ.push(u);encWarmPump();}
+function encWarmPump(){while(encWarmN<ENC_WARM_MAX&&encWarmQ.length){var u=encWarmQ.pop(),im=new Image();encWarmN++;
+	im.onload=im.onerror=function(){encWarmN--;setTimeout(encWarmPump,250);};im.src=u;}}
 encLayer.eachLayer(function(lyr){
 	lyr.on('tileerror',function(e){
 		var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(lyr._map)lyr._pruneTiles();return;}
 		t.setAttribute('data-try',n+1);
-		/* not cached yet → our server fetches and caches it (straight away); then
-		   back off and retry; the last two tries go to NOAA directly */
-		var c=e.coords,url=!ENC_CACHE?lyr.noaaUrl(c):(n<3?lyr.ajaxUrl(c):lyr.noaaUrl(c));
+		/* not cached yet → show it from NOAA now and have our server cache it in
+		   the background (throttled); retries back off and stay on NOAA */
+		var c=e.coords,url=lyr.noaaUrl(c);
+		if(ENC_CACHE&&n===0)encWarm(lyr.ajaxUrl(c));
 		setTimeout(function(){if(!lyr._map||!t.parentNode)return;
-			t.src=url+'&_retry='+(n+1);},(ENC_CACHE&&n===0)?0:700*Math.pow(2,n));
+			t.src=url+'&_retry='+(n+1);},n===0?0:700*Math.pow(2,n));
 	});
 	lyr.on('tileload',function(e){e.tile.removeAttribute('data-try');});
 	var prune=lyr._pruneTiles;
