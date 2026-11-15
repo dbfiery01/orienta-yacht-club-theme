@@ -8,7 +8,7 @@
  *
  * Setup: add the API key to wp-config.php —
  *     define( 'OYC_ANTHROPIC_API_KEY', 'sk-ant-...' );
- * (or store it in the `oyc_anthropic_api_key` option). Without a key the card
+ * (or paste it in Settings → Passage brief, stored in the `oyc_anthropic_api_key` option). Without a key the card
  * shows its rule-based summary instead and the "Ask Claude" button is hidden.
  *
  * Signed-in members only, 25 briefs per member per day, identical requests
@@ -29,6 +29,107 @@ function oyc_passage_brief_key() {
 /** True when this visitor can ask Claude (key set and signed in). */
 function oyc_passage_brief_ai_ready() {
 	return is_user_logged_in() && '' !== oyc_passage_brief_key();
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Settings → Passage brief: paste the Anthropic API key here to switch the
+ * "Ask Claude" button on (wp-config's OYC_ANTHROPIC_API_KEY wins if set).
+ * ───────────────────────────────────────────────────────────────────────────── */
+add_action( 'admin_menu', function () {
+	add_options_page( 'Passage brief', 'Passage brief', 'manage_options', 'oyc-passage-brief', 'oyc_passage_brief_settings_page' );
+} );
+
+add_action( 'admin_init', function () {
+	register_setting( 'oyc_passage_brief', 'oyc_anthropic_api_key', array(
+		'type'              => 'string',
+		'sanitize_callback' => function ( $v ) {
+			$v = trim( sanitize_text_field( (string) $v ) );
+			if ( '' === $v ) {   // blank submit keeps the saved key
+				return get_option( 'oyc_anthropic_api_key', '' );
+			}
+			return $v;
+		},
+	) );
+} );
+
+/** One tiny request to check the key works. Returns array( ok, message ). */
+function oyc_passage_brief_test_key() {
+	$key = oyc_passage_brief_key();
+	if ( '' === $key ) {
+		return array( false, 'No key saved yet.' );
+	}
+	$resp = wp_remote_post(
+		'https://api.anthropic.com/v1/messages',
+		array(
+			'timeout' => 30,
+			'headers' => array(
+				'content-type'      => 'application/json',
+				'x-api-key'         => $key,
+				'anthropic-version' => '2026-10-21',
+				'anthropic-beta'    => 'server-side-fallback-2026-07-01',
+			),
+			'body'    => wp_json_encode( array(
+				'model'      => 'claude-opus-5-5',
+				'fallbacks'  => 'default',
+				'max_tokens' => 16,
+				'messages'   => array( array( 'role' => 'user', 'content' => 'Reply with the single word: ready' ) ),
+			) ),
+		)
+	);
+	if ( is_wp_error( $resp ) ) {
+		return array( false, 'The server couldn’t reach api.anthropic.com: ' . $resp->get_error_message() );
+	}
+	$code = (int) wp_remote_retrieve_response_code( $resp );
+	$json = json_decode( wp_remote_retrieve_body( $resp ), true );
+	if ( 200 === $code ) {
+		return array( true, 'Connected. Claude answered using ' . ( is_array( $json ) && ! empty( $json['model'] ) ? $json['model'] : 'the API' ) . '.' );
+	}
+	$err = is_array( $json ) && ! empty( $json['error']['message'] ) ? $json['error']['message'] : '';
+	if ( 401 === $code ) {
+		return array( false, 'The key was rejected (401). Check it was copied in full.' );
+	}
+	return array( false, 'Anthropic returned HTTP ' . $code . ( $err ? ': ' . $err : '' ) );
+}
+
+function oyc_passage_brief_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( isset( $_POST['oyc_pb_clear'] ) && check_admin_referer( 'oyc_pb_tools' ) ) {
+		delete_option( 'oyc_anthropic_api_key' );
+		echo '<div class="notice notice-success"><p>API key removed. The Ask Claude button is off.</p></div>';
+	}
+	if ( isset( $_POST['oyc_pb_test'] ) && check_admin_referer( 'oyc_pb_tools' ) ) {
+		$t = oyc_passage_brief_test_key();
+		echo '<div class="notice notice-' . ( $t[0] ? 'success' : 'error' ) . '"><p>' . esc_html( $t[1] ) . '</p></div>';
+	}
+	$in_config = defined( 'OYC_ANTHROPIC_API_KEY' ) && OYC_ANTHROPIC_API_KEY;
+	$has       = '' !== oyc_passage_brief_key();
+	?>
+	<div class="wrap">
+		<h1>Passage brief</h1>
+		<p>Switches on <b>Ask Claude for the brief</b> on the chart's Passage brief card (signed-in members only, 25 briefs per member per day). Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> under <b>API keys</b> and paste it below. Live and staging each need the key saved.</p>
+		<p>Status: <b><?php echo $has ? 'On' : 'Off'; ?></b><?php echo $in_config ? ' (key set in wp-config.php)' : ''; ?></p>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'oyc_passage_brief' ); ?>
+			<table class="form-table" role="presentation"><tr>
+				<th scope="row"><label for="oyc_anthropic_api_key">Anthropic API key</label></th>
+				<td>
+					<input type="password" id="oyc_anthropic_api_key" name="oyc_anthropic_api_key" value="" class="regular-text" autocomplete="off" placeholder="<?php echo '' !== get_option( 'oyc_anthropic_api_key', '' ) ? esc_attr__( 'Saved. Paste a new key to replace it', 'orienta-yacht-club' ) : 'sk-ant-…'; ?>">
+					<?php if ( $in_config ) : ?><p class="description">A key is set in wp-config.php (OYC_ANTHROPIC_API_KEY) and is used instead.</p><?php endif; ?>
+				</td>
+			</tr></table>
+			<?php submit_button( 'Save key' ); ?>
+		</form>
+		<?php if ( $has ) : ?>
+			<form method="post">
+				<?php wp_nonce_field( 'oyc_pb_tools' ); ?>
+				<?php submit_button( 'Test connection', 'secondary', 'oyc_pb_test', false ); ?>
+				<?php if ( '' !== get_option( 'oyc_anthropic_api_key', '' ) ) { submit_button( 'Remove key', 'delete', 'oyc_pb_clear', false ); } ?>
+			</form>
+		<?php endif; ?>
+	</div>
+	<?php
 }
 
 add_action( 'wp_ajax_oyc_passage_brief', 'oyc_passage_brief_ajax' );
