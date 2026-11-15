@@ -45,14 +45,14 @@ define( 'OYC_ENC_HOME_ZOOMS', '9,10,11,12,13,14,15,16' );   // every zoom the ch
    cached tiles are thrown away. */
 define( 'OYC_ENC_HIRES_MAX', 12 );
 define( 'OYC_ENC_VER', 4 );
-/* The "detail" chart layer. Zoomed out (zoom 10-11) NOAA draws its small-scale
+/* The "detail" chart layer (zoom 9-12). Zoomed out NOAA draws its small-scale
    charts, where Long Island Sound is one flat light-blue area that looks just
    like the street map. Asking for the approach-scale charts only (ENC usage
    band 4, display_params IntendedUsage "4") gives white deep water, blue
    shallows and soundings there. Those charts don't cover open ocean, so this is
    a second layer over the normal one: where it is empty the normal chart shows
    through. Cached under oyc-enc/d/. Must match encDetail in inc/wind-map.php. */
-define( 'OYC_ENC_DETAIL_ZOOMS', '10,11' );
+define( 'OYC_ENC_DETAIL_ZOOMS', '9,10,11,12' );
 define( 'OYC_ENC_DETAIL', '{"ECDISParameters":{"version":"10.9.1","DynamicParameters":{"Parameter":[{"name":"IntendedUsage","value":"4"}]}}}' );
 /* The "safe water" layers s6..s60 and h6..h60 (never shown on the map). The
    passage checker and Autoroute in inc/wind-map.php read their pixels to find
@@ -91,13 +91,13 @@ function oyc_enc_is_safe( $v ) {
 	return (bool) preg_match( '/^[sh]\d/', (string) $v );
 }
 
-/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-11), ce5 (approach charts with every sounding, zoom 12-13), cx5 (harbour charts with every sounding, zoom 12+). */
+/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 9-12, under the map's own soundings), ch5 (harbour charts, zoom 10-11, no longer drawn), ce5 (approach charts with every sounding, zoom 13), cx5 (harbour charts with every sounding, zoom 13+). */
 function oyc_enc_is_contour( $v ) {
 	return (bool) preg_match( '/^c[dhxe]?\d/', (string) $v );
 }
 
 /* The chart on the map is drawn with NOAA's shallow/safety/deep contours all
-   at 5 ft (variant c5, and cd5 for the zoom 10-11 detail layer), so only water
+   at 5 ft (variant c5, and cd5 for the zoom 9-12 detail layer), so only water
    shallower than 5 ft is shaded blue and everything deeper is white with its
    soundings (Brad, 2026-11-15). Approach-scale cells (e.g. Fishers Island
    Sound) still draw flat blue at any contour, so at zoom 10-12 a harbour-band
@@ -108,17 +108,17 @@ function oyc_enc_is_contour( $v ) {
    with HonorScamin 1 (every sounding drawn) sits on top at zoom 13-17.
    The home-waters warmer keeps c5 / cd5 loaded; wind-map.php reads this. */
 define( 'OYC_ENC_CHART_FT', 5 );
-/* Soundings by zoom (Brad, 2026-11-15): one plain chart style at every zoom,
-   fewer soundings as you zoom out but the shoals still marked.
-     z10      c5 + cd5 + ch5 layers, as before
-     z11      c5, and where c5 is only a flat blue area (most of the Sound at
-              this scale) cd5, then ch5 where cd5 is flat blue too
-     z12-13   ce5 = approach charts with every sounding (NOAA compiles these
-              with few soundings, chosen to show the shoals), and cx5 where
-              an approach chart is flat blue (Fishers Island Sound)
-     z14+     cx5 = harbour charts with every sounding
-   The z11-13 mixing is done in the browser from cached tiles: see encMix in
-   inc/wind-map.php. */
+/* Soundings by zoom (Brad, 2026-11-15): soundings at every zoom, the same
+   across the Sound, fewer as you zoom out with the shallowest always shown.
+     z9-12    c5 with the approach charts cd5 on top (contours, rocks and
+              hazards, but NOAA draws few or no soundings at these scales; in
+              much of the Sound only a flat blue sheet), and the map draws its
+              own soundings from assets/soundings (tools/build-soundings.py,
+              read from NOAA's ENC files). Brad chose this over hiding NOAA's
+              soundings, which also hid contours and rocks.
+     z13      ce5 = approach charts with every sounding, cx5 where those are
+              flat blue (Fishers Island Sound): encMix in inc/wind-map.php
+     z14+     cx5 = harbour charts with every sounding */
 
 
 /** NOAA display settings for a safe-water or contour variant (contour in metres). */
@@ -209,7 +209,7 @@ function oyc_enc_zoom_ok( $z, $v ) {
 			return $z >= 10 && $z <= 11;
 		}
 		if ( 0 === strpos( $v, 'ce' ) ) {
-			return $z >= 12 && $z <= 13;
+			return 13 === (int) $z;
 		}
 		if ( 0 === strpos( $v, 'cx' ) ) {
 			return $z >= 12 && $z <= 17;
@@ -729,16 +729,15 @@ function oyc_enc_home_tiles() {
 	foreach ( array_map( 'intval', explode( ',', OYC_ENC_HOME_ZOOMS ) ) as $z ) {
 		for ( $x = oyc_enc_tile_x( $w, $z ); $x <= oyc_enc_tile_x( $e, $z ); $x++ ) {
 			for ( $y = oyc_enc_tile_y( $n, $z ); $y <= oyc_enc_tile_y( $s, $z ); $y++ ) {
+				// what the map shows (see "Soundings by zoom"): c5 everywhere,
+				// cd5 at 9-12, ce5 + cx5 at 13
 				$out[] = array( $z, $x, $y, 'c' . OYC_ENC_CHART_FT );
-				if ( oyc_enc_zoom_ok( $z, 'd' ) ) {
-					$out[] = array( $z, $x, $y, 'cd' . OYC_ENC_CHART_FT );
-				}
-				foreach ( array( 'ch', 'ce' ) as $k ) {
+				foreach ( array( 'cd', 'ce' ) as $k ) {
 					if ( oyc_enc_zoom_ok( $z, $k . OYC_ENC_CHART_FT ) ) {
 						$out[] = array( $z, $x, $y, $k . OYC_ENC_CHART_FT );
 					}
 				}
-				if ( $z >= 12 && $z <= 13 ) {   // cx5 fills in where z12-13 approach charts are flat blue
+				if ( 13 === $z ) {   // cx5 fills in where zoom-13 approach charts are flat blue
 					$out[] = array( $z, $x, $y, 'cx' . OYC_ENC_CHART_FT );
 				}
 			}

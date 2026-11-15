@@ -1705,6 +1705,8 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
 /* chart shading contour variants (5 ft): same display_params the server uses */
 var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CEP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ce' . OYC_ENC_CHART_FT ) : '' ); ?>;
+/* our own soundings (assets/soundings, built from NOAA's ENC files by tools/build-soundings.py) */
+var SND_URL=<?php echo wp_json_encode( get_template_directory_uri() . '/assets/soundings' ); ?>,SND_V=<?php echo wp_json_encode( OYC_VERSION ); ?>,SND_BOX=L.latLngBounds([40.5,-74.1],[41.45,-71.4]);
 /* cache version: changes whenever the cached tiles are thrown away, so browsers
    don't keep showing tiles from an older chart style (they cache them a week) */
 var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
@@ -1718,26 +1720,26 @@ var EncWMS=L.TileLayer.WMS.extend({
 function encOpts(o){return L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',keepBuffer:4},o);}
 var encBase=new EncWMS(ENC_WMS,encOpts(L.extend({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'},ENC_CV?{encVar:ENC_CV,display_params:ENC_CP}:{})));
 var encLayer=L.layerGroup([encBase]);
-/* Soundings by zoom (Brad, 2026-11-15): the same plain chart at every zoom,
-   fewer soundings as you zoom out but the shoals still shown. Zoom 10 keeps the
-   approach (cd) and harbour (ch) layers on top of the normal chart; zoom 14 in
-   shows the harbour charts with every sounding (cx). Zoom 11-13 is encMix below.
+/* Soundings by zoom (Brad, 2026-11-15): soundings at every zoom, the same
+   across Long Island Sound, fewer as you zoom out with the shallowest always
+   shown. Zoom 9-12 inside SND_BOX: the normal chart (c5) with the general
+   charts (cd5) on top, which keep contours, rocks and hazards, plus the map's
+   own soundings (sndLayer below).
+   Zoom 13: encMix. Zoom 14 in: harbour charts with every sounding (cx).
    See "Soundings by zoom" in inc/enc-cache.php. */
-if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:ENC_CV?10:11,zIndex:3,encVar:ENC_CV?'cd'+ENC_CV.slice(1):'d',display_params:ENC_CV?ENC_CDP:ENC_DETAIL})));
-if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:10,zIndex:4,encVar:'ch'+ENC_CV.slice(1),display_params:ENC_CHP})));
+if(ENC_CV&&ENC_CDP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:9,maxZoom:12,zIndex:3,bounds:SND_BOX,encVar:'cd'+ENC_CV.slice(1),display_params:ENC_CDP})));
 if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:ENC_CEP?14:12,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
-/* encMix, zoom 11-13. NOAA draws a chart with no detail at a given scale as one
+/* encMix, zoom 13. NOAA draws a chart with no detail at a given scale as one
    flat blue area (175,205,225) with no soundings, and which chart that is
    changes across the Sound. So each tile starts from a main chart and, wherever
    that is flat blue, takes the pixels of a more detailed chart instead:
-     zoom 11     the normal chart (c5, already drawn below), then cd5, then ch5
-     zoom 12-13  approach charts with every sounding (ce5), then cx5
+     zoom 13     approach charts with every sounding (ce5), then cx5
    Pixels can only be read from our own cache, so a tile not cached yet shows
    the main chart straight from NOAA and our server caches the rest in the
    background. */
 if(ENC_CV&&ENC_CEP){
 	var ENC_FT=ENC_CV.slice(1);
-	var encMixSpec=function(z){return z===11?{main:'',test:'c',fills:['cd','ch']}:{main:'ce',test:'ce',fills:['cx']};};
+	var encMixSpec=function(){return {main:'ce',test:'ce',fills:['cx']};};
 	var encParams={c:ENC_CP,cd:ENC_CDP,ch:ENC_CHP,ce:ENC_CEP,cx:ENC_CXP};
 	var encWmsUrl=function(k,c){var o=20037508.342789244,sz=2*o/Math.pow(2,c.z),x0=-o+c.x*sz,y1=o-c.y*sz,px=c.z<=ENC_HIRES_MAX?512:256;
 		return ENC_WMS+'?service=WMS&request=GetMap&version=1.3.0&layers=2,3,4,5,6,7&styles=&format=image%2Fpng&transparent=true&crs=EPSG%3A3857&width='+px+'&height='+px
@@ -1769,8 +1771,43 @@ if(ENC_CV&&ENC_CEP){
 			});
 			return cv;
 		}});
-	encLayer.addLayer(new EncMix({minZoom:11,maxZoom:13,zIndex:4,keepBuffer:4}));
+	encLayer.addLayer(new EncMix({minZoom:13,maxZoom:13,zIndex:4,keepBuffer:4}));
 }
+/* sndLayer: the map's own soundings at zoom 9-12. Each zoom's file holds the
+   shallowest sounding in every ~40 px square, with labels that would overlap
+   already dropped (tools/build-soundings.py), so every tile draws the same set. Bold under the low-water warning depth (safeFt), drying
+   heights underlined. Feet, rounded down, as on NOAA's charts. */
+var SND={files:{}};
+function sndFile(z,c){var bz=z-2,k=z+'/'+(c.x>>2)+'_'+(c.y>>2);
+	if(!SND.files[k])SND.files[k]=fetch(SND_URL+'/z'+z+'/'+(c.x>>2)+'_'+(c.y>>2)+'.json?v='+encodeURIComponent(SND_V)).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+	return SND.files[k];}
+var SndLayer=L.GridLayer.extend({
+	createTile:function(c,done){
+		var cv=document.createElement('canvas'),R=window.devicePixelRatio>1?2:1;cv.width=cv.height=256*R;
+		var M=24,tl=L.point(c.x*256,c.y*256);
+		/* soundings of this tile and a margin, from the (z-2) bucket(s) touching it */
+		var need={},ks=[[0,0],[-1,0],[1,0],[0,-1],[0,1]];ks.forEach(function(d){var q={x:c.x+d[0],y:c.y+d[1]};need[(q.x>>2)+'_'+(q.y>>2)]=q;});
+		Promise.all(Object.keys(need).map(function(k){return sndFile(c.z,need[k]);})).then(function(rs){
+			var g=cv.getContext('2d'),pts=[],seen={};g.scale(R,R);
+			rs.forEach(function(a){a.forEach(function(p){var id=p[0]+','+p[1];if(seen[id])return;seen[id]=1;
+				var P=map.project([p[0]/1e5,p[1]/1e5],c.z).subtract(tl);if(P.x>-M&&P.x<256+M&&P.y>-M&&P.y<256+M)pts.push([P.x,P.y,p[2]]);});});
+			pts.sort(function(a,b){return a[2]-b[2];});
+			var safe=(typeof safeFt==='function'?safeFt():10);
+			g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+			pts.forEach(function(p){
+				var ft=p[2]/3.048,t=String(Math.floor(Math.abs(ft))),sh=ft<safe;
+				g.font=(sh?'bold ':'')+'11px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+				var w=g.measureText(t).width;
+				g.lineWidth=3;g.strokeStyle='rgba(255,255,255,.9)';g.strokeText(t,p[0],p[1]);
+				g.fillStyle=sh?'#000':'#3a3a3a';g.fillText(t,p[0],p[1]);
+				if(ft<0){g.fillRect(p[0]-w/2,p[1]+6,w,1);}
+			});
+			done(null,cv);
+		});
+		return cv;
+	}});
+var sndLayer=null;
+if(ENC_CV){sndLayer=new SndLayer({minZoom:9,maxZoom:12,zIndex:6,bounds:SND_BOX,keepBuffer:2});encLayer.addLayer(sndLayer);}
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water
@@ -2139,6 +2176,7 @@ function refreshRoute(){
 	savePins();   /* My waypoints are kept in this browser */
 	passPinsChanged();   /* the Passage brief routes these same waypoints */
 	advanceNextWp();
+	setTimeout(depRun,0);   /* waypoint depths from the soundings files */
 	drawRouteLine();
 	for(var i=0;i<pins.length;i++){pins[i].marker.setIcon(wpIcon(wpBadge(i)));pins[i].popup.setContent(pinContent(pins[i],curTi));}
 	updateRouteBar();
@@ -2408,51 +2446,47 @@ function swRun(){
 }
 /* ── Depth at each waypoint (Brad 2026-11-15: "the depth should come from the
    soundings") ──
-   Our server asks NOAA's chart once per point (admin-ajax oyc_enc_depth, cached
-   30 days, one NOAA query at a time across the site) for the chart features
-   within ~300 m: the soundings and the depth area of the most detailed chart.
-   The pin shows the nearest sounding when NOAA gives positions, else the
-   shallowest sounding found nearby, else the depth area's range. Pins are asked
-   one at a time; a "busy" answer is retried a few seconds later. Depths come in
-   metres and are shown in feet. */
-var DEP={res:{},busy:false,tries:{}};
+   Every sounding of the NOAA ENC charts for Long Island Sound is in the theme
+   (assets/soundings/pt/{x}_{y}.json, one file per zoom-12 tile, built by
+   tools/build-soundings.py). A pin shows the nearest sounding within ~300 m,
+   preferring the most detailed chart (higher band) when two are about as near.
+   Depths are stored in decimetres and shown in feet. */
+var DEP={res:{},files:{}};
 function depKey(p){return p.lat.toFixed(4)+','+p.lon.toFixed(4);}
-function depFetch(lat,lon){
-	return fetchT(AJAX+'?action=oyc_enc_depth&lat='+lat.toFixed(4)+'&lon='+lon.toFixed(4),20000).then(function(r){return r.ok?r.json():{error:1};});
+function depTile(lat,lon){var n=4096,s=Math.sin(lat*Math.PI/180);return [Math.floor((lon+180)/360*n),Math.floor((0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n)];}
+function depFile(x,y){var k=x+'_'+y;
+	if(!DEP.files[k])DEP.files[k]=fetch(SND_URL+'/pt/'+k+'.json?v='+encodeURIComponent(SND_V)).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+	return DEP.files[k];}
+function depLook(lat,lon){
+	var t=depTile(lat,lon),L2=[];
+	for(var dx=-1;dx<=1;dx++)for(var dy=-1;dy<=1;dy++)L2.push(depFile(t[0]+dx,t[1]+dy));
+	return Promise.all(L2).then(function(all){
+		var best=null;
+		all.forEach(function(arr){(arr||[]).forEach(function(e){
+			var d=distNM(lat,lon,e[0]/1e5,e[1]/1e5);if(d>0.162)return;   /* 300 m */
+			var sc=d-(e[3]||0)*0.005;   /* a higher-band chart wins when about as near */
+			if(!best||sc<best.sc)best={sc:sc,d:d,dm:e[2]};});});
+		return best?{ft:best.dm/3.048,d:best.d}:null;});
 }
 function depRun(){
-	if(DEP.busy)return;var p=null;
-	for(var i=0;i<pins.length;i++)if(!(depKey(pins[i]) in DEP.res)&&!pins[i]._dragging){p=pins[i];break;}
-	if(!p)return;var k=depKey(p);
-	if(!swIn(p.lat,p.lon)){DEP.res[k]=null;setTimeout(depRun,0);return;}
-	DEP.busy=true;
-	depFetch(p.lat,p.lon).then(function(r){
-		if(r&&r.busy&&(DEP.tries[k]=(DEP.tries[k]||0)+1)<=8){DEP.busy=false;setTimeout(depRun,3500);return;}   /* another lookup is running on the server */
-		DEP.res[k]=(r&&!r.busy&&!r.error&&!r.none)?r:null;
-		DEP.busy=false;
-		pins.forEach(function(q){if(depKey(q)===k)q.popup.setContent(pinContent(q,curTi));});
-		renderWpTable();setTimeout(depRun,300);
-	},function(){DEP.res[k]=null;DEP.busy=false;setTimeout(depRun,300);});
+	pins.forEach(function(p){var k=depKey(p);if(k in DEP.res||p._dragging)return;
+		if(!SND_BOX.contains([p.lat,p.lon])){DEP.res[k]=null;return;}
+		DEP.res[k]=undefined;
+		depLook(p.lat,p.lon).then(function(r){DEP.res[k]=r;
+			pins.forEach(function(q){if(depKey(q)===k)q.popup.setContent(pinContent(q,curTi));});
+			renderWpTable();});});
 }
-function m2ft(m){return m*3.28084;}
-/* what to show for a pin: {ft, txt, sub} or null */
 function depPick(pin,r){
-	if(!r)return null;var S=(r.soundings||[]).filter(function(x){return isFinite(x.m);}),best=null;
-	S.forEach(function(x){if(x.pos){var d=distNM(pin.lat,pin.lon,x.pos[0],x.pos[1]);if(d>1)d=distNM(pin.lat,pin.lon,x.pos[1],x.pos[0]);   /* lat,lon or lon,lat */
-		if(!best||d<best.d)best={ft:m2ft(x.m),d:d};}});
-	if(best)return {ft:best.ft,txt:Math.round(best.ft)+' ft',sub:'sounding '+(best.d<0.01?'here':best.d.toFixed(2)+' nm away')};
-	if(S.length){var mn=Math.min.apply(null,S.map(function(x){return x.m;})),mx=Math.max.apply(null,S.map(function(x){return x.m;}));
-		return {ft:m2ft(mn),txt:Math.round(m2ft(mn))+(mx-mn>=0.3?'&ndash;'+Math.round(m2ft(mx)):'')+' ft',sub:'soundings within '+Math.round((r.r||300))+' m'};}
-	if(r.area){var lo=m2ft(r.area.min),hi=r.area.max!=null?m2ft(r.area.max):null;
-		return {ft:lo,txt:Math.round(lo)+(hi!=null?'&ndash;'+Math.round(hi):'+')+' ft',sub:'charted depth area'};}
-	return null;
+	if(!r)return null;var ft=r.ft;
+	var txt=ft<0?'dries '+Math.floor(-ft)+' ft':Math.floor(ft)+' ft';
+	return {ft:ft,txt:txt,sub:'sounding '+(r.d<0.01?'here':r.d.toFixed(2)+' nm away')};
 }
 /* Depth line for a pin's card / table row; orange when the charted depth is under the safety depth */
 function depNote(pin,cls){
-	var k=depKey(pin),r=DEP.res[k];if(r===undefined)return swIn(pin.lat,pin.lon)&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
+	var k=depKey(pin),r=DEP.res[k];if(r===undefined)return SND_BOX.contains([pin.lat,pin.lon])&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
 	var d=depPick(pin,r);if(!d)return '';
 	var low=d.ft<safeFt();
-	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="From the NOAA chart around this point; depths at chart datum (MLLW). Not for navigation.">Depth '+d.txt+' &middot; '+d.sub+(low?' &middot; under your '+safeFt()+' ft':'')+'</span>';
+	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="Nearest NOAA chart sounding; depths at chart datum (MLLW). Not for navigation.">Depth '+d.txt+' &middot; '+d.sub+(low?' &middot; under your '+safeFt()+' ft':'')+'</span>';
 }
 function swDraw(){
 	SW.layer.clearLayers();var r=SW.res;if(!r)return;
