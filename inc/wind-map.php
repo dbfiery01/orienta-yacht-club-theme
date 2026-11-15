@@ -685,6 +685,84 @@ function oyc_wind_map_html( $embed = false ) {
    (control bar, readout), which otherwise washed the white callout text out. */
 [data-theme="dark"] #oycwm .leaflet-popup-content,
 [data-theme="dark"] #oycwm .leaflet-tooltip{--ink:#16324a;--mute:#5a6b7d;--faint:#8a99a8}
+/* ---- Offshore passage brief (Layers > Passage; off by default) ----
+   PHASE 1 MOCK: static sample data so the card layout can be reviewed. The
+   router/ETA + Claude brief will fill the same card later (renderPassCard).
+   Desktop: a 312px card at the map's top-right (steps left of the open Layers
+   drawer). Phones: a bottom sheet that opens collapsed to its summary row. */
+#oycwm .passcard{display:none;position:absolute;z-index:1000;top:10px;right:10px;width:312px;max-height:calc(100% - 20px);flex-direction:column;
+	background:rgba(11,42,74,.95);color:#eaf4fb;border:1px solid rgba(255,255,255,.14);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.38);font-size:.74rem;line-height:1.4;overflow:hidden;transition:right .18s ease}
+#oycwm .passcard.on{display:flex}
+#oycwm .passcard.offmode,#oycwm .mapwrap.headsup .passcard{display:none !important}
+#oycwm .card:not(.hasburger) .mapgrid.lyr-open .passcard{right:282px}
+#oycwm .mapgrid.has-wp .passcard{top:64px;max-height:calc(100% - 74px)}
+#oycwm .pc-hd{display:flex;align-items:center;gap:8px;padding:9px 10px 8px 12px;border-bottom:1px solid rgba(255,255,255,.12);flex:none}
+#oycwm .pc-hd .pc-ttl{font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:.72rem;color:#fff}
+#oycwm .pc-chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 7px;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:rgba(212,168,81,.18);color:#d4a851;border:1px solid rgba(212,168,81,.45)}
+#oycwm .pc-hd .pc-sp{flex:1}
+#oycwm .pc-ib{flex:none;width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#oycwm .pc-ib:hover{background:rgba(255,255,255,.2)}
+#oycwm .pc-ib:focus-visible,#oycwm .pc-btn:focus-visible{outline:2px solid #d4a851;outline-offset:2px}
+#oycwm .pc-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
+#oycwm .passcard.min .pc-body{display:none}
+#oycwm .pc-route{font-weight:700;color:#fff;font-size:.8rem}
+#oycwm .pc-route small{display:block;font-weight:500;color:#9fc3da;font-size:.68rem;margin-top:1px}
+#oycwm .pc-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#oycwm .pc-kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 7px}
+#oycwm .pc-kpi b{display:block;font-size:1rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+#oycwm .pc-kpi span{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:#9fc3da}
+#oycwm .pc-verdict{display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:7px 9px;background:rgba(232,168,60,.14);border:1px solid rgba(232,168,60,.45)}
+#oycwm .pc-verdict .pc-vb{flex:none;border-radius:5px;padding:1px 6px;font-size:.62rem;font-weight:800;letter-spacing:.06em;background:#e8a83c;color:#1b1203}
+#oycwm .pc-verdict.go{background:rgba(76,175,80,.14);border-color:rgba(76,175,80,.5)}
+#oycwm .pc-verdict.go .pc-vb{background:#4caf50;color:#fff}
+#oycwm .pc-sec h4{margin:0 0 4px;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#9fc3da;font-weight:800}
+#oycwm .pc-legs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+#oycwm .pc-leg{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 8px;cursor:pointer}
+#oycwm .pc-leg:hover{background:rgba(255,255,255,.11)}
+#oycwm .pc-leg.gs{border-color:rgba(232,104,60,.55)}
+#oycwm .pc-lh{display:flex;align-items:center;gap:6px;font-weight:700;color:#fff}
+#oycwm .pc-n{flex:none;width:18px;height:18px;border-radius:50%;background:#d4a851;color:#1b1203;font-size:.64rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+#oycwm .pc-lh .pc-eta{margin-left:auto;font-weight:800;color:#d4a851;font-variant-numeric:tabular-nums;white-space:nowrap}
+#oycwm .pc-lg{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:1px;margin-top:4px;font-variant-numeric:tabular-nums}
+#oycwm .pc-lg dt{color:#9fc3da}
+#oycwm .pc-lg dd{margin:0;color:#eaf4fb}
+#oycwm .pc-lg dd b{color:#fff}
+#oycwm .pc-tag{display:inline-block;border-radius:4px;padding:0 5px;margin-left:4px;font-size:.6rem;font-weight:800;letter-spacing:.04em;background:rgba(255,255,255,.14);color:#fff;vertical-align:1px}
+#oycwm .pc-tag.motor{background:rgba(232,168,60,.25);color:#f3c879}
+#oycwm .pc-list{margin:0;padding-left:16px}
+#oycwm .pc-list li{margin:2px 0}
+#oycwm .pc-ai{background:rgba(212,168,81,.08);border-left:3px solid #d4a851;border-radius:0 8px 8px 0;padding:7px 9px;color:#f1e9d6}
+#oycwm .pc-ai p{margin:0}
+#oycwm .pc-sec-plan summary{list-style:none;display:flex;gap:8px;cursor:pointer;min-height:28px;align-items:center}
+#oycwm .pc-sec-plan summary::-webkit-details-marker{display:none}
+#oycwm .pc-sec-plan summary h4{margin:0}
+#oycwm .pc-sec-plan summary span{flex:1;color:#eaf4fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#oycwm .pc-sec-plan summary b{color:#d4a851;font-size:.7rem}
+#oycwm .pc-sec-plan[open] summary b{visibility:hidden}
+#oycwm .pc-sec-plan .pc-acts{margin-top:8px}
+#oycwm .pc-plan{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+#oycwm .pc-plan label{display:flex;flex-direction:column;gap:2px;font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;color:#9fc3da;font-weight:700}
+#oycwm .pc-plan select,#oycwm .pc-plan input{font:inherit;font-size:.74rem;letter-spacing:0;text-transform:none;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 6px;min-height:32px;width:100%;box-sizing:border-box}
+#oycwm .pc-plan select option{color:#0b2a4a}
+#oycwm .pc-acts{display:flex;gap:6px;flex-wrap:wrap}
+#oycwm .pc-btn{flex:1 1 auto;min-height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:.74rem;font-weight:700;cursor:pointer;padding:0 10px;white-space:nowrap}
+#oycwm .pc-btn.pri{background:#d4a851;border-color:#d4a851;color:#1b1203}
+#oycwm .pc-btn:hover{filter:brightness(1.08)}
+#oycwm .pc-btn[disabled]{opacity:.55;cursor:default;filter:none}
+#oycwm .pc-foot{font-size:.62rem;color:#87a9c0;border-top:1px solid rgba(255,255,255,.1);padding-top:7px}
+#oycwm .pc-busy .pc-body>*:not(.pc-sec-plan){opacity:.35;transition:opacity .2s}
+#oycwm .pass-lbl{background:rgba(11,42,74,.9);color:#fff;border:0;border-radius:6px;font-size:11px;font-weight:700;padding:2px 6px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+#oycwm .pass-lbl.gs{background:#c2491f}
+#oycwm .pass-lbl:before{display:none}
+@media (max-width:760px){
+	#oycwm .passcard{top:auto;bottom:8px;left:8px;right:8px;width:auto;max-height:62%}
+	#oycwm .card:not(.hasburger) .mapgrid.lyr-open .passcard,#oycwm .mapgrid.has-wp .passcard{right:8px;top:auto;max-height:62%}
+	#oycwm .pc-hd{cursor:pointer}
+}
+#oycwm .pc-mini{display:none;font-weight:700;color:#d4a851;font-size:.7rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+#oycwm .passcard.min .pc-mini{display:inline}
+#oycwm .pc-hd .pc-ttl{white-space:nowrap}
+@media (max-width:760px){#oycwm .passcard.min .pc-chip{display:none}}
 </style>
 <div id="oycwm" class="<?php echo esc_attr( trim( ( $embed ? 'embed' : '' ) . ( is_user_logged_in() ? '' : ' nologin' ) ) ); ?>">
 <div class="wrap">
@@ -862,6 +940,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<?php if ( function_exists( 'oyc_race_tools_can_use' ) && oyc_race_tools_can_use() ) : ?>
 						<label title="Racers: polars and target speed, race log and the team race archive (the panel under the map)"><input type="checkbox" id="tgRaceTools"> Race tools</label>
 						<?php endif; ?>
+						<label title="Offshore passage brief: route, polar-based ETA and a Claude weather brief (preview, sample data)"><input type="checkbox" id="tgPassage"> Passage brief</label>
 					</div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day, on unless you switch it off; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
@@ -895,6 +974,7 @@ function oyc_wind_map_html( $embed = false ) {
 				<div class="boatinfo" id="boatInfo" aria-label="Live boat course and speed"></div>
 				<div class="racesheet" id="raceSheet" aria-label="Race course details"></div>
 			</div>
+			<aside class="passcard" id="passCard" aria-label="Offshore passage brief" aria-live="polite"></aside>
 			<div class="satpanel" id="satPanel" style="display:none"><img id="satImg" alt="NOAA GOES-East infrared satellite — North Atlantic"></div>
 			<div class="map-ll">
 				<div class="hovertip" id="hoverTip"></div>
@@ -3363,6 +3443,7 @@ function setMode(m){
 	document.getElementById('satLayers').style.display=m==='sat'?'flex':'none';
 	document.getElementById('chartLayers').style.display=m==='charts'?'flex':'none';
 	document.getElementById('tipHelp').style.display=m==='wind'?'block':'none';
+	var pcd=document.getElementById('passCard');if(pcd)pcd.classList.toggle('offmode',m!=='wind');
 	/* satellite & charts = standalone NOAA images; swap the interactive map for the image panel */
 	var isImg=(m==='sat'||m==='charts');
 	document.getElementById('map').style.display=isImg?'none':'';
@@ -3564,6 +3645,97 @@ document.getElementById('tgGulf').addEventListener('change',function(){
 		loadGSWall(function(){drawGulf(curTi);updateLegend();});
 	}else{map.removeLayer(gsBandLayer);gsBandLayer.clearLayers();map.removeLayer(gsArrows);gsArrows.clearLayers();gsBandBuilt=false;updateLegend();}
 });
+/* ── Offshore passage brief (Layers > Passage brief, off by default) ──
+   PHASE 1 = LAYOUT MOCK. PASS_MOCK is static sample data in the shape the
+   polar router + Claude brief will return later (per-leg bearing, distance,
+   TWS/TWD, TWA, point of sail, boat speed, ETA), so renderPassCard() can stay
+   as it is when the real engine is wired in. Nothing is fetched. */
+var PASS_MOCK={
+	boat:'Shannon 43',from:'Mamaroneck (OYC)',to:"Bermuda · St. George’s",
+	depart:'Mon 16 Nov 04:00',nm:717,dur:'4d 16h',eta:'Fri 19:50',tz:'EST',
+	verdict:{lvl:'watch',tag:'GO · WATCH',txt:'Benign Gulf Stream crossing. Landfall Friday into a building E 20–30&nbsp;kt.'},
+	gate:'The Race 15:40 on the last of the ebb (slack 16:10, sets 073°)',
+	wps:[{n:'OYC',lat:40.930,lon:-73.720},{n:'The Race',lat:41.230,lon:-72.090},{n:'Gulf Stream crossing',lat:38.4,lon:-70.0,gs:true},{n:"St. George’s",lat:32.37,lon:-64.68}],
+	legs:[
+		{to:'The Race',brg:89,nm:76,wind:'WNW 10 kt',twa:146,pos:'Broad reach',bsp:6.5,motor:true,eta:'Mon 15:40'},
+		{to:'Stream crossing',brg:165,nm:195,wind:'NW 12 kt',twa:160,pos:'Run',bsp:6.5,motor:true,eta:'Tue 21:40',gs:true},
+		{to:"St. George’s",brg:157,nm:446,wind:'NE→E 14–24 kt',twa:'55–75',pos:'Close reach',bsp:6.3,eta:'Fri 19:50'}],
+	stream:'Cross 37.5–38.4°N near 70°W (north wall 38.4°N, NAVO 13 Nov). WNW 8–10 kt with the current, seas 2–3 ft. No wind-against-current.',
+	watch:['Arrival Fri: E 20–30 kt and 6–8 ft on the bow for the last ~120 nm.','~42 h of motor-sailing in the light NW: plan fuel for 45 h.','No tropical systems on the NHC outlook.'],
+	ai:'A good window for the Stream, but it comes with light air, so a Shannon 43 motor-sails most of the first two days and arrives just as the trades fill in from the east. Leaving 12 hours earlier (Sun 16:00, on the evening ebb at The Race) should put you on the dock in St. George’s before the worst of it.',
+	src:'Sample data for layout review · Shannon 43 polars · GFS (Open-Meteo) · NOAA LIS1017 · not for navigation'
+};
+var passLayer=L.layerGroup();
+function passTwa(v){return typeof v==='number'?v+'°':v+'°';}
+function renderPassCard(d,busy){
+	var c=document.getElementById('passCard');if(!c)return;
+	var legs=d.legs.map(function(l,i){
+		return '<li class="pc-leg'+(l.gs?' gs':'')+'" data-leg="'+i+'" tabindex="0">'
+			+'<div class="pc-lh"><span class="pc-n">'+(i+1)+'</span>'+d.wps[i].n.replace(/ \(.*\)/,'')+' → '+l.to+'<span class="pc-eta">'+l.eta+'</span></div>'
+			+'<dl class="pc-lg"><dt>Course</dt><dd><b>'+('00'+l.brg).slice(-3)+'°M</b> · '+l.nm+' nm</dd>'
+			+'<dt>Wind</dt><dd>'+l.wind+' · TWA '+passTwa(l.twa)+'</dd>'
+			+'<dt>Sailing</dt><dd>'+l.pos+' · <b>'+l.bsp.toFixed(1)+' kt</b>'+(l.motor?'<span class="pc-tag motor">MOTOR-SAIL</span>':'')+'</dd></dl></li>';
+	}).join('');
+	c.innerHTML='<div class="pc-hd" id="pcHd"><span class="pc-ttl">Passage brief</span><span class="pc-chip">✦ Mock</span><span class="pc-sp"></span>'
+		+'<span class="pc-mini">'+d.nm+' nm · ETA '+d.eta+'</span>'
+		+'<button type="button" class="pc-ib" id="pcMin" aria-label="Collapse passage brief" aria-expanded="true">–</button>'
+		+'<button type="button" class="pc-ib" id="pcX" aria-label="Close passage brief">×</button></div>'
+		+'<div class="pc-body">'
+		+'<details class="pc-sec pc-sec-plan"><summary><h4>Plan</h4><span>'+d.depart+' · '+d.boat+'</span><b>Edit</b></summary><div class="pc-plan">'
+			+'<label>From<select disabled><option>'+d.from+'</option></select></label>'
+			+'<label>To<select disabled><option>'+d.to+'</option></select></label>'
+			+'<label>Depart<input type="text" value="'+d.depart+'" disabled></label>'
+			+'<label>Boat<select disabled><option>'+d.boat+'</option></select></label></div>'
+		+'<div class="pc-acts"><button type="button" class="pc-btn pri" id="pcBuild"'+(busy?' disabled':'')+'>'+(busy?'Claude is routing…':'✦ Build brief with Claude')+'</button></div></details>'
+		+'<div class="pc-route">'+d.from+' → '+d.to+'<small>'+d.boat+' · depart '+d.depart+' '+d.tz+' · via The Race</small></div>'
+		+'<div class="pc-kpis"><div class="pc-kpi"><b>'+d.nm+'</b><span>nm</span></div><div class="pc-kpi"><b>'+d.dur+'</b><span>Underway</span></div><div class="pc-kpi"><b>'+d.eta+'</b><span>ETA '+d.tz+'</span></div></div>'
+		+'<div class="pc-verdict'+(d.verdict.lvl==='go'?' go':'')+'"><span class="pc-vb">'+d.verdict.tag+'</span><span>'+d.verdict.txt+'</span></div>'
+		+'<div class="pc-sec"><h4>Departure &amp; tidal gate</h4>'+d.depart+' from OYC · '+d.gate+'</div>'
+		+'<div class="pc-sec"><h4>Legs</h4><ol class="pc-legs">'+legs+'</ol></div>'
+		+'<div class="pc-sec"><h4>Gulf Stream</h4>'+d.stream+'</div>'
+		+'<div class="pc-sec"><h4>Watch</h4><ul class="pc-list">'+d.watch.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul></div>'
+		+'<div class="pc-sec"><h4>Claude’s take</h4><div class="pc-ai"><p>'+d.ai+'</p></div></div>'
+		+'<div class="pc-acts"><button type="button" class="pc-btn" disabled title="Coming with the full build">Save GPX</button><button type="button" class="pc-btn" disabled title="Coming with the full build">Print brief</button></div>'
+		+'<div class="pc-foot">'+d.src+'</div></div>';
+	c.classList.toggle('pc-busy',!!busy);
+	if(c._min)passSetMin(true);
+}
+function passSetMin(m){var c=document.getElementById('passCard'),b=document.getElementById('pcMin');if(!c)return;c._min=m;c.classList.toggle('min',m);
+	if(b){b.textContent=m?'+':'–';b.setAttribute('aria-expanded',m?'false':'true');b.setAttribute('aria-label',(m?'Expand':'Collapse')+' passage brief');}}
+function drawPassRoute(d){
+	passLayer.clearLayers();
+	var ll=d.wps.map(function(w){return [w.lat,w.lon];});
+	L.polyline(ll,{color:'#0b2a4a',weight:6,opacity:.35,interactive:false}).addTo(passLayer);
+	L.polyline(ll,{color:'#d4a851',weight:3,dashArray:'8 6',interactive:false}).addTo(passLayer);
+	d.wps.forEach(function(w,i){
+		L.circleMarker([w.lat,w.lon],{radius:w.gs?7:5,color:'#fff',weight:2,fillColor:w.gs?'#c2491f':'#d4a851',fillOpacity:1})
+			.bindTooltip(w.n,{permanent:true,direction:(i===0||i===d.wps.length-1)?'left':'right',offset:[(i===0||i===d.wps.length-1)?-8:8,0],className:'pass-lbl'+(w.gs?' gs':'')}).addTo(passLayer);
+	});
+	passLayer.addTo(map);
+}
+function passFit(){
+	var d=PASS_MOCK,b=L.latLngBounds(d.wps.map(function(w){return [w.lat,w.lon];})),phone=window.matchMedia('(max-width:760px)').matches;
+	var g=document.getElementById('mapGrid'),lyr=g&&g.classList.contains('lyr-open');
+	/* keep the route clear of the card (right, or the bottom sheet on phones) */
+	try{map.fitBounds(b,phone?{paddingTopLeft:[40,30],paddingBottomRight:[20,70]}:{paddingTopLeft:[60,40],paddingBottomRight:[(lyr?640:380),40]});}catch(e){}
+}
+document.getElementById('tgPassage').addEventListener('change',function(){
+	var c=document.getElementById('passCard');
+	if(this.checked){renderPassCard(PASS_MOCK);c.classList.add('on');
+		passSetMin(window.matchMedia('(max-width:760px)').matches);   /* phones open on the summary row */
+		drawPassRoute(PASS_MOCK);passFit();}
+	else{c.classList.remove('on');map.removeLayer(passLayer);passLayer.clearLayers();}
+});
+document.getElementById('passCard').addEventListener('click',function(e){
+	var t=e.target,c=this;
+	if(t.closest('#pcX')){var cb=document.getElementById('tgPassage');cb.checked=false;cb.dispatchEvent(new Event('change',{bubbles:true}));return;}
+	if(t.closest('#pcMin')||(t.closest('#pcHd')&&c.classList.contains('min')&&!t.closest('.pc-ib'))){passSetMin(!c._min);return;}
+	if(t.closest('#pcBuild')){renderPassCard(PASS_MOCK,true);setTimeout(function(){renderPassCard(PASS_MOCK);drawPassRoute(PASS_MOCK);passFit();},1200);return;}
+	var lg=t.closest('.pc-leg');
+	if(lg){var i=+lg.getAttribute('data-leg'),a=PASS_MOCK.wps[i],z=PASS_MOCK.wps[i+1];
+		try{map.fitBounds([[a.lat,a.lon],[z.lat,z.lon]],{paddingTopLeft:[60,40],paddingBottomRight:[window.matchMedia('(max-width:760px)').matches?20:340,window.matchMedia('(max-width:760px)').matches?200:40]});}catch(e2){}}
+});
+document.getElementById('passCard').addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pc-leg')){e.preventDefault();e.target.click();}});
 document.getElementById('tgCur').addEventListener('change',function(){
 	if(this.checked){curLayer.addTo(map);loadCurrents(drawCurrents);}
 	else{map.removeLayer(curLayer);curLayer.clearLayers();}
