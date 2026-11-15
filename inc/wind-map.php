@@ -4777,7 +4777,7 @@ function passFit(){
 document.getElementById('tgPassage').addEventListener('change',function(){
 	var c=document.getElementById('passCard');
 	if(this.checked){c.classList.add('on');passSetMin(false);
-		renderPassCard();drawPassRoute();passFit();var w=passWps();if(w&&(!PASS.res||PASS.res.key!==passRouteKey(w)))passBuild();else rerenderCallouts();}
+		renderPassCard();drawPassRoute();var w=passWps();if(w&&(!PASS.res||PASS.res.key!==passRouteKey(w)))passBuild();else rerenderCallouts();}   /* the map stays where it is (Brad, 2026-11-15) */
 	else{c.classList.remove('on');PASS.picking=null;map.getContainer().classList.remove('pass-picking');map.removeLayer(passLayer);passLayer.clearLayers();rerenderCallouts();passFabSync();}   /* passage ETAs off the waypoints */
 });
 document.getElementById('passCard').addEventListener('click',function(e){
