@@ -1051,7 +1051,7 @@ function oyc_wind_map_html( $embed = false ) {
 						<?php endif; ?>
 						<label title="Offshore passage brief: Long Island Sound to Bermuda routed through the forecast with Shannon 43 polars, The Race tide and the Gulf Stream, plus a written brief from Claude"><input type="checkbox" id="tgPassage"> Passage brief</label>
 					</div>
-					<div class="lyr-draft"><label for="boatDraft">My draft</label><input type="number" id="boatDraft" min="1" max="25" step="0.5" inputmode="decimal" value="6"> ft<span class="hint" id="draftNote"></span></div>
+					<div class="lyr-draft"><label for="boatDraft">My draft</label><input type="text" id="boatDraft" inputmode="text" autocomplete="off" placeholder="4'10&quot;" value="6'" title="Feet and inches, e.g. 4'10&quot; or 4.8"><span class="hint" id="draftNote"></span></div>
 					<details class="lyr-help"><summary>What these mean</summary><span class="hint">Laylines = the starboard (green) and port (red) close-hauled or gybing lines into the next waypoint, or into each upwind/downwind leg of your route or race; tap the angle to set it by boat type, from your polars, or measured from your own tacks; with Race on, every race mark shows its laylines and wind dial for the slider hour &middot; Vector line = direction of travel &middot; AIS ships = vessels transmitting AIS (mostly commercial traffic and larger yachts; via aisstream.io, updated every couple of minutes) &middot; Notices = the Coast Guard District&nbsp;1 Local Notice to Mariners for the Sound (Army Corps dredging and surveys, buoys missing or off station, lights out, bridge and marine construction, safety zones), checked twice a day, on unless you switch it off; tap a warning pin for the notice &middot; Other boats = members sharing their live position (a boat drops off 10&nbsp;min after its last fix) &middot; Share my position works while this page is open on screen &middot; Vector = where each boat will be at its current speed and course &middot; Route legs show the true wind angle (TWA) you&rsquo;d sail at the slider&rsquo;s forecast hour &middot; My location = your live GPS; each waypoint then shows its magnetic bearing (&deg;M) and distance from you &middot; Current = NOAA tidal current at western-Sound stations (reverses with the tide; scrub the slider) &middot; zoom out for the Atlantic pattern &middot; Gulf Stream = ocean current, Florida&rarr;Newfoundland</span></details>
 				</div>
 				<div class="layers lyr-sec" id="poiLayers">
@@ -1704,7 +1704,7 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
    is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
 /* chart shading contour variants (5 ft): same display_params the server uses */
-var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>;
+var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>;
 /* cache version: changes whenever the cached tiles are thrown away, so browsers
    don't keep showing tiles from an older chart style (they cache them a week) */
 var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
@@ -1722,6 +1722,11 @@ if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:1
 /* harbour-scale charts on top at zoom 10-12: approach charts (e.g. Fishers
    Island Sound) shade all their water blue whatever the contour */
 if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:12,zIndex:4,encVar:'ch'+ENC_CV.slice(1),display_params:ENC_CHP})));
+/* zoom 13 in: the same harbour charts with every sounding drawn (NOAA otherwise
+   hides them at these scales, and approach charts there are flat blue with
+   none), see cx in OYC_ENC_CHART_FT. Not pre-loaded: tiles come from NOAA and
+   our server caches them in the background. */
+if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:13,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of
    requests), and each lost tile left a square of the street map's blue water
@@ -2018,6 +2023,7 @@ function pinContent(pin,ti){
 		+(pin.name?'<div class="co-nm">'+pEsc(pin.name)+'</div>':'')
 		+legLine
 		+swNote(pin,'co-sw')
+		+depNote(pin,'co-sw co-dep')
 		+(pe?'<div class="co-eta">'+(i===0&&!routeOrigin()?'Depart ':'Passage ETA ')+pEsc(pWhen(pe))+'</div>':'')
 		+(i===0?'':'<div class="co-t">Total '+cumFromStart(pin).toFixed(1)+' nm</div>')
 		+'<div class="co-ll">'+ll+'</div>'+youLine;
@@ -2232,6 +2238,12 @@ function updatePins(ti){for(var i=0;i<pins.length;i++)pins[i].popup.setContent(p
    asks Claude, and checks Claude's waypoints the same way. Not for navigation:
    rocks, wrecks and buoys are not checked. */
 var SAFE_FT=[6,10,12,18,30,60],SAFE_MARGIN=4,SAFE_AREA=[38,-77,42.5,-69.5],DRAFT_KEY='oyc_wm_draft';/* SAFE_FT, SAFE_AREA must match OYC_ENC_SAFE_FT, OYC_ENC_AREA */
+/* draft typed as 4'10", 4' 10, 4 10, 4ft 10in or 4.8 → feet; NaN if unreadable */
+function parseDraft(t){t=String(t||'').trim().replace(/[\u2019\u2032]/g,"'").replace(/[\u201d\u2033]/g,'"');
+	var m=t.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft|feet)?\s*(?:(\d+(?:\.\d+)?)\s*(?:"|''|in|inches)?)?$/i);
+	if(!m)return NaN;var f=parseFloat(m[1]),i=m[2]!=null?parseFloat(m[2]):0;if(m[2]!=null&&(i>=12||/\./.test(m[1])))return NaN;return f+i/12;}
+/* feet → 4'10" (whole inches) */
+function draftTxt(d){var i=Math.round(d*12),f=Math.floor(i/12);i-=f*12;return f+"'"+(i?i+'"':'');}
 function boatDraft(){var d=6;try{var v=parseFloat(localStorage.getItem(DRAFT_KEY));if(isFinite(v)&&v>=1&&v<=25)d=v;}catch(e){}return d;}
 function safeFt(){var need=boatDraft()+SAFE_MARGIN;for(var i=0;i<SAFE_FT.length;i++)if(SAFE_FT[i]>=need-0.01)return SAFE_FT[i];return 60;}/* Brad 2026-11-15: draft + 4 ft, next contour up */
 function swVar(){return 's'+safeFt();}
@@ -2325,9 +2337,51 @@ function swRun(){
 		var res={legs:{},pins:{},n:0,ft:safeFt()};
 		legs.forEach(function(l,i){res.legs[l.toId]=r[0][i];if(r[0][i].st==='land'||r[0][i].st==='shallow')res.n++;});
 		pins.forEach(function(p,i){res.pins[p.id]=r[1][i];if(r[1][i]===2)res.n++;});
-		SW.res=res;SW.running=false;swDraw();swUI();
+		SW.res=res;SW.running=false;swDraw();swUI();depRun();
 		if(SW.wantAuto){SW.wantAuto=false;SW.fix=null;swAutoroute();}   /* Autoroute was clicked while this ran */
 	});
+}
+/* ── Depth at each waypoint (Brad 2026-11-15) ──
+   The charted depth range under a pin, from the same cached safe-water tiles
+   (zoom 13): each contour variant s<ft>/h<ft> says "deeper" or "shallower than
+   <ft>" there, so a binary search over 6/10/12/18/30/60 ft gives the band, e.g.
+   12-18 ft (about 3 contours per pin). It is the chart's depth area, not the
+   exact sounding. Pins are done one at a time (each contour is 2 tiles), so a
+   long route never sends a burst of tile requests to our server. */
+var DEP={res:{},busy:false};
+function depKey(p){return p.lat.toFixed(5)+','+p.lon.toFixed(5);}
+/* what the chart says at a point for one contour: 0 deeper · 1 shallower · 2 land · -1 unknown.
+   A 7×7 pixel patch, ignoring lines, symbols and labels, majority wins. */
+function depAt(lat,lon,f){var z=13,v='s'+f,p=swPx(lat,lon,z);
+	return swLoad(v,z,swTilesFor([[p[0]-3,p[1]-3],[p[0]+3,p[1]+3],[p[0]-3,p[1]+3],[p[0]+3,p[1]-3]],z)).then(function(){
+		var n=[0,0,0];for(var dx=-3;dx<=3;dx++)for(var dy=-3;dy<=3;dy++){var c=swAt(v,z,p[0]+dx,p[1]+dy);if(c>=0&&c<=2)n[c]++;}
+		if(n[0]+n[1]+n[2]===0)return -1;
+		return n[2]>n[0]+n[1]?2:(n[0]>=n[1]?0:1);});}
+/* Promise of {lo,hi} in feet (lo 0 = under the first contour, hi null = deeper than the last), 'land' or null */
+function depPoint(lat,lon){
+	if(!swIn(lat,lon))return Promise.resolve(null);
+	var lo=0,hi=SAFE_FT.length-1,deep=-1;   /* deep = index of the deepest contour known to be deeper */
+	function step(){if(lo>hi)return Promise.resolve({lo:deep<0?0:SAFE_FT[deep],hi:deep+1<SAFE_FT.length?SAFE_FT[deep+1]:null});
+		var m=(lo+hi)>>1;return depAt(lat,lon,SAFE_FT[m]).then(function(c){
+			if(c===2)return 'land';if(c<0)return null;
+			if(c===0){deep=m;lo=m+1;}else hi=m-1;return step();});}
+	return step();
+}
+function depRun(){
+	if(DEP.busy)return;var p=null;
+	for(var i=0;i<pins.length;i++)if(!(depKey(pins[i]) in DEP.res)&&!pins[i]._dragging){p=pins[i];break;}
+	if(!p)return;var k=depKey(p);DEP.busy=true;
+	depPoint(p.lat,p.lon).then(function(r){DEP.res[k]=r;},function(){DEP.res[k]=null;}).then(function(){
+		DEP.busy=false;
+		pins.forEach(function(q){if(depKey(q)===k)q.popup.setContent(pinContent(q,curTi));});
+		renderWpTable();setTimeout(depRun,150);});
+}
+/* "Depth 12–18 ft" for a pin's card / table row; orange when all of it is under the safety depth */
+function depNote(pin,cls){
+	var r=DEP.res[depKey(pin)];if(r===undefined)return swIn(pin.lat,pin.lon)&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
+	if(!r||r==='land')return '';
+	var t=r.hi==null?'over '+r.lo+' ft':(r.lo===0?'under '+r.hi+' ft':r.lo+'&ndash;'+r.hi+' ft'),low=r.hi!=null&&r.hi<=safeFt();
+	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="Charted depth area at this point (NOAA chart, contours 6/10/12/18/30/60 ft). Not the exact sounding; not for navigation.">Depth '+t+(low?' &middot; under your '+safeFt()+' ft':'')+'</span>';
 }
 function swDraw(){
 	SW.layer.clearLayers();var r=SW.res;if(!r)return;
@@ -2347,7 +2401,7 @@ function swNote(pin,cls){
 function swUI(){
 	var b=document.getElementById('rbAuto');
 	if(b){var n=SW.res?SW.res.n:0;b.classList.toggle('warn',n>0);b.innerHTML=n?'&#9888;&nbsp;Autoroute ('+n+')':'Autoroute';
-		b.title=n?('Fix '+n+' leg'+(n>1?'s':'')+' that cross land or water under '+safeFt()+' ft'):'Check the legs for land and water under '+safeFt()+' ft (draft '+boatDraft()+' ft + '+SAFE_MARGIN+')';}
+		b.title=n?('Fix '+n+' leg'+(n>1?'s':'')+' that cross land or water under '+safeFt()+' ft'):'Check the legs for land and water under '+safeFt()+' ft (draft '+draftTxt(boatDraft())+' + '+SAFE_MARGIN+' ft)';}
 	for(var i=0;i<pins.length;i++)pins[i].popup.setContent(pinContent(pins[i],curTi));
 	renderWpTable();swPanel();
 }
@@ -2465,7 +2519,7 @@ function swAutoroute(){
 	var r=SW.res,v=swVar();
 	/* the leg check is still loading chart tiles (a long route takes a while the first time): say so, and go on when it's done */
 	if(!r||SW.running||SW.key!==swKey()){SW.wantAuto=true;SW.fix={busy:true,items:[],msg:'',checking:true};swPanel();if(!SW.running)swRun();return;}
-	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft). Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
+	if(!r.n){SW.fix={busy:false,items:[],msg:'No land or water under '+r.ft+' ft on your legs (draft '+draftTxt(boatDraft())+' + '+SAFE_MARGIN+' ft). Legs outside the chart area, from Chesapeake Bay to Cape Cod, aren’t checked.'};swPanel();return;}
 	SW.fix={busy:true,items:[],msg:''};swPanel();
 	var legs=swLegs(),jobs=[];
 	pins.forEach(function(p){if(r.pins[p.id]===2)jobs.push(swNearestWater(p.lat,p.lon,v).then(function(ll){
@@ -2501,7 +2555,7 @@ function swPanel(){
 		F.items.forEach(function(it,k){if(it.st===true)nOk++;
 			h+='<li class="'+(it.st===true?'ok':it.st===false?'no':'')+'"><span>'+pEsc(it.why)+'</span>'
 				+(it.kind==='none'?'':'<span class="pc-yn"><button type="button" class="pc-y'+(it.st===true?' on':'')+'" data-ara="'+k+'" aria-pressed="'+(it.st===true)+'">✓ Approve</button><button type="button" class="pc-n'+(it.st===false?' on':'')+'" data-arr="'+k+'" aria-pressed="'+(it.st===false)+'">✕ Reject</button></span>')+'</li>';});
-		h+='</ol><p class="ar-note">Purple on the chart. Checked against land and the '+safeFt()+' ft depth contour (draft '+boatDraft()+' ft + '+SAFE_MARGIN+' ft; set your draft in Layers). Rocks, wrecks and buoys aren’t checked: look at the chart. Not for navigation.</p>'
+		h+='</ol><p class="ar-note">Purple on the chart. Checked against land and the '+safeFt()+' ft depth contour (draft '+draftTxt(boatDraft())+' + '+SAFE_MARGIN+' ft; set My draft in Layers). Rocks, wrecks and buoys aren’t checked: look at the chart. Not for navigation.</p>'
 			+'<div class="pc-acts"><button type="button" class="pc-btn pri" data-ar="ok"'+(nOk?'':' disabled')+'>Apply '+(nOk?nOk+' approved':'approved')+'</button><button type="button" class="pc-btn" data-ar="x">Dismiss</button></div>';}
 	el.innerHTML=h;
 }
@@ -2523,9 +2577,9 @@ document.addEventListener('click',function(e){
 /* Draft (Layers): saved in this browser; changes the depth the legs are checked against */
 (function(){var inp=document.getElementById('boatDraft');if(!inp)return;
 	function note(){var n=document.getElementById('draftNote');if(n)n.textContent='Legs are checked for land and water under '+safeFt()+' ft (draft + '+SAFE_MARGIN+' ft, next charted depth).';}
-	inp.value=boatDraft();note();
-	inp.addEventListener('change',function(){var d=parseFloat(inp.value);if(!isFinite(d)||d<1||d>25){inp.value=boatDraft();return;}
-		try{localStorage.setItem(DRAFT_KEY,String(d));}catch(e){}note();SW.key='';SW.fix=null;SW.prev.clearLayers();swPanel();swSchedule();});})();
+	inp.value=draftTxt(boatDraft());note();
+	inp.addEventListener('change',function(){var d=parseDraft(inp.value);if(!isFinite(d)||d<1||d>25){inp.value=draftTxt(boatDraft());return;}
+		inp.value=draftTxt(d);try{localStorage.setItem(DRAFT_KEY,String(+d.toFixed(3)));}catch(e){}note();SW.key='';SW.fix=null;SW.prev.clearLayers();swPanel();swSchedule();});})();
 
 /* ---------- waypoint table: the pins' cards as rows beside the map ----------
    Each row shows the same reading as that pin's card (pinReading at the slider's
@@ -2557,7 +2611,7 @@ function wpRow(pin,i,ti){
 		sea='<span class="v">'+(s.waveFt!=null?s.waveFt.toFixed(1)+' ft'+(s.wavePer!=null?' · '+Math.round(s.wavePer)+' s':''):'—')+'</span><span class="s">'+pc+'</span>';
 	}
 	if(pin.name)dist='<span class="s nm">'+pEsc(pin.name)+'</span>'+dist;
-	dist+=swNote(pin,'s');
+	dist+=swNote(pin,'s')+depNote(pin,'s dep');
 	return '<tr data-wp="'+pin.id+'"><td class="n" title="Drag the row to change the order"><span>'+wpBadge(i)+'</span></td><td class="dist">'+dist+'</td><td class="wind">'+wind+'</td><td class="sea">'+sea+'</td>'
 		+'<td class="x"><button type="button" data-wpx="'+pin.id+'" title="Remove point" aria-label="Remove point '+wpBadge(i)+'">&#10005;</button></td></tr>';
 }

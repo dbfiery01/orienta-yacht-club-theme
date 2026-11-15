@@ -80,7 +80,7 @@ function oyc_enc_variant( $v ) {
 	if ( preg_match( '/^(s|h)(\d{1,2})$/', $v, $m ) && in_array( (int) $m[2], array_map( 'intval', explode( ',', OYC_ENC_SAFE_FT ) ), true ) ) {
 		return $m[1] . (int) $m[2];
 	}
-	if ( preg_match( '/^(c|cd|ch)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
+	if ( preg_match( '/^(c|cd|ch|cx)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
 		return $m[1] . (int) $m[2];
 	}
 	return false;
@@ -91,9 +91,9 @@ function oyc_enc_is_safe( $v ) {
 	return (bool) preg_match( '/^[sh]\d/', (string) $v );
 }
 
-/** The chart the member sees, shaded at their safety depth: c12 (normal), cd12 (detail layer, zoom 10-11). */
+/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-12), cx5 (harbour charts with every sounding, zoom 13+). */
 function oyc_enc_is_contour( $v ) {
-	return (bool) preg_match( '/^c[dh]?\d/', (string) $v );
+	return (bool) preg_match( '/^c[dhx]?\d/', (string) $v );
 }
 
 /* The chart on the map is drawn with NOAA's shallow/safety/deep contours all
@@ -102,6 +102,10 @@ function oyc_enc_is_contour( $v ) {
    soundings (Brad, 2026-11-15). Approach-scale cells (e.g. Fishers Island
    Sound) still draw flat blue at any contour, so at zoom 10-12 a harbour-band
    layer ch5 (IntendedUsage "5", real contours and soundings) sits on top. NOAA's default shades all water under ~30 m.
+   From zoom 13 in, the same approach cells are still flat blue with no
+   soundings (Fishers Island Sound, Brad 2026-11-15), and the harbour charts hide
+   their soundings at these scales (NOAA's SCAMIN rule), so cx5 = harbour charts
+   with HonorScamin 1 (every sounding drawn) sits on top at zoom 13-17.
    The home-waters warmer keeps c5 / cd5 loaded; wind-map.php reads this. */
 define( 'OYC_ENC_CHART_FT', 5 );
 
@@ -120,8 +124,11 @@ function oyc_enc_safe_params( $v ) {
 	foreach ( array( 'ShallowContour', 'SafetyContour', 'DeepContour', 'SafetyDepth' ) as $n ) {
 		$p[] = '{"name":"' . $n . '","value":' . $m . '}';
 	}
-	if ( 'h' === $k || 'ch' === $k ) {
+	if ( 'h' === $k || 'ch' === $k || 'cx' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"5"}';
+	}
+	if ( 'cx' === $k ) {
+		$p[] = '{"name":"HonorScamin","value":1}';
 	} elseif ( 'cd' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"4"}';
 	}
@@ -185,6 +192,9 @@ function oyc_enc_zoom_ok( $z, $v ) {
 	if ( oyc_enc_is_contour( $v ) ) {
 		if ( 0 === strpos( $v, 'ch' ) ) {
 			return $z >= 10 && $z <= 12;
+		}
+		if ( 0 === strpos( $v, 'cx' ) ) {
+			return $z >= 13 && $z <= 17;
 		}
 		return 0 === strpos( $v, 'cd' ) ? in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_DETAIL_ZOOMS ) ), true ) : ( $z >= 9 && $z <= 17 );
 	}
