@@ -267,6 +267,189 @@ function oyc_passage_brief_ajax() {
 }
 
 /* ======================================================================
+ * Conversation about the passage ("Ask Claude about this passage")
+ *
+ * The browser sends the routed facts (with comfort per leg, a 6-hourly
+ * timeline and alternatives the router has already run), the last few turns
+ * and the new question. Claude answers in plain text and may suggest route
+ * changes (add / move / remove a waypoint, a new departure), each of which the
+ * member approves or rejects on its own; the browser re-runs the approved set
+ * through the router before it is applied.
+ * Members only, 60 questions per member per day.
+ * ====================================================================== */
+add_action( 'wp_ajax_oyc_passage_chat', 'oyc_passage_chat_ajax' );
+add_action( 'wp_ajax_nopriv_oyc_passage_chat', 'oyc_passage_chat_ajax' );
+
+function oyc_passage_chat_ajax() {
+	if ( ! is_user_logged_in() ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Sign in to ask Claude about the passage.' ) );
+	}
+	if ( ! check_ajax_referer( 'oyc_passage_brief', 'nonce', false ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'This page has expired. Reload it and try again.' ) );
+	}
+	$key = oyc_passage_brief_key();
+	if ( '' === $key ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Claude isn’t switched on for this site yet.' ) );
+	}
+	$raw   = isset( $_POST['facts'] ) ? wp_unslash( $_POST['facts'] ) : '';
+	$facts = json_decode( $raw, true );
+	$q     = isset( $_POST['q'] ) ? trim( sanitize_textarea_field( wp_unslash( $_POST['q'] ) ) ) : '';
+	if ( ! is_array( $facts ) || strlen( $raw ) > 60000 || '' === $q ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'The question didn’t come through. Try again.' ) );
+	}
+	$q = function_exists( 'mb_substr' ) ? mb_substr( $q, 0, 600 ) : substr( $q, 0, 600 );
+
+	$uid       = get_current_user_id();
+	$count_key = 'oyc_pc_n_' . $uid . '_' . gmdate( 'Ymd' );
+	$count     = (int) get_transient( $count_key );
+	if ( $count >= 60 ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'That’s today’s limit of questions to Claude. It resets tomorrow.' ) );
+	}
+
+	/* earlier turns: alternate user/assistant, merging repeats, starting with the user */
+	$hist = json_decode( isset( $_POST['history'] ) ? wp_unslash( $_POST['history'] ) : '[]', true );
+	$msgs = array();
+	foreach ( array_slice( is_array( $hist ) ? $hist : array(), -10 ) as $m ) {
+		$role = ( isset( $m['role'] ) && 'assistant' === $m['role'] ) ? 'assistant' : 'user';
+		$text = isset( $m['text'] ) ? sanitize_textarea_field( (string) $m['text'] ) : '';
+		if ( '' === $text ) { continue; }
+		$text = function_exists( 'mb_substr' ) ? mb_substr( $text, 0, 3000 ) : substr( $text, 0, 3000 );
+		if ( ! $msgs && 'assistant' === $role ) { continue; }
+		$n = count( $msgs );
+		if ( $n && $msgs[ $n - 1 ]['role'] === $role ) {
+			$msgs[ $n - 1 ]['content'] .= "\n\n" . $text;
+		} else {
+			$msgs[] = array( 'role' => $role, 'content' => $text );
+		}
+	}
+	$n = count( $msgs );
+	if ( $n && 'user' === $msgs[ $n - 1 ]['role'] ) {
+		$msgs[ $n - 1 ]['content'] .= "\n\n" . $q;
+	} else {
+		$msgs[] = array( 'role' => 'user', 'content' => $q );
+	}
+
+	$system = "You are a passage-planning assistant for members of Orienta Yacht Club in Mamaroneck, NY, talking with a member about one routed passage. "
+		. "Below is the router's output: a polar router stepped the boat (" . sanitize_text_field( (string) ( $facts['boat'] ?? 'the boat' ) ) . ") through the GFS forecast in 30-minute steps, motor-sailing below the motoring floor. "
+		. "It includes per-leg wind, angles and speeds, The Race tidal gate and Gulf Stream crossing when the route passes them, seas, a comfort breakdown (easy, lively, rough hours with the definitions given), "
+		. "a 6-hourly timeline, the current route_waypoints with their index, and alternatives the router has already run (doglegs either side of the rhumb line, and the most comfortable departure within 3 days). "
+		. "Answer the member's question for an experienced cruising sailor: plain English, no markdown headings or tables, short paragraphs or a few dash bullets, usually under 160 words. "
+		. "Use only the numbers in the data; never invent wind speeds, times, distances or hazards. You may use general seamanship knowledge (how a point of sail feels, heel, slamming, rolling, wind against current) to explain them. "
+		. "If the data can't answer something, say so and suggest what to change on the card (departure time, start, finish, waypoints). "
+		. "When the member asks for a recommendation, or a better route or departure clearly exists in the alternatives, set propose to true and list the changes to route_waypoints one by one in changes; the member approves or rejects each change separately, so make each one stand on its own. "
+		. "Each change has action add (insert a new waypoint after route_waypoints[at]), move (move route_waypoints[at] to lat/lon) or remove (drop route_waypoints[at]; lat and lon 0), a short name, and why (one sentence with the numbers behind it). "
+		. "Never move or remove the start (index 0) or the finish (the last index). A new departure goes in depart as YYYY-MM-DDTHH:MM Eastern time with depart_why, or both empty strings to keep the current departure. "
+		. "Prefer alternatives the router has already run, and quote their numbers. If you suggest a waypoint that hasn't been run, say so: the card re-runs every combination the member approves before it is applied. "
+		. "Keep new waypoints in open water, well clear of land. summary is one or two sentences on the overall recommendation. If you are not proposing anything, set propose to false, changes to an empty list and the strings to empty strings. "
+		. "This is a planning aid, not a substitute for the skipper's judgement or official forecasts.\n\nRouter output (JSON):\n" . wp_json_encode( $facts );
+
+	$schema = array(
+		'type'                 => 'object',
+		'properties'           => array(
+			'answer'    => array( 'type' => 'string' ),
+			'propose'   => array( 'type' => 'boolean' ),
+			'summary'   => array( 'type' => 'string' ),
+			'depart'     => array( 'type' => 'string' ),
+			'depart_why' => array( 'type' => 'string' ),
+			'changes'    => array(
+				'type'  => 'array',
+				'items' => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'action' => array( 'type' => 'string', 'enum' => array( 'add', 'move', 'remove' ) ),
+						'at'     => array( 'type' => 'integer' ),
+						'name'   => array( 'type' => 'string' ),
+						'lat'    => array( 'type' => 'number' ),
+						'lon'    => array( 'type' => 'number' ),
+						'why'    => array( 'type' => 'string' ),
+					),
+					'required'             => array( 'action', 'at', 'name', 'lat', 'lon', 'why' ),
+					'additionalProperties' => false,
+				),
+			),
+		),
+		'required'             => array( 'answer', 'propose', 'summary', 'depart', 'depart_why', 'changes' ),
+		'additionalProperties' => false,
+	);
+
+	$resp = wp_remote_post(
+		'https://api.anthropic.com/v1/messages',
+		array(
+			'timeout' => 100,
+			'headers' => array(
+				'content-type'      => 'application/json',
+				'x-api-key'         => $key,
+				'anthropic-version' => '2026-10-21',
+				'anthropic-beta'    => 'server-side-fallback-2026-07-01',
+			),
+			'body'    => wp_json_encode( array(
+				'model'         => 'claude-opus-5-5',
+				'max_tokens'    => 12000,
+				'fallbacks'     => 'default',
+				'output_config' => array(
+					'effort' => 'medium',
+					'format' => array( 'type' => 'json_schema', 'schema' => $schema ),
+				),
+				'system'        => array( array( 'type' => 'text', 'text' => $system, 'cache_control' => array( 'type' => 'ephemeral' ) ) ),
+				'messages'      => $msgs,
+			) ),
+		)
+	);
+	if ( is_wp_error( $resp ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Couldn’t reach Claude just now. Try again in a minute.' ) );
+	}
+	$code = (int) wp_remote_retrieve_response_code( $resp );
+	$json = json_decode( wp_remote_retrieve_body( $resp ), true );
+	if ( 200 !== $code || ! is_array( $json ) ) {
+		$msg = ( 429 === $code || 529 === $code ) ? 'Claude is busy right now. Try again in a minute.' : 'Claude couldn’t answer just now.';
+		wp_send_json( array( 'ok' => false, 'msg' => $msg, 'code' => $code ) );
+	}
+	if ( isset( $json['stop_reason'] ) && 'refusal' === $json['stop_reason'] ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Claude declined to answer that one.' ) );
+	}
+	$text = '';
+	foreach ( (array) ( $json['content'] ?? array() ) as $block ) {
+		if ( isset( $block['type'] ) && 'text' === $block['type'] ) {
+			$text .= (string) $block['text'];
+		}
+	}
+	$out = json_decode( $text, true );
+	if ( ! is_array( $out ) || ! isset( $out['answer'] ) ) {
+		wp_send_json( array( 'ok' => false, 'msg' => 'Claude’s reply came back incomplete. Try again.' ) );
+	}
+	$proposal = null;
+	if ( ! empty( $out['propose'] ) ) {
+		$chg = array();
+		foreach ( array_slice( (array) ( $out['changes'] ?? array() ), 0, 10 ) as $c ) {
+			$act = (string) ( $c['action'] ?? '' );
+			if ( ! in_array( $act, array( 'add', 'move', 'remove' ), true ) || ! isset( $c['at'] ) || ! is_numeric( $c['at'] ) ) { continue; }
+			$lat = (float) ( $c['lat'] ?? 0 );
+			$lon = (float) ( $c['lon'] ?? 0 );
+			if ( 'remove' !== $act && ( abs( $lat ) > 70 || abs( $lon ) > 180 ) ) { continue; }
+			$chg[] = array(
+				'action' => $act,
+				'at'     => (int) $c['at'],
+				'name'   => sanitize_text_field( (string) ( $c['name'] ?? '' ) ),
+				'lat'    => round( $lat, 4 ),
+				'lon'    => round( $lon, 4 ),
+				'why'    => sanitize_text_field( (string) ( $c['why'] ?? '' ) ),
+			);
+		}
+		$dep = preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', (string) ( $out['depart'] ?? '' ) ) ? (string) $out['depart'] : '';
+		if ( $chg || '' !== $dep ) {
+			$proposal = array(
+				'summary'    => sanitize_textarea_field( (string) ( $out['summary'] ?? '' ) ),
+				'changes'    => $chg,
+				'depart'     => $dep,
+				'depart_why' => sanitize_text_field( (string) ( $out['depart_why'] ?? '' ) ),
+			);
+		}
+	}
+	set_transient( $count_key, $count + 1, DAY_IN_SECONDS );
+	wp_send_json( array( 'ok' => true, 'answer' => sanitize_textarea_field( (string) $out['answer'] ), 'proposal' => $proposal ) );
+}
+
+/* ======================================================================
  * Window accuracy log
  *
  * Every routed window a signed-in member looks at (the departure they
