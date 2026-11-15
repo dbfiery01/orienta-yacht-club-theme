@@ -732,7 +732,7 @@ function oyc_wind_map_html( $embed = false ) {
 #oycwm .pc-list li{margin:2px 0}
 #oycwm .pc-ai{background:rgba(212,168,81,.08);border-left:3px solid #d4a851;border-radius:0 8px 8px 0;padding:7px 9px;color:#f1e9d6}
 #oycwm .pc-ai p{margin:0}
-#oycwm .pc-chatlog{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;margin:4px 0 8px;padding-right:2px}
+#oycwm .pc-chatlog{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}
 #oycwm .pc-msg{padding:7px 9px;border-radius:10px;font-size:.76rem;line-height:1.45;max-width:92%;white-space:normal;overflow-wrap:anywhere}
 #oycwm .pc-msg.me{align-self:flex-end;background:#d4a851;color:#0b2a4a;border-bottom-right-radius:3px;font-weight:600}
 #oycwm .pc-msg.cl{align-self:flex-start;background:rgba(212,168,81,.08);border-left:3px solid #d4a851;color:#f1e9d6;border-radius:0 10px 10px 0}
@@ -4003,11 +4003,11 @@ function passFacts(r){
 		forecast_source:'GFS via Open-Meteo, 3-hourly; The Race NOAA LIS1017; Gulf Stream walls NOAA/NAVO; seas Open-Meteo marine'};
 }
 function passAskClaude(){
-	var r=PASS.res;if(!r||PASS.aiBusy)return;PASS.aiBusy=true;PASS.aiErr='';renderPassCard();
+	var r=PASS.res;if(!r||PASS.aiBusy)return;PASS.aiBusy=true;PASS.aiErr='';PASS.scrollTo='#pcTake';renderPassCard();
 	var fd=new FormData();fd.append('action','oyc_passage_brief');fd.append('nonce',PB_NONCE);fd.append('facts',JSON.stringify(passFacts(r)));
 	fetch(AJAX,{method:'POST',body:fd,credentials:'same-origin'}).then(function(x){return x.json();}).then(function(j){
 		if(j&&j.ok&&j.brief)PASS.ai=j.brief;else PASS.aiErr=(j&&j.msg)||'Claude couldn’t write the brief just now.';
-	}).catch(function(){PASS.aiErr='Claude couldn’t write the brief just now.';}).then(function(){PASS.aiBusy=false;renderPassCard();});
+	}).catch(function(){PASS.aiErr='Claude couldn’t write the brief just now.';}).then(function(){PASS.aiBusy=false;PASS.scrollTo='#pcTake';renderPassCard();});
 }
 /* ── conversation with Claude about this passage ──
    Claude gets the routed facts plus comfort (per leg and every 6 h along the
@@ -4123,7 +4123,7 @@ function passChatSend(q){
 	var r=PASS.res;q=String(q||'').trim();if(!r||!q||PASS.chatBusy)return;
 	if(q.length>600)q=q.slice(0,600);
 	PASS.chat=PASS.chat||[];var hist=PASS.chat.slice(-10).map(function(m){return {role:m.role,text:m.text};});
-	PASS.chat.push({role:'user',text:q});PASS.chatDraft='';PASS.chatBusy=true;PASS.chatErr='';renderPassCard();
+	PASS.chat.push({role:'user',text:q});PASS.chatDraft='';PASS.chatBusy=true;PASS.chatErr='';PASS.scrollTo='.pc-msg.last';renderPassCard();
 	var fd=new FormData();fd.append('action','oyc_passage_chat');fd.append('nonce',PB_NONCE);
 	fd.append('facts',JSON.stringify(passChatFacts(r)));fd.append('history',JSON.stringify(hist));fd.append('q',q);
 	var ctl=new AbortController(),tm=setTimeout(function(){ctl.abort();},120000);
@@ -4131,13 +4131,13 @@ function passChatSend(q){
 		if(j&&j.ok&&j.answer){PASS.prop=null;PASS.chat.push({role:'assistant',text:j.answer});if(j.proposal)passPropose(j.proposal);}
 		else{PASS.chat.pop();PASS.chatDraft=q;PASS.chatErr=(j&&j.msg)||'Claude couldn’t answer just now.';}
 	}).catch(function(){PASS.chat.pop();PASS.chatDraft=q;PASS.chatErr='Claude couldn’t answer just now. Try again.';})
-	.then(function(){PASS.chatBusy=false;renderPassCard();var l=document.querySelector('#passCard .pc-chatlog');if(l)l.scrollTop=l.scrollHeight;});
+	.then(function(){PASS.chatBusy=false;PASS.scrollTo=PASS.chat.length&&PASS.chat[PASS.chat.length-1].role==='assistant'?'.pc-msg.last':'.pc-chatsec';renderPassCard();});
 }
 function passChatHTML(){
 	if(!PB_AJAX_OK)return '';
 	var C=PASS.chat||[],h='<div class="pc-sec pc-chatsec"><h4>Ask Claude about this passage</h4>';
-	if(C.length){h+='<div class="pc-chatlog" aria-live="polite">'+C.map(function(m){return '<div class="pc-msg '+(m.role==='user'?(/^\(/.test(m.text)?'sys':'me'):'cl')+'">'+pEsc(m.text).replace(/\n/g,'<br>')+'</div>';}).join('')
-		+(PASS.chatBusy?'<div class="pc-msg cl wait"><span class="pc-spin" aria-hidden="true"></span>Claude is thinking…</div>':'')+'</div>';}
+	if(C.length){h+='<div class="pc-chatlog" aria-live="polite">'+C.map(function(m,i){return '<div class="pc-msg '+(i===C.length-1&&!PASS.chatBusy?'last ':'')+(m.role==='user'?(/^\(/.test(m.text)?'sys':'me'):'cl')+'">'+pEsc(m.text).replace(/\n/g,'<br>')+'</div>';}).join('')
+		+(PASS.chatBusy?'<div class="pc-msg cl wait last"><span class="pc-spin" aria-hidden="true"></span>Claude is thinking…</div>':'')+'</div>';}
 	h+=passPropHTML();
 	if(!PASS.chatBusy)h+='<div class="pc-chips">'+PASS_CHIPS.map(function(c,i){return '<button type="button" class="pc-chip-q" data-q="'+i+'">'+pEsc(c)+'</button>';}).join('')+'</div>';
 	if(PASS.chatErr)h+='<p class="pc-note warn">'+pEsc(PASS.chatErr)+'</p>';
@@ -4247,7 +4247,7 @@ function renderPassCard(){
 		var watch=PASS.ai&&PASS.ai.watch&&PASS.ai.watch.length?PASS.ai.watch:r.flags.map(function(f){return f.txt;});
 		if(!watch.length)watch=['Nothing flagged. Re-run before you go: the forecast updates every 6 hours.'];
 		h+='<div class="pc-sec"><h4>Watch</h4><ul class="pc-list">'+watch.map(function(w){return '<li>'+pEsc(w)+'</li>';}).join('')+'</ul></div>';
-		h+='<div class="pc-sec"><h4>'+(PASS.ai?'Claude’s take':'Summary')+'</h4><div class="pc-ai"><p>'+pEsc(PASS.ai?PASS.ai.take:sm.text)+'</p></div>';
+		h+='<div class="pc-sec" id="pcTake"><h4>'+(PASS.ai?'Claude’s take':'Summary')+'</h4><div class="pc-ai"><p>'+pEsc(PASS.ai?PASS.ai.take:sm.text)+'</p></div>';
 		if(!PASS.ai){
 			if(PB_AJAX_OK)h+='<div class="pc-acts" style="margin-top:8px"><button type="button" class="pc-btn pri" id="pcAsk"'+(PASS.aiBusy?' disabled':'')+'>'+(PASS.aiBusy?'Claude is writing…':'✦ Ask Claude for the brief')+'</button></div>';
 			else h+='<p class="pc-note">'+(PB_LOGGED?'Claude brief isn’t switched on for this site yet.'+(PB_ADMIN?' Add the API key in WP Admin → Settings → Passage brief.':''):'Sign in to ask Claude for a written brief.')+'</p>';
@@ -4257,8 +4257,12 @@ function renderPassCard(){
 			+'<div class="pc-foot">'+PASS.boat+' polars, motor-sailing below '+PASS.floor+' kt · GFS (Open-Meteo), 3-hourly · NOAA LIS1017 current · NOAA Gulf Stream walls · Open-Meteo seas'+(r.noFcH?' · last '+Math.round(r.noFcH)+' h past the 7-day forecast':'')+' · planning aid, not for navigation</div>';
 	}
 	h+='</div>';
-	var ae=document.activeElement,qf=ae&&ae.id==='pcQ';
+	var ae=document.activeElement,qf=ae&&ae.id==='pcQ',ob=c.querySelector('.pc-body'),st=ob?ob.scrollTop:0;
 	c.innerHTML=h;
+	/* a redraw keeps the reader where they were; after Claude answers, scroll to the answer */
+	var nb=c.querySelector('.pc-body');if(nb){nb.scrollTop=st;
+		if(PASS.scrollTo){var el=c.querySelector(PASS.scrollTo);if(el)nb.scrollTop+=el.getBoundingClientRect().top-nb.getBoundingClientRect().top-8;}}
+	PASS.scrollTo=null;
 	if(qf){var qa=document.getElementById('pcQ');if(qa&&!qa.disabled){qa.focus();qa.selectionStart=qa.selectionEnd=qa.value.length;}}
 	if(c._min)passSetMin(true);
 }
