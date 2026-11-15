@@ -110,12 +110,13 @@ function oyc_enc_is_contour( $v ) {
 define( 'OYC_ENC_CHART_FT', 5 );
 /* Soundings by zoom (Brad, 2026-11-15): soundings at every zoom, the same
    across the Sound, fewer as you zoom out with the shallowest always shown.
-     z9-12    c5 with the approach charts cd5 on top (contours, rocks and
-              hazards, but NOAA draws few or no soundings at these scales; in
-              much of the Sound only a flat blue sheet), and the map draws its
-              own soundings from assets/soundings (tools/build-soundings.py,
-              read from NOAA's ENC files). Brad chose this over hiding NOAA's
-              soundings, which also hid contours and rocks.
+     z9-12    c5 for land and names, under the map's own chart background
+              (assets/chartbg, tools/build-chartbg.py: white water, blue under
+              5 ft, grey contours, rocks) and its own soundings
+              (assets/soundings, tools/build-soundings.py), both drawn from
+              NOAA's ENC files, inside SND_BOX. NOAA's charts at these scales
+              show much of the Sound as one flat blue sheet (Brad wanted it the
+              same at every zoom).
      z13      ce5 = approach charts with every sounding, cx5 where those are
               flat blue (Fishers Island Sound): encMix in inc/wind-map.php
      z14+     cx5 = harbour charts with every sounding */
@@ -730,9 +731,9 @@ function oyc_enc_home_tiles() {
 		for ( $x = oyc_enc_tile_x( $w, $z ); $x <= oyc_enc_tile_x( $e, $z ); $x++ ) {
 			for ( $y = oyc_enc_tile_y( $n, $z ); $y <= oyc_enc_tile_y( $s, $z ); $y++ ) {
 				// what the map shows (see "Soundings by zoom"): c5 everywhere,
-				// cd5 at 9-12, ce5 + cx5 at 13
+				// ce5 + cx5 at 13
 				$out[] = array( $z, $x, $y, 'c' . OYC_ENC_CHART_FT );
-				foreach ( array( 'cd', 'ce' ) as $k ) {
+				foreach ( array( 'ce' ) as $k ) {
 					if ( oyc_enc_zoom_ok( $z, $k . OYC_ENC_CHART_FT ) ) {
 						$out[] = array( $z, $x, $y, $k . OYC_ENC_CHART_FT );
 					}

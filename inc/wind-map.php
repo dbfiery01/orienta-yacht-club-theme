@@ -1722,12 +1722,15 @@ var encBase=new EncWMS(ENC_WMS,encOpts(L.extend({minZoom:9,maxZoom:19,zIndex:2,a
 var encLayer=L.layerGroup([encBase]);
 /* Soundings by zoom (Brad, 2026-11-15): soundings at every zoom, the same
    across Long Island Sound, fewer as you zoom out with the shallowest always
-   shown. Zoom 9-12 inside SND_BOX: the normal chart (c5) with the general
-   charts (cd5) on top, which keep contours, rocks and hazards, plus the map's
-   own soundings (sndLayer below).
+   shown. Zoom 9-12 inside SND_BOX: the normal chart (c5) for land, with the
+   map's own chart background (chartBg) and soundings (sndLayer below) on top.
    Zoom 13: encMix. Zoom 14 in: harbour charts with every sounding (cx).
    See "Soundings by zoom" in inc/enc-cache.php. */
-if(ENC_CV&&ENC_CDP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:9,maxZoom:12,zIndex:3,bounds:SND_BOX,encVar:'cd'+ENC_CV.slice(1),display_params:ENC_CDP})));
+/* chartBg: our own chart background at zoom 9-12 inside SND_BOX (white water,
+   blue under 5 ft, grey contours, rocks), drawn from the NOAA ENC files by
+   tools/build-chartbg.py into assets/chartbg. Land is transparent, so NOAA's
+   chart (c5) shows through for the coast and names. */
+if(ENC_CV)encLayer.addLayer(L.tileLayer(SND_URL.replace(/soundings$/,'chartbg')+'/{z}/{x}/{y}.png?v='+encodeURIComponent(SND_V),{minZoom:9,maxZoom:12,zIndex:3,bounds:SND_BOX,keepBuffer:4}));
 if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:ENC_CEP?14:12,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
 /* encMix, zoom 13. NOAA draws a chart with no detail at a given scale as one
    flat blue area (175,205,225) with no soundings, and which chart that is
