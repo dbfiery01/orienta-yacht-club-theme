@@ -354,6 +354,63 @@ function oyc_enc_probe() {
 	wp_send_json( $out );
 }
 
+/* admin-ajax oyc_enc_fi: read-only test of NOAA's GetFeatureInfo at one point
+   (lat, lon inside OYC_ENC_AREA; fmt = xml | html | json), to see whether the
+   chart server can give the depth area (DRVAL1-DRVAL2) and soundings at a
+   waypoint. Shares the probe's 10-second lock; answers cached 10 minutes. */
+add_action( 'wp_ajax_oyc_enc_fi', 'oyc_enc_fi' );
+add_action( 'wp_ajax_nopriv_oyc_enc_fi', 'oyc_enc_fi' );
+function oyc_enc_fi() {
+	$lat = isset( $_GET['lat'] ) ? (float) $_GET['lat'] : 0;
+	$lon = isset( $_GET['lon'] ) ? (float) $_GET['lon'] : 0;
+	list( $s, $w, $n, $e ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+	if ( $lat < $s || $lat > $n || $lon < $w || $lon > $e ) {
+		wp_send_json( array( 'error' => 'outside the chart area' ), 400 );
+	}
+	$fmts = array( 'xml' => 'text/xml', 'html' => 'text/html', 'json' => 'application/json', 'plain' => 'text/plain' );
+	$fk   = isset( $_GET['fmt'] ) && is_string( $_GET['fmt'] ) ? sanitize_key( wp_unslash( $_GET['fmt'] ) ) : 'xml';
+	if ( ! isset( $fmts[ $fk ] ) ) {
+		$fk = 'xml';
+	}
+	$key  = 'oyc_enc_fi_' . md5( round( $lat, 5 ) . ',' . round( $lon, 5 ) . $fk );
+	$out  = get_transient( $key );
+	if ( ! $out ) {
+		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
+			wp_send_json( array( 'wait' => 'try again in 10 seconds' ), 429 );
+		}
+		set_transient( 'oyc_enc_probe_lock', 1, 10 );
+		$o  = 20037508.342789244;
+		$x  = $lon * $o / 180;
+		$y  = log( tan( ( 90 + $lat ) * M_PI / 360 ) ) * $o / M_PI;
+		$h  = 50; // metres each side: 101 px at ~1 m
+		$url = add_query_arg( array(
+			'service'      => 'WMS',
+			'request'      => 'GetFeatureInfo',
+			'version'      => '1.3.0',
+			'layers'       => OYC_ENC_LAYERS,
+			'query_layers' => OYC_ENC_LAYERS,
+			'styles'       => '',
+			'crs'          => 'EPSG:3857',
+			'bbox'         => implode( ',', array( $x - $h, $y - $h, $x + $h, $y + $h ) ),
+			'width'        => 101,
+			'height'       => 101,
+			'i'            => 50,
+			'j'            => 50,
+			'info_format'  => $fmts[ $fk ],
+			'feature_count' => 50,
+		), OYC_ENC_WMS );
+		$r   = wp_remote_get( $url, array( 'timeout' => 15 ) );
+		$out = is_wp_error( $r ) ? array( 'error' => $r->get_error_message() ) : array(
+			'code' => wp_remote_retrieve_response_code( $r ),
+			'type' => wp_remote_retrieve_header( $r, 'content-type' ),
+			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 20000 ),
+		);
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	wp_send_json( $out );
+}
+
 /* ── Background: pre-load home waters, prune old tiles ───────────────────── */
 
 add_filter( 'cron_schedules', function ( $s ) {

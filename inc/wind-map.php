@@ -2398,12 +2398,17 @@ function depRun(){
 		pins.forEach(function(q){if(depKey(q)===k)q.popup.setContent(pinContent(q,curTi));});
 		renderWpTable();setTimeout(depRun,150);});
 }
-/* "Depth 12–18 ft" for a pin's card / table row; orange when all of it is under the safety depth */
+/* Depth line for a pin's card / table row. NOAA shades a depth area by its
+   SHOALEST depth (DRVAL1), so these tiles say how shallow the charted area
+   around the point gets, not the depth at the point: in a coarse area (e.g.
+   charted 6-18 ft as one area) a 12 ft spot read "6-10 ft" (Brad, 2026-11-15,
+   off Fishers Island). So it reads "6 ft or more": the lower bound is sure,
+   the upper one isn't. Orange only when the area is charted under 6 ft. */
 function depNote(pin,cls){
 	var r=DEP.res[depKey(pin)];if(r===undefined)return swIn(pin.lat,pin.lon)&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
 	if(!r||r==='land')return '';
-	var t=r.hi==null?'over '+r.lo+' ft':(r.lo===0?'under '+r.hi+' ft':r.lo+'&ndash;'+r.hi+' ft'),low=r.hi!=null&&r.hi<=safeFt();
-	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="Charted depth area at this point (NOAA chart, contours 6/10/12/18/30/60 ft). Not the exact sounding; not for navigation.">Depth '+t+(low?' &middot; under your '+safeFt()+' ft':'')+'</span>';
+	var low=r.lo===0,t=low?'under '+r.hi+' ft':(r.lo+' ft or more');
+	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="Least charted depth of the depth area at this point (NOAA chart). The water here may be deeper: check the soundings. Not for navigation.">Depth '+t+'</span>';
 }
 function swDraw(){
 	SW.layer.clearLayers();var r=SW.res;if(!r)return;
