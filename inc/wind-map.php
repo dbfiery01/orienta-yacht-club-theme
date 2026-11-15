@@ -5296,7 +5296,7 @@ map.whenReady(function(){setTimeout(drawGraticule,400);});
 			if(PRESETS.mine.indexOf('tgRace')>=0&&PRESETS.mine.indexOf('tgRaceTools')<0&&document.getElementById('tgRaceTools'))PRESETS.mine.push('tgRaceTools');}
 		else delete PRESETS.mine;
 		var mb=bar.querySelector('.pre-mine');if(mb)mb.classList.toggle('empty',!mine);
-		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Update My chart':'Save as My chart';
+		var sv=document.getElementById('mineSave');if(sv)sv.textContent=mine?'Save':'Save as My chart';
 	}
 	function saveMine(){
 		var on=MANAGED.concat(EXTRA).filter(function(id){var cb=document.getElementById(id);return cb&&cb.checked;});
