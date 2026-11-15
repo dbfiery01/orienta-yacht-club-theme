@@ -372,6 +372,64 @@ function oyc_enc_probe() {
 	wp_send_json( $out );
 }
 
+/* admin-ajax oyc_enc_sd: read-only test of NOAA's ENC Direct map services
+   (encdirect.noaa.gov), which serve chart features such as soundings as data,
+   so the map could draw its own soundings at any zoom (Brad, 2026-11-15:
+   soundings at every zoom, consistent across the Sound). svc = overview |
+   general | coastal | approach | harbour | berthing. Without layer: the
+   service's layer list. With layer (number) and bbox=s,w,n,e (inside
+   OYC_ENC_AREA, at most 0.2 degrees a side): up to 2000 features of that
+   layer. Shares the probe's 10-second lock; answers cached 1 hour. */
+add_action( 'wp_ajax_oyc_enc_sd', 'oyc_enc_sd' );
+add_action( 'wp_ajax_nopriv_oyc_enc_sd', 'oyc_enc_sd' );
+function oyc_enc_sd() {
+	$svcs = array( 'overview', 'general', 'coastal', 'approach', 'harbour', 'berthing' );
+	$svc  = isset( $_GET['svc'] ) && is_string( $_GET['svc'] ) ? sanitize_key( wp_unslash( $_GET['svc'] ) ) : '';
+	if ( ! in_array( $svc, $svcs, true ) ) {
+		wp_send_json( array( 'error' => 'svc must be one of ' . implode( ', ', $svcs ) ), 400 );
+	}
+	$base  = 'https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_' . $svc . '/MapServer';
+	$layer = isset( $_GET['layer'] ) && is_string( $_GET['layer'] ) && '' !== $_GET['layer'] ? absint( $_GET['layer'] ) : -1;
+	if ( $layer < 0 ) {
+		$url = add_query_arg( array( 'f' => 'json' ), $base . '/layers' );
+	} else {
+		$b = isset( $_GET['bbox'] ) && is_string( $_GET['bbox'] ) ? array_map( 'floatval', explode( ',', wp_unslash( $_GET['bbox'] ) ) ) : array();
+		list( $as, $aw, $an, $ae ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+		if ( 4 !== count( $b ) || $b[0] >= $b[2] || $b[1] >= $b[3] || $b[2] - $b[0] > 0.2 || $b[3] - $b[1] > 0.2 || $b[0] < $as || $b[2] > $an || $b[1] < $aw || $b[3] > $ae ) {
+			wp_send_json( array( 'error' => 'bbox=s,w,n,e inside the chart area, at most 0.2 degrees a side' ), 400 );
+		}
+		$url = add_query_arg( array(
+			'where'          => '1=1',
+			'geometry'       => $b[1] . ',' . $b[0] . ',' . $b[3] . ',' . $b[2],
+			'geometryType'   => 'esriGeometryEnvelope',
+			'inSR'           => 4326,
+			'outSR'          => 4326,
+			'spatialRel'     => 'esriSpatialRelIntersects',
+			'outFields'      => '*',
+			'returnGeometry' => 'true',
+			'resultRecordCount' => 2000,
+			'f'              => 'json',
+		), $base . '/' . $layer . '/query' );
+	}
+	$key = 'oyc_enc_sd_' . md5( $url );
+	$out = get_transient( $key );
+	if ( ! $out ) {
+		if ( get_transient( 'oyc_enc_probe_lock' ) ) {
+			wp_send_json( array( 'wait' => 'try again in 10 seconds' ), 429 );
+		}
+		set_transient( 'oyc_enc_probe_lock', 1, 10 );
+		$r   = wp_remote_get( $url, array( 'timeout' => 15 ) );
+		$out = is_wp_error( $r ) ? array( 'error' => $r->get_error_message() ) : array(
+			'code' => wp_remote_retrieve_response_code( $r ),
+			'type' => wp_remote_retrieve_header( $r, 'content-type' ),
+			'body' => mb_substr( (string) wp_remote_retrieve_body( $r ), 0, 400000 ),
+		);
+		set_transient( $key, $out, HOUR_IN_SECONDS );
+	}
+	header( 'X-Robots-Tag: noindex' );
+	wp_send_json( $out );
+}
+
 /* admin-ajax oyc_enc_fi: read-only test of NOAA's GetFeatureInfo at one point
    (lat, lon inside OYC_ENC_AREA; fmt = xml | html | json), to see whether the
    chart server can give the depth area (DRVAL1-DRVAL2) and soundings at a
