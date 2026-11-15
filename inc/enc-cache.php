@@ -383,14 +383,19 @@ function oyc_enc_probe() {
 add_action( 'wp_ajax_oyc_enc_sd', 'oyc_enc_sd' );
 add_action( 'wp_ajax_nopriv_oyc_enc_sd', 'oyc_enc_sd' );
 function oyc_enc_sd() {
-	$svcs = array( 'overview', 'general', 'coastal', 'approach', 'harbour', 'berthing' );
-	$svc  = isset( $_GET['svc'] ) && is_string( $_GET['svc'] ) ? sanitize_key( wp_unslash( $_GET['svc'] ) ) : '';
-	if ( ! in_array( $svc, $svcs, true ) ) {
-		wp_send_json( array( 'error' => 'svc must be one of ' . implode( ', ', $svcs ) ), 400 );
+	/* svc = a service path under the ENC Direct REST root, e.g.
+	   encdirect/enc_approach (letters, digits, _ and one /), or "" / a folder
+	   name with list=1 to list what is there. */
+	$svc  = isset( $_GET['svc'] ) && is_string( $_GET['svc'] ) ? wp_unslash( $_GET['svc'] ) : '';
+	if ( ! preg_match( '#^[A-Za-z0-9_]{0,60}(/[A-Za-z0-9_]{1,60})?$#', $svc ) ) {
+		wp_send_json( array( 'error' => 'svc: a service path like encdirect/enc_approach' ), 400 );
 	}
-	$base  = 'https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_' . $svc . '/MapServer';
+	$host  = isset( $_GET['host'] ) && 'charttools' === $_GET['host'] ? 'https://gis.charttools.noaa.gov/arcgis/rest/services/' : 'https://encdirect.noaa.gov/arcgis/rest/services/';
+	$base  = $host . $svc . '/MapServer';
 	$layer = isset( $_GET['layer'] ) && is_string( $_GET['layer'] ) && '' !== $_GET['layer'] ? absint( $_GET['layer'] ) : -1;
-	if ( $layer < 0 ) {
+	if ( ! empty( $_GET['list'] ) ) {
+		$url = add_query_arg( array( 'f' => 'json' ), $host . $svc );
+	} elseif ( $layer < 0 ) {
 		$url = add_query_arg( array( 'f' => 'json' ), $base . '/layers' );
 	} else {
 		$b = isset( $_GET['bbox'] ) && is_string( $_GET['bbox'] ) ? array_map( 'floatval', explode( ',', wp_unslash( $_GET['bbox'] ) ) ) : array();
