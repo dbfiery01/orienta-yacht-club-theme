@@ -165,6 +165,12 @@ require_once get_template_directory() . '/inc/grib-endpoint.php';
 require_once get_template_directory() . '/inc/wind-map.php';
 
 /*
+ * Offshore passage brief: Claude-written brief for the chart's Passage brief card
+ * (needs OYC_ANTHROPIC_API_KEY in wp-config.php; members only).
+ */
+require_once get_template_directory() . '/inc/passage-brief.php';
+
+/*
  * Racers' race tools on the wind map: Polars & Target Speed overlay, GPS race
  * log, shared team archive + replay (racers only; admins until the hub ships).
  */
