@@ -411,6 +411,113 @@ function oyc_enc_fi() {
 	wp_send_json( $out );
 }
 
+/* admin-ajax oyc_enc_depth: the charted depth at a waypoint (Brad, 2026-11-15:
+   "the depth should come from the soundings"). One NOAA GetFeatureInfo query
+   around the point (OYC_ENC_DEP_R metres each side) returns the chart features
+   there: the nearest sounding (SOUNDG) and the depth area (DEPARE, DRVAL1-2) of
+   the most detailed chart. Load: each point (rounded to ~10 m) is asked once and
+   kept 30 days; only ONE query runs at a time across the whole site (a 12 s
+   lock), with an 8 s timeout, and a page asking while another runs gets
+   {busy:1} and retries a few seconds later. &raw=1 returns NOAA's answer as-is. */
+define( 'OYC_ENC_DEP_R', 300 );
+add_action( 'wp_ajax_oyc_enc_depth', 'oyc_enc_depth' );
+add_action( 'wp_ajax_nopriv_oyc_enc_depth', 'oyc_enc_depth' );
+function oyc_enc_depth() {
+	header( 'X-Robots-Tag: noindex' );
+	$lat = isset( $_GET['lat'] ) ? round( (float) $_GET['lat'], 4 ) : 0;
+	$lon = isset( $_GET['lon'] ) ? round( (float) $_GET['lon'], 4 ) : 0;
+	list( $s, $w, $n, $e ) = array_map( 'floatval', explode( ',', OYC_ENC_AREA ) );
+	if ( $lat < $s || $lat > $n || $lon < $w || $lon > $e ) {
+		wp_send_json( array( 'none' => 1 ) );
+	}
+	$raw = ! empty( $_GET['raw'] );
+	$key = 'oyc_dep_' . md5( $lat . ',' . $lon . '|' . OYC_ENC_DEP_R . ( $raw ? '|raw' : '' ) );
+	$out = get_transient( $key );
+	if ( false !== $out ) {
+		header( 'Cache-Control: public, max-age=86400' );
+		wp_send_json( $out );
+	}
+	if ( get_transient( 'oyc_enc_dep_lock' ) ) {
+		header( 'Cache-Control: no-store' );
+		wp_send_json( array( 'busy' => 1 ) );
+	}
+	set_transient( 'oyc_enc_dep_lock', 1, 12 );
+	$o  = 20037508.342789244;
+	$x  = $lon * $o / 180;
+	$y  = log( tan( ( 90 + $lat ) * M_PI / 360 ) ) * $o / M_PI;
+	$h  = OYC_ENC_DEP_R / cos( deg2rad( $lat ) ); // ground metres → Web Mercator metres
+	$px = 61;
+	$url = add_query_arg( array(
+		'service'       => 'WMS',
+		'request'       => 'GetFeatureInfo',
+		'version'       => '1.3.0',
+		'layers'        => OYC_ENC_LAYERS,
+		'query_layers'  => OYC_ENC_LAYERS,
+		'styles'        => '',
+		'crs'           => 'EPSG:3857',
+		'bbox'          => implode( ',', array( $x - $h, $y - $h, $x + $h, $y + $h ) ),
+		'width'         => $px,
+		'height'        => $px,
+		'i'             => 30,
+		'j'             => 30,
+		'info_format'   => 'text/xml',
+		'feature_count' => 200,
+	), OYC_ENC_WMS );
+	$r = wp_remote_get( $url, array( 'timeout' => 8 ) );
+	delete_transient( 'oyc_enc_dep_lock' );
+	if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
+		header( 'Cache-Control: no-store' );
+		wp_send_json( array( 'error' => 1 ) );
+	}
+	$body = (string) wp_remote_retrieve_body( $r );
+	if ( $raw ) {
+		$out = array( 'body' => mb_substr( $body, 0, 60000 ) );
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
+		wp_send_json( $out );
+	}
+	$out = oyc_enc_depth_parse( $body, $lat, $lon );
+	set_transient( $key, $out, 30 * DAY_IN_SECONDS );
+	header( 'Cache-Control: public, max-age=86400' );
+	wp_send_json( $out );
+}
+
+/** Pull the depth area and the soundings out of NOAA's GetFeatureInfo XML. Depths in metres. */
+function oyc_enc_depth_parse( $body, $lat, $lon ) {
+	$area  = null;
+	$snd   = array();
+	$types = array();
+	if ( preg_match_all( '/<Feature\b([^>]*)>(.*?)<\/Feature>/s', $body, $fm, PREG_SET_ORDER ) ) {
+		foreach ( $fm as $f ) {
+			$acr = preg_match( '/acronym="(\w+)"/', $f[1], $m ) ? $m[1] : '';
+			$sc  = preg_match( '/cscl="(\d+)"/', $f[1], $m ) ? (int) $m[1] : 0;
+			$types[ $acr ] = true;
+			$a = array();
+			if ( preg_match_all( '/<Attribute\b[^>]*acronym="(\w+)"[^>]*value="([^"]*)"/', $f[2], $am, PREG_SET_ORDER ) ) {
+				foreach ( $am as $x ) {
+					$a[ $x[1] ] = html_entity_decode( $x[2] );
+				}
+			}
+			if ( 'DEPARE' === $acr && isset( $a['DRVAL1'] ) && ( ! $area || ( $sc && $sc < $area['scale'] ) ) ) {
+				$area = array( 'min' => (float) $a['DRVAL1'], 'max' => isset( $a['DRVAL2'] ) && '' !== $a['DRVAL2'] ? (float) $a['DRVAL2'] : null, 'scale' => $sc );
+			}
+			if ( 'SOUNDG' === $acr || isset( $a['DEPTH'] ) ) {
+				/* a sounding: depth, and its position if NOAA gives one */
+				$d = isset( $a['DEPTH'] ) ? $a['DEPTH'] : ( isset( $a['VALSOU'] ) ? $a['VALSOU'] : null );
+				$p = null;
+				foreach ( array( 'geometry', 'GEOMETRY', 'coordinates', 'position' ) as $g ) {
+					if ( isset( $a[ $g ] ) && preg_match( '/(-?\d+\.\d+)[ ,]+(-?\d+\.\d+)/', $a[ $g ], $m ) ) {
+						$p = array( (float) $m[1], (float) $m[2] );
+					}
+				}
+				if ( null !== $d && is_numeric( $d ) ) {
+					$snd[] = array( 'm' => (float) $d, 'scale' => $sc, 'pos' => $p );
+				}
+			}
+		}
+	}
+	return array( 'area' => $area, 'soundings' => array_slice( $snd, 0, 40 ), 'types' => array_keys( $types ), 'r' => OYC_ENC_DEP_R );
+}
+
 /* ── Background: pre-load home waters, prune old tiles ───────────────────── */
 
 add_filter( 'cron_schedules', function ( $s ) {

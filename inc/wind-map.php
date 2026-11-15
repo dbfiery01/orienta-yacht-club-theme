@@ -2362,52 +2362,53 @@ function swRun(){
 		if(SW.wantAuto){SW.wantAuto=false;SW.fix=null;swAutoroute();}   /* Autoroute was clicked while this ran */
 	});
 }
-/* ── Depth at each waypoint (Brad 2026-11-15) ──
-   The charted depth range under a pin, from the same cached safe-water tiles
-   (zoom 13): each contour variant s<ft>/h<ft> says "deeper" or "shallower than
-   <ft>" there, so a binary search over 6/10/12/18/30/60 ft gives the band, e.g.
-   12-18 ft (about 3 contours per pin). It is the chart's depth area, not the
-   exact sounding. Pins are done one at a time (each contour is 2 tiles), so a
-   long route never sends a burst of tile requests to our server. */
-var DEP={res:{},busy:false};
-function depKey(p){return p.lat.toFixed(5)+','+p.lon.toFixed(5);}
-/* what the chart says at a point for one contour: 0 deeper · 1 shallower · 2 land · -1 unknown.
-   A 7×7 pixel patch, ignoring lines, symbols and labels, majority wins. */
-function depAt(lat,lon,f){var z=13,v='s'+f,p=swPx(lat,lon,z);
-	return swLoad(v,z,swTilesFor([[p[0]-3,p[1]-3],[p[0]+3,p[1]+3],[p[0]-3,p[1]+3],[p[0]+3,p[1]-3]],z)).then(function(){
-		var n=[0,0,0];for(var dx=-3;dx<=3;dx++)for(var dy=-3;dy<=3;dy++){var c=swAt(v,z,p[0]+dx,p[1]+dy);if(c>=0&&c<=2)n[c]++;}
-		if(n[0]+n[1]+n[2]===0)return -1;
-		return n[2]>n[0]+n[1]?2:(n[0]>=n[1]?0:1);});}
-/* Promise of {lo,hi} in feet (lo 0 = under the first contour, hi null = deeper than the last), 'land' or null */
-function depPoint(lat,lon){
-	if(!swIn(lat,lon))return Promise.resolve(null);
-	var lo=0,hi=SAFE_FT.length-1,deep=-1;   /* deep = index of the deepest contour known to be deeper */
-	function step(){if(lo>hi)return Promise.resolve({lo:deep<0?0:SAFE_FT[deep],hi:deep+1<SAFE_FT.length?SAFE_FT[deep+1]:null});
-		var m=(lo+hi)>>1;return depAt(lat,lon,SAFE_FT[m]).then(function(c){
-			if(c===2)return 'land';if(c<0)return null;
-			if(c===0){deep=m;lo=m+1;}else hi=m-1;return step();});}
-	return step();
+/* ── Depth at each waypoint (Brad 2026-11-15: "the depth should come from the
+   soundings") ──
+   Our server asks NOAA's chart once per point (admin-ajax oyc_enc_depth, cached
+   30 days, one NOAA query at a time across the site) for the chart features
+   within ~300 m: the soundings and the depth area of the most detailed chart.
+   The pin shows the nearest sounding when NOAA gives positions, else the
+   shallowest sounding found nearby, else the depth area's range. Pins are asked
+   one at a time; a "busy" answer is retried a few seconds later. Depths come in
+   metres and are shown in feet. */
+var DEP={res:{},busy:false,tries:{}};
+function depKey(p){return p.lat.toFixed(4)+','+p.lon.toFixed(4);}
+function depFetch(lat,lon){
+	return fetchT(AJAX+'?action=oyc_enc_depth&lat='+lat.toFixed(4)+'&lon='+lon.toFixed(4),20000).then(function(r){return r.ok?r.json():{error:1};});
 }
 function depRun(){
 	if(DEP.busy)return;var p=null;
 	for(var i=0;i<pins.length;i++)if(!(depKey(pins[i]) in DEP.res)&&!pins[i]._dragging){p=pins[i];break;}
-	if(!p)return;var k=depKey(p);DEP.busy=true;
-	depPoint(p.lat,p.lon).then(function(r){DEP.res[k]=r;},function(){DEP.res[k]=null;}).then(function(){
+	if(!p)return;var k=depKey(p);
+	if(!swIn(p.lat,p.lon)){DEP.res[k]=null;setTimeout(depRun,0);return;}
+	DEP.busy=true;
+	depFetch(p.lat,p.lon).then(function(r){
+		if(r&&r.busy&&(DEP.tries[k]=(DEP.tries[k]||0)+1)<=8){DEP.busy=false;setTimeout(depRun,3500);return;}   /* another lookup is running on the server */
+		DEP.res[k]=(r&&!r.busy&&!r.error&&!r.none)?r:null;
 		DEP.busy=false;
 		pins.forEach(function(q){if(depKey(q)===k)q.popup.setContent(pinContent(q,curTi));});
-		renderWpTable();setTimeout(depRun,150);});
+		renderWpTable();setTimeout(depRun,300);
+	},function(){DEP.res[k]=null;DEP.busy=false;setTimeout(depRun,300);});
 }
-/* Depth line for a pin's card / table row. NOAA shades a depth area by its
-   SHOALEST depth (DRVAL1), so these tiles say how shallow the charted area
-   around the point gets, not the depth at the point: in a coarse area (e.g.
-   charted 6-18 ft as one area) a 12 ft spot read "6-10 ft" (Brad, 2026-11-15,
-   off Fishers Island). So it reads "6 ft or more": the lower bound is sure,
-   the upper one isn't. Orange only when the area is charted under 6 ft. */
+function m2ft(m){return m*3.28084;}
+/* what to show for a pin: {ft, txt, sub} or null */
+function depPick(pin,r){
+	if(!r)return null;var S=(r.soundings||[]).filter(function(x){return isFinite(x.m);}),best=null;
+	S.forEach(function(x){if(x.pos){var d=distNM(pin.lat,pin.lon,x.pos[0],x.pos[1]);if(d>1)d=distNM(pin.lat,pin.lon,x.pos[1],x.pos[0]);   /* lat,lon or lon,lat */
+		if(!best||d<best.d)best={ft:m2ft(x.m),d:d};}});
+	if(best)return {ft:best.ft,txt:Math.round(best.ft)+' ft',sub:'sounding '+(best.d<0.01?'here':best.d.toFixed(2)+' nm away')};
+	if(S.length){var mn=Math.min.apply(null,S.map(function(x){return x.m;})),mx=Math.max.apply(null,S.map(function(x){return x.m;}));
+		return {ft:m2ft(mn),txt:Math.round(m2ft(mn))+(mx-mn>=0.3?'&ndash;'+Math.round(m2ft(mx)):'')+' ft',sub:'soundings within '+Math.round((r.r||300))+' m'};}
+	if(r.area){var lo=m2ft(r.area.min),hi=r.area.max!=null?m2ft(r.area.max):null;
+		return {ft:lo,txt:Math.round(lo)+(hi!=null?'&ndash;'+Math.round(hi):'+')+' ft',sub:'charted depth area'};}
+	return null;
+}
+/* Depth line for a pin's card / table row; orange when the charted depth is under the safety depth */
 function depNote(pin,cls){
-	var r=DEP.res[depKey(pin)];if(r===undefined)return swIn(pin.lat,pin.lon)&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
-	if(!r||r==='land')return '';
-	var low=r.lo===0,t=low?'under '+r.hi+' ft':(r.lo+' ft or more');
-	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="Least charted depth of the depth area at this point (NOAA chart). The water here may be deeper: check the soundings. Not for navigation.">Depth '+t+'</span>';
+	var k=depKey(pin),r=DEP.res[k];if(r===undefined)return swIn(pin.lat,pin.lon)&&pins.length?'<span class="'+cls+'">Depth &hellip;</span>':'';
+	var d=depPick(pin,r);if(!d)return '';
+	var low=d.ft<safeFt();
+	return '<span class="'+cls+(low?' sw-shoal':'')+'" title="From the NOAA chart around this point; depths at chart datum (MLLW). Not for navigation.">Depth '+d.txt+' &middot; '+d.sub+(low?' &middot; under your '+safeFt()+' ft':'')+'</span>';
 }
 function swDraw(){
 	SW.layer.clearLayers();var r=SW.res;if(!r)return;
