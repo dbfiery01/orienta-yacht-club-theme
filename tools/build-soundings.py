@@ -27,7 +27,7 @@ warnings.filterwarnings('ignore')
 import pyogrio
 
 S, W, N, E = 40.50, -74.10, 41.45, -71.40          # Long Island Sound and approaches
-GRID = {9: 44, 10: 44, 11: 40, 12: 40}             # px between soundings at each zoom
+GRID = {9: 24, 10: 28, 11: 32, 12: 36}             # px between soundings at each zoom
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'soundings')
 
 
