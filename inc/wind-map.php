@@ -1704,7 +1704,7 @@ var ENC_CACHE=<?php echo wp_json_encode( esc_url_raw( function_exists( 'oyc_enc_
    is empty and the normal chart shows through. See OYC_ENC_DETAIL. */
 var ENC_DETAIL=<?php echo wp_json_encode( defined( 'OYC_ENC_DETAIL' ) ? OYC_ENC_DETAIL : '' ); ?>;
 /* chart shading contour variants (5 ft): same display_params the server uses */
-var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CAP=<?php echo wp_json_encode( defined( 'OYC_ENC_BIG_PX' ) ? oyc_enc_safe_params( 'ca' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CYP=<?php echo wp_json_encode( defined( 'OYC_ENC_BIG_PX' ) ? oyc_enc_safe_params( 'cy' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_BIG_PX=<?php echo (int) ( defined( 'OYC_ENC_BIG_PX' ) ? OYC_ENC_BIG_PX : 0 ); ?>;
+var ENC_CV=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? 'c' . OYC_ENC_CHART_FT : '' ); ?>,ENC_CP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'c' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CDP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cd' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CHP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ch' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CXP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'cx' . OYC_ENC_CHART_FT ) : '' ); ?>,ENC_CEP=<?php echo wp_json_encode( defined( 'OYC_ENC_CHART_FT' ) ? oyc_enc_safe_params( 'ce' . OYC_ENC_CHART_FT ) : '' ); ?>;
 /* cache version: changes whenever the cached tiles are thrown away, so browsers
    don't keep showing tiles from an older chart style (they cache them a week) */
 var ENC_VER=<?php echo (int) ( defined( 'OYC_ENC_VER' ) ? OYC_ENC_VER : 1 ); ?>;
@@ -1718,57 +1718,58 @@ var EncWMS=L.TileLayer.WMS.extend({
 function encOpts(o){return L.extend({layers:'2,3,4,5,6,7',format:'image/png',transparent:true,version:'1.3.0',keepBuffer:4},o);}
 var encBase=new EncWMS(ENC_WMS,encOpts(L.extend({minZoom:9,maxZoom:19,zIndex:2,attribution:'NOAA ENC chart &mdash; not for navigation'},ENC_CV?{encVar:ENC_CV,display_params:ENC_CP}:{})));
 var encLayer=L.layerGroup([encBase]);
-if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:11,zIndex:3,encVar:ENC_CV?'cd'+ENC_CV.slice(1):'d',display_params:ENC_CV?ENC_CDP:ENC_DETAIL})));
-/* harbour-scale charts on top at zoom 10-12: approach charts (e.g. Fishers
-   Island Sound) shade all their water blue whatever the contour */
-if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:12,zIndex:4,encVar:'ch'+ENC_CV.slice(1),display_params:ENC_CHP})));
-/* zoom 13 in: the same harbour charts with every sounding drawn (NOAA otherwise
-   hides them at these scales, and approach charts there are flat blue with
-   none), see cx in OYC_ENC_CHART_FT. Not pre-loaded: tiles come from NOAA and
-   our server caches them in the background. */
-if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:ENC_BIG_PX?14:13,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
-/* Zoom 13 (Brad, 2026-11-15, preview option 5): fewer, larger soundings and
-   darker depth contours. Each tile is the approach-scale chart (ca5, every
-   sounding, but far fewer than the harbour charts), with the harbour chart (cy5)
-   filled in wherever the approach chart is only a flat blue area (Fishers Island
-   Sound), both drawn ENC_BIG_PX wide and enlarged to 256 so text is ~1.4x; then
-   the grey contour lines and labels are drawn in a stronger blue. Pixels can only
-   be read from our own cache, so a tile not cached yet shows NOAA's approach
-   chart as it is and our server caches both in the background. */
-var encZ13=null;
-if(ENC_CV&&ENC_BIG_PX&&ENC_CAP){
-	var encBigUrl=function(v,c,dp){var o=20037508.342789244,sz=2*o/Math.pow(2,c.z),x0=-o+c.x*sz,y1=o-c.y*sz;
-		return ENC_WMS+'?service=WMS&request=GetMap&version=1.3.0&layers=2,3,4,5,6,7&styles=&format=image%2Fpng&transparent=true&crs=EPSG%3A3857&width='+ENC_BIG_PX+'&height='+ENC_BIG_PX
-			+'&bbox='+[x0,y1-sz,x0+sz,y1].join(',')+'&display_params='+encodeURIComponent(dp);};
-	var encImg=function(src,cors){return new Promise(function(res){var im=new Image();if(cors)im.crossOrigin='anonymous';im.onload=function(){res(im);};im.onerror=function(){res(null);};im.src=src;});};
-	var encCached=function(v,c){return ENC_CACHE?ENC_CACHE+'/'+v+'/'+c.z+'/'+c.x+'/'+c.y+'.png?cv='+ENC_VER:'';};
-	var encAjax=function(v,c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+'&v='+v+'&cv='+ENC_VER;};
-	var EncZ13=L.GridLayer.extend({
+/* Soundings by zoom (Brad, 2026-11-15): the same plain chart at every zoom,
+   fewer soundings as you zoom out but the shoals still shown. Zoom 10 keeps the
+   approach (cd) and harbour (ch) layers on top of the normal chart; zoom 14 in
+   shows the harbour charts with every sounding (cx). Zoom 11-13 is encMix below.
+   See "Soundings by zoom" in inc/enc-cache.php. */
+if(ENC_DETAIL)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:ENC_CV?10:11,zIndex:3,encVar:ENC_CV?'cd'+ENC_CV.slice(1):'d',display_params:ENC_CV?ENC_CDP:ENC_DETAIL})));
+if(ENC_CV)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:10,maxZoom:10,zIndex:4,encVar:'ch'+ENC_CV.slice(1),display_params:ENC_CHP})));
+if(ENC_CV&&ENC_CXP)encLayer.addLayer(new EncWMS(ENC_WMS,encOpts({minZoom:ENC_CEP?14:12,maxZoom:19,zIndex:4,encVar:'cx'+ENC_CV.slice(1),display_params:ENC_CXP})));
+/* encMix, zoom 11-13. NOAA draws a chart with no detail at a given scale as one
+   flat blue area (175,205,225) with no soundings, and which chart that is
+   changes across the Sound. So each tile starts from a main chart and, wherever
+   that is flat blue, takes the pixels of a more detailed chart instead:
+     zoom 11     the normal chart (c5, already drawn below), then cd5, then ch5
+     zoom 12-13  approach charts with every sounding (ce5), then cx5
+   Pixels can only be read from our own cache, so a tile not cached yet shows
+   the main chart straight from NOAA and our server caches the rest in the
+   background. */
+if(ENC_CV&&ENC_CEP){
+	var ENC_FT=ENC_CV.slice(1);
+	var encMixSpec=function(z){return z===11?{main:'',test:'c',fills:['cd','ch']}:{main:'ce',test:'ce',fills:['cx']};};
+	var encParams={c:ENC_CP,cd:ENC_CDP,ch:ENC_CHP,ce:ENC_CEP,cx:ENC_CXP};
+	var encWmsUrl=function(k,c){var o=20037508.342789244,sz=2*o/Math.pow(2,c.z),x0=-o+c.x*sz,y1=o-c.y*sz,px=c.z<=ENC_HIRES_MAX?512:256;
+		return ENC_WMS+'?service=WMS&request=GetMap&version=1.3.0&layers=2,3,4,5,6,7&styles=&format=image%2Fpng&transparent=true&crs=EPSG%3A3857&width='+px+'&height='+px
+			+'&bbox='+[x0,y1-sz,x0+sz,y1].join(',')+'&display_params='+encodeURIComponent(encParams[k]);};
+	var encImg=function(src){return new Promise(function(res){if(!src){res(null);return;}var im=new Image();im.onload=function(){res(im);};im.onerror=function(){res(null);};im.src=src;});};
+	var encCached=function(k,c){return ENC_CACHE?ENC_CACHE+'/'+k+ENC_FT+'/'+c.z+'/'+c.x+'/'+c.y+'.png?cv='+ENC_VER:'';};
+	var encAjax=function(k,c){return ENC_AJAX+'?action=oyc_enc_tile&z='+c.z+'&x='+c.x+'&y='+c.y+'&v='+k+ENC_FT+'&cv='+ENC_VER;};
+	var encFlat=function(d,j){return d[j+3]>200&&Math.abs(d[j]-175)<6&&Math.abs(d[j+1]-205)<6&&Math.abs(d[j+2]-225)<6;};
+	var EncMix=L.GridLayer.extend({
 		createTile:function(c,done){
-			var cv=document.createElement('canvas');cv.width=cv.height=256;var va='ca'+ENC_CV.slice(1),vy='cy'+ENC_CV.slice(1);
-			Promise.all([encImg(encCached(va,c)),encImg(encCached(vy,c))]).then(function(r){
+			var sp=encMixSpec(c.z),px=c.z<=ENC_HIRES_MAX?512:256,cv=document.createElement('canvas');cv.width=cv.height=px;
+			var keys=[sp.test].concat(sp.fills);
+			Promise.all(keys.map(function(k){return encImg(encCached(k,c));})).then(function(r){
 				var g=cv.getContext('2d');
-				if(!r[0]){   /* not cached: NOAA's approach chart as it is, cache both in the background */
-					if(ENC_CACHE){encWarm(encAjax(va,c));encWarm(encAjax(vy,c));}
-					return encImg(encBigUrl(va,c,ENC_CAP)).then(function(im){if(im){g.imageSmoothingQuality='high';g.drawImage(im,0,0,256,256);}done(null,cv);});
+				keys.forEach(function(k,i){if(!r[i]&&ENC_CACHE)encWarm(encAjax(k,c));});
+				if(!r[0]){   /* main chart not cached yet: show it from NOAA as it is */
+					if(!sp.main){done(null,cv);return;}
+					return encImg(encWmsUrl(sp.main,c)).then(function(im){if(im)g.drawImage(im,0,0,px,px);done(null,cv);});
 				}
-				if(!r[1]&&ENC_CACHE)encWarm(encAjax(vy,c));
-				g.imageSmoothingQuality='high';g.drawImage(r[0],0,0,256,256);
-				var A=g.getImageData(0,0,256,256),a=A.data,h=null;
-				if(r[1]){var t=document.createElement('canvas');t.width=t.height=256;var tg=t.getContext('2d');tg.imageSmoothingQuality='high';tg.drawImage(r[1],0,0,256,256);h=tg.getImageData(0,0,256,256).data;}
-				for(var j=0;j<a.length;j+=4){
-					/* the approach chart's flat blue (no soundings) → the harbour chart there */
-					if(h&&a[j+3]>200&&Math.abs(a[j]-175)<14&&Math.abs(a[j+1]-205)<14&&Math.abs(a[j+2]-225)<14){a[j]=h[j];a[j+1]=h[j+1];a[j+2]=h[j+2];a[j+3]=h[j+3];}
-					/* depth contours (NOAA's light grey lines and labels) in a stronger blue */
-					var R=a[j],G=a[j+1],B=a[j+2];
-					if(a[j+3]>100&&R>=125&&R<230&&Math.abs(R-G)<5&&Math.abs(G-B)<5){a[j]=40;a[j+1]=95;a[j+2]=160;}
+				var rd=function(im){var t=document.createElement('canvas');t.width=t.height=px;var tg=t.getContext('2d');tg.drawImage(im,0,0,px,px);return tg.getImageData(0,0,px,px).data;};
+				var T=rd(r[0]),F=r.slice(1).map(function(im){return im?rd(im):null;});
+				var O=g.createImageData(px,px),o=O.data;
+				for(var j=0;j<o.length;j+=4){
+					var src=sp.main?T:null;
+					if(encFlat(T,j))for(var f=0;f<F.length;f++){var d=F[f];if(!d||d[j+3]<10)continue;src=d;if(!encFlat(d,j))break;}
+					if(src){o[j]=src[j];o[j+1]=src[j+1];o[j+2]=src[j+2];o[j+3]=src[j+3];}
 				}
-				g.putImageData(A,0,0);done(null,cv);
+				g.putImageData(O,0,0);done(null,cv);
 			});
 			return cv;
 		}});
-	encZ13=new EncZ13({minZoom:13,maxZoom:13,zIndex:4,keepBuffer:4});
-	encLayer.addLayer(encZ13);
+	encLayer.addLayer(new EncMix({minZoom:11,maxZoom:13,zIndex:4,keepBuffer:4}));
 }
 /* The chart takes priority over the street map: NOAA's chart server often drops
    or times out a tile (worst right after a zoom, when it gets a burst of

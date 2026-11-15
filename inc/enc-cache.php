@@ -80,7 +80,7 @@ function oyc_enc_variant( $v ) {
 	if ( preg_match( '/^(s|h)(\d{1,2})$/', $v, $m ) && in_array( (int) $m[2], array_map( 'intval', explode( ',', OYC_ENC_SAFE_FT ) ), true ) ) {
 		return $m[1] . (int) $m[2];
 	}
-	if ( preg_match( '/^(c|cd|ch|cx|ca|cy)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
+	if ( preg_match( '/^(c|cd|ch|cx|ce)(\d{1,2})$/', $v, $m ) && (int) $m[2] === (int) OYC_ENC_CHART_FT ) {
 		return $m[1] . (int) $m[2];
 	}
 	return false;
@@ -91,9 +91,9 @@ function oyc_enc_is_safe( $v ) {
 	return (bool) preg_match( '/^[sh]\d/', (string) $v );
 }
 
-/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-12), cx5 (harbour charts with every sounding, zoom 13+). */
+/** The chart the member sees: c5 (normal), cd5 (detail layer, zoom 10-11), ch5 (harbour charts, zoom 10-11), ce5 (approach charts with every sounding, zoom 12-13), cx5 (harbour charts with every sounding, zoom 12+). */
 function oyc_enc_is_contour( $v ) {
-	return (bool) preg_match( '/^c[dhxay]?\d/', (string) $v );
+	return (bool) preg_match( '/^c[dhxe]?\d/', (string) $v );
 }
 
 /* The chart on the map is drawn with NOAA's shallow/safety/deep contours all
@@ -108,14 +108,18 @@ function oyc_enc_is_contour( $v ) {
    with HonorScamin 1 (every sounding drawn) sits on top at zoom 13-17.
    The home-waters warmer keeps c5 / cd5 loaded; wind-map.php reads this. */
 define( 'OYC_ENC_CHART_FT', 5 );
-/* Zoom 13 (Brad, 2026-11-15, preview option 5): fewer, larger soundings. ca5 =
-   approach-scale charts with every sounding (far fewer than harbour charts),
-   cy5 = harbour charts with every sounding, both rendered OYC_ENC_BIG_PX wide
-   and enlarged to 256 on the map, so text is ~1.4x. The page shows ca5 and,
-   where an approach chart only has a flat blue area (Fishers Island Sound),
-   cy5's soundings and contours instead; depth contours are drawn darker blue.
-   See encZ13 in inc/wind-map.php. */
-define( 'OYC_ENC_BIG_PX', 184 );
+/* Soundings by zoom (Brad, 2026-11-15): one plain chart style at every zoom,
+   fewer soundings as you zoom out but the shoals still marked.
+     z10      c5 + cd5 + ch5 layers, as before
+     z11      c5, and where c5 is only a flat blue area (most of the Sound at
+              this scale) cd5, then ch5 where cd5 is flat blue too
+     z12-13   ce5 = approach charts with every sounding (NOAA compiles these
+              with few soundings, chosen to show the shoals), and cx5 where
+              an approach chart is flat blue (Fishers Island Sound)
+     z14+     cx5 = harbour charts with every sounding
+   The z11-13 mixing is done in the browser from cached tiles: see encMix in
+   inc/wind-map.php. */
+
 
 /** NOAA display settings for a safe-water or contour variant (contour in metres). */
 function oyc_enc_safe_params( $v ) {
@@ -132,13 +136,13 @@ function oyc_enc_safe_params( $v ) {
 	foreach ( array( 'ShallowContour', 'SafetyContour', 'DeepContour', 'SafetyDepth' ) as $n ) {
 		$p[] = '{"name":"' . $n . '","value":' . $m . '}';
 	}
-	if ( 'h' === $k || 'ch' === $k || 'cx' === $k || 'cy' === $k ) {
+	if ( 'h' === $k || 'ch' === $k || 'cx' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"5"}';
 	}
-	if ( 'ca' === $k ) {
+	if ( 'ce' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"4"}';
 	}
-	if ( 'cx' === $k || 'ca' === $k || 'cy' === $k ) {
+	if ( 'cx' === $k || 'ce' === $k ) {
 		$p[] = '{"name":"HonorScamin","value":1}';
 	} elseif ( 'cd' === $k ) {
 		$p[] = '{"name":"IntendedUsage","value":"4"}';
@@ -176,9 +180,6 @@ function oyc_enc_wms_url( $z, $x, $y, $v = '' ) {
 	$size = 2 * $o / ( 1 << $z );
 	$bbox = array( -$o + $x * $size, $o - ( $y + 1 ) * $size, -$o + ( $x + 1 ) * $size, $o - $y * $size );
 	$px   = $z <= OYC_ENC_HIRES_MAX ? 512 : 256;
-	if ( preg_match( '/^c[ay]\d/', (string) $v ) ) {
-		$px = OYC_ENC_BIG_PX; // drawn at 256 on the map: text 1.4x
-	}
 	return add_query_arg( array(
 		'service'     => 'WMS',
 		'request'     => 'GetMap',
@@ -205,13 +206,13 @@ function oyc_enc_zoom_ok( $z, $v ) {
 	}
 	if ( oyc_enc_is_contour( $v ) ) {
 		if ( 0 === strpos( $v, 'ch' ) ) {
-			return $z >= 10 && $z <= 12;
+			return $z >= 10 && $z <= 11;
 		}
-		if ( 0 === strpos( $v, 'ca' ) || 0 === strpos( $v, 'cy' ) ) {
-			return 13 === (int) $z;
+		if ( 0 === strpos( $v, 'ce' ) ) {
+			return $z >= 12 && $z <= 13;
 		}
 		if ( 0 === strpos( $v, 'cx' ) ) {
-			return $z >= 13 && $z <= 17;
+			return $z >= 12 && $z <= 17;
 		}
 		return 0 === strpos( $v, 'cd' ) ? in_array( $z, array_map( 'intval', explode( ',', OYC_ENC_DETAIL_ZOOMS ) ), true ) : ( $z >= 9 && $z <= 17 );
 	}
@@ -591,8 +592,13 @@ function oyc_enc_home_tiles() {
 				if ( oyc_enc_zoom_ok( $z, 'd' ) ) {
 					$out[] = array( $z, $x, $y, 'cd' . OYC_ENC_CHART_FT );
 				}
-				if ( oyc_enc_zoom_ok( $z, 'ch' . OYC_ENC_CHART_FT ) ) {
-					$out[] = array( $z, $x, $y, 'ch' . OYC_ENC_CHART_FT );
+				foreach ( array( 'ch', 'ce' ) as $k ) {
+					if ( oyc_enc_zoom_ok( $z, $k . OYC_ENC_CHART_FT ) ) {
+						$out[] = array( $z, $x, $y, $k . OYC_ENC_CHART_FT );
+					}
+				}
+				if ( $z >= 12 && $z <= 13 ) {   // cx5 fills in where z12-13 approach charts are flat blue
+					$out[] = array( $z, $x, $y, 'cx' . OYC_ENC_CHART_FT );
 				}
 			}
 		}
