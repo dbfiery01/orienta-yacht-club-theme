@@ -2061,6 +2061,11 @@ function pinReading(lat,lon,ti,fc){
    from the previous waypoint. Deleting a waypoint re-numbers the rest and
    recomputes the legs + route line. */
 var routeLayer=L.layerGroup().addTo(map),legHitLayer=L.layerGroup().addTo(map);   /* legHitLayer: see drawLegHits */
+/* the leg click lines get their own pane above every other line and area (notices,
+   suggestions…) but below the waypoint markers, so nothing drawn later can sit on
+   top of a leg and take its click */
+map.createPane('legHitPane').style.zIndex=590;
+var legHitRenderer=L.svg({pane:'legHitPane',padding:0.5});
 function wpIcon(n){return L.divIcon({className:'wp-mk',html:'<div class="wp-ic">'+n+'</div>',iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-22]});}
 /* First point is the Start (leg measured from Buoy 42); later points are
    Waypoint 1..n, each leg measured from the previous point. */
@@ -2160,11 +2165,13 @@ function drawRouteLine(){
    new point goes on the line under the click, and can be dragged from there. */
 function drawLegHits(pts){
 	legHitLayer.clearLayers();
-	if(pins.some(function(p){return p._dragging;}))return;
+	/* skip while a waypoint is being dragged (a drag that never ended, e.g. the
+	   pointer left the window, doesn't count) */
+	if(pins.some(function(p){var d=p.marker&&p.marker.dragging&&p.marker.dragging._draggable;if(p._dragging&&!(d&&d._moving))p._dragging=false;return p._dragging;}))return;
 	var o=routeOrigin()?1:0;
 	for(var k=0;k<pts.length-1;k++)(function(k){
 		var a=pts[k],b=pts[k+1],at=k+1-o;   /* index in pins of the leg's end point */
-		L.polyline([a,b],{color:'#0b2a4a',weight:18,opacity:0,className:'leg-hit',bubblingMouseEvents:false})
+		L.polyline([a,b],{color:'#0b2a4a',weight:18,opacity:0,className:'leg-hit',bubblingMouseEvents:false,pane:'legHitPane',renderer:legHitRenderer})
 			.bindTooltip('Click to add a waypoint here',{sticky:true,direction:'top',offset:[0,-8]})
 			.on('click',function(e){
 				L.DomEvent.stop(e);
