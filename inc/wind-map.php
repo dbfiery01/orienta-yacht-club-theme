@@ -1827,6 +1827,7 @@ function encWarm(u){if(encWarmQ.length>=60)encWarmQ.shift();encWarmQ.push(u);enc
 function encWarmPump(){while(encWarmN<ENC_WARM_MAX&&encWarmQ.length){var u=encWarmQ.pop(),im=new Image();encWarmN++;
 	im.onload=im.onerror=function(){encWarmN--;setTimeout(encWarmPump,250);};im.src=u;}}
 encLayer.eachLayer(function(lyr){
+	if(!lyr.noaaUrl)return;   /* only the NOAA chart layers (not chartBg / soundings) */
 	lyr.on('tileerror',function(e){
 		var t=e.tile,n=+(t.getAttribute('data-try')||0);if(n>=5){t.removeAttribute('data-try');if(lyr._map)lyr._pruneTiles();return;}
 		t.setAttribute('data-try',n+1);
