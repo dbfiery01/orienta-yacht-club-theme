@@ -310,9 +310,13 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		'inactive'     => array(), // Expelled/Deceased rows that still have an account.
 		'directory'    => null,    // count written (or that would be).
 		'dir_skipped'  => 0,
+		'pdf'          => null,    // true/false once the PDF was rebuilt.
 		'error'        => '',
 	);
 
+	// Profile changes made by this upload must not be copied back into the
+	// directory it is replacing (see oyc_roster_sync_queue()).
+	$GLOBALS['oyc_roster_importing'] = ! $dry_run;
 	$rows = oyc_roster_read_rows( $path, $name );
 	if ( is_wp_error( $rows ) ) {
 		$out['error'] = $rows->get_error_message();
@@ -429,10 +433,16 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 				// Keep the previous directory so it can be restored by hand.
 				update_option( 'oyc_fleet_roster_prev', get_option( 'oyc_fleet_roster', '' ), false );
 				update_option( 'oyc_fleet_roster', wp_json_encode( $directory ), false );
+				update_option( 'oyc_fleet_roster_updated', time(), false );
+				// Rebuild the members-only Fleet Roster PDF from the new directory.
+				// A PDF problem never stops the upload (profiles and cards are
+				// already saved above).
+				$out['pdf'] = function_exists( 'oyc_roster_pdf_save' ) ? oyc_roster_pdf_save() : false;
 			}
 		}
 	}
 
+	$GLOBALS['oyc_roster_importing'] = false;
 	if ( ! $dry_run && function_exists( 'oyc_audit_log' ) ) {
 		oyc_audit_log( 'user.roster_import', sprintf( 'Roster upload: %d accounts updated, %d unchanged, %d rows unmatched%s', $out['updated'], $out['unchanged'], count( $out['unmatched'] ), null !== $out['directory'] ? sprintf( '; Fleet Roster directory replaced (%d members)', $out['directory'] ) : '' ), 0 );
 	}
