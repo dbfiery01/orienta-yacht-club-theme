@@ -24,6 +24,25 @@ function oyc_get_roster() {
 }
 
 /**
+ * Email comparison key: lower case, and for Gmail the dots and any +tag in
+ * the name are ignored (Gmail delivers dan.smith@ and dansmith@ to the same
+ * inbox), so a roster address and an account address that differ only that
+ * way are treated as the same member.
+ */
+function oyc_email_key( $email ) {
+	$e = strtolower( trim( (string) $email ) );
+	if ( false === strpos( $e, '@' ) ) {
+		return $e;
+	}
+	list( $local, $domain ) = explode( '@', $e, 2 );
+	if ( in_array( $domain, array( 'gmail.com', 'googlemail.com' ), true ) ) {
+		$local  = str_replace( '.', '', preg_replace( '/\+.*$/', '', $local ) );
+		$domain = 'gmail.com';
+	}
+	return $local . '@' . $domain;
+}
+
+/**
  * Admin-only write endpoint to load/replace the roster JSON in the DB.
  * Body: { b64: "<base64 of the JSON array>" }. Admin (manage_options) only.
  */
@@ -284,6 +303,53 @@ add_action( 'profile_update', function ( $user_id, $old ) {
 	}
 }, 10, 2 );
 
+/**
+ * Index of a member's directory entry, or null: by email (Gmail dots and
+ * +tags ignored), then by unique first + last name, then by unique last name
+ * whose first name starts the same way (Dan / Daniel, Bill / William is not
+ * matched).
+ */
+function oyc_roster_find_entry( $roster, $emails, $first, $last ) {
+	foreach ( array_filter( (array) $emails ) as $em ) {
+		$k = oyc_email_key( $em );
+		foreach ( $roster as $i => $e ) {
+			if ( is_array( $e ) && '' !== $k && oyc_email_key( $e['email'] ?? '' ) === $k ) {
+				return $i;
+			}
+		}
+	}
+	$first = trim( (string) $first );
+	$last  = trim( (string) $last );
+	if ( '' === $last ) {
+		return null;
+	}
+	$full = array();
+	$near = array();
+	foreach ( $roster as $i => $e ) {
+		if ( ! is_array( $e ) ) {
+			continue;
+		}
+		$n     = trim( (string) ( $e['name'] ?? '' ) );
+		$parts = preg_split( '/\s+/', $n );
+		$el    = (string) array_pop( $parts );
+		$ef    = implode( ' ', $parts );
+		if ( '' !== $first && 0 === strcasecmp( $n, $first . ' ' . $last ) ) {
+			$full[] = $i;
+		}
+		if ( 0 === strcasecmp( $el, $last ) && '' !== $first && '' !== $ef ) {
+			$a = strtolower( $first );
+			$b = strtolower( $ef );
+			if ( 0 === strpos( $a, $b ) || 0 === strpos( $b, $a ) ) {
+				$near[] = $i;
+			}
+		}
+	}
+	if ( 1 === count( $full ) ) {
+		return $full[0];
+	}
+	return 1 === count( $near ) ? $near[0] : null;
+}
+
 /** Apply queued profile changes to the directory; rebuild the PDF if anything changed. */
 function oyc_roster_sync_run() {
 	global $oyc_roster_sync;
@@ -305,18 +371,7 @@ function oyc_roster_sync_run() {
 
 		// Find the member's entry: email (old email if it just changed), then unique name.
 		$idx = null;
-		foreach ( array_filter( array( $q['old_email'], $u->user_email ) ) as $em ) {
-			foreach ( $roster as $i => $e ) {
-				if ( is_array( $e ) && '' !== $em && strtolower( trim( (string) ( $e['email'] ?? '' ) ) ) === strtolower( trim( $em ) ) ) {
-					$idx = $i;
-					break 2;
-				}
-			}
-		}
-		if ( null === $idx && '' !== $first && '' !== $last ) {
-			$hits = array_keys( array_filter( $roster, fn( $e ) => is_array( $e ) && 0 === strcasecmp( trim( (string) ( $e['name'] ?? '' ) ), $first . ' ' . $last ) ) );
-			$idx  = 1 === count( $hits ) ? $hits[0] : null;
-		}
+		$idx = oyc_roster_find_entry( $roster, array( $q['old_email'], $u->user_email ), $first, $last );
 		if ( null === $idx ) {
 			// Not on the roster: add a new member, built from the whole profile.
 			$entry = oyc_roster_entry_from_account( $u );

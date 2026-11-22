@@ -308,6 +308,8 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		'unmatched'    => array(),
 		'duplicates'   => array(),
 		'inactive'     => array(), // Expelled/Deceased rows that still have an account.
+		'emails'       => array(), // Account emails changed to the roster's.
+		'email_conflicts' => array(), // Roster email already used by another account.
 		'directory'    => null,    // count written (or that would be).
 		'dir_skipped'  => 0,
 		'pdf'          => null,    // true/false once the PDF was rebuilt.
@@ -330,6 +332,7 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 
 	$profile_fields = array_merge( array_keys( oyc_card_fields() ), array( 'oyc_member_since' ), array_keys( oyc_member_club_fields() ) );
 	$seen_num       = array();
+	$email_keys     = null; // Built on first need.
 	$directory      = array();
 	$inactive_types = oyc_roster_inactive_types();
 
@@ -371,6 +374,19 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		$user = null;
 		if ( ! empty( $r['email'] ) && is_email( $r['email'] ) ) {
 			$user = get_user_by( 'email', $r['email'] );
+			if ( ! $user && function_exists( 'oyc_email_key' ) ) {
+				// Same Gmail inbox written differently (dan.smith@ vs dansmith@).
+				if ( null === $email_keys ) {
+					$email_keys = array();
+					foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $acct ) {
+						$email_keys[ oyc_email_key( $acct->user_email ) ][] = (int) $acct->ID;
+					}
+				}
+				$ids = $email_keys[ oyc_email_key( $r['email'] ) ] ?? array();
+				if ( 1 === count( $ids ) ) {
+					$user = get_userdata( $ids[0] );
+				}
+			}
 		}
 		if ( ! $user && ! empty( $r['login'] ) ) {
 			$user = get_user_by( 'login', $r['login'] );
@@ -418,6 +434,32 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 				}
 			}
 		}
+		// The roster is the record: a matched account whose email differs
+		// (dan.smith@ vs dansmith@, or a match by name) takes the roster email,
+		// unless another account already uses that address.
+		$roster_email = isset( $r['email'] ) ? sanitize_email( $r['email'] ) : '';
+		if ( '' !== $roster_email && is_email( $roster_email ) && 0 !== strcasecmp( $roster_email, $user->user_email ) ) {
+			$owner = get_user_by( 'email', $roster_email );
+			if ( $owner && (int) $owner->ID !== (int) $user->ID ) {
+				$out['email_conflicts'][] = sprintf( __( 'Row %1$d: %2$s: %3$s is already used by account %4$s, so %5$s kept %6$s', 'orienta-yacht-club' ), $line, $label, $roster_email, $owner->user_login, $user->user_login, $user->user_email );
+			} else {
+				$out['emails'][] = sprintf( __( 'Row %1$d: %2$s: %3$s → %4$s', 'orienta-yacht-club' ), $line, $label, $user->user_email, $roster_email );
+				$changed         = true;
+				if ( ! $dry_run ) {
+					// Officer-driven change: no "your email changed" notice.
+					add_filter( 'send_email_change_email', '__return_false', 99 );
+					$res = wp_update_user( array( 'ID' => $user->ID, 'user_email' => $roster_email ) );
+					remove_filter( 'send_email_change_email', '__return_false', 99 );
+					if ( is_wp_error( $res ) ) {
+						array_pop( $out['emails'] );
+						$out['email_conflicts'][] = sprintf( __( 'Row %1$d: %2$s: email not changed: %3$s', 'orienta-yacht-club' ), $line, $label, $res->get_error_message() );
+					} elseif ( is_array( $email_keys ) ) {
+						$email_keys[ oyc_email_key( $roster_email ) ][] = (int) $user->ID;
+					}
+				}
+			}
+		}
+
 		$out[ $changed ? 'updated' : 'unchanged' ]++;
 	}
 
