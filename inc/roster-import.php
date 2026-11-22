@@ -32,6 +32,92 @@ function oyc_member_club_fields() {
 }
 
 /**
+ * Find the website account for a roster member: exact email, then the same
+ * Gmail inbox written differently (dan.smith@ vs dansmith@), then a unique
+ * first + last name, then a unique last name whose first name is a short form
+ * of the other (Dan / Daniel). Returns the user ID or 0.
+ *
+ * @param string $email Roster email.
+ * @param string $first Roster first name.
+ * @param string $last  Roster last name.
+ * @param bool   $reset Rebuild the account index (after accounts change).
+ */
+function oyc_roster_match_account( $email, $first, $last, $reset = false ) {
+	static $idx = null;
+	$norm = fn( $v ) => preg_replace( '/[^a-z0-9]/', '', strtolower( remove_accents( trim( (string) $v ) ) ) );
+	if ( $reset || null === $idx ) {
+		$idx = array( 'email' => array(), 'key' => array(), 'name' => array(), 'last' => array() );
+		foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $a ) {
+			$id = (int) $a->ID;
+			$em = strtolower( trim( (string) $a->user_email ) );
+			$fn = $norm( get_user_meta( $id, 'first_name', true ) );
+			$ln = $norm( get_user_meta( $id, 'last_name', true ) );
+			if ( '' !== $em ) {
+				$idx['email'][ $em ] = $id;
+				$idx['key'][ function_exists( 'oyc_email_key' ) ? oyc_email_key( $em ) : $em ][] = $id;
+			}
+			if ( '' !== $ln ) {
+				$idx['name'][ $fn . '|' . $ln ][] = $id;
+				$idx['last'][ $ln ][]             = array( $id, $fn );
+			}
+		}
+	}
+	if ( null === $email ) {
+		return 0; // Reset only.
+	}
+	$em = strtolower( trim( (string) $email ) );
+	if ( '' !== $em ) {
+		if ( isset( $idx['email'][ $em ] ) ) {
+			return $idx['email'][ $em ];
+		}
+		$ids = $idx['key'][ function_exists( 'oyc_email_key' ) ? oyc_email_key( $em ) : $em ] ?? array();
+		if ( 1 === count( $ids ) ) {
+			return $ids[0];
+		}
+	}
+	$fn = $norm( $first );
+	$ln = $norm( $last );
+	if ( '' === $ln || '' === $fn ) {
+		return 0;
+	}
+	$ids = $idx['name'][ $fn . '|' . $ln ] ?? array();
+	if ( 1 === count( $ids ) ) {
+		return $ids[0];
+	}
+	if ( $ids ) {
+		return 0; // Two accounts with the same name: don't guess.
+	}
+	$near = array();
+	foreach ( $idx['last'][ $ln ] ?? array() as $pair ) {
+		list( $id, $afn ) = $pair;
+		if ( '' !== $afn && ( 0 === strpos( $afn, $fn ) || 0 === strpos( $fn, $afn ) ) ) {
+			$near[] = $id;
+		}
+	}
+	return 1 === count( $near ) ? $near[0] : 0;
+}
+
+/**
+ * Split a directory "First Last" (or "Last, First") name.
+ *
+ * @return array{0:string,1:string} First, last.
+ */
+function oyc_roster_split_name( $name, $last = '' ) {
+	$name = trim( (string) $name );
+	$last = trim( (string) $last );
+	if ( false !== strpos( $name, ',' ) ) {
+		list( $l, $f ) = array_map( 'trim', explode( ',', $name, 2 ) );
+		return array( $f, $l );
+	}
+	if ( '' !== $last && strlen( $name ) > strlen( $last ) && 0 === strcasecmp( substr( $name, -strlen( $last ) ), $last ) ) {
+		return array( trim( substr( $name, 0, -strlen( $last ) ) ), $last );
+	}
+	$parts = preg_split( '/\s+/', $name );
+	$l     = (string) array_pop( $parts );
+	return array( implode( ' ', $parts ), $l );
+}
+
+/**
  * Membership types that are left out of the Fleet Roster directory.
  */
 function oyc_roster_inactive_types() {
@@ -308,6 +394,8 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		'unmatched'    => array(),
 		'duplicates'   => array(),
 		'inactive'     => array(), // Expelled/Deceased rows that still have an account.
+		'emails'       => array(), // Account emails changed to the roster's.
+		'email_conflicts' => array(), // Roster email already used by another account.
 		'directory'    => null,    // count written (or that would be).
 		'dir_skipped'  => 0,
 		'pdf'          => null,    // true/false once the PDF was rebuilt.
@@ -330,6 +418,7 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 
 	$profile_fields = array_merge( array_keys( oyc_card_fields() ), array( 'oyc_member_since' ), array_keys( oyc_member_club_fields() ) );
 	$seen_num       = array();
+	oyc_roster_match_account( null, '', '', true ); // Fresh account index.
 	$directory      = array();
 	$inactive_types = oyc_roster_inactive_types();
 
@@ -367,26 +456,16 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 			$directory[] = oyc_roster_directory_entry( $r );
 		}
 
-		// Account match.
-		$user = null;
-		if ( ! empty( $r['email'] ) && is_email( $r['email'] ) ) {
-			$user = get_user_by( 'email', $r['email'] );
-		}
+		// Account match: email (or the same Gmail inbox), login, then name.
+		$em   = is_email( $r['email'] ?? '' ) ? $r['email'] : '';
+		$uid  = '' !== $em ? oyc_roster_match_account( $em, '', '' ) : 0;
+		$user = $uid ? get_userdata( $uid ) : null;
 		if ( ! $user && ! empty( $r['login'] ) ) {
-			$user = get_user_by( 'login', $r['login'] );
+			$user = get_user_by( 'login', $r['login'] ) ?: null;
 		}
-		if ( ! $user && ! empty( $r['first'] ) && ! empty( $r['last'] ) ) {
-			$found = get_users( array(
-				'number'     => 2,
-				'meta_query' => array(
-					'relation' => 'AND',
-					array( 'key' => 'first_name', 'value' => $r['first'] ),
-					array( 'key' => 'last_name', 'value' => $r['last'] ),
-				),
-			) );
-			if ( 1 === count( $found ) ) {
-				$user = $found[0];
-			}
+		if ( ! $user ) {
+			$uid  = oyc_roster_match_account( '', $r['first'] ?? '', $r['last'] ?? '' );
+			$user = $uid ? get_userdata( $uid ) : null;
 		}
 		if ( ! $user || ! oyc_officer_can_manage_user( $user->ID ) ) {
 			$out['unmatched'][] = sprintf( __( 'Row %1$d: %2$s', 'orienta-yacht-club' ), $line, $label );
@@ -418,6 +497,30 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 				}
 			}
 		}
+		// The roster is the record: a matched account whose email differs
+		// (dan.smith@ vs dansmith@, or a match by name) takes the roster email,
+		// unless another account already uses that address.
+		$roster_email = isset( $r['email'] ) ? sanitize_email( $r['email'] ) : '';
+		if ( '' !== $roster_email && is_email( $roster_email ) && 0 !== strcasecmp( $roster_email, $user->user_email ) ) {
+			$owner = get_user_by( 'email', $roster_email );
+			if ( $owner && (int) $owner->ID !== (int) $user->ID ) {
+				$out['email_conflicts'][] = sprintf( __( 'Row %1$d: %2$s: %3$s is already used by account %4$s, so %5$s kept %6$s', 'orienta-yacht-club' ), $line, $label, $roster_email, $owner->user_login, $user->user_login, $user->user_email );
+			} else {
+				$out['emails'][] = sprintf( __( 'Row %1$d: %2$s: %3$s → %4$s', 'orienta-yacht-club' ), $line, $label, $user->user_email, $roster_email );
+				$changed         = true;
+				if ( ! $dry_run ) {
+					// Officer-driven change: no "your email changed" notice.
+					add_filter( 'send_email_change_email', '__return_false', 99 );
+					$res = wp_update_user( array( 'ID' => $user->ID, 'user_email' => $roster_email ) );
+					remove_filter( 'send_email_change_email', '__return_false', 99 );
+					if ( is_wp_error( $res ) ) {
+						array_pop( $out['emails'] );
+						$out['email_conflicts'][] = sprintf( __( 'Row %1$d: %2$s: email not changed: %3$s', 'orienta-yacht-club' ), $line, $label, $res->get_error_message() );
+					}
+				}
+			}
+		}
+
 		$out[ $changed ? 'updated' : 'unchanged' ]++;
 	}
 
@@ -470,13 +573,6 @@ function oyc_roster_export_url() {
 function oyc_roster_export_rows() {
 	$header = array( 'Member', 'First Name', 'Last Name', 'Phone', 'Alt Phone', 'Billing Street', 'Billing City', 'Billing State', 'Billing ZIP', 'Email', 'Member Type', 'Spouse', 'Boat Name', 'Size', 'Type', 'Member Since', 'Locker', 'Dinghy Rack', 'OYC Member No.', 'Dues Paid Through', 'Website Username', 'Account Status' );
 
-	// Accounts this officer may see, keyed by lower-case email.
-	$accounts = array();
-	foreach ( get_users( array( 'fields' => 'all' ) ) as $u ) {
-		if ( oyc_officer_can_manage_user( $u->ID ) ) {
-			$accounts[ strtolower( trim( $u->user_email ) ) ] = $u;
-		}
-	}
 	$meta = function ( $u, $k ) {
 		return $u ? (string) get_user_meta( $u->ID, $k, true ) : '';
 	};
@@ -536,15 +632,11 @@ function oyc_roster_export_rows() {
 		if ( ! is_array( $d ) ) {
 			continue;
 		}
-		$em = strtolower( trim( (string) ( $d['email'] ?? '' ) ) );
-		$u  = ( '' !== $em && isset( $accounts[ $em ] ) ) ? $accounts[ $em ] : null;
-		$n = trim( (string) ( $d['name'] ?? '' ) );
-		if ( false !== strpos( $n, ',' ) ) {
-			list( $last, $first ) = array_map( 'trim', explode( ',', $n, 2 ) );
-		} else {
-			$parts = preg_split( '/\s+/', $n );
-			$last  = (string) array_pop( $parts );
-			$first = implode( ' ', $parts );
+		list( $first, $last ) = oyc_roster_split_name( $d['name'] ?? '', $d['last'] ?? '' );
+		$uid = oyc_roster_match_account( (string) ( $d['email'] ?? '' ), $first, $last );
+		$u   = null;
+		if ( $uid && oyc_officer_can_manage_user( $uid ) ) {
+			$u = get_userdata( $uid ) ?: null;
 		}
 		$rows[] = $row( $first, $last, $d, $u );
 	}
@@ -594,13 +686,6 @@ function oyc_roster_unregistered( $search = '' ) {
 	if ( ! function_exists( 'oyc_get_roster' ) ) {
 		return array();
 	}
-	$norm   = fn( $v ) => strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $v ) );
-	$emails = array();
-	$names  = array();
-	foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $a ) {
-		$emails[ strtolower( trim( $a->user_email ) ) ] = true;
-		$names[ $norm( get_user_meta( $a->ID, 'first_name', true ) . get_user_meta( $a->ID, 'last_name', true ) ) ] = true;
-	}
 	$q   = strtolower( trim( (string) $search ) );
 	$out = array();
 	foreach ( oyc_get_roster() as $e ) {
@@ -608,7 +693,8 @@ function oyc_roster_unregistered( $search = '' ) {
 			continue;
 		}
 		$em = strtolower( trim( (string) ( $e['email'] ?? '' ) ) );
-		if ( ( '' !== $em && isset( $emails[ $em ] ) ) || isset( $names[ $norm( $e['name'] ?? '' ) ] ) ) {
+		list( $first, $last ) = oyc_roster_split_name( $e['name'] ?? '', $e['last'] ?? '' );
+		if ( oyc_roster_match_account( $em, $first, $last ) ) {
 			continue;
 		}
 		if ( '' !== $q ) {
@@ -667,7 +753,7 @@ function oyc_roster_enroll( $dry_run = true, $send_email = false ) {
 			$out['skipped'][] = sprintf( __( '%s: no email address on the roster', 'orienta-yacht-club' ), $label );
 			continue;
 		}
-		if ( email_exists( $email ) || isset( $seen[ strtolower( $email ) ] ) ) {
+		if ( email_exists( $email ) || oyc_roster_match_account( $email, $first, $last ) || isset( $seen[ strtolower( $email ) ] ) ) {
 			$out['skipped'][] = sprintf( __( '%1$s: %2$s is already used by another account', 'orienta-yacht-club' ), $label, $email );
 			continue;
 		}

@@ -818,6 +818,22 @@ get_header();
 						<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
+				<?php if ( $oyc_import && ! empty( $oyc_import['emails'] ) ) : ?>
+					<h3 class="officer-form__subhead"><?php echo esc_html( ! empty( $oyc_import['dry_run'] ) ? __( 'Account emails that would change to the roster email', 'orienta-yacht-club' ) : __( 'Account emails changed to the roster email', 'orienta-yacht-club' ) ); ?></h3>
+					<ul class="officer-import-list">
+						<?php foreach ( $oyc_import['emails'] as $line ) : ?>
+							<li><?php echo esc_html( $line ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+				<?php if ( $oyc_import && ! empty( $oyc_import['email_conflicts'] ) ) : ?>
+					<h3 class="officer-form__subhead"><?php esc_html_e( 'Emails not changed', 'orienta-yacht-club' ); ?></h3>
+					<ul class="officer-import-list">
+						<?php foreach ( $oyc_import['email_conflicts'] as $line ) : ?>
+							<li><?php echo esc_html( $line ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
 				<?php if ( $oyc_import && ( $oyc_import['unmatched'] || $oyc_import['duplicates'] ) ) : ?>
 					<?php if ( $oyc_import['unmatched'] ) : ?>
 						<h3 class="officer-form__subhead"><?php esc_html_e( 'Rows with no matching account', 'orienta-yacht-club' ); ?></h3>
