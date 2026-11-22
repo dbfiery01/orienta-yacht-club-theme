@@ -311,6 +311,11 @@ if ( isset( $_POST['oyc_card_import_nonce'] ) &&
 						$oyc_import['dir_skipped']
 					), 0 === $oyc_import['directory'] ? 'error' : 'success' );
 			}
+			if ( null !== $oyc_import['pdf'] ) {
+				oyc_officer_notice( $oyc_import['pdf']
+					? __( 'Fleet Roster PDF rebuilt from this roster.', 'orienta-yacht-club' )
+					: __( 'The Fleet Roster PDF could not be rebuilt. The directory and profiles were saved; it will be built the next time a member opens the PDF.', 'orienta-yacht-club' ), $oyc_import['pdf'] ? 'success' : 'error' );
+			}
 		}
 	}
 }
@@ -783,7 +788,7 @@ get_header();
 				<summary class="officer-panel__title"><?php esc_html_e( 'Upload Roster', 'orienta-yacht-club' ); ?></summary>
 				<div class="officer-import">
 
-				<p><?php esc_html_e( 'Upload the club roster spreadsheet (.xlsx or .csv) as it is. Each row is matched to a website account by Email, then Username, then First + Last Name, and fills in Member No., Member Type, Member Since, Locker and Dinghy Rack on that member\'s profile. It can also replace the members-only Fleet Roster directory (names, spouse, boat, phones, address).', 'orienta-yacht-club' ); ?></p>
+				<p><?php esc_html_e( 'Upload the club roster spreadsheet (.xlsx or .csv) as it is. Each row is matched to a website account by Email, then Username, then First + Last Name, and fills in Member No., Member Type, Member Since, Locker and Dinghy Rack on that member\'s profile. It can also replace the members-only Fleet Roster directory (names, spouse, boat, phones, address) and rebuild the Fleet Roster PDF from it.', 'orienta-yacht-club' ); ?></p>
 				<p class="officer-form__hint"><a href="<?php echo esc_url( oyc_roster_export_url() ); ?>"><?php esc_html_e( 'Export the current roster', 'orienta-yacht-club' ); ?></a> <?php esc_html_e( 'to get a spreadsheet in the same layout: edit it in Excel and upload it here.', 'orienta-yacht-club' ); ?></p>
 				<p class="officer-form__hint"><?php esc_html_e( 'The heading row can be anywhere in the first 10 rows. Blank cells never erase what is already saved. Expelled and Deceased members are left out of the directory. Names, emails and addresses on accounts are not changed.', 'orienta-yacht-club' ); ?></p>
 

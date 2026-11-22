@@ -310,6 +310,7 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		'inactive'     => array(), // Expelled/Deceased rows that still have an account.
 		'directory'    => null,    // count written (or that would be).
 		'dir_skipped'  => 0,
+		'pdf'          => null,    // true/false once the PDF was rebuilt.
 		'error'        => '',
 	);
 
@@ -429,6 +430,11 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 				// Keep the previous directory so it can be restored by hand.
 				update_option( 'oyc_fleet_roster_prev', get_option( 'oyc_fleet_roster', '' ), false );
 				update_option( 'oyc_fleet_roster', wp_json_encode( $directory ), false );
+				update_option( 'oyc_fleet_roster_updated', time(), false );
+				// Rebuild the members-only Fleet Roster PDF from the new directory.
+				// A PDF problem never stops the upload (profiles and cards are
+				// already saved above).
+				$out['pdf'] = function_exists( 'oyc_roster_pdf_save' ) ? oyc_roster_pdf_save() : false;
 			}
 		}
 	}

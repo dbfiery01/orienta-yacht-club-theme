@@ -232,6 +232,7 @@ require_once get_template_directory() . '/inc/calendar-api.php';
  * Fleet Roster: members-only searchable directory (data stays in the DB).
  */
 require_once get_template_directory() . '/inc/fleet-roster.php';
+require_once get_template_directory() . '/inc/roster-pdf.php';
 
 /**
  * Protected member documents: PII PDFs (slip waiting list, dock assignments)

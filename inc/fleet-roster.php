@@ -136,6 +136,10 @@ add_action( 'rest_api_init', function () {
 			}
 			update_option( 'oyc_fleet_roster', wp_json_encode( $arr ), false );
 			delete_option( 'oyc_fleet_roster_buf' );
+			update_option( 'oyc_fleet_roster_updated', time(), false );
+			if ( function_exists( 'oyc_roster_pdf_save' ) ) {
+				oyc_roster_pdf_save();
+			}
 			return array( 'ok' => true, 'count' => count( $arr ) );
 		},
 	) );
@@ -186,15 +190,23 @@ add_action( 'template_redirect', function () {
 		auth_redirect();
 		exit;
 	}
-	$file = (string) get_option( 'oyc_roster_pdf_path', '' );
+	// The PDF built from the latest Upload Roster; built now if it is missing
+	// (e.g. the roster was loaded before this existed). The old 2025 edition
+	// (oyc_roster_pdf_path) is no longer served but is left on the server.
+	$file = (string) get_option( 'oyc_roster_pdf_generated', '' );
+	if ( ( ! $file || ! file_exists( $file ) ) && oyc_get_roster() && function_exists( 'oyc_roster_pdf_save' ) ) {
+		oyc_roster_pdf_save();
+		$file = (string) get_option( 'oyc_roster_pdf_generated', '' );
+	}
 	if ( ! $file || ! file_exists( $file ) ) {
 		status_header( 404 );
 		exit;
 	}
+	$ts = (int) get_option( 'oyc_fleet_roster_updated', 0 );
 	status_header( 200 );
 	nocache_headers();
 	header( 'Content-Type: application/pdf' );
-	header( 'Content-Disposition: inline; filename="2025-Fleet-Roster.pdf"' );
+	header( 'Content-Disposition: inline; filename="OYC-Fleet-Roster' . ( $ts ? '-' . wp_date( 'Y-m-d', $ts ) : '' ) . '.pdf"' );
 	header( 'Content-Length: ' . filesize( $file ) );
 	header( 'X-Robots-Tag: noindex, nofollow' );
 	readfile( $file );
