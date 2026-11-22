@@ -67,6 +67,9 @@ if ( isset( $_POST['oyc_user_create_nonce'] ) &&
 				'error'
 			);
 		} else {
+			// A member an officer adds goes on the Fleet Roster page and PDF
+			// (inc/fleet-roster.php) until the next roster upload lists them.
+			update_user_meta( $new_id, 'oyc_officer_created', '1' );
 			wp_send_new_user_notifications( $new_id, 'user' );
 			oyc_audit_log( 'user.create', sprintf( 'Created account "%s" (%s) with role %s', $login, $email, $role ), $new_id );
 			oyc_officer_notice( sprintf(

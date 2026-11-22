@@ -220,8 +220,12 @@ add_action( 'template_redirect', function () {
  * the changed fields are copied into that member's Fleet Roster entry, matched
  * by email (then by unique first + last name), and the PDF is rebuilt once at
  * the end of the request. Only the fields that changed are copied, so a roster
- * upload's data is not overwritten by older account values. Accounts that are
- * not on the roster are ignored. Roster uploads replace the directory as before.
+ * upload's data is not overwritten by older account values.
+ *
+ * A new member who is not on the roster yet (an account an officer created, or
+ * a sign-up an officer confirmed) is added to the directory from their profile.
+ * Other accounts that are not on the roster (admins, unconfirmed or old
+ * sign-ups) are left out. Roster uploads replace the directory as before.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /** User meta key => directory field. */
@@ -241,6 +245,7 @@ function oyc_roster_sync_map() {
 		'oyc_dinghy_rack'       => 'dinghy',
 		'oyc_member_number'     => 'number',
 		'oyc_dues_paid_through' => 'dues',
+		'active'                => 'status', // WP-Members approval: may add a new member.
 	);
 }
 
@@ -313,7 +318,13 @@ function oyc_roster_sync_run() {
 			$idx  = 1 === count( $hits ) ? $hits[0] : null;
 		}
 		if ( null === $idx ) {
-			continue; // Not on the club roster.
+			// Not on the roster: add a new member, built from the whole profile.
+			$entry = oyc_roster_entry_from_account( $u );
+			if ( $entry ) {
+				$roster  = oyc_roster_insert_sorted( $roster, $entry, $last );
+				$changed = true;
+			}
+			continue;
 		}
 
 		$e = $roster[ $idx ];
@@ -323,6 +334,8 @@ function oyc_roster_sync_run() {
 					if ( '' !== $first || '' !== $last ) {
 						$e['name'] = trim( $first . ' ' . $last );
 					}
+					break;
+				case 'status':
 					break;
 				case 'email':
 					$e['email'] = $u->user_email;
@@ -352,4 +365,76 @@ function oyc_roster_sync_run() {
 			oyc_roster_pdf_save();
 		}
 	}
+}
+
+/**
+ * Whether an account that is not on the roster should be added to the Fleet
+ * Roster as a new member: created by an officer, or confirmed by an officer,
+ * and not marked Expelled/Deceased. Site admins are only added when they have
+ * a membership type.
+ */
+function oyc_roster_account_is_new_member( $u ) {
+	$type = strtolower( trim( (string) get_user_meta( $u->ID, 'oyc_membership_type', true ) ) );
+	if ( function_exists( 'oyc_roster_inactive_types' ) && in_array( $type, oyc_roster_inactive_types(), true ) ) {
+		return false;
+	}
+	if ( user_can( $u, 'manage_options' ) && '' === $type ) {
+		return false;
+	}
+	if ( '1' === (string) get_user_meta( $u->ID, 'oyc_officer_created', true ) ) {
+		return true;
+	}
+	return '1' === (string) get_user_meta( $u->ID, 'active', true );
+}
+
+/** A Fleet Roster entry built from a new member's profile (null if not eligible). */
+function oyc_roster_entry_from_account( $u ) {
+	if ( ! oyc_roster_account_is_new_member( $u ) ) {
+		return null;
+	}
+	$meta = fn( $k ) => trim( (string) get_user_meta( $u->ID, $k, true ) );
+	$name = trim( $meta( 'first_name' ) . ' ' . $meta( 'last_name' ) );
+	if ( '' === $name ) {
+		return null;
+	}
+	return array(
+		'name'     => $name,
+		'spouse'   => '',
+		'email'    => $u->user_email,
+		'phones'   => array_values( array_filter( array( $meta( 'oyc_phone' ) ), 'strlen' ) ),
+		'street'   => trim( $meta( 'billing_address_1' ) . ' ' . $meta( 'billing_address_2' ) ),
+		'city'     => $meta( 'billing_city' ),
+		'state'    => $meta( 'billing_state' ),
+		'zip'      => $meta( 'billing_postcode' ),
+		'boat'     => '',
+		'boatLen'  => '',
+		'boatType' => '',
+		'category' => $meta( 'oyc_membership_type' ),
+		'since'    => $meta( 'oyc_member_since' ),
+		'locker'   => $meta( 'oyc_locker' ),
+		'dinghy'   => $meta( 'oyc_dinghy_rack' ),
+		'number'   => $meta( 'oyc_member_number' ),
+		'dues'     => $meta( 'oyc_dues_paid_through' ),
+		'listed'   => trim( $meta( 'last_name' ) . ', ' . $meta( 'first_name' ), ', ' ),
+	);
+}
+
+/** Insert an entry in last-name order (the roster's order) without re-sorting the rest. */
+function oyc_roster_insert_sorted( $roster, $entry, $last ) {
+	$key = strtolower( ( '' !== $last ? $last : (string) preg_replace( '/^.*\s/', '', $entry['name'] ) ) . ' ' . $entry['name'] );
+	$out = array();
+	$done = false;
+	foreach ( $roster as $e ) {
+		$n  = is_array( $e ) ? trim( (string) ( $e['name'] ?? '' ) ) : '';
+		$ek = strtolower( (string) preg_replace( '/^.*\s/', '', $n ) . ' ' . $n );
+		if ( ! $done && strcmp( $ek, $key ) > 0 ) {
+			$out[] = $entry;
+			$done  = true;
+		}
+		$out[] = $e;
+	}
+	if ( ! $done ) {
+		$out[] = $entry;
+	}
+	return $out;
 }
