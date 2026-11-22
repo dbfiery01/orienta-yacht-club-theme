@@ -330,6 +330,7 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 
 	$profile_fields = array_merge( array_keys( oyc_card_fields() ), array( 'oyc_member_since' ), array_keys( oyc_member_club_fields() ) );
 	$seen_num       = array();
+	$email_keys     = null; // Built on first need.
 	$directory      = array();
 	$inactive_types = oyc_roster_inactive_types();
 
@@ -371,6 +372,19 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		$user = null;
 		if ( ! empty( $r['email'] ) && is_email( $r['email'] ) ) {
 			$user = get_user_by( 'email', $r['email'] );
+			if ( ! $user && function_exists( 'oyc_email_key' ) ) {
+				// Same Gmail inbox written differently (dan.smith@ vs dansmith@).
+				if ( null === $email_keys ) {
+					$email_keys = array();
+					foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $acct ) {
+						$email_keys[ oyc_email_key( $acct->user_email ) ][] = (int) $acct->ID;
+					}
+				}
+				$ids = $email_keys[ oyc_email_key( $r['email'] ) ] ?? array();
+				if ( 1 === count( $ids ) ) {
+					$user = get_userdata( $ids[0] );
+				}
+			}
 		}
 		if ( ! $user && ! empty( $r['login'] ) ) {
 			$user = get_user_by( 'login', $r['login'] );
