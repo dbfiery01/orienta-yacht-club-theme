@@ -12,6 +12,8 @@
 get_header();
 $is_member = is_user_logged_in();
 $roster    = $is_member ? oyc_get_roster() : array();
+// Leave out anyone marked Expelled/Deceased on their profile since the last upload.
+$roster    = array_values( array_filter( $roster, fn( $m ) => is_array( $m ) && ! ( function_exists( 'oyc_roster_inactive_types' ) && in_array( strtolower( trim( (string) ( $m['category'] ?? '' ) ) ), oyc_roster_inactive_types(), true ) ) ) );
 ?>
 
 <div class="page-hero">
@@ -37,7 +39,10 @@ $roster    = $is_member ? oyc_get_roster() : array();
 				<input type="search" id="roster-search" class="roster-search"
 					placeholder="<?php esc_attr_e( 'Search by boat, name, phone, email, or address…', 'orienta-yacht-club' ); ?>"
 					aria-label="<?php esc_attr_e( 'Search the fleet roster', 'orienta-yacht-club' ); ?>" autocomplete="off" />
-				<p class="roster-count"><span id="roster-shown"><?php echo count( $roster ); ?></span> <?php esc_html_e( 'members', 'orienta-yacht-club' ); ?></p>
+				<p class="roster-count"><span id="roster-shown"><?php echo count( $roster ); ?></span> <?php esc_html_e( 'members', 'orienta-yacht-club' ); ?><?php
+				$oyc_upd = function_exists( 'oyc_roster_updated_label' ) ? oyc_roster_updated_label() : '';
+				if ( $oyc_upd ) :
+					?> &middot; <?php echo esc_html( sprintf( /* translators: %s: date. */ __( 'Updated %s', 'orienta-yacht-club' ), $oyc_upd ) ); ?><?php endif; ?></p>
 			</div>
 
 			<p class="roster-pdf"><a href="<?php echo esc_url( home_url( '/fleet-roster-pdf/' ) ); ?>" target="_blank" rel="noopener">&#128196; <?php esc_html_e( 'Download the full Fleet Roster (PDF)', 'orienta-yacht-club' ); ?></a></p>
