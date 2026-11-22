@@ -12,6 +12,8 @@
 get_header();
 $is_member = is_user_logged_in();
 $roster    = $is_member ? oyc_get_roster() : array();
+// Leave out anyone marked Expelled/Deceased on their profile since the last upload.
+$roster    = array_values( array_filter( $roster, fn( $m ) => is_array( $m ) && ! ( function_exists( 'oyc_roster_inactive_types' ) && in_array( strtolower( trim( (string) ( $m['category'] ?? '' ) ) ), oyc_roster_inactive_types(), true ) ) ) );
 ?>
 
 <div class="page-hero">

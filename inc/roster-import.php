@@ -314,6 +314,9 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		'error'        => '',
 	);
 
+	// Profile changes made by this upload must not be copied back into the
+	// directory it is replacing (see oyc_roster_sync_queue()).
+	$GLOBALS['oyc_roster_importing'] = ! $dry_run;
 	$rows = oyc_roster_read_rows( $path, $name );
 	if ( is_wp_error( $rows ) ) {
 		$out['error'] = $rows->get_error_message();
@@ -439,6 +442,7 @@ function oyc_roster_import( $path, $name, $dry_run = true, $do_directory = false
 		}
 	}
 
+	$GLOBALS['oyc_roster_importing'] = false;
 	if ( ! $dry_run && function_exists( 'oyc_audit_log' ) ) {
 		oyc_audit_log( 'user.roster_import', sprintf( 'Roster upload: %d accounts updated, %d unchanged, %d rows unmatched%s', $out['updated'], $out['unchanged'], count( $out['unmatched'] ), null !== $out['directory'] ? sprintf( '; Fleet Roster directory replaced (%d members)', $out['directory'] ) : '' ), 0 );
 	}

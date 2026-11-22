@@ -140,6 +140,9 @@ function oyc_rpdf_members( $roster ) {
 			continue;
 		}
 		$g      = fn( $k ) => isset( $m[ $k ] ) && ! is_array( $m[ $k ] ) ? trim( (string) $m[ $k ] ) : '';
+		if ( function_exists( 'oyc_roster_inactive_types' ) && in_array( strtolower( $g( 'category' ) ), oyc_roster_inactive_types(), true ) ) {
+			continue; // e.g. marked Deceased on the profile since the last upload.
+		}
 		$city   = $pc( $g( 'city' ), 'street' );
 		$phones = isset( $m['phones'] ) && is_array( $m['phones'] ) ? array_values( array_filter( array_map( 'trim', $m['phones'] ), 'strlen' ) ) : array();
 		$out[]  = array(

@@ -212,3 +212,144 @@ add_action( 'template_redirect', function () {
 	readfile( $file );
 	exit;
 }, 0 );
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Profile edits → Fleet Roster directory (page and PDF)
+ *
+ * When a member's profile is saved (by the member, an officer, or an admin),
+ * the changed fields are copied into that member's Fleet Roster entry, matched
+ * by email (then by unique first + last name), and the PDF is rebuilt once at
+ * the end of the request. Only the fields that changed are copied, so a roster
+ * upload's data is not overwritten by older account values. Accounts that are
+ * not on the roster are ignored. Roster uploads replace the directory as before.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/** User meta key => directory field. */
+function oyc_roster_sync_map() {
+	return array(
+		'first_name'            => 'name',
+		'last_name'             => 'name',
+		'billing_address_1'     => 'street',
+		'billing_address_2'     => 'street',
+		'billing_city'          => 'city',
+		'billing_state'         => 'state',
+		'billing_postcode'      => 'zip',
+		'oyc_phone'             => 'phone',
+		'oyc_membership_type'   => 'category',
+		'oyc_member_since'      => 'since',
+		'oyc_locker'            => 'locker',
+		'oyc_dinghy_rack'       => 'dinghy',
+		'oyc_member_number'     => 'number',
+		'oyc_dues_paid_through' => 'dues',
+	);
+}
+
+/** Queue a user's changed directory field for syncing at the end of the request. */
+function oyc_roster_sync_queue( $user_id, $field, $old_email = '' ) {
+	if ( ! empty( $GLOBALS['oyc_roster_importing'] ) ) {
+		return; // A roster upload is replacing the directory itself.
+	}
+	global $oyc_roster_sync;
+	if ( ! is_array( $oyc_roster_sync ) ) {
+		$oyc_roster_sync = array();
+		add_action( 'shutdown', 'oyc_roster_sync_run' );
+	}
+	$q = $oyc_roster_sync[ $user_id ] ?? array( 'fields' => array(), 'old_email' => '' );
+	$q['fields'][ $field ] = true;
+	if ( $old_email ) {
+		$q['old_email'] = $old_email;
+	}
+	$oyc_roster_sync[ $user_id ] = $q;
+}
+
+add_action( 'added_user_meta', 'oyc_roster_sync_meta', 10, 3 );
+add_action( 'updated_user_meta', 'oyc_roster_sync_meta', 10, 3 );
+add_action( 'deleted_user_meta', 'oyc_roster_sync_meta', 10, 3 );
+function oyc_roster_sync_meta( $meta_id, $user_id, $key ) {
+	$map = oyc_roster_sync_map();
+	if ( is_string( $key ) && isset( $map[ $key ] ) ) {
+		oyc_roster_sync_queue( (int) $user_id, $map[ $key ] );
+	}
+}
+
+add_action( 'profile_update', function ( $user_id, $old ) {
+	$u = get_userdata( $user_id );
+	if ( $u && $old && strtolower( $u->user_email ) !== strtolower( (string) $old->user_email ) ) {
+		oyc_roster_sync_queue( (int) $user_id, 'email', (string) $old->user_email );
+	}
+}, 10, 2 );
+
+/** Apply queued profile changes to the directory; rebuild the PDF if anything changed. */
+function oyc_roster_sync_run() {
+	global $oyc_roster_sync;
+	$queue           = is_array( $oyc_roster_sync ) ? $oyc_roster_sync : array();
+	$oyc_roster_sync = null;
+	$roster          = oyc_get_roster();
+	if ( ! $queue || ! $roster ) {
+		return;
+	}
+	$changed = false;
+	foreach ( $queue as $user_id => $q ) {
+		$u = get_userdata( $user_id );
+		if ( ! $u ) {
+			continue;
+		}
+		$meta  = fn( $k ) => trim( (string) get_user_meta( $user_id, $k, true ) );
+		$first = $meta( 'first_name' );
+		$last  = $meta( 'last_name' );
+
+		// Find the member's entry: email (old email if it just changed), then unique name.
+		$idx = null;
+		foreach ( array_filter( array( $q['old_email'], $u->user_email ) ) as $em ) {
+			foreach ( $roster as $i => $e ) {
+				if ( is_array( $e ) && '' !== $em && strtolower( trim( (string) ( $e['email'] ?? '' ) ) ) === strtolower( trim( $em ) ) ) {
+					$idx = $i;
+					break 2;
+				}
+			}
+		}
+		if ( null === $idx && '' !== $first && '' !== $last ) {
+			$hits = array_keys( array_filter( $roster, fn( $e ) => is_array( $e ) && 0 === strcasecmp( trim( (string) ( $e['name'] ?? '' ) ), $first . ' ' . $last ) ) );
+			$idx  = 1 === count( $hits ) ? $hits[0] : null;
+		}
+		if ( null === $idx ) {
+			continue; // Not on the club roster.
+		}
+
+		$e = $roster[ $idx ];
+		foreach ( array_keys( $q['fields'] ) as $f ) {
+			switch ( $f ) {
+				case 'name':
+					if ( '' !== $first || '' !== $last ) {
+						$e['name'] = trim( $first . ' ' . $last );
+					}
+					break;
+				case 'email':
+					$e['email'] = $u->user_email;
+					break;
+				case 'street':
+					$e['street'] = trim( $meta( 'billing_address_1' ) . ' ' . $meta( 'billing_address_2' ) );
+					break;
+				case 'phone':
+					$phones    = isset( $e['phones'] ) && is_array( $e['phones'] ) ? array_values( $e['phones'] ) : array();
+					$phones[0] = $meta( 'oyc_phone' );
+					$e['phones'] = array_values( array_filter( $phones, 'strlen' ) );
+					break;
+				default:
+					$keys = array_flip( oyc_roster_sync_map() );
+					$e[ $f ] = $meta( $keys[ $f ] );
+			}
+		}
+		if ( $e !== $roster[ $idx ] ) {
+			$roster[ $idx ] = $e;
+			$changed        = true;
+		}
+	}
+	if ( $changed ) {
+		update_option( 'oyc_fleet_roster', wp_json_encode( array_values( $roster ) ), false );
+		update_option( 'oyc_fleet_roster_updated', time(), false );
+		if ( function_exists( 'oyc_roster_pdf_save' ) ) {
+			oyc_roster_pdf_save();
+		}
+	}
+}
