@@ -5,8 +5,14 @@
  * disk: the members-only /fleet-roster-pdf/ link (inc/fleet-roster.php) streams
  * the result, so the PDF always matches the Fleet Roster page.
  *
- * A small self-contained PDF writer: Helvetica / Helvetica-Bold (built into
- * every PDF reader, so no font files), WinAnsi text, one table.
+ * Layout: the club's Fleet Roster booklet (5.5 x 8.5 in). The fixed pages
+ * (cover, club info, officers, committees, past commodores, dock assignments,
+ * fees, work dock rules, memorials, notes) are copied from
+ * assets/fleet-roster/booklet-static.json, made from the hand-made booklet by
+ * tools/build-roster-booklet.py. The fleet list and the Regular and Associate
+ * member pages are drawn here from the roster, in the booklet's fonts and
+ * positions (TeX Gyre Bonum, Times, Helvetica). Page numbers and the cover's
+ * Updated date are redrawn.
  *
  * @package Orienta_Yacht_Club
  */
@@ -58,238 +64,348 @@ function oyc_rpdf_textw( $s, $size, $bold = false ) {
 	return $t * $size / 1000;
 }
 
-/**
- * Wrap WinAnsi text to a width; long words are broken.
- *
- * @return string[]
- */
-function oyc_rpdf_wrap( $s, $width, $size, $bold = false ) {
-	$s = trim( preg_replace( '/ +/', ' ', $s ) );
-	if ( '' === $s ) {
-		return array();
-	}
-	$lines = array();
-	$line  = '';
-	foreach ( explode( ' ', $s ) as $word ) {
-		$try = '' === $line ? $word : $line . ' ' . $word;
-		if ( oyc_rpdf_textw( $try, $size, $bold ) <= $width ) {
-			$line = $try;
-			continue;
-		}
-		if ( '' !== $line ) {
-			$lines[] = $line;
-			$line    = '';
-		}
-		// Break a word that is wider than the column on its own; an email
-		// address breaks before its @ first.
-		$at = strpos( $word, '@' );
-		if ( $at && oyc_rpdf_textw( $word, $size, $bold ) > $width && oyc_rpdf_textw( substr( $word, 0, $at ), $size, $bold ) <= $width ) {
-			$lines[] = substr( $word, 0, $at );
-			$word    = substr( $word, $at );
-		}
-		while ( oyc_rpdf_textw( $word, $size, $bold ) > $width && strlen( $word ) > 1 ) {
-			$cut = strlen( $word ) - 1;
-			while ( $cut > 1 && oyc_rpdf_textw( substr( $word, 0, $cut ), $size, $bold ) > $width ) {
-				$cut--;
-			}
-			$lines[] = substr( $word, 0, $cut );
-			$word    = substr( $word, $cut );
-		}
-		$line = $word;
-	}
-	if ( '' !== $line ) {
-		$lines[] = $line;
-	}
-	return $lines;
-}
-
 /** PDF text operator for WinAnsi text at x,y. */
-function oyc_rpdf_text( $x, $y, $s, $size, $bold = false ) {
+function oyc_rpdf_text( $x, $y, $s, $size, $bold = false, $font = '' ) {
 	$s = str_replace( array( '\\', '(', ')' ), array( '\\\\', '\\(', '\\)' ), $s );
-	return sprintf( "BT /%s %.2F Tf %.2F %.2F Td (%s) Tj ET\n", $bold ? 'F2' : 'F1', $size, $x, $y, $s );
+	return sprintf( "BT /%s %.2F Tf %.2F %.2F Td (%s) Tj ET\n", $font ? $font : ( $bold ? 'F2' : 'F1' ), $size, $x, $y, $s );
 }
 
 /**
- * One table row per directory entry, as display text.
+ * Booklet font (TeX Gyre Bonum) metrics and a text writer for it.
+ */
+class OYC_Rpdf_Bonum {
+	public $m;        // face => metrics.
+	public $used = array(); // face => [ gid => unicode ].
+
+	public function __construct( $metrics ) {
+		$this->m = $metrics;
+	}
+
+	/** Glyph ids for UTF-8 text in a face. */
+	public function gids( $face, $s ) {
+		$out  = array();
+		$cmap = $this->m[ $face ]['cmap'];
+		$s    = str_replace( array( "\r", "\n", "\t" ), ' ', (string) $s );
+		foreach ( preg_split( '//u', $s, -1, PREG_SPLIT_NO_EMPTY ) as $ch ) {
+			$u = mb_ord( $ch, 'UTF-8' );
+			$g = isset( $cmap[ (string) $u ] ) ? $cmap[ (string) $u ] : ( isset( $cmap['63'] ) ? $cmap['63'] : 0 );
+			$this->used[ $face ][ $g ] = isset( $cmap[ (string) $u ] ) ? $u : 63;
+			$out[] = $g;
+		}
+		return $out;
+	}
+
+	/** Width in points. */
+	public function width( $face, $s, $size ) {
+		$w = 0;
+		foreach ( $this->gids( $face, $s ) as $g ) {
+			$w += $this->m[ $face ]['widths'][ $g ] ?? 500;
+		}
+		return $w * $size / 1000;
+	}
+
+	/**
+	 * PDF ops to draw text; squeezed horizontally if wider than $maxw.
+	 *
+	 * @return array{0:string,1:float} Ops and drawn width.
+	 */
+	public function text( $face, $x, $y, $s, $size, $maxw = 0 ) {
+		if ( '' === trim( (string) $s ) ) {
+			return array( '', 0 );
+		}
+		$hex = '';
+		foreach ( $this->gids( $face, $s ) as $g ) {
+			$hex .= sprintf( '%04X', $g );
+		}
+		$w  = $this->width( $face, $s, $size );
+		$tz = ( $maxw > 0 && $w > $maxw ) ? max( 70, floor( 100 * $maxw / $w ) ) : 100;
+		$id = array( 'regular' => 'B1', 'bold' => 'B2', 'italic' => 'B3' )[ $face ];
+		return array( sprintf( "BT /%s %.2F Tf %d Tz %.2F %.2F Td <%s> Tj ET\n", $id, $size, $tz, $x, $y, $hex ), $w * $tz / 100 );
+	}
+}
+
+/**
+ * Roster entries as booklet records.
  *
  * @param array $roster Fleet Roster directory entries.
- * @return array[] Each: [ member lines, boat, phones, email, address ].
+ * @return array[]
  */
-function oyc_rpdf_rows( $roster ) {
-	$pc   = function ( $s, $k = 'name' ) {
+function oyc_rpdf_members( $roster ) {
+	$pc  = function ( $s, $k = 'name' ) {
 		return function_exists( 'oyc_proper_case' ) ? oyc_proper_case( $s, $k ) : $s;
 	};
-	$rows = array();
+	$out = array();
 	foreach ( $roster as $m ) {
 		if ( ! is_array( $m ) ) {
 			continue;
 		}
 		$g      = fn( $k ) => isset( $m[ $k ] ) && ! is_array( $m[ $k ] ) ? trim( (string) $m[ $k ] ) : '';
-		$name   = $pc( $g( 'name' ) );
-		$spouse = $pc( $g( 'spouse' ) );
 		$city   = $pc( $g( 'city' ), 'street' );
-		$cityln = trim( $city . ( $g( 'state' ) ? ', ' . $g( 'state' ) : '' ) . ( $g( 'zip' ) ? ' ' . $g( 'zip' ) : '' ), ', ' );
-		$street = $pc( str_replace( array( "\r\n", "\n" ), ', ', $g( 'street' ) ), 'street' );
-		$phones = isset( $m['phones'] ) && is_array( $m['phones'] ) ? array_filter( array_map( 'trim', $m['phones'] ), 'strlen' ) : array();
-		$rows[] = array(
-			'name'     => $name,
-			'spouse'   => $spouse,
-			'assoc'    => 'Associate' === $g( 'category' ),
-			'boat'     => trim( $g( 'boat' ) . ' ' . $g( 'boatLen' ) . ' ' . $g( 'boatType' ) ),
-			'phones'   => array_values( $phones ),
-			'email'    => $g( 'email' ),
-			'street'   => $street,
-			'cityln'   => $cityln,
+		$phones = isset( $m['phones'] ) && is_array( $m['phones'] ) ? array_values( array_filter( array_map( 'trim', $m['phones'] ), 'strlen' ) ) : array();
+		$out[]  = array(
+			'name'    => $pc( $g( 'name' ) ),
+			'spouse'  => $pc( $g( 'spouse' ) ),
+			'assoc'   => 'associate' === strtolower( $g( 'category' ) ),
+			'street'  => $pc( trim( preg_replace( '/\s*[\r\n]+\s*/', ' ', $g( 'street' ) ) ), 'street' ),
+			'cityln'  => trim( $city . ( $g( 'state' ) ? ', ' . $g( 'state' ) : '' ) . ( $g( 'zip' ) ? ' ' . $g( 'zip' ) : '' ), ', ' ),
+			'email'   => $g( 'email' ),
+			'phones'  => $phones,
+			'since'   => $g( 'since' ),
+			'boat'    => $g( 'boat' ),
+			'size'    => rtrim( $g( 'boatLen' ), "'" ),
+			'type'    => $g( 'boatType' ),
 		);
 	}
-	return $rows;
+	return $out;
+}
+
+/** Load a theme asset under assets/fleet-roster/. */
+function oyc_rpdf_asset( $file ) {
+	$path = get_template_directory() . '/assets/fleet-roster/' . $file;
+	return file_exists( $path ) ? file_get_contents( $path ) : false;
 }
 
 /**
- * Build the Fleet Roster PDF.
+ * Build the Fleet Roster booklet PDF.
  *
- * @param array  $roster  Fleet Roster directory entries.
- * @param string $updated Date line, e.g. "November 22, 2026" ('' to leave out).
+ * @param array $roster  Fleet Roster directory entries.
+ * @param int   $updated Timestamp of the roster upload (0 = today).
  * @return string PDF bytes.
  */
-function oyc_roster_pdf_build( $roster, $updated = '' ) {
-	$pw = 792; $ph = 612; $mx = 36; // Landscape US Letter, half-inch margins.
-	$fs = 8.5; $lh = 10.5; $pad = 4;
-	$cols = array(
-		array( 'Member', 170 ),
-		array( 'Boat', 140 ),
-		array( 'Phone', 85 ),
-		array( 'Email', 185 ),
-		array( 'Address', 140 ),
-	);
-	$top    = $ph - $mx;
-	$bottom = $mx + 22; // Room for the footer.
-	$rows   = oyc_rpdf_rows( $roster );
-	$pages  = array();
-	$cur    = '';
-	$y      = $top;
-
-	$header = function () use ( &$cur, &$y, $cols, $mx, $fs, $lh, $pad ) {
-		$h   = $lh + 2 * $pad;
-		$cur .= sprintf( "0.11 0.23 0.37 rg %.2F %.2F %.2F %.2F re f\n", $mx, $y - $h, 720, $h );
-		$cur .= "1 1 1 rg\n";
-		$x = $mx;
-		foreach ( $cols as $c ) {
-			$cur .= oyc_rpdf_text( $x + $pad, $y - $pad - $fs + 1, $c[0], $fs, true );
-			$x   += $c[1];
-		}
-		$cur .= "0 0 0 rg\n";
-		$y   -= $h;
+function oyc_roster_pdf_build( $roster, $updated = 0 ) {
+	$static  = json_decode( (string) oyc_rpdf_asset( 'booklet-static.json' ), true );
+	$metrics = json_decode( (string) oyc_rpdf_asset( 'fonts.json' ), true );
+	if ( ! is_array( $static ) || ! is_array( $metrics ) || count( $static['pages'] ) < 10 ) {
+		throw new RuntimeException( 'Fleet Roster booklet assets missing' );
+	}
+	$updated = $updated ? $updated : time();
+	$bon     = new OYC_Rpdf_Bonum( $metrics );
+	$members = oyc_rpdf_members( $roster );
+	$times   = function ( $font, $x, $y, $s, $size ) {
+		return oyc_rpdf_text( $x, $y, oyc_rpdf_enc( $s ), $size, false, $font );
 	};
 
-	// Title block on page 1.
-	$cur .= "0.11 0.23 0.37 rg\n";
-	$cur .= oyc_rpdf_text( $mx, $y - 18, oyc_rpdf_enc( 'Orienta Yacht Club Fleet Roster' ), 18, true );
-	$cur .= "0.35 0.35 0.35 rg\n";
-	$sub  = ( $updated ? 'Updated ' . $updated . '  ·  ' : '' ) . count( $rows ) . ' members';
-	$cur .= oyc_rpdf_text( $mx, $y - 33, oyc_rpdf_enc( $sub ), 9.5 );
-	$cur .= "0 0 0 rg\n";
-	$y   -= 46;
-	$header();
-
-	foreach ( $rows as $i => $r ) {
-		$cells = array();
-		$w0    = $cols[0][1] - 2 * $pad;
-		$name  = oyc_rpdf_wrap( oyc_rpdf_enc( $r['name'] ), $w0, $fs, true );
-		$sub   = trim( ( $r['spouse'] ? $r['spouse'] : '' ) . ( $r['assoc'] ? ( $r['spouse'] ? ' · ' : '' ) . 'Associate' : '' ) );
-		$cells[0] = array( 'bold' => $name, 'reg' => oyc_rpdf_wrap( oyc_rpdf_enc( $sub ), $w0, $fs ) );
-		$cells[1] = array( 'reg' => oyc_rpdf_wrap( oyc_rpdf_enc( $r['boat'] ), $cols[1][1] - 2 * $pad, $fs ) );
-		$pl = array();
-		foreach ( $r['phones'] as $p ) {
-			$pl = array_merge( $pl, oyc_rpdf_wrap( oyc_rpdf_enc( $p ), $cols[2][1] - 2 * $pad, $fs ) );
+	// ── Fleet list: Regular members' boats A–Z (ties by member last name, the
+	// roster's order). Associates' boats are not in the club fleet list.
+	$fleet = array();
+	foreach ( $members as $i => $m ) {
+		if ( '' !== $m['boat'] && ! $m['assoc'] ) {
+			$fleet[] = array( $m['boat'], $m['name'], $i );
 		}
-		$cells[2] = array( 'reg' => $pl );
-		$cells[3] = array( 'reg' => oyc_rpdf_wrap( oyc_rpdf_enc( $r['email'] ), $cols[3][1] - 2 * $pad, $fs ) );
-		$al = oyc_rpdf_wrap( oyc_rpdf_enc( $r['street'] ), $cols[4][1] - 2 * $pad, $fs );
-		$cells[4] = array( 'reg' => array_merge( $al, oyc_rpdf_wrap( oyc_rpdf_enc( $r['cityln'] ), $cols[4][1] - 2 * $pad, $fs ) ) );
-
-		$n = 1;
-		foreach ( $cells as $c ) {
-			$n = max( $n, count( $c['bold'] ?? array() ) + count( $c['reg'] ) );
-		}
-		$h = $n * $lh + 2 * $pad;
-		if ( $y - $h < $bottom ) {
-			$pages[] = $cur;
-			$cur     = '';
-			$y       = $top;
-			$header();
-		}
-		if ( 1 === $i % 2 ) {
-			$cur .= sprintf( "0.94 0.96 0.98 rg %.2F %.2F %.2F %.2F re f 0 0 0 rg\n", $mx, $y - $h, 720, $h );
-		}
-		$cur .= sprintf( "0.85 0.87 0.9 RG 0.5 w %.2F %.2F m %.2F %.2F l S\n", $mx, $y - $h, $mx + 720, $y - $h );
-		$x = $mx;
-		foreach ( $cells as $ci => $c ) {
-			$ly = $y - $pad - $fs + 1;
-			foreach ( $c['bold'] ?? array() as $t ) {
-				$cur .= oyc_rpdf_text( $x + $pad, $ly, $t, $fs, true );
-				$ly  -= $lh;
-			}
-			if ( 0 === $ci && $c['reg'] ) {
-				$cur .= "0.35 0.35 0.35 rg\n";
-			}
-			foreach ( $c['reg'] as $t ) {
-				$cur .= oyc_rpdf_text( $x + $pad, $ly, $t, $fs );
-				$ly  -= $lh;
-			}
-			if ( 0 === $ci && $c['reg'] ) {
-				$cur .= "0 0 0 rg\n";
-			}
-			$x += $cols[ $ci ][1];
-		}
-		$y -= $h;
 	}
-	if ( ! $rows ) {
-		$cur .= oyc_rpdf_text( $mx + $pad, $y - 16, oyc_rpdf_enc( 'The roster has not been loaded yet.' ), 10 );
-	}
-	$pages[] = $cur;
-
-	// Footers, now that the page count is known.
-	$total = count( $pages );
-	foreach ( $pages as $p => $c ) {
-		$foot  = "0.45 0.45 0.45 rg\n";
-		$foot .= oyc_rpdf_text( $mx, $mx, oyc_rpdf_enc( 'Orienta Yacht Club · Members only. Please do not share.' . ( $updated ? ' · Updated ' . $updated : '' ) ), 7.5 );
-		$pg    = 'Page ' . ( $p + 1 ) . ' of ' . $total;
-		$foot .= oyc_rpdf_text( $pw - $mx - oyc_rpdf_textw( $pg, 7.5 ), $mx, $pg, 7.5 );
-		$pages[ $p ] = $c . $foot;
+	usort( $fleet, fn( $a, $b ) => strcasecmp( $a[0], $b[0] ) ?: $a[2] - $b[2] );
+	$fleet_pages = array();
+	foreach ( array_chunk( $fleet, 42 ) ?: array( array() ) as $pi => $chunk ) {
+		$c  = $times( 'T2', 122.6, 567.4, 'ORIENTA YACHT CLUB FLEET', 10 );
+		if ( $pi > 0 ) {
+			$c .= $times( 'T1', 177.2, 557.4, 'Continued', 10 );
+		}
+		$c .= $times( 'T2', 36, 545.9, 'NAME', 10 ) . $times( 'T2', 227, 545.9, 'OWNER', 10 );
+		$y  = 527.4;
+		foreach ( $chunk as $row ) {
+			$c .= oyc_rpdf_text( 36, $y, oyc_rpdf_enc( $row[0] ), 10 );
+			$c .= oyc_rpdf_text( 204.6, $y, oyc_rpdf_enc( $row[1] ), 10 );
+			$y -= 12;
+		}
+		$fleet_pages[] = $c;
 	}
 
-	// Assemble: 1 catalog, 2 pages, 3-4 fonts, 5 info, then page/content pairs.
-	$objs  = array();
+	// ── Regular members: 8 on the first page (under the heading), 9 after.
+	$regular = array_values( array_filter( $members, fn( $m ) => ! $m['assoc'] ) );
+	$reg_pages = array();
+	$i = 0;
+	$n = count( $regular );
+	do {
+		$first = ! $reg_pages;
+		$c     = $first ? $bon->text( 'bold', 76.7, 563.8, 'REGULAR OYC MEMBERSHIP ROSTER', 12 )[0] : '';
+		$y     = $first ? 506.1 : 565.8;
+		for ( $k = 0; $k < ( $first ? 8 : 9 ) && $i < $n; $k++, $i++ ) {
+			$m = $regular[ $i ];
+			list( $ops, $w ) = $bon->text( 'bold', 36, $y, $m['name'], 10, 166 );
+			$c .= $ops;
+			if ( $m['spouse'] ) {
+				$c .= $bon->text( 'regular', 36 + $w + 3.2, $y, '(' . $m['spouse'] . ')', 10, max( 20, 166 - $w - 3.2 ) )[0];
+			}
+			$c .= $bon->text( 'regular', 36, $y - 12, $m['street'], 10, 166 )[0];
+			$c .= $bon->text( 'regular', 36, $y - 24, $m['cityln'], 10, 166 )[0];
+			if ( $m['boat'] ) {
+				// Booklet spacing: boat (italic), size and type 6.4 pt apart.
+				list( $ops, $w ) = $bon->text( 'italic', 36, $y - 36, $m['boat'], 10, 110 );
+				$c .= $ops;
+				$x  = 36 + $w + 6.4;
+			} else {
+				$x = 36;
+			}
+			if ( '' !== $m['size'] ) {
+				list( $ops, $w ) = $bon->text( 'regular', $x, $y - 36, $m['size'], 10 );
+				$c .= $ops;
+				$x += $w + 6.4;
+			}
+			if ( '' !== $m['type'] ) {
+				$c .= $bon->text( 'regular', $x, $y - 36, $m['type'], 10, max( 20, 202 - $x ) )[0];
+			}
+			$c .= $bon->text( 'regular', 206, $y, $m['email'], 10, 156 )[0];
+			if ( $m['since'] ) {
+				$c .= $bon->text( 'italic', 206, $y - 12, 'Member Since ' . $m['since'], 10, 156 )[0];
+			}
+			$c .= $bon->text( 'regular', 206, $y - 24, $m['phones'][0] ?? '', 10, 156 )[0];
+			$c .= $bon->text( 'regular', 206, $y - 36, $m['phones'][1] ?? ( isset( $m['phones'][0] ) ? 'No Alt #' : '' ), 10, 156 )[0];
+			$y -= 60;
+		}
+		$reg_pages[] = $c;
+	} while ( $i < $n );
+
+	// ── Associate members: two columns of 7, left column first.
+	$assoc = array_values( array_filter( $members, fn( $m ) => $m['assoc'] ) );
+	$as_pages = array();
+	foreach ( array_chunk( $assoc, 14 ) ?: array( array() ) as $pi => $chunk ) {
+		$c = $times( 'T2', 130.8, 566.6, 'ASSOCIATE MEMBERS', 12 );
+		if ( $pi > 0 ) {
+			$c .= $times( 'T1', 173, 556.6, 'Continued', 12 );
+		}
+		foreach ( $chunk as $k => $m ) {
+			$x  = $k < 7 ? 36 : 206;
+			$y  = 529.8 - ( $k % 7 ) * 72;
+			$c .= $bon->text( 'bold', $x, $y, $m['name'], 10, 164 )[0];
+			$c .= $bon->text( 'regular', $x, $y - 12, $m['street'], 10, 164 )[0];
+			$c .= $bon->text( 'regular', $x, $y - 24, $m['cityln'], 10, 164 )[0];
+			$c .= $bon->text( 'regular', $x, $y - 36, $m['email'], 10, 164 )[0];
+			$c .= $bon->text( 'regular', $x, $y - 48, $m['phones'][0] ?? '', 10, 164 )[0];
+		}
+		$as_pages[] = $c;
+	}
+
+	// ── Page order: fixed 1-5, fleet, fixed dock + fees, Regular, Associate, fixed back pages.
+	$sp    = $static['pages'];
+	$order = array();
+	foreach ( array_slice( $sp, 0, 5 ) as $k => $p ) {
+		$order[] = array( 'static' => $k );
+	}
+	foreach ( $fleet_pages as $c ) {
+		$order[] = array( 'gen' => $c );
+	}
+	$order[] = array( 'static' => 5 );
+	$order[] = array( 'static' => 6 );
+	foreach ( array_merge( $reg_pages, $as_pages ) as $c ) {
+		$order[] = array( 'gen' => $c );
+	}
+	// Keep the back pages on the same sides of the spread as the printed
+	// booklet (Work Dock Rules on a left-hand, even page): pad with an empty
+	// "Associate Members, Continued" page, as the hand-made booklet does.
+	if ( 0 === count( $order ) % 2 ) {
+		$order[] = array( 'gen' => $times( 'T2', 130.8, 566.6, 'ASSOCIATE MEMBERS', 12 ) . $times( 'T1', 173, 556.6, 'Continued', 12 ) );
+	}
+	for ( $k = 7; $k < count( $sp ); $k++ ) {
+		$order[] = array( 'static' => $k );
+	}
+
+	// ── Objects. 1 catalog, 2 pages, 3 info, 4 Helvetica, 5 Times-Roman,
+	// 6 Times-Bold, 7.. Bonum fonts (5 objects each), then the copied objects
+	// (renumbered), then the forms and pages.
+	$objs   = array();
+	$objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+	$objs[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>';
+	$objs[6] = '<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>';
+	$base    = 22;
+	$shift   = function ( $txt ) use ( $base ) {
+		return preg_replace_callback( '/\b(\d+) 0 R\b/', fn( $mm ) => ( (int) $mm[1] + $base ) . ' 0 R', $txt );
+	};
+	$max = 0;
+	foreach ( $static['objects'] as $num => $o ) {
+		$id  = (int) $num + $base;
+		$max = max( $max, $id );
+		$objs[ $id ] = isset( $o['stream'] )
+			? $shift( $o['dict'] ) . "\nstream\n" . base64_decode( $o['stream'] ) . "\nendstream"
+			: $shift( $o['dict'] );
+	}
+	$next = $max + 1;
+	$fonts = '/F1 4 0 R /T1 5 0 R /T2 6 0 R /B1 7 0 R /B2 12 0 R /B3 17 0 R';
 	$kids  = array();
-	foreach ( $pages as $p => $c ) {
-		$po = 6 + 2 * $p;
-		$kids[] = $po . ' 0 R';
-		$data   = function_exists( 'gzcompress' ) ? gzcompress( $c ) : $c;
-		$filter = function_exists( 'gzcompress' ) ? ' /Filter /FlateDecode' : '';
-		$objs[ $po ]     = sprintf( '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents %d 0 R >>', $pw, $ph, $po + 1 );
-		$objs[ $po + 1 ] = '<< /Length ' . strlen( $data ) . $filter . " >>\nstream\n" . $data . "\nendstream";
+	$total = count( $order );
+	foreach ( $order as $pn => $pg ) {
+		$num = $pn + 1;
+		$xo  = '';
+		$c   = '';
+		if ( isset( $pg['static'] ) ) {
+			$s    = $sp[ $pg['static'] ];
+			$form = $next++;
+			$data = base64_decode( $s['stream'] );
+			$objs[ $form ] = sprintf( '<< /Type /XObject /Subtype /Form /BBox [%s] /Resources %s /Filter /FlateDecode /Length %d >>', implode( ' ', $s['bbox'] ), $shift( $s['resources'] ), strlen( $data ) ) . "\nstream\n" . $data . "\nendstream";
+			$xo = '/XObject << /P ' . $form . ' 0 R >>';
+			$c  = "q /P Do Q\n";
+			if ( 0 === $pn ) {
+				// Cover: replace the edition date with this upload's date.
+				$c .= "1 1 1 rg 228 41 130 16 re f 0.137 0.122 0.125 rg\n";
+				$x  = 232.4;
+				$last = ' ';
+				foreach ( preg_split( '//u', strtoupper( wp_date( 'F j, Y', $updated ) ), -1, PREG_SPLIT_NO_EMPTY ) as $ci => $ch ) {
+					$prev = $last;
+					$big  = ' ' === $prev || ! ctype_alpha( $ch );
+					$size = $big ? 12 : 9.2;
+					$enc  = oyc_rpdf_enc( $ch );
+					$c   .= oyc_rpdf_text( $x, 45.7, $enc, $size );
+					$x   += oyc_rpdf_textw( $enc, $size );
+					$last = $ch;
+				}
+			} else {
+				$c .= "1 1 1 rg 184 22 28 13 re f 0 0 0 rg\n";
+			}
+		} else {
+			$c = $pg['gen'];
+		}
+		if ( $pn > 0 ) {
+			$c .= oyc_rpdf_text( 198 - 2 * strlen( (string) $num ), 25.7, (string) $num, 8, false, 'T1' );
+		}
+		$cid  = $next++;
+		$pid  = $next++;
+		$data = function_exists( 'gzcompress' ) ? gzcompress( $c ) : $c;
+		$objs[ $cid ] = '<< /Length ' . strlen( $data ) . ( function_exists( 'gzcompress' ) ? ' /Filter /FlateDecode' : '' ) . " >>\nstream\n" . $data . "\nendstream";
+		$objs[ $pid ] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 396 612] /Resources << /Font << ' . $fonts . ' >> ' . $xo . ' >> /Contents ' . $cid . ' 0 R >>';
+		$kids[] = $pid . ' 0 R';
+	}
+
+	// Bonum fonts (after the pages, so every glyph used is known).
+	foreach ( array( 'regular' => 7, 'bold' => 12, 'italic' => 17 ) as $face => $o ) {
+		$fm   = $metrics[ $face ];
+		$file = (string) oyc_rpdf_asset( $fm['file'] );
+		$name = 'TeXGyreBonum-' . ucfirst( $face );
+		$objs[ $o ]     = '<< /Type /Font /Subtype /Type0 /BaseFont /' . $name . ' /Encoding /Identity-H /DescendantFonts [' . ( $o + 1 ) . ' 0 R] /ToUnicode ' . ( $o + 4 ) . ' 0 R >>';
+		$objs[ $o + 1 ] = '<< /Type /Font /Subtype /CIDFontType0 /BaseFont /' . $name . ' /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ' . ( $o + 2 ) . ' 0 R /DW 500 /W [0 [' . implode( ' ', $fm['widths'] ) . ']] >>';
+		$objs[ $o + 2 ] = sprintf(
+			'<< /Type /FontDescriptor /FontName /%s /Flags %d /FontBBox [%s] /ItalicAngle %s /Ascent %d /Descent %d /CapHeight %d /StemV 80 /FontFile3 %d 0 R >>',
+			$name, 'italic' === $face ? 98 : 34, implode( ' ', $fm['bbox'] ), $fm['italicAngle'], $fm['ascent'], $fm['descent'], $fm['capHeight'], $o + 3
+		);
+		$objs[ $o + 3 ] = '<< /Subtype /OpenType /Length ' . strlen( $file ) . " >>\nstream\n" . $file . "\nendstream";
+		$map = '';
+		$cnt = 0;
+		$chunks = array();
+		foreach ( $bon->used[ $face ] ?? array() as $g => $u ) {
+			$chunks[] = sprintf( '<%04X> <%04X>', $g, $u );
+		}
+		foreach ( array_chunk( $chunks, 100 ) as $ch ) {
+			$map .= count( $ch ) . " beginbfchar\n" . implode( "\n", $ch ) . "\nendbfchar\n";
+		}
+		$cmap = "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n" . $map . "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend";
+		$objs[ $o + 4 ] = '<< /Length ' . strlen( $cmap ) . " >>\nstream\n" . $cmap . "\nendstream";
 	}
 	$objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
 	$objs[2] = '<< /Type /Pages /Kids [' . implode( ' ', $kids ) . '] /Count ' . $total . ' >>';
-	$objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
-	$objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
-	$objs[5] = '<< /Title (Orienta Yacht Club Fleet Roster) /Producer (orientayachtclub.com) /CreationDate (D:' . gmdate( 'YmdHis' ) . "Z) >>";
+	$objs[3] = '<< /Title (OYC Fleet Roster ' . wp_date( 'Y', $updated ) . ') /Author (Orienta Yacht Club) /Producer (orientayachtclub.com) /CreationDate (D:' . gmdate( 'YmdHis' ) . "Z) >>";
 	ksort( $objs );
 
-	$out  = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+	$out  = "%PDF-1.7\n%\xE2\xE3\xCF\xD3\n";
 	$offs = array();
-	foreach ( $objs as $n => $body ) {
-		$offs[ $n ] = strlen( $out );
-		$out       .= $n . " 0 obj\n" . $body . "\nendobj\n";
+	foreach ( $objs as $num => $body ) {
+		$offs[ $num ] = strlen( $out );
+		$out         .= $num . " 0 obj\n" . $body . "\nendobj\n";
 	}
 	$xref = strlen( $out );
 	$max  = max( array_keys( $objs ) );
-	$out .= 'xref' . "\n0 " . ( $max + 1 ) . "\n0000000000 65535 f \n";
-	for ( $n = 1; $n <= $max; $n++ ) {
-		$out .= sprintf( "%010d 00000 n \n", $offs[ $n ] );
+	$out .= "xref\n0 " . ( $max + 1 ) . "\n0000000000 65535 f \n";
+	for ( $num = 1; $num <= $max; $num++ ) {
+		$out .= isset( $offs[ $num ] ) ? sprintf( "%010d 00000 n \n", $offs[ $num ] ) : "0000000000 65535 f \n";
 	}
-	$out .= 'trailer' . "\n<< /Size " . ( $max + 1 ) . " /Root 1 0 R /Info 5 0 R >>\nstartxref\n" . $xref . "\n%%EOF\n";
+	$out .= "trailer\n<< /Size " . ( $max + 1 ) . " /Root 1 0 R /Info 3 0 R >>\nstartxref\n" . $xref . "\n%%EOF\n";
 	return $out;
 }
 
@@ -311,7 +427,7 @@ function oyc_roster_updated_label() {
  */
 function oyc_roster_pdf_save() {
 	try {
-		$pdf = oyc_roster_pdf_build( oyc_get_roster(), oyc_roster_updated_label() );
+		$pdf = oyc_roster_pdf_build( oyc_get_roster(), (int) get_option( 'oyc_fleet_roster_updated', 0 ) );
 		$up  = wp_upload_dir();
 		$dir = $up['basedir'] . '/oyc-protected';
 		if ( ! file_exists( $dir ) ) {
